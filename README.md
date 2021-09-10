@@ -1,5 +1,5 @@
 # I'm currently looking for a job
-# if you want to hire me, please send email. 
+# If you want to hire me, please send email. 
 # Email Address: joeun3518@gmail.com
 
 # MyLaboratory
