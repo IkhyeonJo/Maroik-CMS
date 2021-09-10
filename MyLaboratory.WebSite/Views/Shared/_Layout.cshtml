@@ -1,0 +1,242 @@
+﻿@using Newtonsoft.Json
+@using System.Text
+@using MyLaboratory.WebSite.Common
+@inject MyLaboratory.Common.DataAccess.Contracts.IAccountRepository accountRepository
+
+@{
+    Context.Session.TryGetValue("AccountSession", out byte[] resultByte);
+    var currentCulture = Context.Features.Get<Microsoft.AspNetCore.Localization.IRequestCultureFeature>().RequestCulture.Culture.Name;
+    var loginedAccount = await accountRepository.GetAccountAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email);
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    @*Prevent Web Cache*@
+    @*<meta http-equiv="Expires" content="-1">
+        <meta http-equiv="Pragma" content="no-cache">
+        <meta http-equiv="Cache-Control" content="No-Cache">*@
+    @*Prevent Web Cache*@
+    <title>MyLaboratory WebSite</title>
+
+    @if (loginedAccount.Role == Role.Admin)
+    {
+        @*HomePage Site Icon*@
+        <link rel="Shortcut Icon" href="~/admin/favicon.ico" type="image/x-icon" />
+        @*<!-- NonFactor DataGrid -->*@
+        <link rel="stylesheet" href="~/admin/css/mvc-grid/mvc-grid.css" asp-append-version="true">
+        @*<!-- Google Font: Source Sans Pro -->*@
+        <link rel="stylesheet" href="~/admin/lib/GoogleFont/SourceSansPro.css" asp-append-version="true">
+        @*<!-- Ionicons -->*@
+        <link rel="stylesheet" href="~/admin/lib/Ionicons/css/ionicons.min.css" asp-append-version="true">
+        @*<!-- Font Awesome -->*@
+        <link rel="stylesheet" href="~/admin/plugins/fontawesome-free/css/all.min.css" asp-append-version="true">
+        @*<!-- Tempusdominus Bootstrap 4 -->*@
+        <link rel="stylesheet" href="~/admin/plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css" asp-append-version="true">
+        @*<!-- iCheck -->*@
+        <link rel="stylesheet" href="~/admin/plugins/icheck-bootstrap/icheck-bootstrap.min.css" asp-append-version="true">
+        @*<!-- JQVMap -->*@
+        <link rel="stylesheet" href="~/admin/plugins/jqvmap/jqvmap.min.css" asp-append-version="true">
+        @*<!-- Theme style -->*@
+        <link rel="stylesheet" href="~/admin/dist/css/adminlte.min.css" asp-append-version="true">
+        @*<!-- overlayScrollbars -->*@
+        <link rel="stylesheet" href="~/admin/plugins/overlayScrollbars/css/OverlayScrollbars.min.css" asp-append-version="true">
+        @*<!-- Daterange picker -->*@
+        <link rel="stylesheet" href="~/admin/plugins/daterangepicker/daterangepicker.css" asp-append-version="true">
+        @*<!-- summernote -->*@
+        <link rel="stylesheet" href="~/admin/plugins/summernote/summernote-bs4.min.css" asp-append-version="true">
+        @*<!-- Jquery-ui -->*@
+        <link rel="stylesheet" href="~/admin/plugins/jquery-ui/jquery-ui.min.css" asp-append-version="true">
+        @*<!-- Toastr -->*@
+        <link rel="stylesheet" href="~/admin/plugins/toastr/toastr.min.css" asp-append-version="true">
+        @*<!-- Jquery-confirm -->*@
+        <link rel="stylesheet" href="~/admin/lib/jquery-confirm/jquery-confirm.min.css" asp-append-version="true">
+        @*<!-- Custom Modal CSS -->*@
+        <link rel="stylesheet" href="~/admin/custom/_Layout/css/modal.css" asp-append-version="true">
+    }
+    else if (loginedAccount.Role == Role.User)
+    {
+        @*HomePage Site Icon*@
+        <link rel="Shortcut Icon" href="~/user/favicon.ico" type="image/x-icon" />
+        @*<!-- NonFactor DataGrid -->*@
+        <link rel="stylesheet" href="~/user/css/mvc-grid/mvc-grid.css" asp-append-version="true">
+        @*<!-- Google Font: Source Sans Pro -->*@
+        <link rel="stylesheet" href="~/user/lib/GoogleFont/SourceSansPro.css" asp-append-version="true">
+        @*<!-- Ionicons -->*@
+        <link rel="stylesheet" href="~/user/lib/Ionicons/css/ionicons.min.css" asp-append-version="true">
+        @*<!-- Font Awesome -->*@
+        <link rel="stylesheet" href="~/user/plugins/fontawesome-free/css/all.min.css" asp-append-version="true">
+        @*<!-- Tempusdominus Bootstrap 4 -->*@
+        <link rel="stylesheet" href="~/user/plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css" asp-append-version="true">
+        @*<!-- iCheck -->*@
+        <link rel="stylesheet" href="~/user/plugins/icheck-bootstrap/icheck-bootstrap.min.css" asp-append-version="true">
+        @*<!-- JQVMap -->*@
+        <link rel="stylesheet" href="~/user/plugins/jqvmap/jqvmap.min.css" asp-append-version="true">
+        @*<!-- Theme style -->*@
+        <link rel="stylesheet" href="~/user/dist/css/adminlte.min.css" asp-append-version="true">
+        @*<!-- overlayScrollbars -->*@
+        <link rel="stylesheet" href="~/user/plugins/overlayScrollbars/css/OverlayScrollbars.min.css" asp-append-version="true">
+        @*<!-- Daterange picker -->*@
+        <link rel="stylesheet" href="~/user/plugins/daterangepicker/daterangepicker.css" asp-append-version="true">
+        @*<!-- summernote -->*@
+        <link rel="stylesheet" href="~/user/plugins/summernote/summernote-bs4.min.css" asp-append-version="true">
+        @*<!-- Jquery-ui -->*@
+        <link rel="stylesheet" href="~/user/plugins/jquery-ui/jquery-ui.min.css" asp-append-version="true">
+        @*<!-- Toastr -->*@
+        <link rel="stylesheet" href="~/user/plugins/toastr/toastr.min.css" asp-append-version="true">
+        @*<!-- Jquery-confirm -->*@
+        <link rel="stylesheet" href="~/user/lib/jquery-confirm/jquery-confirm.min.css" asp-append-version="true">
+        @*<!-- Custom Modal CSS -->*@
+        <link rel="stylesheet" href="~/user/custom/_Layout/css/modal.css" asp-append-version="true">
+    }
+    else
+    {
+
+    }
+</head>
+@*
+    <!--
+    `body` tag options:
+
+      Apply one or more of the following classes to to the body tag
+      to get the desired effect
+
+      * sidebar-collapse
+      * sidebar-mini
+    -->
+*@
+@*<body class="hold-transition dark-mode sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed">*@
+<body class="hold-transition dark-mode sidebar-mini">
+    @if (loginedAccount.Role == Role.Admin)
+    {
+
+        @*<!-- jQuery -->*@
+        <script src="~/admin/plugins/jquery/jquery.min.js" asp-append-version="true"></script>
+        <script src="~/admin/plugins/jquery-ui/jquery-ui.min.js" asp-append-version="true"></script>
+        <script src="~/admin/lib/jquery-validation/dist/jquery.validate.min.js" asp-append-version="true"></script>
+        <script src="~/admin/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js" asp-append-version="true"></script>
+        <script src="~/admin/lib/jquery-confirm/jquery-confirm.min.js" asp-append-version="true"></script>
+        @*<!-- Bootstrap -->*@
+        <script src="~/admin/plugins/bootstrap/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+        @*<!-- AdminLTE -->*@
+        <script src="~/admin/dist/js/adminlte.js" asp-append-version="true"></script>
+        @*<!-- Toastr -->*@
+        <script src="~/admin/plugins/toastr/toastr.min.js" asp-append-version="true"></script>
+        @*
+            <!-- OPTIONAL SCRIPTS -->
+            <script src="~/plugins/chart.js/Chart.min.js"></script>
+            <!-- AdminLTE for demo purposes -->
+            <script src="~/dist/js/demo.js"></script>
+            <!-- AdminLTE dashboard demo (This is only for demo purposes) -->
+            <script src="~/dist/js/pages/dashboard3.js"></script>
+        *@
+    }
+    else if (loginedAccount.Role == Role.User)
+    {
+        @*<!-- jQuery -->*@
+        <script src="~/user/plugins/jquery/jquery.min.js" asp-append-version="true"></script>
+        <script src="~/user/plugins/jquery-ui/jquery-ui.min.js" asp-append-version="true"></script>
+        <script src="~/user/lib/jquery-validation/dist/jquery.validate.min.js" asp-append-version="true"></script>
+        <script src="~/user/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js" asp-append-version="true"></script>
+        <script src="~/user/lib/jquery-confirm/jquery-confirm.min.js" asp-append-version="true"></script>
+        @*<!-- Bootstrap -->*@
+        <script src="~/user/plugins/bootstrap/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+        @*<!-- AdminLTE -->*@
+        <script src="~/user/dist/js/adminlte.js" asp-append-version="true"></script>
+        @*<!-- Toastr -->*@
+        <script src="~/user/plugins/toastr/toastr.min.js" asp-append-version="true"></script>
+        @*
+            <!-- OPTIONAL SCRIPTS -->
+            <script src="~/plugins/chart.js/Chart.min.js"></script>
+            <!-- AdminLTE for demo purposes -->
+            <script src="~/dist/js/demo.js"></script>
+            <!-- AdminLTE dashboard demo (This is only for demo purposes) -->
+            <script src="~/dist/js/pages/dashboard3.js"></script>
+        *@
+    }
+    else
+    {
+
+    }
+    <div class="wrapper">
+
+        @*<!-- Preloader -->*@
+        <div class="preloader flex-column justify-content-center align-items-center">
+            @if (loginedAccount.Role == Role.Admin)
+            {
+                <img class="animation__wobble" src="~/admin/dist/img/AdminLTELogo.png" alt="AdminLTELogo" height="60" width="60">
+            }
+            else if (loginedAccount.Role == Role.User)
+            {
+                <img class="animation__wobble" src="~/user/dist/img/AdminLTELogo.png" alt="AdminLTELogo" height="60" width="60">
+            }
+            else
+            {
+
+            }
+        </div>
+
+
+        @(await Html.PartialAsync("_MainTopBar", loginedAccount))
+        @(await Html.PartialAsync("_MainLeftSideBar", loginedAccount))
+        @*<!-- Content Wrapper. Contains page content -->*@
+        <div class="content-wrapper">
+            @(await Html.PartialAsync("_BodyPageHeader", loginedAccount))
+            @RenderBody()
+            @if (loginedAccount.Role == Role.Admin)@*nonfactors.grid.mvc6\6.2.4*@
+            {
+                if (currentCulture == "ko-KR")
+                {
+                    <script src="~/admin/js/mvc-grid/mvc-grid-ko-KR.js" asp-append-version="true"></script>
+                    <script src="~/admin/js/mvc-grid/mvc-grid-ko-KR-lang.js" asp-append-version="true"></script>
+                }
+                else if (currentCulture == "en-US")
+                {
+                    <script src="~/admin/js/mvc-grid/mvc-grid-en-US.js" asp-append-version="true"></script>
+                    <script src="~/admin/js/mvc-grid/mvc-grid-en-US-lang.js" asp-append-version="true"></script>
+                }
+                <script src="~/admin/js/mvc-grid/mvc-grid-attribute.js" asp-append-version="true"></script>
+
+                <script>
+                    document.querySelectorAll(".mvc-grid").forEach(element => new MvcGrid(element));
+                </script>
+            }
+            else if (loginedAccount.Role == Role.User) @*nonfactors.grid.mvc6\6.2.4*@
+            {
+                if (currentCulture == "ko-KR")
+                {
+                    <script src="~/user/js/mvc-grid/mvc-grid-ko-KR.js" asp-append-version="true"></script>
+                    <script src="~/user/js/mvc-grid/mvc-grid-ko-KR-lang.js" asp-append-version="true"></script>
+                }
+                else if (currentCulture == "en-US")
+                {
+                    <script src="~/user/js/mvc-grid/mvc-grid-en-US.js" asp-append-version="true"></script>
+                    <script src="~/user/js/mvc-grid/mvc-grid-en-US-lang.js" asp-append-version="true"></script>
+                }
+                <script src="~/user/js/mvc-grid/mvc-grid-attribute.js" asp-append-version="true"></script>
+
+                <script>
+                    document.querySelectorAll(".mvc-grid").forEach(element => new MvcGrid(element));
+                </script>
+            }
+            else
+            {
+
+            }
+
+            @await RenderSectionAsync("Scripts", required: false) @* Model Only [Require] 이런거 모델 Model.IsValid 이런거 쓸 때 쓰는 자바스크립트임 aspnetcore를 위한 *@
+        </div>
+        @*<!-- /.content-wrapper -->*@
+        @*<!-- Control Sidebar -->*@
+        <aside class="control-sidebar control-sidebar-dark">
+            @*<!-- Control sidebar content goes here -->*@
+        </aside>
+        @*<!-- /.control-sidebar -->*@
+        @(await Html.PartialAsync("_MainFooter"))
+    </div>
+    @*<!-- ./wrapper -->*@
+</body>
+</html>

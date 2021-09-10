@@ -1,0 +1,286 @@
+﻿@using Newtonsoft.Json
+@using System.Text
+@inject MyLaboratory.Common.DataAccess.Contracts.IAssetRepository assetRepository
+
+@{
+    var currentCulture = Context.Features.Get<Microsoft.AspNetCore.Localization.IRequestCultureFeature>().RequestCulture.Culture.Name;
+    Context.Session.TryGetValue("AccountSession", out byte[] resultByte);
+}
+
+@Html.AntiForgeryToken()
+<section class="content">
+    <div class="card card-primary">
+        <div class="card-header">
+            <h3 class="card-title">@localizer["Notice FixedIncome"].Value</h3>
+            <br/>
+            <h3 class="card-title"><font color="Red">@localizer["Red row"].Value</font><b>: @localizer["Maturity date has been passed."]</b></h3>
+            <br/>
+            <h3 class="card-title"><font color="Yellow">@localizer["Yellow Row"].Value</font><b>: @localizer["Deposit date is near."].Value</b></h3>
+        </div>
+
+        <div class="card-body">
+            <nav class="navbar-expand navbar-dark" style="position: relative; display: block !important; overflow-x: auto; overflow-y:hidden; align-items: center ">
+                <ul class="navbar-nav">
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-primary btn-block btn-sm" data-toggle="modal" data-target="#createFixedIncomeDialogModal" data-backdrop="static" data-keyboard="false" style="width: 100px !important;"><i class="fa fa-plus" style="padding-right:3px;"></i> @localizer["CREATE"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-success btn-block btn-sm" onclick="EditFixedIncomeGridRow('@localizer["Please select grid row"].Value')" style="width: 100px !important;"><i class="fas fa-edit" style="padding-right:3px;"></i> @localizer["EDIT"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-danger btn-block btn-sm" onclick="ConfirmDeleteFixedIncome('@localizer["Please select grid row"].Value')" style="width: 100px !important;"><i class="fa fa-trash" style="padding-right:3px;"></i> @localizer["DELETE"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-secondary btn-block btn-sm" onclick="ExportExcelFixedIncome()" style="width: 100px !important;"><i class="fas fa-file-excel" style="padding-right:3px;"></i> @localizer["EXCEL"].Value</button>
+                    </li>
+                    <li class="nav-item ml-auto">
+                        <input type="text" id="gridSearch" placeholder="@localizer["Search..."].Value" style="margin-bottom: 7px; text-align: center; font-size: .7em; padding: 5px 0; color: #000; border: none; " />
+                    </li>
+                </ul>
+            </nav>
+            @Html.AjaxGrid(Url.Action("FixedIncome", "Notice"))
+        </div>
+    </div>
+</section>
+
+@*<!--createFixedIncomeDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="createFixedIncomeDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="createFixedIncomeTabs">
+                @*<!--Tab Menu-->*@
+                <ul>
+                    <li><a href="#createFixedIncomeTabs-1">@localizer["Add FixedIncome"].Value</a></li>
+                </ul>
+                @*Tabs-1: Create FixedIncome Modal*@
+                <div id="createFixedIncomeTabs-1">
+                    <form id="formCreateFixedIncome" onsubmit="return CreateFixedIncome()">
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedIncomeMainClass">@localizer["MainClass"].Value</label>
+                                <br />
+                                <select id="createFixedIncomeMainClass" name="createFixedIncomeMainClass" onchange="CreateFormShowFixedIncomeSubClassBySelectedFixedIncomeMainClass(this)">
+                                    <option value="RegularIncome" selected="selected">@localizer["정기수입"].Value</option>
+                                    <option value="IrregularIncome">@localizer["비정기수입"].Value</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedIncomeSubClass">@localizer["SubClass"].Value</label>
+                                <br />
+                                <select id="createFixedIncomeSubClass" name="createFixedIncomeSubClass">
+                                    <option value="LaborIncome" selected="selected">@localizer["근로수입"].Value</option>
+                                    <option value="BusinessIncome">@localizer["사업수입"].Value</option>
+                                    <option value="PensionIncome">@localizer["연금수입"].Value</option>
+                                    <option value="FinancialIncome">@localizer["금융소득"].Value</option>
+                                    <option value="RentalIncome">@localizer["임대수입"].Value</option>
+                                    <option value="OtherIncome">@localizer["기타수입"].Value</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedIncomeContents">@localizer["Contents"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter Contents"].Value" id="createFixedIncomeContents" name="createFixedIncomeContents" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createFixedIncomeContents" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedIncomeAmount">@localizer["Amount"].Value</label>
+                                <input class="form-control form-control-sm" min="0" type="number" id="createFixedIncomeAmount" name="createFixedIncomeAmount" value="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedIncomeDepositMonth">@localizer["DepositMonth"].Value</label>
+                                <br />
+                                <select id="createFixedIncomeDepositMonth" name="createFixedIncomeDepositMonth" onchange="CreateFormShowFixedIncomeDepositDayBySelectedFixedIncomeDepositMonth(this)">
+                                    <option value="1" selected="selected">1</option>
+                                    @for (int i = 2; i <= 12; i++)
+                                    {
+
+                                        <option value="@i">@i</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedIncomeDepositDay">@localizer["DepositDay"].Value</label>
+                                <br />
+                                <select id="createFixedIncomeDepositDay" name="createFixedIncomeDepositDay">
+                                    <option value="1" selected="selected">1</option>
+                                    @for (int i = 2; i <= 31; i++)
+                                    {
+                                        <option value="@i">@i</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedIncomeMaturityDate">@localizer["MaturityDate"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter MaturityDate"].Value" id="createFixedIncomeMaturityDate" name="createFixedIncomeMaturityDate" value="" readonly>
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createFixedIncomeMaturityDate" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedIncomeNote">@localizer["Note"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="false" id="createFixedIncomeNote" name="createFixedIncomeNote" value="">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedIncomeDepositMyAssetProductName">@localizer["DepositMyAssetProductName"].Value</label>
+                                <br />
+                                <select id="createFixedIncomeDepositMyAssetProductName" name="createFixedIncomeDepositMyAssetProductName">
+                                    @foreach (var item in await assetRepository.GetAssetsAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email))
+                                    {
+                                        if (!item.Deleted)
+                                        {
+                                            <option value="@item.ProductName">@item.ProductName</option>
+
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+                            <input type="submit" class="btn btn-primary" value="@localizer["Save"].Value" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--EditFixedIncomeDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="editFixedIncomeDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="editFixedIncomeTabs">
+                @*<!--Tab Menu-->*@
+                <ul>
+                    <li><a href="#editFixedIncomeTabs-1">@localizer["Edit FixedIncome"].Value</a></li>
+                </ul>
+                @*Tabs-1: Edit FixedIncome Modal*@
+                <div id="editFixedIncomeTabs-1">
+                    <form id="formEditFixedIncome" onsubmit="return UpdateFixedIncome()">
+                        <input type="hidden" id="editFixedIncomeId" />
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedIncomeMainClass">@localizer["MainClass"].Value</label>
+                                <br />
+                                <select id="editFixedIncomeMainClass" name="editFixedIncomeMainClass" onchange="EditFormShowFixedIncomeSubClassBySelectedFixedIncomeMainClass(this)">
+                                    <option value="RegularIncome">@localizer["정기수입"].Value</option>
+                                    <option value="IrregularIncome">@localizer["비정기수입"].Value</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedIncomeSubClass">@localizer["SubClass"].Value</label>
+                                <br />
+                                <select id="editFixedIncomeSubClass" name="editFixedIncomeSubClass">
+                                    <option value="LaborIncome">@localizer["근로수입"].Value</option>
+                                    <option value="BusinessIncome">@localizer["사업수입"].Value</option>
+                                    <option value="PensionIncome">@localizer["연금수입"].Value</option>
+                                    <option value="FinancialIncome">@localizer["금융소득"].Value</option>
+                                    <option value="RentalIncome">@localizer["임대수입"].Value</option>
+                                    <option value="OtherIncome">@localizer["기타수입"].Value</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedIncomeContents">@localizer["Contents"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter Contents"].Value" id="editFixedIncomeContents" name="editFixedIncomeContents" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="editFixedIncomeContents" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedIncomeAmount">@localizer["Amount"].Value</label>
+                                <input class="form-control form-control-sm" min="0" type="number" id="editFixedIncomeAmount" name="editFixedIncomeAmount" value="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedIncomeDepositMonth">@localizer["DepositMonth"].Value</label>
+                                <br />
+                                <select id="editFixedIncomeDepositMonth" name="editFixedIncomeDepositMonth" onchange="EditFormShowFixedIncomeDepositDayBySelectedFixedIncomeDepositMonth(this)">
+                                    <option value="1" selected="selected">1</option>
+                                    @for (int i = 2; i <= 12; i++)
+                                    {
+
+                                        <option value="@i">@i</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedIncomeDepositDay">@localizer["DepositDay"].Value</label>
+                                <br />
+                                <select id="editFixedIncomeDepositDay" name="editFixedIncomeDepositDay">
+                                    <option value="1" selected="selected">1</option>
+                                    @for (int i = 2; i <= 31; i++)
+                                    {
+                                        <option value="@i">@i</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedIncomeMaturityDate">@localizer["MaturityDate"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter MaturityDate"].Value" id="editFixedIncomeMaturityDate" name="editFixedIncomeMaturityDate" value="" readonly>
+                                <span class="field-validation-valid text-danger" data-valmsg-for="editFixedIncomeMaturityDate" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedIncomeNote">@localizer["Note"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="false" id="editFixedIncomeNote" name="editFixedIncomeNote" value="">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedIncomeDepositMyAssetProductName">@localizer["DepositMyAssetProductName"].Value</label>
+                                <br />
+                                <select id="editFixedIncomeDepositMyAssetProductName" name="editFixedIncomeDepositMyAssetProductName">
+                                    @foreach (var item in await assetRepository.GetAssetsAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email))
+                                    {
+                                        if (!item.Deleted)
+                                        {
+                                            <option value="@item.ProductName">@item.ProductName</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+                            <input type="submit" class="btn btn-primary" value="@localizer["Save"].Value" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--ConfirmDeleteDialogModal-->*@
+<div class="modal" tabindex="-1" role="dialog" id="confirmDeleteFixedIncomeDialogModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                @localizer["Are you sure to delete?"].Value
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" onclick="DeleteFixedIncome('@localizer["Please select grid row"].Value')">@localizer["DELETE"].Value</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts{
+    @if (currentCulture == "ko-KR")
+    {
+        <script src="~/user/custom/Notice/FixedIncome/js/ko-KR-init.js" asp-append-version="true"></script>
+    }
+    else if (currentCulture == "en-US")
+    {
+        <script src="~/user/custom/Notice/FixedIncome/js/en-US-init.js" asp-append-version="true"></script>
+    }
+    <script src="~/user/custom/Notice/FixedIncome/js/site.js" asp-append-version="true"></script>
+}

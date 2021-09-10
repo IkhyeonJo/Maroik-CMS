@@ -1,0 +1,136 @@
+#https://docs.microsoft.com/en-us/visualstudio/containers/docker-compose-properties?view=vs-2019
+
+### ------------------------------------------README !IMPORTANT---------------------------------------------------------
+#Before start this project, Set Server settings in appsettings.json [MyLaboratory.WebSite] (for registration & password recovery & Login) [Especially DomainName]
+### ------------------------------------------README !IMPORTANT---------------------------------------------------------
+
+##AWS step
+#step 1: Create AWS instance (in my case, AWS Linux)
+#step 2: open PORT
+#80, 443, 5000, 5001 (DevelopmentMode)
+#80, 443, 5001 (Deploy)
+
+#AWS Command (docker and docker-compose install)
+#go to docker-compose.yml file and execute below this command
+
+#-----------------------------------------------------------------------------------
+#sudo yum update -y && sudo amazon-linux-extras install docker -y && sudo service docker start && sudo curl -L https://github.com/docker/compose/releases/download/1.21.0/docker-compose-`uname -s`-`uname -m` | sudo tee /usr/local/bin/docker-compose > /dev/null && sudo chmod +x /usr/local/bin/docker-compose && sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose && sudo docker-compose up -d
+#-----------------------------------------------------------------------------------
+
+## Clean Restart of a Docker Instance command
+#-----------------------------------------------------------------------------------
+#sudo docker-compose down && sudo docker volume rm $(sudo docker volume ls -q) && sudo docker rmi -f $(sudo docker images -a -q) --force && sudo docker-compose up -d
+#-----------------------------------------------------------------------------------
+
+## To delete all containers
+#sudo docker rm -f $(docker ps -a -q)
+
+## To delete all volumes
+#sudo docker volume rm $(docker volume ls -q)
+
+## To delete all the images,
+#docker rmi -f $(docker images -a -q)
+
+## To delete all containers including its volumes use,
+#docker rm -vf $(docker ps -a -q)
+
+###stop docker-compose
+#docker-compose down
+
+###check docker images
+#docker images
+
+###remove docker images
+#docker rmi [Image ID]
+
+#when you should go debugging mode , change DB location (appsettings.json, DatabaseConfig.cs) and install (mariadb 10.5.10) and use IIS Express debugging mode
+
+#----------------------------------------------------------------------------------------------------
+### Tip: To see [CONTAINER ID], execute below this command
+#docker ps
+
+###Access docker container
+#docker exec -it <containerID> /bin/bash/
+
+###In order to copy a file from a container to the host, you can use the command
+#docker cp <containerId>:/file/path/within/container /host/path/target
+
+###Backup and restore a mysql database from a running Docker mysql container
+
+## Backup
+#docker exec [CONTAINER ID] /usr/bin/mysqldump -u root --password=mariadbpassword [DATABASE] > backup.sql
+
+## Restore
+#cat backup.sql | docker exec -i [CONTAINER ID] /usr/bin/mysql -u root --password=mariadbpassword [DATABASE]
+#----------------------------------------------------------------------------------------------------
+
+
+#For Publish
+version: "3"
+
+volumes:
+      datasource:
+
+networks:       
+       backend:
+
+services:
+    mariadb:
+        image: "mariadb:10.2.38"
+        container_name: MyLaboratory.MariaDB
+        volumes:
+          - datasource:/var/lib/mysql
+          - ./MyLaboratory.Common.DataAccess/_MariaDBSql_Init_Script:/docker-entrypoint-initdb.d
+        networks:
+          - backend
+        environment:
+          - MYSQL_ROOT_PASSWORD=mariadbpassword
+          - bind-address=0.0.0.0
+          - TZ=Asia/Seoul
+        command:
+          - mysqld
+          - --character-set-server=utf8mb4
+          - --collation-server=utf8mb4_unicode_ci
+          - --default-time-zone=+09:00
+
+    mylaboratory.website:
+        build :
+         context : .
+         dockerfile : MyLaboratory.WebSite/Dockerfile
+        container_name: MyLaboratory.WebSite
+        networks :
+          - backend          
+        ports:
+          - 80:80
+          - 443:443
+        environment :
+          - DBHOST=mariadb
+          - ASPNETCORE_ENVIRONMENT=Development
+          - ASPNETCORE_URLS=https://+:443;http://+:80
+          - ASPNETCORE_Kestrel__Certificates__Default__Password=zxcvZXCV # must be equal to .pfx file's' password
+          - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/haha.pfx
+        volumes:
+          - ./MyLaboratory.WebSite/:/https:ro
+        depends_on :
+          - mariadb  
+
+    mylaboratory.webapi:
+        build :
+         context : .
+         dockerfile : MyLaboratory.WebAPI/Dockerfile
+        container_name: MyLaboratory.WebAPI
+        networks :
+          - backend          
+        ports:
+          #- 5000:5000 ## HTTP (for development purpose) (To see HTTP Packet) (RESTful API)
+          - 5001:5001 # HTTPS
+        environment :
+          - DBHOST=mariadb
+          - ASPNETCORE_ENVIRONMENT=Development
+          - ASPNETCORE_URLS=https://+:5001;http://+:5000
+          - ASPNETCORE_Kestrel__Certificates__Default__Password=zxcvZXCV # must be equal to .pfx file's' password
+          - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/haha.pfx
+        volumes:
+          - ./MyLaboratory.WebAPI/:/https:ro
+        depends_on :
+          - mariadb  

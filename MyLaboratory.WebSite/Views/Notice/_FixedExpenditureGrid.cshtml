@@ -1,0 +1,37 @@
+﻿@model IQueryable<MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel>
+@* Should only include grid declaration *@
+
+@(Html
+    .Grid(Model)
+    .Build(columns =>
+    {
+        columns.Add(model => model.Id).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.Id)]);
+        columns.Add(model => model.MainClass).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.MainClass)]);
+        columns.Add(model => model.SubClass).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.SubClass)]);
+        columns.Add(model => model.Contents).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.Contents)]);
+        columns.Add(model => model.Amount).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.Amount)]);
+        columns.Add(model => model.PaymentMethod).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.PaymentMethod)]);
+        columns.Add(model => model.MyDepositAsset).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.MyDepositAsset)]);
+        columns.Add(model => model.DepositMonth).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.DepositMonth)]);
+        columns.Add(model => model.DepositDay).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.DepositDay)]);
+        columns.Add(model => model.MaturityDate).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.MaturityDate)]);
+        columns.Add(model => model.Created).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.Created)]);
+        columns.Add(model => model.Updated).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.Updated)]);
+        columns.Add(model => model.Note).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedExpenditureOutputViewModel.Note)]);
+    })
+    .Id("fixedExpenditureGrid")
+    .Css("table table-striped")
+    .AppendCss("table-hover")
+    //.Attributed(new { data_type = "individuals" })
+    //.RowAttributed(model => new { @class = model.IsWorking == true ? "working" : null, data_id = model.Id })
+    .RowAttributed(model => new { @class = model.Expired == true ? "table-danger" : model.Noticed == true ? "table-warning" : "table-inactive", data_id = model.Id})
+    .Using(GridFilterMode.Row)
+    .Empty(localizer["No data found"])
+    .Filterable()
+    .Sortable()
+    .Pageable(pager => {
+        pager.PageSizes = new Dictionary<Int32, string> { { 10, "10" }, { 25, "25" }, { 50, "50" }, {100, "100" } };
+        pager.ShowPageSizes = true;
+        pager.RowsPerPage = 10;
+    })
+)

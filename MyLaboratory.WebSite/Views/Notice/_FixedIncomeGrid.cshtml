@@ -1,0 +1,36 @@
+﻿@model IQueryable<MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel>
+@* Should only include grid declaration *@
+
+@(Html
+    .Grid(Model)
+    .Build(columns =>
+    {
+        columns.Add(model => model.Id).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel.Id)]);
+        columns.Add(model => model.MainClass).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel.MainClass)]);
+        columns.Add(model => model.SubClass).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel.SubClass)]);
+        columns.Add(model => model.Contents).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel.Contents)]);
+        columns.Add(model => model.Amount).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel.Amount)]);
+        columns.Add(model => model.DepositMonth).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel.DepositMonth)]);
+        columns.Add(model => model.DepositDay).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel.DepositDay)]);
+        columns.Add(model => model.MaturityDate).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel.MaturityDate)]);
+        columns.Add(model => model.Note).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel.Note)]);
+        columns.Add(model => model.DepositMyAssetProductName).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel.DepositMyAssetProductName)]);
+        columns.Add(model => model.Created).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel.Created)]);
+        columns.Add(model => model.Updated).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Notice.FixedIncomeOutputViewModel.Updated)]);
+    })
+    .Id("fixedIncomeGrid")
+    .Css("table table-striped")
+    .AppendCss("table-hover")
+    //.Attributed(new { data_type = "individuals" })
+    //.RowAttributed(model => new { @class = model.IsWorking == true ? "working" : null, data_id = model.Id })
+    .RowAttributed(model => new { @class = model.Expired == true ? "table-danger" : model.Noticed == true ? "table-warning" : "table-inactive", data_id = model.Id})
+    .Using(GridFilterMode.Row)
+    .Empty(localizer["No data found"])
+    .Filterable()
+    .Sortable()
+    .Pageable(pager => {
+        pager.PageSizes = new Dictionary<Int32, string> { { 10, "10" }, { 25, "25" }, { 50, "50" }, {100, "100" } };
+        pager.ShowPageSizes = true;
+        pager.RowsPerPage = 10;
+    })
+)

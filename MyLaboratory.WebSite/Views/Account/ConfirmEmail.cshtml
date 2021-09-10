@@ -1,0 +1,98 @@
+﻿@{
+    bool invalidToken = ViewBag.InvalidToken ?? false;
+    bool accountCreated = ViewBag.AccountCreated ?? false;
+    var error = TempData["Error"] as string;
+}
+
+@if (invalidToken == false && accountCreated == false) // 1.	이미 이메일 인증 하셨습니다. [로그인 화면으로] <- 버튼
+{
+    <div class="register-box">
+        <div class="card card-outline card-primary">
+            <div class="card-header text-center">
+                <a href="#" class="h1"><b>My</b>Laboratory</a>
+            </div>
+            <div class="card-body">
+                <p class="login-box-msg"><font style="font-weight:bold" color="black">@localizer["You have already verified your email"]</font></p>
+                <div class="social-auth-links text-center mt-2 mb-3">
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-block btn-primary">
+                        <i class="fas fa-sign-in-alt" style="padding-right:3px;"></i>@localizer["Back To Login Page"]
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (invalidToken == false && accountCreated == true) // 1.	계정이 성공적으로 생성되었습니다. [로그인 화면으로] <- 버튼
+{
+    <div class="register-box">
+        <div class="card card-outline card-primary">
+            <div class="card-header text-center">
+                <a href="#" class="h1"><b>My</b>Laboratory</a>
+            </div>
+            <div class="card-body">
+                <p class="login-box-msg"><font style="font-weight:bold" color="green">@localizer["Your account has been successfully created"]</font></p>
+                <div class="social-auth-links text-center mt-2 mb-3">
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-block btn-primary">
+                        <i class="fas fa-sign-in-alt" style="padding-right:3px;"></i>@localizer["Back To Login Page"]
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (invalidToken == true && accountCreated == false) // 1.	승인 코드가 유효하지 않습니다. [로그인 화면으로] <- 버튼
+{
+    <div class="register-box">
+        <div class="card card-outline card-primary">
+            <div class="card-header text-center">
+                <a href="#" class="h1"><b>My</b>Laboratory</a>
+            </div>
+            <div class="card-body">
+                <p class="login-box-msg"><font style="font-weight:bold" color="red">@localizer["The authentication token is invalid."]</font></p>
+                <div class="social-auth-links text-center mt-2 mb-3">
+                    <p class="mb-0">
+                        <font style="font-weight:bold" color="black">
+                            @localizer["The validity period of the authentication token may have expired or membership registration may have already been completed."]
+                            <br />
+                            <br />
+                            @localizer["If you have not registered as a member,"]
+                            <br />
+                            @localizer["please try signing up again."]
+                            <br />
+                            <br />
+                            @localizer["If the problem persists,"]
+                            <br />
+                            @localizer["please contact your"] <a href="mailto:joeun3518@gmail.com">@localizer["administrator"]</a>.
+                        </font>
+                    </p>
+                    <br />
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-block btn-primary">
+                        <i class="fas fa-sign-in-alt" style="padding-right:3px;"></i>@localizer["Back To Login Page"]
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (invalidToken == true && accountCreated == true) // 1.	(있을 수 없는 일) [이메일 활성화 중 예외 발생 시 사용하는 페이지]
+{
+    <div class="register-box">
+        <div class="card card-outline card-primary">
+            <div class="card-header text-center">
+                <a href="#" class="h1"><b>My</b>Laboratory</a>
+            </div>
+            <div class="card-body">
+                <p class="login-box-msg"><font style="font-weight:bold" color="red">@localizer["Exception!!"]</font></p>
+                <div class="social-auth-links text-center mt-2 mb-3">
+                    <p class="mb-0">
+                        <font style="font-weight:bold" color="red">@error</font>
+                    </p>
+                    <br />
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-block btn-primary">
+                        <i class="fas fa-sign-in-alt" style="padding-right:3px;"></i>@localizer["Back To Login Page"]
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}

@@ -1,0 +1,171 @@
+﻿@Html.AntiForgeryToken()
+<section class="content">
+    <div class="card card-primary">
+        <div class="card-header">
+            <h3 class="card-title">@localizer["AccountBook Asset"].Value</h3>
+        </div>
+
+        <div class="card-body">
+            <nav class="navbar-expand navbar-dark" style="position: relative; display: block !important; overflow-x: auto; overflow-y:hidden; align-items: center ">
+                <ul class="navbar-nav">
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-primary btn-block btn-sm" data-toggle="modal" data-target="#createAssetDialogModal" data-backdrop="static" data-keyboard="false" style="width: 100px !important;"><i class="fa fa-plus" style="padding-right:3px;"></i> @localizer["CREATE"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-success btn-block btn-sm" onclick="EditAssetGridRow('@localizer["Please select grid row"].Value')" style="width: 100px !important;"><i class="fas fa-edit" style="padding-right:3px;"></i> @localizer["EDIT"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-danger btn-block btn-sm" onclick="ConfirmDeleteAsset('@localizer["Please select grid row"].Value')" style="width: 100px !important;"><i class="fa fa-trash" style="padding-right:3px;"></i> @localizer["DELETE"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-secondary btn-block btn-sm" onclick="ExportExcelAsset()" style="width: 100px !important;"><i class="fas fa-file-excel" style="padding-right:3px;"></i> @localizer["EXCEL"].Value</button>
+                    </li>
+                    <li class="nav-item ml-auto">
+                        <input type="text" id="gridSearch" placeholder="@localizer["Search..."].Value" style="margin-bottom: 7px; text-align: center; font-size: .7em; padding: 5px 0; color: #000; border: none; " />
+                    </li>
+                </ul>
+            </nav>
+            @Html.AjaxGrid(Url.Action("Asset", "AccountBook"))
+        </div>
+    </div>
+</section>
+
+@*<!--createAssetDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="createAssetDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="createAssetTabs">
+                @*<!--Tab Menu-->*@
+                <ul>
+                    <li><a href="#createAssetTabs-1">@localizer["Add Asset"].Value</a></li>
+                </ul>
+                @*Tabs-1: Create Asset Modal*@
+                <div id="createAssetTabs-1">
+                    <form id="formCreateAsset" onsubmit="return CreateAsset()">
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createAssetProductName">@localizer["ProductName"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter ProductName"].Value" id="createAssetProductName" name="createAssetProductName" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createAssetProductName" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createAssetItem">@localizer["Item"].Value</label>
+                                <br />
+                                <select id="createAssetItem" name="createAssetItem">
+                                    <option value="FreeDepositAndWithdrawal">@localizer["자유입출금 자산"].Value</option>
+                                    <option value="TrustAsset">@localizer["신탁 자산"].Value</option>
+                                    <option value="CashAsset">@localizer["현금 자산"].Value</option>
+                                    <option value="SavingsAsset">@localizer["저축성 자산"].Value</option>
+                                    <option value="InvestmentAsset">@localizer["투자성 자산"].Value</option>
+                                    <option value="RealEstate">@localizer["부동산"].Value</option>
+                                    <option value="Movables">@localizer["동산"].Value</option>
+                                    <option value="OtherPhysicalAsset">@localizer["기타 실물 자산"].Value</option>
+                                    <option value="InsuranceAsset">@localizer["보험 자산"].Value</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createAssetAmount">@localizer["Amount"].Value</label>
+                                <input class="form-control form-control-sm" type="number" id="createAssetAmount" name="createAssetAmount" value="0">
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createAssetMonetaryUnit">@localizer["MonetaryUnit"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter MonetaryUnit"].Value" id="createAssetMonetaryUnit" name="createAssetMonetaryUnit" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createAssetMonetaryUnit" data-valmsg-replace="true"></span>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createAssetNote">@localizer["Note"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="false" id="createAssetNote" name="createAssetNote" value="">
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+                            <input type="submit" class="btn btn-primary" value="@localizer["Save"].Value" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--EditAssetDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="editAssetDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="editAssetTabs">
+                @*<!--Tab Menu-->*@
+                <ul>
+                    <li><a href="#editAssetTabs-1">@localizer["Edit Asset"].Value</a></li>
+                </ul>
+                @*Tabs-1: Edit Asset Modal*@
+                <div id="editAssetTabs-1">
+                    <form id="formEditAsset" onsubmit="return UpdateAsset()">
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAssetProductName">@localizer["ProductName"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="false" id="editAssetProductName" name="editAssetProductName" value="" readonly>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAssetItem">@localizer["Item"].Value</label>
+                                <br />
+                                <select id="editAssetItem" name="editAssetItem">
+                                    <option value="FreeDepositAndWithdrawal">@localizer["자유입출금 자산"].Value</option>
+                                    <option value="TrustAsset">@localizer["신탁 자산"].Value</option>
+                                    <option value="CashAsset">@localizer["현금 자산"].Value</option>
+                                    <option value="SavingsAsset">@localizer["저축성 자산"].Value</option>
+                                    <option value="InvestmentAsset">@localizer["투자성 자산"].Value</option>
+                                    <option value="RealEstate">@localizer["부동산"].Value</option>
+                                    <option value="Movables">@localizer["동산"].Value</option>
+                                    <option value="OtherPhysicalAsset">@localizer["기타 실물 자산"].Value</option>
+                                    <option value="InsuranceAsset">@localizer["보험 자산"].Value</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAssetAmount">@localizer["Amount"].Value</label>
+                                <input class="form-control form-control-sm" type="number" id="editAssetAmount" name="editAssetAmount" value="0">
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAssetNote">@localizer["Note"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="false" id="editAssetNote" name="editAssetNote" value="">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAssetDeleted">@localizer["Deleted"].Value</label>
+                                <input class="form-control form-control-sm" type="checkbox" id="editAssetDeleted" name="editAssetDeleted" />
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+                            <input type="submit" class="btn btn-primary" value="@localizer["Save"].Value" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--ConfirmDeleteDialogModal-->*@
+<div class="modal" tabindex="-1" role="dialog" id="confirmDeleteAssetDialogModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                @localizer["Are you sure to delete?"].Value
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" onclick="DeleteAsset('@localizer["Please select grid row"].Value')">@localizer["DELETE"].Value</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts{
+    <script src="~/user/custom/AccountBook/Asset/js/site.js" asp-append-version="true"></script>
+}

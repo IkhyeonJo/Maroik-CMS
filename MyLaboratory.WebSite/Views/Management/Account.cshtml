@@ -1,0 +1,175 @@
+﻿@Html.AntiForgeryToken()
+<section class="content">
+    <div class="card card-primary">
+        <div class="card-header">
+            <h3 class="card-title">@localizer["Account Management"].Value</h3>
+        </div>
+
+        <div class="card-body">
+            <nav class="navbar-expand navbar-dark" style="position: relative; display: block !important; overflow-x: auto; overflow-y:hidden; align-items: center ">
+                <ul class="navbar-nav">
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-primary btn-block btn-sm" data-toggle="modal" data-target="#createAccountDialogModal" data-backdrop="static" data-keyboard="false" style="width: 100px !important;"><i class="fa fa-plus" style="padding-right:3px;"></i> @localizer["CREATE"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-success btn-block btn-sm" onclick="EditAccountGridRow('@localizer["Please select grid row"].Value')" style="width: 100px !important;"><i class="fas fa-edit" style="padding-right:3px;"></i> @localizer["EDIT"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-danger btn-block btn-sm" onclick="ConfirmDeleteAccount('@localizer["Please select grid row"].Value')" style="width: 100px !important;"><i class="fa fa-trash" style="padding-right:3px;"></i> @localizer["DELETE"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-secondary btn-block btn-sm" onclick="ExportExcelAccount()" style="width: 100px !important;"><i class="fas fa-file-excel" style="padding-right:3px;"></i> @localizer["EXCEL"].Value</button>
+                    </li>
+                    <li class="nav-item ml-auto">
+                        <input type="text" id="gridSearch" placeholder="@localizer["Search..."].Value" style="margin-bottom: 7px; text-align: center; font-size: .7em; padding: 5px 0; color: #000; border: none; " />
+                    </li>
+                </ul>
+            </nav>
+            @Html.AjaxGrid(Url.Action("Account", "Management"))
+        </div>
+    </div>
+</section>
+
+@*<!--createAccountDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="createAccountDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="createAccountTabs">
+                @*<!--Tab Menu-->*@
+                <ul>
+                    <li><a href="#createAccountTabs-1">@localizer["Add Account"].Value</a></li>
+                </ul>
+                @*Tabs-1: Create Account Modal*@
+                <div id="createAccountTabs-1">
+                    <form id="formCreateAccount" onsubmit="return CreateAccount()">
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createAccountEmail">@localizer["Email"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter email"].Value" id="createAccountEmail" name="createAccountEmail" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createAccountEmail" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createAccountPassword">@localizer["Password"].Value</label>
+                                <input class="form-control form-control-sm" type="password" data-val="true" data-val-required="@localizer["Please enter password"].Value" id="createAccountPassword" name="createAccountPassword" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createAccountPassword" data-valmsg-replace="true"></span>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createAccountFullName">@localizer["FullName"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter FullName"].Value" id="createAccountFullName" name="createAccountFullName" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createAccountFullName" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createAccountRole">@localizer["Role"].Value</label>
+                                <br />
+                                <select id="createAccountRole" name="createAccountRole">
+                                    <option value="Admin">@localizer["Admin"].Value</option>
+                                    <option value="User">@localizer["User"].Value</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+                            <input type="submit" class="btn btn-primary" value="@localizer["Save"].Value" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--EditAccountDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="editAccountDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="editAccountTabs">
+                @*<!--Tab Menu-->*@
+                <ul>
+                    <li><a href="#editAccountTabs-1">@localizer["Edit Account"].Value</a></li>
+                </ul>
+                @*Tabs-1: Edit Account Modal*@
+                <div id="editAccountTabs-1">
+                    <form id="formEditAccount" onsubmit="return UpdateAccount()">
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAccountEmail">@localizer["Email"].Value</label>
+                                <input class="form-control form-control-sm" type="text" id="editAccountEmail" name="editAccountEmail" readonly />
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAccountPassword">@localizer["Password"].Value</label>
+                                <input class="form-control form-control-sm" type="password" data-val="true" data-val-required="@localizer["Please enter password"].Value" id="editAccountPassword" name="editAccountPassword" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="editAccountPassword" data-valmsg-replace="true"></span>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAccountFullName">@localizer["FullName"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter FullName"].Value" id="editAccountFullName" name="editAccountFullName" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="editAccountFullName" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAccountRole">@localizer["Role"].Value</label>
+                                <br />
+                                <select id="editAccountRole" name="editAccountRole">
+                                    <option value="Admin">@localizer["Admin"].Value</option>
+                                    <option value="User">@localizer["User"].Value</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAccountLocked">@localizer["Locked"].Value</label>
+                                <input class="form-control form-control-sm" type="checkbox" id="editAccountLocked" name="editAccountLocked" />
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAccountEmailConfirmed">@localizer["EmailConfirmed"].Value</label>
+                                <input class="form-control form-control-sm" type="checkbox" id="editAccountEmailConfirmed" name="editAccountEmailConfirmed" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAccountAgreedServiceTerms">@localizer["AgreedServiceTerms"].Value</label>
+                                <input class="form-control form-control-sm" type="checkbox" id="editAccountAgreedServiceTerms" name="editAccountAgreedServiceTerms" />
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editMessage">@localizer["Message"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter message"].Value" id="editMessage" name="editMessage" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="editMessage" data-valmsg-replace="true"></span>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editAccountDeleted">@localizer["Deleted"].Value</label>
+                                <input class="form-control form-control-sm" type="checkbox" id="editAccountDeleted" name="editAccountDeleted" />
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+                            <input type="submit" class="btn btn-primary" value="@localizer["Save"].Value" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--ConfirmDeleteDialogModal-->*@
+<div class="modal" tabindex="-1" role="dialog" id="confirmDeleteAccountDialogModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                @localizer["Are you sure to delete?"].Value
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" onclick="DeleteAccount('@localizer["Please select grid row"].Value')">@localizer["DELETE"].Value</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts{
+    <script src="~/admin/custom/Management/Account/js/site.js" asp-append-version="true"></script>
+}

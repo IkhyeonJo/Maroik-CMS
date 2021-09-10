@@ -1,0 +1,276 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Add FixedExpenditure" xml:space="preserve">
+    <value>고정 지출 추가</value>
+  </data>
+  <data name="Amount" xml:space="preserve">
+    <value>금액</value>
+  </data>
+  <data name="Are you sure to delete?" xml:space="preserve">
+    <value>정말로 삭제하시겠습니까?</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>취소</value>
+  </data>
+  <data name="Contents" xml:space="preserve">
+    <value>내용</value>
+  </data>
+  <data name="CREATE" xml:space="preserve">
+    <value>생성</value>
+  </data>
+  <data name="DELETE" xml:space="preserve">
+    <value>삭제</value>
+  </data>
+  <data name="Deposit date is near." xml:space="preserve">
+    <value>입금일이 임박했습니다.</value>
+  </data>
+  <data name="DepositDay" xml:space="preserve">
+    <value>입금일</value>
+  </data>
+  <data name="DepositMonth" xml:space="preserve">
+    <value>입금월</value>
+  </data>
+  <data name="EDIT" xml:space="preserve">
+    <value>편집</value>
+  </data>
+  <data name="Edit FixedExpenditure" xml:space="preserve">
+    <value>고정 지출 편집</value>
+  </data>
+  <data name="EXCEL" xml:space="preserve">
+    <value>엑셀</value>
+  </data>
+  <data name="MainClass" xml:space="preserve">
+    <value>대분류</value>
+  </data>
+  <data name="Maturity date has been passed." xml:space="preserve">
+    <value>만기일이 지났습니다.</value>
+  </data>
+  <data name="MaturityDate" xml:space="preserve">
+    <value>만기일</value>
+  </data>
+  <data name="MyDepositAsset" xml:space="preserve">
+    <value>내입금자산</value>
+  </data>
+  <data name="Note" xml:space="preserve">
+    <value>주석</value>
+  </data>
+  <data name="Notice FixedExpenditure" xml:space="preserve">
+    <value>알림 고정 지출</value>
+  </data>
+  <data name="PaymentMethod" xml:space="preserve">
+    <value>결제수단</value>
+  </data>
+  <data name="Please enter Contents" xml:space="preserve">
+    <value>내용을 입력해주세요.</value>
+  </data>
+  <data name="Please enter MaturityDate" xml:space="preserve">
+    <value>만기일을 입력해주세요.</value>
+  </data>
+  <data name="Please select grid row" xml:space="preserve">
+    <value>행을 선택해주세요.</value>
+  </data>
+  <data name="Red row" xml:space="preserve">
+    <value>적색 행</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>저장</value>
+  </data>
+  <data name="Search..." xml:space="preserve">
+    <value>검색...</value>
+  </data>
+  <data name="SubClass" xml:space="preserve">
+    <value>소분류</value>
+  </data>
+  <data name="Yellow Row" xml:space="preserve">
+    <value>황색 행</value>
+  </data>
+  <data name="가구간 이전지출" xml:space="preserve">
+    <value>가구간 이전지출</value>
+  </data>
+  <data name="공적연금" xml:space="preserve">
+    <value>공적연금</value>
+  </data>
+  <data name="교육비" xml:space="preserve">
+    <value>교육비</value>
+  </data>
+  <data name="교통비" xml:space="preserve">
+    <value>교통비</value>
+  </data>
+  <data name="기타지출" xml:space="preserve">
+    <value>기타지출</value>
+  </data>
+  <data name="내자산이체" xml:space="preserve">
+    <value>내자산이체</value>
+  </data>
+  <data name="미파악지출" xml:space="preserve">
+    <value>미파악지출</value>
+  </data>
+  <data name="보장성보험" xml:space="preserve">
+    <value>보장성보험</value>
+  </data>
+  <data name="부채상환" xml:space="preserve">
+    <value>부채상환</value>
+  </data>
+  <data name="비소비지출" xml:space="preserve">
+    <value>비소비지출</value>
+  </data>
+  <data name="비영리단체 이전" xml:space="preserve">
+    <value>비영리단체 이전</value>
+  </data>
+  <data name="사회보험" xml:space="preserve">
+    <value>사회보험</value>
+  </data>
+  <data name="세금" xml:space="preserve">
+    <value>세금</value>
+  </data>
+  <data name="소비지출" xml:space="preserve">
+    <value>소비지출</value>
+  </data>
+  <data name="식비/외식비" xml:space="preserve">
+    <value>식비/외식비</value>
+  </data>
+  <data name="여가/문화" xml:space="preserve">
+    <value>여가/문화</value>
+  </data>
+  <data name="예적금" xml:space="preserve">
+    <value>예적금</value>
+  </data>
+  <data name="용돈" xml:space="preserve">
+    <value>용돈</value>
+  </data>
+  <data name="의료비" xml:space="preserve">
+    <value>의료비</value>
+  </data>
+  <data name="의류/신발" xml:space="preserve">
+    <value>의류/신발</value>
+  </data>
+  <data name="정기저축" xml:space="preserve">
+    <value>정기저축</value>
+  </data>
+  <data name="주거/용품비" xml:space="preserve">
+    <value>주거/용품비</value>
+  </data>
+  <data name="통신비" xml:space="preserve">
+    <value>통신비</value>
+  </data>
+  <data name="투자" xml:space="preserve">
+    <value>투자</value>
+  </data>
+</root>

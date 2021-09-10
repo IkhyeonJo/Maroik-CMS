@@ -1,0 +1,33 @@
+﻿@model IQueryable<MyLaboratory.WebSite.Models.ViewModels.AccountBook.AssetOutputViewModel>
+
+@* Should only include grid declaration *@
+
+@(Html
+    .Grid(Model)
+    .Build(columns =>
+    {
+        columns.Add(model => model.ProductName).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.AssetOutputViewModel.ProductName)]);
+        columns.Add(model => model.Item).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.AssetOutputViewModel.Item)]);
+        columns.Add(model => model.Amount).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.AssetOutputViewModel.Amount)]);
+        columns.Add(model => model.MonetaryUnit).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.AssetOutputViewModel.MonetaryUnit)]);
+        columns.Add(model => model.Created).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.AssetOutputViewModel.Created)]);
+        columns.Add(model => model.Updated).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.AssetOutputViewModel.Updated)]);
+        columns.Add(model => model.Note).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.AssetOutputViewModel.Note)]);
+        columns.Add(model => model.Deleted).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.AssetOutputViewModel.Deleted)]);
+    })
+    .Id("assetGrid")
+    .Css("table table-striped")
+    .AppendCss("table-hover")
+    //.Attributed(new { data_type = "individuals" })
+    //.RowAttributed(model => new { @class = model.IsWorking == true ? "working" : null, data_id = model.Id })
+    .RowAttributed(model => new { @class = "table-inactive", data_productName = model.ProductName })
+    .Using(GridFilterMode.Row)
+    .Empty(localizer["No data found"])
+    .Filterable()
+    .Sortable()
+    .Pageable(pager => {
+        pager.PageSizes = new Dictionary<Int32, string> { { 10, "10" }, { 25, "25" }, { 50, "50" }, {100, "100" } };
+        pager.ShowPageSizes = true;
+        pager.RowsPerPage = 10;
+    })
+)

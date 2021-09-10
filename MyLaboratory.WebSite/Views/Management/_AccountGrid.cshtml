@@ -1,0 +1,40 @@
+﻿@model IQueryable<MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel>
+
+@* Should only include grid declaration *@
+
+@(Html
+    .Grid(Model)
+    .Build(columns =>
+    {
+        columns.Add(model => model.Email).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.Email)]);
+        columns.Add(model => model.HashedPassword).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.HashedPassword)]);
+        columns.Add(model => model.FullName).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.FullName)]);
+        columns.Add(model => model.AvatarImagePath).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.AvatarImagePath)]);
+        columns.Add(model => model.Role).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.Role)]);
+        columns.Add(model => model.Locked).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.Locked)]);
+        columns.Add(model => model.LoginAttempt).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.LoginAttempt)]);
+        columns.Add(model => model.EmailConfirmed).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.EmailConfirmed)]);
+        columns.Add(model => model.AgreedServiceTerms).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.AgreedServiceTerms)]);
+        columns.Add(model => model.RegistrationToken).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.RegistrationToken)]);
+        columns.Add(model => model.ResetPasswordToken).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.ResetPasswordToken)]);
+        columns.Add(model => model.Created).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.Created)]);
+        columns.Add(model => model.Updated).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.Updated)]);
+        columns.Add(model => model.Message).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.Message)]);
+        columns.Add(model => model.Deleted).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.AccountOutputViewModel.Deleted)]);
+    })
+    .Id("accountGrid")
+    .Css("table table-striped")
+    .AppendCss("table-hover")
+    //.Attributed(new { data_type = "individuals" })
+    //.RowAttributed(model => new { @class = model.IsWorking == true ? "working" : null, data_id = model.Id })
+    .RowAttributed(model => new { @class = "table-inactive", data_email = model.Email})
+    .Using(GridFilterMode.Row)
+    .Empty(localizer["No data found"])
+    .Filterable()
+    .Sortable()
+    .Pageable(pager => {
+        pager.PageSizes = new Dictionary<Int32, string> { { 10, "10" }, { 25, "25" }, { 50, "50" }, {100, "100" } };
+        pager.ShowPageSizes = true;
+        pager.RowsPerPage = 10;
+    })
+)

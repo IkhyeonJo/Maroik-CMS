@@ -1,0 +1,126 @@
+﻿@using MyLaboratory.WebSite.Models.ViewModels.Account
+
+@model LoginOutputViewModel
+
+@{
+    bool repeatEmailSend = ViewBag.RepeatEmailSend ?? false;
+    bool resendEmail = ViewBag.ResendEmail ?? false;
+    string resentEmailAddress = ViewBag.ResentEmailAddress ?? "";
+    var error = TempData["Error"] as string;
+}
+
+@if (resendEmail == false)
+{
+    <div class="register-box">
+        <div class="card card-outline card-primary">
+            <div class="card-header text-center">
+                <a href="#" class="h1"><b>My</b>Laboratory</a>
+            </div>
+            <div class="card-body">
+                <p class="login-box-msg">@localizer["Register a new membership"]</p>
+
+                <form id="registerForm" class="form-horizontal" method="post" asp-controller="Account" asp-action="Register">
+                    @Html.AntiForgeryToken()
+                    <div class="form-group has-feedback">
+                        <input asp-for="FullName" type="text" class="form-control" placeholder="@localizer["Full Name"]" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+                    <div class="form-group has-feedback">
+                        <input asp-for="Email" type="email" class="form-control" placeholder="@localizer["Email"]" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+                    <div class="form-group has-feedback">
+                        <input asp-for="Password" type="password" class="form-control" placeholder="@localizer["Password"]" />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+                    <div class="form-group has-feedback">
+                        <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="@localizer["Confirm Password"]" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="icheck-primary">
+                                <input asp-for="AgreedServiceTerms" />
+                                <label for="AgreedServiceTerms">
+                                    @localizer["I agree to the"] <a asp-controller="Account" asp-action="ConsentForm" target="_blank" rel="noopener noreferrer">@localizer["terms"]</a> @* rel="noopener noreferrer" // prevent tabnabbing (https://www.freecodecamp.org/news/how-to-use-html-to-open-link-in-new-tab/) *@
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-primary btn-block" onclick="ShowRegisterLoading()">@localizer["Register"]</button>
+                        </div>
+                    </div>
+                </form>
+
+                <a asp-controller="Account" asp-action="Login" class="text-center">@localizer["I already have a membership"]</a>
+                <p class="mb-0">
+                    <font style="font-weight:bold" color="red">@error</font>
+                </p>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    if (repeatEmailSend == false)
+    {
+        <div class="register-box">
+            <div class="card card-outline card-primary">
+                <div class="card-header text-center">
+                    <a href="#" class="h1"><b>My</b>Laboratory</a>
+                </div>
+                <div class="card-body">
+                    <p class="login-box-msg">@localizer["Authentication Email has been sent"]</p>
+
+                    <form id="registerForm" class="form-horizontal" method="post" asp-controller="Account" asp-action="Register">
+                        @Html.AntiForgeryToken()
+                        <div class="form-group has-feedback">
+                            <input asp-for="Email" type="hidden" class="form-control" />
+                        </div>
+                        <p class="mb-0">
+                            <font style="font-weight:normal" color="black">@localizer["Please check {0}'s MailBox", resentEmailAddress]<br /><br />@localizer["If you do not receive an email,"] <br />@localizer["please check your spam folder or resend the email."]</font>
+                        </p>
+                        <button type="submit" class="btn btn-primary btn-block" onclick="ShowRegisterLoading()">@localizer["Resend"]</button>
+                    </form>
+                    <p class="mb-0">
+                        <font style="font-weight:bold" color="red">@error</font>
+                    </p>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="register-box">
+            <div class="card card-outline card-primary">
+                <div class="card-header text-center">
+                    <a href="#" class="h1"><b>My</b>Laboratory</a>
+                </div>
+                <div class="card-body">
+                    <p class="login-box-msg">@localizer["Authentication Email has been sent again"]</p>
+
+                    <form id="registerForm" class="form-horizontal" method="post" asp-controller="Account" asp-action="Register">
+                        @Html.AntiForgeryToken()
+                        <div class="form-group has-feedback">
+                            <input asp-for="Email" type="hidden" class="form-control" />
+                        </div>
+                        <p class="mb-0">
+                            <font style="font-weight:normal" color="black">@localizer["Please check {0}'s MailBox", resentEmailAddress]<br /><br />@localizer["If you do not receive an email,"] <br /> @localizer["please check your spam folder or resend the email."] <br /><br />@localizer["If you keep fail to receive authentication email,"] @localizer["please contact to"]<a href='mailto: joeun3518@gmail.com'> @localizer["Administrator"]</a></font>
+                        </p>
+                        <button type="submit" class="btn btn-primary btn-block" onclick="ShowRegisterLoading()">@localizer["Resend"]</button>
+                    </form>
+                    <p class="mb-0">
+                        <font style="font-weight:bold" color="red">@error</font>
+                    </p>
+                </div>
+            </div>
+        </div>
+    }
+}
+<div class="modal" id="loading">
+    <img src="~/anonymous/custom/Account/img/ajax-loader.gif" />
+</div>
+@section Scripts{
+    <script src="~/anonymous/custom/Account/js/site.js" asp-append-version="true"></script>
+}

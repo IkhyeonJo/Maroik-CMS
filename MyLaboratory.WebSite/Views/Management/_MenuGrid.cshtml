@@ -1,0 +1,35 @@
+﻿@model IQueryable<MyLaboratory.WebSite.Models.ViewModels.Management.MenuOutputViewModel>
+
+@* Should only include grid declaration *@
+
+@(Html
+    .Grid(Model)
+    .Build(columns =>
+    {
+        columns.Add(model => model.Id).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.MenuOutputViewModel.Id)]);
+        columns.Add(model => model.CategoryId).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.MenuOutputViewModel.CategoryId)]);
+        columns.Add(model => model.Name).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.MenuOutputViewModel.Name)]);
+        columns.Add(model => model.DisplayName).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.MenuOutputViewModel.DisplayName)]);
+        columns.Add(model => model.IconPath).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.MenuOutputViewModel.IconPath)]);
+        columns.Add(model => model.Controller).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.MenuOutputViewModel.Controller)]);
+        columns.Add(model => model.Action).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.MenuOutputViewModel.Action)]);
+        columns.Add(model => model.Role).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.MenuOutputViewModel.Role)]);
+        columns.Add(model => model.Order).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.Management.MenuOutputViewModel.Order)]);
+
+    })
+    .Id("menuGrid")
+    .Css("table table-striped")
+    .AppendCss("table-hover")
+    //.Attributed(new { data_type = "individuals" })
+    //.RowAttributed(model => new { @class = model.IsWorking == true ? "working" : null, data_id = model.Id })
+    .RowAttributed(model => new { @class = "table-inactive", data_id = model.Id, data_categoryid = model.CategoryId ?? -1 })
+    .Using(GridFilterMode.Row)
+    .Empty(localizer["No data found"])
+    .Filterable()
+    .Sortable()
+    .Pageable(pager => {
+        pager.PageSizes = new Dictionary<Int32, string> { { 10, "10" }, { 25, "25" }, { 50, "50" }, {100, "100" } };
+        pager.ShowPageSizes = true;
+        pager.RowsPerPage = 10;
+    })
+)

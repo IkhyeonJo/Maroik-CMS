@@ -1,0 +1,322 @@
+﻿@model MyLaboratory.Common.DataAccess.Models.Account
+@using MyLaboratory.WebSite.Common
+
+@{
+    var currentControllerName = ViewContext.RouteData.Values["Controller"].ToString();
+    var currentActionName = ViewContext.RouteData.Values["Action"].ToString();
+}
+
+<aside class="main-sidebar sidebar-dark-primary elevation-4">
+    @*<!-- Brand Logo -->*@
+    @if (Model.Role == Role.Admin)
+    {
+        <a asp-controller="DashBoard" asp-action="AdminIndex" class="brand-link">
+            <img src="~/admin/dist/img/AdminLTELogo.png" alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+            <span class="brand-text font-weight-light">MyLaboratory</span>
+        </a>
+    }
+    else if (Model.Role == Role.User)
+    {
+        <a asp-controller="DashBoard" asp-action="UserIndex" class="brand-link">
+            <img src="~/user/dist/img/AdminLTELogo.png" alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+            <span class="brand-text font-weight-light">MyLaboratory</span>
+        </a>
+    }
+    else
+    {
+
+    }
+
+    @*<!-- Sidebar -->*@
+<div class="sidebar">
+    @*<!-- Sidebar user panel (optional) -->*@
+    
+    @*
+    <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+        <div class="image">
+            @if (Model.Role == Role.Admin)
+            {
+                <img src="@Model.AvatarImagePath" class="img-circle elevation-2" alt="User Image">
+            }
+            else if (Model.Role == Role.User)
+            {
+                <img src="@Model.AvatarImagePath" class="img-circle elevation-2" alt="User Image">
+            }
+            else
+            {
+
+            }
+        </div>
+        <div class="info">
+            @if (Model.Role == Role.Admin)
+            {
+                <a href="#" class="d-block">@Model.FullName</a>
+            }
+            else if (Model.Role == Role.User)
+            {
+                <a href="#" class="d-block">@Model.FullName</a>
+            }
+            else
+            {
+
+            }
+        </div>
+    </div>
+    *@
+
+    @*<!-- SidebarSearch Form -->*@
+
+    @*
+        <div class="form-inline">
+            <div class="input-group" data-widget="sidebar-search">
+                <input class="form-control form-control-sidebar" type="search" placeholder="Search" aria-label="Search">
+                <div class="input-group-append">
+                    <button class="btn btn-sidebar">
+                        <i class="fas fa-search fa-fw"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    *@
+
+    @*<!-- Sidebar Menu -->*@
+    <nav class="mt-2">
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            @*<!-- Add icons to the links using the .nav-icon class
+                with font-awesome or any other icon font library -->*@
+
+            @if (Model.Role == Role.Admin) // 로그인 한 사용자의 권한이 Admin인 경우
+            {
+                var tempAdminCategories = from adminCategory in DbCache.AdminCategories
+                                          orderby adminCategory.Order ascending
+                                          select adminCategory;
+                var tempAdminSubCategories = DbCache.AdminSubCategories;
+
+                foreach (var tempAdminCategory in tempAdminCategories)
+                {
+                    if (!string.IsNullOrEmpty(tempAdminCategory.Action)) // 단일 카테고리
+                    {
+                        if (tempAdminCategory.Controller == currentControllerName && tempAdminCategory.Action == currentActionName) // 선택된 것이라면
+                        {
+                            <li class="nav-item">
+                                <a asp-controller="@tempAdminCategory.Controller" asp-action="@tempAdminCategory.Action" class="nav-link active">
+                                    <i class="@tempAdminCategory.IconPath"></i>
+                                    <p>
+                                        @localizer[tempAdminCategory.DisplayName]
+                                    </p>
+                                </a>
+                            </li>
+                        }
+                        else // 선택되지 않았다면
+                        {
+                            <li class="nav-item">
+                                <a asp-controller="@tempAdminCategory.Controller" asp-action="@tempAdminCategory.Action" class="nav-link">
+                                    <i class="@tempAdminCategory.IconPath"></i>
+                                    <p>
+                                        @localizer[tempAdminCategory.DisplayName]
+                                    </p>
+                                </a>
+                            </li>
+                        }
+                    }
+                    else if (string.IsNullOrEmpty(tempAdminCategory.Action)) // 다중 카테고리
+                    {
+                        var tempAdminSelectedSubCategories = from tempAdminSubCategory in tempAdminSubCategories
+                                                             where tempAdminCategory.Id == tempAdminSubCategory.CategoryId
+                                                             orderby tempAdminSubCategory.Order ascending
+                                                             select tempAdminSubCategory;
+
+                        bool isExistSelectedSubCategoryInCategory = false;
+
+                        foreach (var tempAdminSelectedSubCategory in tempAdminSelectedSubCategories)
+                        {
+                            if (tempAdminCategory.Controller == currentControllerName && tempAdminSelectedSubCategory.Action == currentActionName)
+                            {
+                                isExistSelectedSubCategoryInCategory = true;
+                                break;
+                            }
+                        }
+
+                        if (isExistSelectedSubCategoryInCategory == true)
+                        {
+                            <li class="nav-item menu-open">
+                                <a href="#" class="nav-link active">
+                                    <i class="@tempAdminCategory.IconPath"></i>
+                                    <p>
+                                        @localizer[tempAdminCategory.DisplayName]
+                                        <i class="right fas fa-angle-left"></i>
+                                    </p>
+                                </a>
+                                <ul class="nav nav-treeview">
+                                    @foreach (var tempAdminSelectedSubCategory in tempAdminSelectedSubCategories)
+                                    {
+                                        if (tempAdminSelectedSubCategory.Action == currentActionName)
+                                        {
+                                            <li class="nav-item">
+                                                <a asp-controller="@tempAdminCategory.Controller" asp-action="@tempAdminSelectedSubCategory.Action" class="nav-link active">
+                                                    <i class="@tempAdminSelectedSubCategory.IconPath"></i>
+                                                    <p>@localizer[tempAdminSelectedSubCategory.DisplayName]</p>
+                                                </a>
+                                            </li>
+                                        }
+                                        else
+                                        {
+                                            <li class="nav-item">
+                                                <a asp-controller="@tempAdminCategory.Controller" asp-action="@tempAdminSelectedSubCategory.Action" class="nav-link">
+                                                    <i class="@tempAdminSelectedSubCategory.IconPath"></i>
+                                                    <p>@localizer[tempAdminSelectedSubCategory.DisplayName]</p>
+                                                </a>
+                                            </li>
+                                        }
+                                    }
+                                </ul>
+                            </li>
+                        }
+                        else if (isExistSelectedSubCategoryInCategory == false)
+                        {
+                            <li class="nav-item">
+                                <a href="#" class="nav-link">
+                                    <i class="@tempAdminCategory.IconPath"></i>
+                                    <p>
+                                        @localizer[tempAdminCategory.DisplayName]
+                                        <i class="fas fa-angle-left right"></i>
+                                    </p>
+                                </a>
+                                <ul class="nav nav-treeview">
+                                    @foreach (var tempAdminSelectedSubCategory in tempAdminSelectedSubCategories)
+                                    {
+                                        <li class="nav-item">
+                                            <a asp-controller="@tempAdminCategory.Controller" asp-action="@tempAdminSelectedSubCategory.Action" class="nav-link">
+                                                <i class="@tempAdminSelectedSubCategory.IconPath"></i>
+                                                <p>@localizer[tempAdminSelectedSubCategory.DisplayName]</p>
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </li>
+                        }
+                    }
+                }
+
+            }
+            else if (Model.Role == Role.User) // 로그인 한 사용자의 권한이 User인 경우
+            {
+                var tempUserCategories = from userCategory in DbCache.UserCategories
+                                         orderby userCategory.Order ascending
+                                         select userCategory;
+                var tempUserSubCategories = DbCache.UserSubCategories;
+
+                foreach (var tempUserCategory in tempUserCategories)
+                {
+                    if (!string.IsNullOrEmpty(tempUserCategory.Action)) // 단일 카테고리
+                    {
+                        if (tempUserCategory.Controller == currentControllerName && tempUserCategory.Action == currentActionName) // 선택된 것이라면
+                        {
+                            <li class="nav-item">
+                                <a asp-controller="@tempUserCategory.Controller" asp-action="@tempUserCategory.Action" class="nav-link active">
+                                    <i class="@tempUserCategory.IconPath"></i>
+                                    <p>
+                                        @localizer[tempUserCategory.DisplayName]
+                                    </p>
+                                </a>
+                            </li>
+                        }
+                        else // 선택되지 않았다면
+                        {
+                            <li class="nav-item">
+                                <a asp-controller="@tempUserCategory.Controller" asp-action="@tempUserCategory.Action" class="nav-link">
+                                    <i class="@tempUserCategory.IconPath"></i>
+                                    <p>
+                                        @localizer[tempUserCategory.DisplayName]
+                                    </p>
+                                </a>
+                            </li>
+                        }
+                    }
+                    else if (string.IsNullOrEmpty(tempUserCategory.Action)) // 다중 카테고리
+                    {
+                        var tempUserSelectedSubCategories = from tempUserSubCategory in tempUserSubCategories
+                                                            where tempUserCategory.Id == tempUserSubCategory.CategoryId
+                                                            orderby tempUserSubCategory.Order ascending
+                                                            select tempUserSubCategory;
+
+                        bool isExistSelectedSubCategoryInCategory = false;
+
+                        foreach (var tempUserSelectedSubCategory in tempUserSelectedSubCategories)
+                        {
+                            if (tempUserCategory.Controller == currentControllerName && tempUserSelectedSubCategory.Action == currentActionName)
+                            {
+                                isExistSelectedSubCategoryInCategory = true;
+                                break;
+                            }
+                        }
+
+                        if (isExistSelectedSubCategoryInCategory == true)
+                        {
+                            <li class="nav-item menu-open">
+                                <a href="#" class="nav-link active">
+                                    <i class="@tempUserCategory.IconPath"></i>
+                                    <p>
+                                        @localizer[tempUserCategory.DisplayName]
+                                        <i class="right fas fa-angle-left"></i>
+                                    </p>
+                                </a>
+                                <ul class="nav nav-treeview">
+                                    @foreach (var tempUserSelectedSubCategory in tempUserSelectedSubCategories)
+                                    {
+                                        if (tempUserSelectedSubCategory.Action == currentActionName)
+                                        {
+                                            <li class="nav-item">
+                                                <a asp-controller="@tempUserCategory.Controller" asp-action="@tempUserSelectedSubCategory.Action" class="nav-link active">
+                                                    <i class="@tempUserSelectedSubCategory.IconPath"></i>
+                                                    <p>@localizer[tempUserSelectedSubCategory.DisplayName]</p>
+                                                </a>
+                                            </li>
+                                        }
+                                        else
+                                        {
+                                            <li class="nav-item">
+                                                <a asp-controller="@tempUserCategory.Controller" asp-action="@tempUserSelectedSubCategory.Action" class="nav-link">
+                                                    <i class="@tempUserSelectedSubCategory.IconPath"></i>
+                                                    <p>@localizer[tempUserSelectedSubCategory.DisplayName]</p>
+                                                </a>
+                                            </li>
+                                        }
+                                    }
+                                </ul>
+                            </li>
+                        }
+                        else if (isExistSelectedSubCategoryInCategory == false)
+                        {
+                            <li class="nav-item">
+                                <a href="#" class="nav-link">
+                                    <i class="@tempUserCategory.IconPath"></i>
+                                    <p>
+                                        @localizer[tempUserCategory.DisplayName]
+                                        <i class="fas fa-angle-left right"></i>
+                                    </p>
+                                </a>
+                                <ul class="nav nav-treeview">
+                                    @foreach (var tempUserSelectedSubCategory in tempUserSelectedSubCategories)
+                                    {
+                                        <li class="nav-item">
+                                            <a asp-controller="@tempUserCategory.Controller" asp-action="@tempUserSelectedSubCategory.Action" class="nav-link">
+                                                <i class="@tempUserSelectedSubCategory.IconPath"></i>
+                                                <p>@localizer[tempUserSelectedSubCategory.DisplayName]</p>
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </li>
+                        }
+                    }
+                }
+            }
+            else // 버그임. 로그인한 사용자는 Admin 또는 User 밖에 없음.
+            {
+
+            }
+        </ul>
+    </nav>
+</div>
+</aside>
