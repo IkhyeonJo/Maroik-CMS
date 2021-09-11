@@ -1,3 +1,7 @@
+# How to run this project
+
+## execute [MyLaboratory.sln] -> Open [1.Web] folder -> right-click [docker-compose] -> click "Set as Startup Project" -> Press F5 Button
+
 # I'm currently looking for a job
 # If you want to hire me, please send email. 
 # Email Address: joeun3518@gmail.com
@@ -10,10 +14,6 @@ I'm currently interested in make asp.net core mvc 5 WebServer!
 Docker, AdminLTE, MariaDB, Session Login, RESTful API, HTTPS etc.
 
 # IMPORTANT!! MUST Set this value [MyLaboratory.Site -> appsettings.json -> DomainName (According to Server Hostname)] & Mail Account & Docker-compose file's comment!!
-
-# How to run this project
-
-## execute [MyLaboratory.sln] -> Open [1.Web] folder -> right-click [docker-compose] -> click "Set as Startup Project" -> Press F5 Button
 
 ☞ 프로젝트명 : 스마트 홈 IoT & 가계부
 
