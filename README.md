@@ -27,6 +27,7 @@ I'm currently interested in make asp.net core mvc 5 WebServer!
 Docker, AdminLTE, MariaDB, Session Login, RESTful API, HTTPS etc.
 
 # IMPORTANT!! MUST Set this value [MyLaboratory.Site -> appsettings.json -> DomainName (According to Server Hostname)] & Mail Account & Docker-compose file's comment!!
+# IMPORTANT!! If file name is too long, you can short the file name by rename or save the file to C:\ location
 
 ☞ 프로젝트명 : 스마트 홈 IoT & 가계부
 
