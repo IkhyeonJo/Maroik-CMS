@@ -4,10 +4,10 @@
 
 # Login Account
 
-## Admin Account ID: admin@gmail.com
+## Admin Account ID: joeun3518@gmail.com
 ## Admin Account Password: Pa$$w0rd
 
-## User Account ID: user@gmail.com
+## User Account ID: iloveopencv12@naver.com
 ## User Account Password: Pa$$w0rd
 
 
