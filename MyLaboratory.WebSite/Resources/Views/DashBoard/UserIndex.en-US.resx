@@ -117,7 +117,25 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Online Store Visitors" xml:space="preserve">
-    <value>Online Store Visitors</value>
+  <data name="Consumer spending" xml:space="preserve">
+    <value>Consumer spending</value>
+  </data>
+  <data name="Expenditure this month" xml:space="preserve">
+    <value>Expenditure this month</value>
+  </data>
+  <data name="Income this month" xml:space="preserve">
+    <value>Income this month</value>
+  </data>
+  <data name="Irregular income" xml:space="preserve">
+    <value>Irregular income</value>
+  </data>
+  <data name="NonConsumer spending" xml:space="preserve">
+    <value>NonConsumer spending</value>
+  </data>
+  <data name="Regular income" xml:space="preserve">
+    <value>Regular income</value>
+  </data>
+  <data name="Regular savings" xml:space="preserve">
+    <value>Regular savings</value>
   </data>
 </root>

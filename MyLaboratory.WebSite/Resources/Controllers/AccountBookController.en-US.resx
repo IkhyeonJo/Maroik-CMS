@@ -219,6 +219,9 @@
   <data name="MyAssetTransfer" xml:space="preserve">
     <value>MyAssetTransfer</value>
   </data>
+  <data name="MyDepositAsset" xml:space="preserve">
+    <value>MyDepositAsset</value>
+  </data>
   <data name="No expenditure exists" xml:space="preserve">
     <value>No expenditure exists</value>
   </data>
@@ -242,6 +245,9 @@
   </data>
   <data name="OtherPhysicalAsset" xml:space="preserve">
     <value>OtherPhysicalAsset</value>
+  </data>
+  <data name="PaymentMethod" xml:space="preserve">
+    <value>PaymentMethod</value>
   </data>
   <data name="PensionIncome" xml:space="preserve">
     <value>PensionIncome</value>

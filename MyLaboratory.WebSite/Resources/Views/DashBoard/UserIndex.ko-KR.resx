@@ -117,7 +117,25 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Online Store Visitors" xml:space="preserve">
-    <value>온라인 상점 방문자들</value>
+  <data name="Consumer spending" xml:space="preserve">
+    <value>소비지출</value>
+  </data>
+  <data name="Expenditure this month" xml:space="preserve">
+    <value>이번달 지출</value>
+  </data>
+  <data name="Income this month" xml:space="preserve">
+    <value>이번달 수입</value>
+  </data>
+  <data name="Irregular income" xml:space="preserve">
+    <value>비정기수입</value>
+  </data>
+  <data name="NonConsumer spending" xml:space="preserve">
+    <value>비소비지출</value>
+  </data>
+  <data name="Regular income" xml:space="preserve">
+    <value>정기수입</value>
+  </data>
+  <data name="Regular savings" xml:space="preserve">
+    <value>정기저축</value>
   </data>
 </root>

@@ -195,6 +195,9 @@
   <data name="SubClass" xml:space="preserve">
     <value>소분류</value>
   </data>
+  <data name="Unpunctuality" xml:space="preserve">
+    <value>시간 미엄수</value>
+  </data>
   <data name="Yellow Row" xml:space="preserve">
     <value>황색 행</value>
   </data>

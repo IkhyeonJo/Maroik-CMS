@@ -153,6 +153,9 @@
   <data name="Income" xml:space="preserve">
     <value>수입</value>
   </data>
+  <data name="MachineLearning" xml:space="preserve">
+    <value>기계학습</value>
+  </data>
   <data name="Management" xml:space="preserve">
     <value>관리</value>
   </data>

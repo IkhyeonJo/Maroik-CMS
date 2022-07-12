@@ -5,7 +5,7 @@
     .Grid(Model)
     .Build(columns =>
     {
-        columns.Add(model => model.Id).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.Id)]);
+        columns.Add(model => model.Id).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.Id)]).Hidden();
         columns.Add(model => model.MainClass).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.MainClass)]);
         columns.Add(model => model.SubClass).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.SubClass)]);
         columns.Add(model => model.Contents).Titled(localizer[nameof(MyLaboratory.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.Contents)]);

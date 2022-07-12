@@ -141,12 +141,6 @@
   <data name="Deposit date is near." xml:space="preserve">
     <value>입금일이 임박했습니다.</value>
   </data>
-  <data name="DepositDay" xml:space="preserve">
-    <value>입금일</value>
-  </data>
-  <data name="DepositMonth" xml:space="preserve">
-    <value>입금월</value>
-  </data>
   <data name="EDIT" xml:space="preserve">
     <value>편집</value>
   </data>
@@ -197,6 +191,15 @@
   </data>
   <data name="SubClass" xml:space="preserve">
     <value>소분류</value>
+  </data>
+  <data name="Unpunctuality" xml:space="preserve">
+    <value>시간 미엄수</value>
+  </data>
+  <data name="WithdrawalDay" xml:space="preserve">
+    <value>출금일</value>
+  </data>
+  <data name="WithdrawalMonth" xml:space="preserve">
+    <value>출금월</value>
   </data>
   <data name="Yellow Row" xml:space="preserve">
     <value>황색 행</value>

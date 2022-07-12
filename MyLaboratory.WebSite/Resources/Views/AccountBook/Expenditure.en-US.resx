@@ -178,7 +178,7 @@
     <value>SubClass</value>
   </data>
   <data name="가구간 이전지출" xml:space="preserve">
-    <value>Inter household transer</value>
+    <value>Inter household transfer expenses</value>
   </data>
   <data name="공적연금" xml:space="preserve">
     <value>Public pension</value>
@@ -241,7 +241,7 @@
     <value>Regular savings</value>
   </data>
   <data name="주거/용품비" xml:space="preserve">
-    <value>Housing or suppliesCost</value>
+    <value>Housing or supplies cost</value>
   </data>
   <data name="통신비" xml:space="preserve">
     <value>Communication cost</value>

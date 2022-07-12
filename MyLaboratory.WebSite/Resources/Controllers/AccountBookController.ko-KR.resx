@@ -219,6 +219,9 @@
   <data name="MyAssetTransfer" xml:space="preserve">
     <value>내자산이체</value>
   </data>
+  <data name="MyDepositAsset" xml:space="preserve">
+    <value>내입금자산</value>
+  </data>
   <data name="No expenditure exists" xml:space="preserve">
     <value>지출이 없습니다.</value>
   </data>
@@ -242,6 +245,9 @@
   </data>
   <data name="OtherPhysicalAsset" xml:space="preserve">
     <value>기타실물자산</value>
+  </data>
+  <data name="PaymentMethod" xml:space="preserve">
+    <value>결제수단</value>
   </data>
   <data name="PensionIncome" xml:space="preserve">
     <value>연금수입</value>

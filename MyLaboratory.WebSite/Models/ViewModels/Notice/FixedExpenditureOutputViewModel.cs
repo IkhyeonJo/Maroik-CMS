@@ -50,5 +50,7 @@ namespace MyLaboratory.WebSite.Models.ViewModels.Notice
         public string Note { get; set; }
         public bool Noticed { get; set; }
         public bool Expired { get; set; }
+        [Display(Name = "Unpunctuality")]
+        public bool Unpunctuality { get; set; }
     }
 }

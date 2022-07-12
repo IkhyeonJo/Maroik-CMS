@@ -431,6 +431,7 @@ function EditFixedIncomeGridRow(errorMessageSelectGridRow) {
                 formEditFixedIncome.find('input[id="editFixedIncomeMaturityDate"]').val(data.fixedIncome.maturityDate);
                 formEditFixedIncome.find('input[id="editFixedIncomeNote"]').val(data.fixedIncome.note);
                 formEditFixedIncome.find('select[id="editFixedIncomeDepositMyAssetProductName"]').val(data.fixedIncome.depositMyAssetProductName).change();
+                formEditFixedIncome.find('input[id="editFixedIncomeUnpunctuality"]').prop("checked", data.fixedIncome.unpunctuality);
 
                 $('#editFixedIncomeDialogModal').modal({
                     keyboard: false,
@@ -465,6 +466,7 @@ function UpdateFixedIncome() {
     var maturityDate = createForm.find('input[id="editFixedIncomeMaturityDate"]').val();
     var note = createForm.find('input[id="editFixedIncomeNote"]').val();
     var depositMyAssetProductName = createForm.find('select[id="editFixedIncomeDepositMyAssetProductName"]').val();
+    var unpunctuality = createForm.find('input[id="editFixedIncomeUnpunctuality"]').is(":checked");
 
     var paramValue = JSON.stringify({
         Id: id,
@@ -476,7 +478,8 @@ function UpdateFixedIncome() {
         DepositDay: depositDay,
         MaturityDate: maturityDate,
         Note: note,
-        DepositMyAssetProductName: depositMyAssetProductName
+        DepositMyAssetProductName: depositMyAssetProductName,
+        Unpunctuality: unpunctuality
     });
 
     $.ajax({

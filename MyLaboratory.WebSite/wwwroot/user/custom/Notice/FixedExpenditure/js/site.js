@@ -723,6 +723,8 @@ function EditFixedExpenditureGridRow(errorMessageSelectGridRow) {
                     $("#divEditFixedExpenditureMyDepositAsset").hide();
                 }
 
+                formEditFixedExpenditure.find('input[id="editFixedExpenditureUnpunctuality"]').prop("checked", data.fixedExpenditure.unpunctuality);
+
                 $('#editFixedExpenditureDialogModal').modal({
                     keyboard: false,
                     backdrop: "static"
@@ -892,6 +894,7 @@ function UpdateFixedExpenditure() {
     var note = createForm.find('input[id="editFixedExpenditureNote"]').val();
     var paymentMethod = createForm.find('select[id="editFixedExpenditurePaymentMethod"]').val();
     var myDepositAsset = createForm.find('select[id="editFixedExpenditureMyDepositAsset"]').val();
+    var unpunctuality = createForm.find('input[id="editFixedExpenditureUnpunctuality"]').is(":checked");
 
     var paramValue = JSON.stringify({
         Id: id,
@@ -904,7 +907,8 @@ function UpdateFixedExpenditure() {
         MaturityDate: maturityDate,
         Note: note,
         PaymentMethod: paymentMethod,
-        MyDepositAsset: myDepositAsset
+        MyDepositAsset: myDepositAsset,
+        Unpunctuality: unpunctuality
     });
 
     $.ajax({

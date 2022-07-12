@@ -54,7 +54,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createIncomeMainClass">@localizer["MainClass"].Value</label>
                                 <br />
-                                <select id="createIncomeMainClass" name="createIncomeMainClass" onchange="CreateFormShowIncomeSubClassBySelectedIncomeMainClass(this)">
+                                <select id="createIncomeMainClass" name="createIncomeMainClass" onchange="CreateFormShowIncomeSubClassBySelectedIncomeMainClass(this)" style="max-width:90%;">
                                     <option value="RegularIncome" selected="selected">@localizer["정기수입"].Value</option>
                                     <option value="IrregularIncome">@localizer["비정기수입"].Value</option>
                                 </select>
@@ -62,7 +62,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createIncomeSubClass">@localizer["SubClass"].Value</label>
                                 <br />
-                                <select id="createIncomeSubClass" name="createIncomeSubClass">
+                                <select id="createIncomeSubClass" name="createIncomeSubClass" style="max-width:90%;">
                                     <option value="LaborIncome" selected="selected">@localizer["근로수입"].Value</option>
                                     <option value="BusinessIncome">@localizer["사업수입"].Value</option>
                                     <option value="PensionIncome">@localizer["연금수입"].Value</option>
@@ -87,7 +87,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createIncomeDepositMyAssetProductName">@localizer["DepositMyAssetProductName"].Value</label>
                                 <br />
-                                <select id="createIncomeDepositMyAssetProductName" name="createIncomeDepositMyAssetProductName">
+                                <select id="createIncomeDepositMyAssetProductName" name="createIncomeDepositMyAssetProductName" style="max-width:90%;width:210px;text-overflow:ellipsis;">
                                     @foreach (var item in await assetRepository.GetAssetsAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email))
                                     {
                                         if (!item.Deleted)
@@ -131,7 +131,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editIncomeMainClass">@localizer["MainClass"].Value</label>
                                 <br />
-                                <select id="editIncomeMainClass" name="editIncomeMainClass" onchange="EditFormShowIncomeSubClassBySelectedIncomeMainClass(this)">
+                                <select id="editIncomeMainClass" name="editIncomeMainClass" onchange="EditFormShowIncomeSubClassBySelectedIncomeMainClass(this)" style="max-width:90%;">
                                     <option value="RegularIncome">@localizer["정기수입"].Value</option>
                                     <option value="IrregularIncome">@localizer["비정기수입"].Value</option>
                                 </select>
@@ -139,7 +139,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editIncomeSubClass">@localizer["SubClass"].Value</label>
                                 <br />
-                                <select id="editIncomeSubClass" name="editIncomeSubClass">
+                                <select id="editIncomeSubClass" name="editIncomeSubClass" style="max-width:90%;">
                                     <option value="LaborIncome">@localizer["근로수입"].Value</option>
                                     <option value="BusinessIncome">@localizer["사업수입"].Value</option>
                                     <option value="PensionIncome">@localizer["연금수입"].Value</option>
@@ -164,7 +164,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editIncomeDepositMyAssetProductName">@localizer["DepositMyAssetProductName"].Value</label>
                                 <br />
-                                <select id="editIncomeDepositMyAssetProductName" name="editIncomeDepositMyAssetProductName">
+                                <select id="editIncomeDepositMyAssetProductName" name="editIncomeDepositMyAssetProductName" style="max-width:90%;width:210px;text-overflow:ellipsis;">
                                     @foreach (var item in await assetRepository.GetAssetsAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email))
                                     {
                                         if (!item.Deleted)

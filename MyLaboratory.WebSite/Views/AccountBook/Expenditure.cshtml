@@ -54,7 +54,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createExpenditureMainClass">@localizer["MainClass"].Value</label>
                                 <br />
-                                <select id="createExpenditureMainClass" name="createExpenditureMainClass" onchange="CreateFormShowExpenditureSubClassBySelectedExpenditureMainClass(this)">
+                                <select id="createExpenditureMainClass" name="createExpenditureMainClass" onchange="CreateFormShowExpenditureSubClassBySelectedExpenditureMainClass(this)" style="max-width:90%;">
                                     <option value="RegularSavings" selected="selected">@localizer["정기저축"].Value</option>
                                     <option value="NonConsumerSpending">@localizer["비소비지출"].Value</option>
                                     <option value="ConsumerSpending">@localizer["소비지출"].Value</option>
@@ -63,7 +63,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createExpenditureSubClass">@localizer["SubClass"].Value</label>
                                 <br />
-                                <select id="createExpenditureSubClass" name="createExpenditureSubClass" onchange="CreateFormShowExpenditureDivCreateExpenditureMyDepositAssetBySelectedExpenditureSubClass(this)">
+                                <select id="createExpenditureSubClass" name="createExpenditureSubClass" onchange="CreateFormShowExpenditureDivCreateExpenditureMyDepositAssetBySelectedExpenditureSubClass(this)" style="max-width:90%;">
                                     @*정기저축*@
                                     <option value="Deposit" selected="selected">@localizer["예적금"].Value</option>
                                     <option value="MyAssetTransfer">@localizer["내자산이체"].Value</option>
@@ -106,7 +106,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createExpenditurePaymentMethod">@localizer["PaymentMethod"].Value</label>
                                 <br />
-                                <select id="createExpenditurePaymentMethod" name="createExpenditurePaymentMethod">
+                                <select id="createExpenditurePaymentMethod" name="createExpenditurePaymentMethod" style="max-width:90%;width:210px;text-overflow:ellipsis;">
                                     @foreach (var item in await assetRepository.GetAssetsAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email))
                                     {
                                         if (!item.Deleted)
@@ -125,7 +125,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createExpenditureMyDepositAsset">@localizer["MyDepositAsset"].Value</label>
                                 <br />
-                                <select id="createExpenditureMyDepositAsset" name="createExpenditureMyDepositAsset">
+                                <select id="createExpenditureMyDepositAsset" name="createExpenditureMyDepositAsset" style="max-width:90%;width:210px;text-overflow:ellipsis;">
                                     @foreach (var item in await assetRepository.GetAssetsAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email))
                                     {
                                         if (!item.Deleted)
@@ -164,7 +164,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editExpenditureMainClass">@localizer["MainClass"].Value</label>
                                 <br />
-                                <select id="editExpenditureMainClass" name="editExpenditureMainClass" onchange="EditFormShowExpenditureSubClassBySelectedExpenditureMainClass(this)">
+                                <select id="editExpenditureMainClass" name="editExpenditureMainClass" onchange="EditFormShowExpenditureSubClassBySelectedExpenditureMainClass(this)" style="max-width:90%;">
                                     <option value="RegularSavings" selected="selected">@localizer["정기저축"].Value</option>
                                     <option value="NonConsumerSpending">@localizer["비소비지출"].Value</option>
                                     <option value="ConsumerSpending">@localizer["소비지출"].Value</option>
@@ -173,7 +173,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editExpenditureSubClass">@localizer["SubClass"].Value</label>
                                 <br />
-                                <select id="editExpenditureSubClass" name="editExpenditureSubClass" onchange="EditFormShowExpenditureDivCreateExpenditureMyDepositAssetBySelectedExpenditureSubClass(this)">
+                                <select id="editExpenditureSubClass" name="editExpenditureSubClass" onchange="EditFormShowExpenditureDivCreateExpenditureMyDepositAssetBySelectedExpenditureSubClass(this)" style="max-width:90%;">
                                     @*정기저축*@
                                     <option value="Deposit" selected="selected">@localizer["예적금"].Value</option>
                                     <option value="MyAssetTransfer">@localizer["내자산이체"].Value</option>
@@ -216,7 +216,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editExpenditurePaymentMethod">@localizer["PaymentMethod"].Value</label>
                                 <br />
-                                <select id="editExpenditurePaymentMethod" name="editExpenditurePaymentMethod">
+                                <select id="editExpenditurePaymentMethod" name="editExpenditurePaymentMethod" style="max-width:90%;width:210px;text-overflow:ellipsis;">
                                     @foreach (var item in await assetRepository.GetAssetsAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email))
                                     {
                                         if (!item.Deleted)
@@ -235,7 +235,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editExpenditureMyDepositAsset">@localizer["MyDepositAsset"].Value</label>
                                 <br />
-                                <select id="editExpenditureMyDepositAsset" name="editExpenditureMyDepositAsset">
+                                <select id="editExpenditureMyDepositAsset" name="editExpenditureMyDepositAsset" style="max-width:90%;width:210px;text-overflow:ellipsis;">
                                     @foreach (var item in await assetRepository.GetAssetsAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email))
                                     {
                                         if (!item.Deleted)

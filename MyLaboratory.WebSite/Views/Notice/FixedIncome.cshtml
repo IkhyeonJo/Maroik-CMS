@@ -59,7 +59,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createFixedIncomeMainClass">@localizer["MainClass"].Value</label>
                                 <br />
-                                <select id="createFixedIncomeMainClass" name="createFixedIncomeMainClass" onchange="CreateFormShowFixedIncomeSubClassBySelectedFixedIncomeMainClass(this)">
+                                <select id="createFixedIncomeMainClass" name="createFixedIncomeMainClass" onchange="CreateFormShowFixedIncomeSubClassBySelectedFixedIncomeMainClass(this)" style="max-width:90%;">
                                     <option value="RegularIncome" selected="selected">@localizer["정기수입"].Value</option>
                                     <option value="IrregularIncome">@localizer["비정기수입"].Value</option>
                                 </select>
@@ -67,7 +67,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createFixedIncomeSubClass">@localizer["SubClass"].Value</label>
                                 <br />
-                                <select id="createFixedIncomeSubClass" name="createFixedIncomeSubClass">
+                                <select id="createFixedIncomeSubClass" name="createFixedIncomeSubClass" style="max-width:90%;">
                                     <option value="LaborIncome" selected="selected">@localizer["근로수입"].Value</option>
                                     <option value="BusinessIncome">@localizer["사업수입"].Value</option>
                                     <option value="PensionIncome">@localizer["연금수입"].Value</option>
@@ -92,7 +92,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createFixedIncomeDepositMonth">@localizer["DepositMonth"].Value</label>
                                 <br />
-                                <select id="createFixedIncomeDepositMonth" name="createFixedIncomeDepositMonth" onchange="CreateFormShowFixedIncomeDepositDayBySelectedFixedIncomeDepositMonth(this)">
+                                <select id="createFixedIncomeDepositMonth" name="createFixedIncomeDepositMonth" onchange="CreateFormShowFixedIncomeDepositDayBySelectedFixedIncomeDepositMonth(this)" style="max-width:90%;">
                                     <option value="1" selected="selected">1</option>
                                     @for (int i = 2; i <= 12; i++)
                                     {
@@ -104,7 +104,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createFixedIncomeDepositDay">@localizer["DepositDay"].Value</label>
                                 <br />
-                                <select id="createFixedIncomeDepositDay" name="createFixedIncomeDepositDay">
+                                <select id="createFixedIncomeDepositDay" name="createFixedIncomeDepositDay" style="max-width:90%;">
                                     <option value="1" selected="selected">1</option>
                                     @for (int i = 2; i <= 31; i++)
                                     {
@@ -128,7 +128,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createFixedIncomeDepositMyAssetProductName">@localizer["DepositMyAssetProductName"].Value</label>
                                 <br />
-                                <select id="createFixedIncomeDepositMyAssetProductName" name="createFixedIncomeDepositMyAssetProductName">
+                                <select id="createFixedIncomeDepositMyAssetProductName" name="createFixedIncomeDepositMyAssetProductName" style="max-width:90%;width:210px;text-overflow:ellipsis;">
                                     @foreach (var item in await assetRepository.GetAssetsAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email))
                                     {
                                         if (!item.Deleted)
@@ -168,7 +168,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editFixedIncomeMainClass">@localizer["MainClass"].Value</label>
                                 <br />
-                                <select id="editFixedIncomeMainClass" name="editFixedIncomeMainClass" onchange="EditFormShowFixedIncomeSubClassBySelectedFixedIncomeMainClass(this)">
+                                <select id="editFixedIncomeMainClass" name="editFixedIncomeMainClass" onchange="EditFormShowFixedIncomeSubClassBySelectedFixedIncomeMainClass(this)" style="max-width:90%;">
                                     <option value="RegularIncome">@localizer["정기수입"].Value</option>
                                     <option value="IrregularIncome">@localizer["비정기수입"].Value</option>
                                 </select>
@@ -176,7 +176,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editFixedIncomeSubClass">@localizer["SubClass"].Value</label>
                                 <br />
-                                <select id="editFixedIncomeSubClass" name="editFixedIncomeSubClass">
+                                <select id="editFixedIncomeSubClass" name="editFixedIncomeSubClass" style="max-width:90%;">
                                     <option value="LaborIncome">@localizer["근로수입"].Value</option>
                                     <option value="BusinessIncome">@localizer["사업수입"].Value</option>
                                     <option value="PensionIncome">@localizer["연금수입"].Value</option>
@@ -201,7 +201,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editFixedIncomeDepositMonth">@localizer["DepositMonth"].Value</label>
                                 <br />
-                                <select id="editFixedIncomeDepositMonth" name="editFixedIncomeDepositMonth" onchange="EditFormShowFixedIncomeDepositDayBySelectedFixedIncomeDepositMonth(this)">
+                                <select id="editFixedIncomeDepositMonth" name="editFixedIncomeDepositMonth" onchange="EditFormShowFixedIncomeDepositDayBySelectedFixedIncomeDepositMonth(this)" style="max-width:90%;">
                                     <option value="1" selected="selected">1</option>
                                     @for (int i = 2; i <= 12; i++)
                                     {
@@ -213,7 +213,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editFixedIncomeDepositDay">@localizer["DepositDay"].Value</label>
                                 <br />
-                                <select id="editFixedIncomeDepositDay" name="editFixedIncomeDepositDay">
+                                <select id="editFixedIncomeDepositDay" name="editFixedIncomeDepositDay" style="max-width:90%;">
                                     <option value="1" selected="selected">1</option>
                                     @for (int i = 2; i <= 31; i++)
                                     {
@@ -237,7 +237,7 @@
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editFixedIncomeDepositMyAssetProductName">@localizer["DepositMyAssetProductName"].Value</label>
                                 <br />
-                                <select id="editFixedIncomeDepositMyAssetProductName" name="editFixedIncomeDepositMyAssetProductName">
+                                <select id="editFixedIncomeDepositMyAssetProductName" name="editFixedIncomeDepositMyAssetProductName" style="max-width:90%;width:210px;text-overflow:ellipsis;">
                                     @foreach (var item in await assetRepository.GetAssetsAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email))
                                     {
                                         if (!item.Deleted)
@@ -246,6 +246,12 @@
                                         }
                                     }
                                 </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedIncomeUnpunctuality">@localizer["Unpunctuality"].Value</label>
+                                <input class="form-control form-control-sm" type="checkbox" id="editFixedIncomeUnpunctuality" name="editFixedIncomeUnpunctuality" />
                             </div>
                         </div>
                         <div class="modal-footer justify-content-between">

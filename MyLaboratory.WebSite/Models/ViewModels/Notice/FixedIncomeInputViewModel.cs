@@ -39,5 +39,7 @@ namespace MyLaboratory.WebSite.Models.ViewModels.Notice
         [Required(ErrorMessage = "Please enter DepositMyAssetProductName")]
         [Display(Name = "DepositMyAssetProductName")]
         public string DepositMyAssetProductName { get; set; }
+        [Display(Name = "Unpunctuality")]
+        public bool Unpunctuality { get; set; }
     }
 }

@@ -508,8 +508,7 @@ namespace MyLaboratory.WebSite.Controllers
                     }
                     else
                     {
-                        if ((item.Id.ToString() ?? "").Contains(wholeSearch) ||
-                            localizer[item.MainClass?.ToString() ?? ""].Value.Contains(wholeSearch) ||
+                        if (localizer[item.MainClass?.ToString() ?? ""].Value.Contains(wholeSearch) ||
                             localizer[item.SubClass?.ToString() ?? ""].Value.Contains(wholeSearch) ||
                             (item.Contents?.ToString() ?? "").Contains(wholeSearch) ||
                             (item.Amount.ToString() ?? "").Contains(wholeSearch) ||
@@ -778,7 +777,6 @@ namespace MyLaboratory.WebSite.Controllers
             {
                 incomeOutputViewModels.Add(new IncomeOutputViewModel()
                 {
-                    Id = item.Id,
                     MainClass = item.MainClass,
                     SubClass = item.SubClass,
                     Contents = item.Contents,
@@ -800,28 +798,26 @@ namespace MyLaboratory.WebSite.Controllers
                 workSheetMenuOutputViewModels.Row(1).Height = 20;
                 workSheetMenuOutputViewModels.Row(1).Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
                 workSheetMenuOutputViewModels.Row(1).Style.Font.Bold = true;
-                workSheetMenuOutputViewModels.Cells[1, 1].Value = localizer[nameof(IncomeOutputViewModel.Id).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 2].Value = localizer[nameof(IncomeOutputViewModel.MainClass).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 3].Value = localizer[nameof(IncomeOutputViewModel.SubClass).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 4].Value = localizer[nameof(IncomeOutputViewModel.Contents).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 5].Value = localizer[nameof(IncomeOutputViewModel.Amount).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 6].Value = localizer[nameof(IncomeOutputViewModel.DepositMyAssetProductName).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 7].Value = localizer[nameof(IncomeOutputViewModel.Created).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 8].Value = localizer[nameof(IncomeOutputViewModel.Updated).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 9].Value = localizer[nameof(IncomeOutputViewModel.Note).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 1].Value = localizer[nameof(IncomeOutputViewModel.MainClass).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 2].Value = localizer[nameof(IncomeOutputViewModel.SubClass).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 3].Value = localizer[nameof(IncomeOutputViewModel.Contents).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 4].Value = localizer[nameof(IncomeOutputViewModel.Amount).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 5].Value = localizer[nameof(IncomeOutputViewModel.DepositMyAssetProductName).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 6].Value = localizer[nameof(IncomeOutputViewModel.Created).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 7].Value = localizer[nameof(IncomeOutputViewModel.Updated).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 8].Value = localizer[nameof(IncomeOutputViewModel.Note).ToString()].Value;
 
                 int recordIndex = 2;
                 foreach (var item in incomeOutputViewModels)
                 {
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 1].Value = item.Id;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 2].Value = localizer[item?.MainClass?.ToString() ?? ""].Value;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 3].Value = localizer[item?.SubClass?.ToString() ?? ""].Value;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 4].Value = item.Contents;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 5].Value = item.Amount;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 6].Value = item.DepositMyAssetProductName;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 7].Value = item.Created.ToString();
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 8].Value = item.Updated.ToString();
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 9].Value = item.Note;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 1].Value = localizer[item?.MainClass?.ToString() ?? ""].Value;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 2].Value = localizer[item?.SubClass?.ToString() ?? ""].Value;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 3].Value = item.Contents;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 4].Value = item.Amount;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 5].Value = item.DepositMyAssetProductName;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 6].Value = item.Created.ToString();
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 7].Value = item.Updated.ToString();
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 8].Value = item.Note;
                     recordIndex++;
                 }
 
@@ -1157,8 +1153,7 @@ namespace MyLaboratory.WebSite.Controllers
                     }
                     else
                     {
-                        if ((item.Id.ToString() ?? "").Contains(wholeSearch) ||
-                            localizer[item.MainClass?.ToString() ?? ""].Value.Contains(wholeSearch) ||
+                        if (localizer[item.MainClass?.ToString() ?? ""].Value.Contains(wholeSearch) ||
                             localizer[item.SubClass?.ToString() ?? ""].Value.Contains(wholeSearch) ||
                             (item.Contents?.ToString() ?? "").Contains(wholeSearch) ||
                             (item.Amount.ToString() ?? "").Contains(wholeSearch) ||
@@ -1327,7 +1322,7 @@ namespace MyLaboratory.WebSite.Controllers
 
                                         var currentExpenditureAsset = await assetRepository.GetAssetAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email, currentTempExpenditure.PaymentMethod);
                                         var currentIncomeAsset = await assetRepository.GetAssetAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email, currentTempExpenditure.MyDepositAsset);
-                                        
+
                                         #region 과거 자산
                                         pastExpenditureAsset.Amount += Math.Abs(previousTempExpenditure.Amount);
                                         pastExpenditureAsset.Updated = DateTime.UtcNow;
@@ -2033,7 +2028,7 @@ namespace MyLaboratory.WebSite.Controllers
                                     #region 지출 업데이트
                                     await expenditureRepository.UpdateExpenditureAsync(currentTempExpenditure);
                                     #endregion
-                                    
+
                                     if (previousTempExpenditure.PaymentMethod == currentTempExpenditure.PaymentMethod)
                                     {
                                         if (previousTempExpenditure.MyDepositAsset == currentTempExpenditure.MyDepositAsset)
@@ -2985,7 +2980,7 @@ namespace MyLaboratory.WebSite.Controllers
                 HttpContext.Session.TryGetValue("AccountSession", out byte[] resultByte);
 
                 var tempExpenditures = await expenditureRepository.GetExpendituresAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email);
-                
+
                 if (tempExpenditures == null)
                 {
                     return Json(new { result = false, error = localizer["Input is invalid"].Value });
@@ -3081,7 +3076,6 @@ namespace MyLaboratory.WebSite.Controllers
             {
                 expenditureOutputViewModels.Add(new ExpenditureOutputViewModel()
                 {
-                    Id = item.Id,
                     MainClass = localizer[item.MainClass.ToString()].Value,
                     SubClass = localizer[item.SubClass.ToString()].Value,
                     Contents = item.Contents,
@@ -3104,31 +3098,29 @@ namespace MyLaboratory.WebSite.Controllers
                 workSheetMenuOutputViewModels.Row(1).Height = 20;
                 workSheetMenuOutputViewModels.Row(1).Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
                 workSheetMenuOutputViewModels.Row(1).Style.Font.Bold = true;
-                workSheetMenuOutputViewModels.Cells[1, 1].Value = localizer[nameof(ExpenditureOutputViewModel.Id).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 2].Value = localizer[nameof(ExpenditureOutputViewModel.MainClass).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 3].Value = localizer[nameof(ExpenditureOutputViewModel.SubClass).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 4].Value = localizer[nameof(ExpenditureOutputViewModel.Contents).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 5].Value = localizer[nameof(ExpenditureOutputViewModel.Amount).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 6].Value = localizer[nameof(ExpenditureOutputViewModel.PaymentMethod).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 7].Value = localizer[nameof(ExpenditureOutputViewModel.Note).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 8].Value = localizer[nameof(ExpenditureOutputViewModel.MyDepositAsset).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 9].Value = localizer[nameof(ExpenditureOutputViewModel.Created).ToString()].Value;
-                workSheetMenuOutputViewModels.Cells[1, 10].Value = localizer[nameof(ExpenditureOutputViewModel.Updated).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 1].Value = localizer[nameof(ExpenditureOutputViewModel.MainClass).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 2].Value = localizer[nameof(ExpenditureOutputViewModel.SubClass).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 3].Value = localizer[nameof(ExpenditureOutputViewModel.Contents).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 4].Value = localizer[nameof(ExpenditureOutputViewModel.Amount).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 5].Value = localizer[nameof(ExpenditureOutputViewModel.PaymentMethod).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 6].Value = localizer[nameof(ExpenditureOutputViewModel.Note).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 7].Value = localizer[nameof(ExpenditureOutputViewModel.MyDepositAsset).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 8].Value = localizer[nameof(ExpenditureOutputViewModel.Created).ToString()].Value;
+                workSheetMenuOutputViewModels.Cells[1, 9].Value = localizer[nameof(ExpenditureOutputViewModel.Updated).ToString()].Value;
 
                 int recordIndex = 2;
                 foreach (var item in expenditureOutputViewModels)
                 {
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 1].Value = item.Id;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 2].Value = localizer[item?.MainClass?.ToString() ?? ""].Value;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 3].Value = localizer[item?.SubClass?.ToString() ?? ""].Value;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 4].Value = item.Contents;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 5].Value = item.Amount;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 6].Value = item.PaymentMethod;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 7].Value = item.Note;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 8].Value = item.MyDepositAsset;
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 9].Value = item.Created.ToString();
-                    workSheetMenuOutputViewModels.Cells[recordIndex, 10].Value = item.Updated.ToString();
-                    
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 1].Value = localizer[item?.MainClass?.ToString() ?? ""].Value;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 2].Value = localizer[item?.SubClass?.ToString() ?? ""].Value;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 3].Value = item.Contents;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 4].Value = item.Amount;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 5].Value = item.PaymentMethod;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 6].Value = item.Note;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 7].Value = item.MyDepositAsset;
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 8].Value = item.Created.ToString();
+                    workSheetMenuOutputViewModels.Cells[recordIndex, 9].Value = item.Updated.ToString();
+
                     recordIndex++;
                 }
 

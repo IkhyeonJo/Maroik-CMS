@@ -141,12 +141,6 @@
   <data name="Deposit date is near." xml:space="preserve">
     <value>Deposit date is near.</value>
   </data>
-  <data name="DepositDay" xml:space="preserve">
-    <value>DepositDay</value>
-  </data>
-  <data name="DepositMonth" xml:space="preserve">
-    <value>DepositMonth</value>
-  </data>
   <data name="EDIT" xml:space="preserve">
     <value>EDIT</value>
   </data>
@@ -197,6 +191,15 @@
   </data>
   <data name="SubClass" xml:space="preserve">
     <value>SubClass</value>
+  </data>
+  <data name="Unpunctuality" xml:space="preserve">
+    <value>Unpunctuality</value>
+  </data>
+  <data name="WithdrawalDay" xml:space="preserve">
+    <value>WithdrawalDay</value>
+  </data>
+  <data name="WithdrawalMonth" xml:space="preserve">
+    <value>WithdrawalMonth</value>
   </data>
   <data name="Yellow Row" xml:space="preserve">
     <value>Yellow Row</value>

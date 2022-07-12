@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using MyLaboratory.Common.DataAccess.Data;
 using MyLaboratory.Common.DataAccess.Models;
 using MyLaboratory.Common.DataAccess.Contracts;
+using MySqlConnector;
 
 namespace MyLaboratory.Common.DataAccess.Services
 {
@@ -25,6 +26,24 @@ namespace MyLaboratory.Common.DataAccess.Services
         public async Task<List<Income>> GetIncomesAsync(string email)
         {
             return await context.Incomes.Where(x => x.AccountEmail == email).ToListAsync();
+        }
+
+        /// <summary>
+        /// 로그인 계정에 해당하는 금년월 수입을 구합니다.
+        /// </summary>
+        /// <param name="email"></param>
+        /// <param name="yearMonth"></param>
+        /// <returns></returns>
+        public async Task<List<Income>> GetCurrentYearMonthIncomesAsync(string email, string yearMonth)
+        {
+            return await context.Incomes.FromSqlInterpolated<Income>
+                    (
+                        @$"SELECT *
+                            FROM Income
+                            WHERE 
+                            DATE_FORMAT(Created, '%Y-%m') = {yearMonth}
+                            AND AccountEmail = {email}"
+                    ).ToListAsync();
         }
 
         /// <summary>
