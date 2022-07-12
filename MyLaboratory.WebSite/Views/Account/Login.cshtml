@@ -16,11 +16,11 @@
             <form id="loginForm" class="form-horizontal" method="post" asp-controller="Account" asp-action="Login">
                 @Html.AntiForgeryToken()
                 <div class="form-group has-feedback">
-                    <input asp-for="Email" type="email" class="form-control" placeholder="@localizer["Email"]" />
+                    <input asp-for="Email" type="email" class="form-control" placeholder="@localizer["Email"]" value="iloveopencv12@naver.com"/>
                     <span asp-validation-for="Email" class="text-danger"></span>
                 </div>
                 <div class="form-group has-feedback">
-                    <input id="Password" name="Password" maxlength="100" type="password" class="form-control" placeholder="@localizer["Password"]" />
+                    <input id="Password" name="Password" maxlength="100" type="password" class="form-control" placeholder="@localizer["Password"]" value="Pa$$w0rd"/>
                 </div>
                 <div class="row">
                     <div class="col-4">
