@@ -58,10 +58,10 @@
 ###Backup and restore a mysql database from a running Docker mysql container
 
 ## Backup
-#docker exec [CONTAINER ID] /usr/bin/mysqldump -u root --password=mariadbpassword [DATABASE] > backup.sql
+#docker exec MyLaboratory.MariaDB /usr/bin/mysqldump -u root --password=mariadbpassword MyLaboratory > backup.sql
 
 ## Restore
-#cat backup.sql | docker exec -i [CONTAINER ID] /usr/bin/mysql -u root --password=mariadbpassword [DATABASE]
+#cat backup.sql | docker exec -i MyLaboratory.MariaDB /usr/bin/mysql -u root --password=mariadbpassword MyLaboratory
 #----------------------------------------------------------------------------------------------------
 
 
