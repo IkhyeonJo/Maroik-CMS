@@ -1,5 +1,3 @@
-# https://13.209.26.220/
-
 # How to run this project
 
 ## execute [MyLaboratory.sln] -> Open [1.Web] folder -> right-click [docker-compose] -> click "Set as Startup Project" -> Press F5 Button
