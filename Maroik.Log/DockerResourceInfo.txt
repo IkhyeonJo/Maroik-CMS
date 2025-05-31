@@ -1,0 +1,14 @@
+Docker Container Status:
+NAMES                STATUS
+Maroik.WebAPI        Up 17 minutes
+Maroik.WebSite       Up 17 minutes
+Maroik.AI            Up 1 second
+Maroik.FileStorage   Up 17 minutes
+Maroik.PostgreSQL    Up 17 minutes
+Docker Resource Usage:
+NAME                 CPU %     MEM USAGE / LIMIT
+Maroik.WebAPI        0.33%     167.4MiB / 31.22GiB
+Maroik.WebSite       0.38%     320.8MiB / 31.22GiB
+Maroik.AI            1.48%     45.62MiB / 31.22GiB
+Maroik.FileStorage   0.46%     240.6MiB / 31.22GiB
+Maroik.PostgreSQL    0.00%     42.47MiB / 31.22GiB

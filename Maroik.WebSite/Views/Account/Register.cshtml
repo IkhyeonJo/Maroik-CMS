@@ -1,0 +1,152 @@
+﻿@using Maroik.WebSite.Models.ViewModels.Account
+
+@model LoginOutputViewModel
+
+@{
+    string currentCulture = Context.Features.Get<Microsoft.AspNetCore.Localization.IRequestCultureFeature>().RequestCulture.Culture.Name;
+    bool repeatEmailSend = ViewBag.RepeatEmailSend ?? false;
+    bool resendEmail = ViewBag.ResendEmail ?? false;
+    string resentEmailAddress = ViewBag.ResentEmailAddress ?? "";
+    string error = (TempData["Error"] as string) ?? string.Empty;
+}
+
+@if (resendEmail == false)
+{
+    <input id="_currentCulture" type="hidden" value="@(currentCulture)" />
+    <div class="register-box">
+        <div class="card card-outline card-primary">
+            <div class="card-header text-center">
+                <a asp-controller="DashBoard" asp-action="AnonymousIndex" class="h1"><b>Maroik</b></a>
+            </div>
+            <div class="card-body">
+                <p class="login-box-msg">@localizer["Register a new membership"]</p>
+
+                <form id="registerForm" class="form-horizontal" method="post" asp-controller="Account" asp-action="Register">
+                    <div class="form-group has-feedback">
+                        <input asp-for="Nickname" type="text" class="form-control" placeholder="@localizer["Nickname"]" />
+                        <span asp-validation-for="Nickname" class="text-danger"></span>
+                    </div>
+                    <div class="form-group has-feedback">
+                        <input asp-for="Email" type="email" class="form-control" placeholder="@localizer["Email"]" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+                    <div class="form-group has-feedback">
+                        <input asp-for="Password" type="password" class="form-control" placeholder="@localizer["Password"]" />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+                    <div class="form-group has-feedback">
+                        <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="@localizer["Confirm Password"]" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group has-feedback">
+                        <select asp-for="TimeZoneIanaId" required class="form-control" style="max-width:100%;text-overflow:ellipsis;">
+                            <option value="" disabled selected hidden>
+                                @localizer["Please select time zone"]
+                            </option>
+
+                            @foreach(TimeZoneInfo systemTimeZone in TimeZoneInfo.GetSystemTimeZones())
+                            {
+                                string systemTimeZoneIanaId = string.Empty;
+
+                                if (systemTimeZone.HasIanaId)
+                                {
+                                    systemTimeZoneIanaId = systemTimeZone.Id;  // no conversion necessary
+                                }
+                                else if (TimeZoneInfo.TryConvertWindowsIdToIanaId(systemTimeZone.Id, out string ianaId))
+                                {
+                                    systemTimeZoneIanaId = ianaId;  // use the converted ID
+                                }
+
+                                if (string.IsNullOrEmpty(systemTimeZoneIanaId))
+                                    continue;
+
+                                <option value="@systemTimeZoneIanaId">@systemTimeZone.DisplayName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="icheck-primary">
+                                <input asp-for="AgreedServiceTerms" />
+                                <label for="AgreedServiceTerms">
+                                    @localizer["I agree to the"] <a asp-controller="Account" asp-action="ConsentForm" target="_blank" rel="noopener noreferrer">@localizer["terms"]</a> @* rel="noopener noreferrer" // prevent tabnabbing (https://www.freecodecamp.org/news/how-to-use-html-to-open-link-in-new-tab/) *@
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <button id="btnRegister" type="submit" class="btn btn-primary btn-block">@localizer["Register"]</button>
+                        </div>
+                    </div>
+                </form>
+
+                <a asp-controller="Account" asp-action="Login" class="text-center">@localizer["I already have a membership"]</a>
+                <p class="mb-0">
+                    <font style="font-weight:bold" color="red">@error</font>
+                </p>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    if (repeatEmailSend == false)
+    {
+        <div class="register-box">
+            <div class="card card-outline card-primary">
+                <div class="card-header text-center">
+                    <a asp-controller="DashBoard" asp-action="AnonymousIndex" class="h1"><b>Maroik</b></a>
+                </div>
+                <div class="card-body">
+                    <p class="login-box-msg">@localizer["Authentication Email has been sent"]</p>
+
+                    <form id="registerForm" class="form-horizontal" method="post" asp-controller="Account" asp-action="Register">
+                        <div class="form-group has-feedback">
+                            <input asp-for="Email" type="hidden" class="form-control" />
+                        </div>
+                        <p class="mb-0">
+                            <font style="font-weight:normal" color="black">@localizer["Please check {0}'s MailBox", resentEmailAddress]<br /><br />@localizer["If you do not receive an email,"] <br />@localizer["please check your spam folder or resend the email."]</font>
+                        </p>
+                        <button id="btnResend" type="submit" class="btn btn-primary btn-block">@localizer["Resend"]</button>
+                    </form>
+                    <p class="mb-0">
+                        <font style="font-weight:bold" color="red">@error</font>
+                    </p>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="register-box">
+            <div class="card card-outline card-primary">
+                <div class="card-header text-center">
+                    <a asp-controller="DashBoard" asp-action="AnonymousIndex" class="h1"><b>Maroik</b></a>
+                </div>
+                <div class="card-body">
+                    <p class="login-box-msg">@localizer["Authentication Email has been sent again"]</p>
+
+                    <form id="registerForm" class="form-horizontal" method="post" asp-controller="Account" asp-action="Register">
+                        <div class="form-group has-feedback">
+                            <input asp-for="Email" type="hidden" class="form-control" />
+                        </div>
+                        <p class="mb-0">
+                            <font style="font-weight:normal" color="black">@localizer["Please check {0}'s MailBox", resentEmailAddress]<br /><br />@localizer["If you do not receive an email,"] <br /> @localizer["please check your spam folder or resend the email."] <br /><br />@localizer["If you keep fail to receive authentication email,"] @localizer["please contact to"]<a href='mailto: admin@maroik.com'> @localizer["Administrator"]</a></font>
+                        </p>
+                        <button id="btnResend" type="submit" class="btn btn-primary btn-block">@localizer["Resend"]</button>
+                    </form>
+                    <p class="mb-0">
+                        <font style="font-weight:bold" color="red">@error</font>
+                    </p>
+                </div>
+            </div>
+        </div>
+    }
+}
+<div class="modal" id="loading">
+    <img src="~/anonymous/custom/Account/img/ajax-loader.gif" />
+</div>
+@section Scripts{
+    <script src="~/anonymous/custom/Account/js/site.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,579 @@
+﻿@using Maroik.WebSite.Utilities
+@using Maroik.Common.Miscellaneous.Utilities
+@using Maroik.WebSite.Models
+@using Maroik.WebSite.Models.ViewModels.Forum
+@using Newtonsoft.Json
+@using System.Text
+@using System.Web
+@inject Maroik.Common.DataAccess.Contracts.IAccountRepository accountRepository
+@inject Maroik.Common.DataAccess.Contracts.IBoardCommentRepository boardCommentRepository
+@inject Maroik.Common.DataAccess.Contracts.IBoardAttachedFileRepository boardAttachedFileRepository
+
+@model FreeForumOutputViewModel
+
+@{
+    Context.Session.TryGetValue(Maroik.Common.Miscellaneous.Extensions.EnumHelper.GetDescription(Maroik.Common.Miscellaneous.Utilities.Session.Account), out byte[] resultByte);
+
+    string loginedAccountTimeZoneIanaId = string.Empty;
+
+    try
+    {
+        loginedAccountTimeZoneIanaId = JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).TimeZoneIanaId;
+    }
+    catch
+    {
+        loginedAccountTimeZoneIanaId = string.Empty;
+    }
+
+    Account loginedAccount = new Account();
+
+    if (resultByte != null) // 로그인이 된 상태라면
+    {
+        loginedAccount = await accountRepository.GetAccountByEmailAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email);
+    }
+    else // 로그인이 되지 않은 상태라면
+    {
+        loginedAccount.Role = Role.Anonymous;
+    }
+
+    string currentCulture = Context.Features.Get<Microsoft.AspNetCore.Localization.IRequestCultureFeature>().RequestCulture.Culture.Name;
+    string selectedSearchType = (ViewBag.SelectedSearchType as string) ?? "";
+    string typedSearchText = (ViewBag.TypedSearchText as string) ?? "";
+    List<Account> accounts = await accountRepository.GetAllAsync(); // 게시물에서 특별 계정 찾기 위한 용도
+}
+
+@Html.Hidden("localizerIETFLanguageTag", localizer["IETFLanguageTag"].Value)
+
+<section class="content">
+    <div class="card card-primary">
+        <div class="card-header">
+            <h3 class="card-title">@localizer["Free Forum"].Value</h3>
+        </div>
+        <div class="card-body">
+            @if (Model.Method == "write")
+            {
+                <form id="formWriteBoard">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="form-group">
+                        <label for="writeBoardTitle">@localizer["Title"].Value</label>
+                        <input class="form-control" type="text" data-val="true" data-val-required="@localizer["Title is required"].Value" id="writeBoardTitle" name="writeBoardTitle" value="" required maxlength="100">
+                        <span class="field-validation-valid text-danger" data-valmsg-for="writeBoardTitle" data-valmsg-replace="true"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="writeBoardContent" class="control-label">@localizer["Content"].Value</label>
+                        <textarea name="writeBoardContent" id="writeBoardContent" maxlength="16384"></textarea> @*maxlength: 16KB*@
+                    </div>
+
+                    @if (loginedAccount.Role == Role.Admin)
+                    {
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input class="custom-control-input" type="checkbox" id="writeBoardNoticed" />
+                                <label for="writeBoardNoticed" class="custom-control-label">@localizer["Noticed"].Value</label>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input class="custom-control-input" type="checkbox" id="writeBoardLocked" />
+                            <label for="writeBoardLocked" class="custom-control-label">@localizer["Locked"].Value</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <input type="file" id="writeUploadedFile" name="writeUploadedFile" accept=".zip" data-errorMessage="@localizer["File size must be smaller than 10MB."].Value">
+                        <p class="help-block">@localizer["Only zip extension allowed."].Value</p>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="float-right">
+                            <button id="btnFreeForumShowWriteBoardLoading" type="submit" class="btn btn-primary">@localizer["Write"].Value</button>
+                        </div>
+                        <a asp-controller="Forum" asp-action="FreeForum" class="btn btn-default">@localizer["List"].Value</a>
+                    </div>
+                </form>
+            }
+            else if (Model.Method == "detail")
+            {
+                <div class="mailbox-read-info">
+                    <h5>@localizer["Title"].Value: @Model.BoardOutputViewModel.Title</h5>
+                    <h6>
+                        @localizer["Writer"].Value: @Model.BoardOutputViewModel.Writer
+                    </h6>
+                    <span class="mailbox-read-time float-left">@localizer["Views"].Value: @Model.BoardOutputViewModel.Views</span>
+
+                    @if (loginedAccount.Role == Role.Admin || loginedAccount.Role == Role.User)
+                    {
+                        <span class="mailbox-read-time float-right">
+                            @localizer["Updated"].Value: [<span id="free_forum_detail_updated">@Model.BoardOutputViewModel.Updated.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId)</span>]
+                        </span>
+                    }
+                    else if (loginedAccount.Role == Role.Anonymous)
+                    {
+                        <span class="mailbox-read-time float-right">
+                            @localizer["Updated"].Value: [<span id="free_forum_detail_updated">@Model.BoardOutputViewModel.Updated.ToString("yyyy-MM-ddTHH:mm:ssZ")</span>]
+                        </span>
+                    }
+                    else
+                    {
+
+                    }
+                    <br />
+                </div>
+
+                <div id="detailBoardContent" class="mailbox-read-message" style="@(Model.BoardOutputViewModel.IsImgTagIncluded ? "display:none;" : "")">
+                    @Html.Raw(Model.BoardOutputViewModel.Content)
+                </div>
+
+                <div class="card-footer bg-dark">
+                    @if (!string.IsNullOrEmpty(Model.BoardOutputViewModel.BoardAttachedFileName))
+                    {
+
+                        <ul class="mailbox-attachments d-flex align-items-stretch clearfix">
+                            <li>
+                                <span class="mailbox-attachment-icon"><i class="far fa-file"></i></span>
+
+                                <div class="mailbox-attachment-info">
+                                    <a id="aDetailBoardAttachedFile" href="#" class="mailbox-attachment-name" data-file="@Model.BoardOutputViewModel.BoardAttachedFileBase64Data" data-contenttype="@Model.BoardOutputViewModel.BoardAttachedFileContentType" data-name="@($"{Model.BoardOutputViewModel.BoardAttachedFileName}{Model.BoardOutputViewModel.BoardAttachedFileExtension}")"><i class="fas fa-paperclip"></i>@Model.BoardOutputViewModel.BoardAttachedFileName@Model.BoardOutputViewModel.BoardAttachedFileExtension</a>
+                                    <span class="mailbox-attachment-size clearfix mt-1">
+                                        <span>
+                                            @(
+                                                string.Format("{0:#,###0.#}", (int)(Model.BoardOutputViewModel.BoardAttachedFileSize / 1024))
+                                                )KB
+                                        </span>
+                                    </span>
+                                </div>
+                            </li>
+                        </ul>
+
+                    }
+                </div>
+                <div class="card-footer bg-dark">
+                    <div class="float-right">
+                        @if (loginedAccount.Nickname == Model.BoardOutputViewModel.Writer)@*방문한 사람이 작성자인 경우*@
+                        {
+                            <button id="btnFreeForumModify" type="button" class="btn btn-primary" data-link="@Url.Action("FreeForum", "Forum", new { method = "edit", boardId = Model.DetailBoardId, page = Model.DetailCurrentPage })">@localizer["Modify"].Value</button>
+                        }
+                        @if ((loginedAccount.Nickname == Model.BoardOutputViewModel.Writer) || loginedAccount.Role == Role.Admin)@*방문한 사람이 작성자 또는 관리자인 경우*@
+                        {
+                            <button id="btnFreeForumConfirmDeleteBoard" type="button" class="btn btn-danger">@localizer["Delete"].Value</button>
+                        }
+                    </div>
+                    <button id="btnFreeForumList" type="button" class="btn btn-default" data-link="@Url.Action("FreeForum", "Forum", new { page = Model.DetailCurrentPage })">@localizer["List"].Value</button>
+                </div>
+
+                <div class="card-footer card-comments">
+                    @foreach (BoardComment comment in await boardCommentRepository.GetOneBoardCommentsAsync(Model.DetailBoardId))
+                    {
+                        if (!comment.Deleted)
+                        {
+                            @if (Model.BoardOutputViewModel.Writer == comment.Writer) @*게시물 작성자와 댓글 작성자가 같으면 배경색 변경*@
+                            {
+                                <div class="card-comment" style="background-color:#003366;">
+                                    <img class="img-circle img-sm" src="@(comment.AvatarImagePath)" alt="">
+
+                                    <div class="comment-text">
+                                        <span class="username">
+
+                                            @if (accounts.Where(m => m.Role == Role.Admin).Where(m => m.Nickname == comment.Writer).FirstOrDefault() != null)@*관리자가 쓴 댓글인 경우*@
+                                            {
+                                                <span style="font-weight:bold; color:green;">@comment.Writer</span>
+                                            }
+                                            else
+                                            {
+                                                <span>@comment.Writer</span>
+                                            }
+
+                                            @if (loginedAccount.Role == Role.Admin || loginedAccount.Role == Role.User)
+                                            {
+                                                <span class="text-muted float-middle">
+                                                    @localizer["Created"].Value: [<span class="free_forum_detail_comment_created">@comment.Created.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId)</span>] 
+                                                </span>
+                                            }
+                                            else if (loginedAccount.Role == Role.Anonymous)
+                                            {
+                                                <span class="text-muted float-middle">
+                                                    @localizer["Created"].Value: [<span class="free_forum_detail_comment_created">@comment.Created.ToString("yyyy-MM-ddTHH:mm:ssZ")</span>]
+                                                </span>
+                                            }
+                                            else
+                                            {
+
+                                            }
+
+                                            @if (loginedAccount.Nickname == comment.Writer || loginedAccount.Role == Role.Admin)@*작성자 또는 관리자인 경우*@
+                                            {
+                                                <span class="text-muted float-right" style="margin: 0px 0px 0px 3px"><a class="hover aFreeForumDeleteComment" href="#" data-commentId="@(comment.Id)" data-detailBoardId="@(Model.DetailBoardId)" data-detailCurrentPage="@(Model.DetailCurrentPage)">@localizer["Delete"].Value</a></span>
+                                            }
+                                        </span>
+                                        @(HttpUtility.HtmlDecode(comment.Content))
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="card-comment">
+                                    <img class="img-circle img-sm" src="@(comment.AvatarImagePath)" alt="">
+
+                                    <div class="comment-text">
+                                        <span class="username">
+
+                                            @if (accounts.Where(m => m.Role == Role.Admin).Where(m => m.Nickname == comment.Writer).FirstOrDefault() != null)@*관리자가 쓴 댓글인 경우*@
+                                            {
+                                                <span style="font-weight:bold; color:green;">@comment.Writer</span>
+                                            }
+                                            else
+                                            {
+                                                <span>@comment.Writer</span>
+                                            }
+
+                                            @if (loginedAccount.Role == Role.Admin || loginedAccount.Role == Role.User)
+                                            {
+                                                <span class="text-muted float-middle">
+                                                    @localizer["Created"].Value: [<span class="free_forum_detail_comment_created">@comment.Created.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId)</span>]
+                                                </span>
+                                            }
+                                            else if (loginedAccount.Role == Role.Anonymous)
+                                            {
+                                                <span class="text-muted float-middle">
+                                                    @localizer["Created"].Value: [<span class="free_forum_detail_comment_created">@comment.Created.ToString("yyyy-MM-ddTHH:mm:ssZ")</span>]
+                                                </span>
+                                            }
+                                            else
+                                            {
+
+                                            }
+
+                                            @if (loginedAccount.Nickname == comment.Writer || loginedAccount.Role == Role.Admin)@*작성자 또는 관리자인 경우*@
+                                            {
+                                                <span class="text-muted float-right" style="margin: 0px 0px 0px 3px"><a class="hover aFreeForumDeleteComment" href="#" data-commentId="@(comment.Id)" data-detailBoardId="@(Model.DetailBoardId)" data-detailCurrentPage="@(Model.DetailCurrentPage)">@localizer["Delete"].Value</a></span>
+                                            }
+                                        </span>
+                                        @(HttpUtility.HtmlDecode(comment.Content))
+                                    </div>
+                                </div>
+                            }
+                        }
+                    }
+                </div>
+
+                <div class="card-footer">
+                    @if (loginedAccount.Role == Role.Anonymous)
+                    {
+                        <form id="formWriteFreeComment">
+                            <img class="img-fluid img-circle img-sm" src="~/upload/Management/Profile/default-avatar.jpg">
+                            <div class="img-push">
+                                <input id="writeFreeCommentContent" type="text" class="form-control form-control-sm" placeholder="@localizer["Only logged in users can write comments."].Value">
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <form id="formWriteFreeComment" data-detailBoardId="@(Model.DetailBoardId)" data-detailCurrentPage="@(Model.DetailCurrentPage)" data-errorMessage="@localizer["Please write the content."].Value">
+                            <img class="img-fluid img-circle img-sm" src="@loginedAccount.AvatarImagePath">
+                            <div class="img-push">
+                                <input id="writeFreeCommentContent" type="text" class="form-control form-control-sm" placeholder="@localizer["Press enter to post comment."].Value">
+                            </div>
+                        </form>
+                    }
+                </div>
+            }
+            else if (Model.Method == "edit")
+            {
+                <form id="formEditBoard" data-editBoardId="@(Model.EditBoardId)" data-editCurrentPage="@(Model.EditCurrentPage)">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="form-group">
+                        <label for="editBoardTitle">@localizer["Title"].Value</label>
+                        <input class="form-control" type="text" data-val="true" data-val-required="@localizer["Title is required"].Value" id="editBoardTitle" name="editBoardTitle" value="@Model.BoardOutputViewModel.Title" required maxlength="100">
+                        <span class="field-validation-valid text-danger" data-valmsg-for="editBoardTitle" data-valmsg-replace="true"></span>
+                    </div>
+                    <div id="divEditBoardContent" class="form-group" style="@(Model.BoardOutputViewModel.IsImgTagIncluded ? "display:none;" : "")">
+                        <label for="editBoardContent" class="control-label"></label>
+                        <textarea name="editBoardContent" id="editBoardContent" maxlength="16384">@Html.Raw(Model.BoardOutputViewModel.Content)</textarea> @*maxlength: 16KB*@
+                    </div>
+
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            @if (Model.BoardOutputViewModel.Locked)
+                            {
+                                <input class="custom-control-input" type="checkbox" id="editBoardLocked" checked />
+                            }
+                            else
+                            {
+                                <input class="custom-control-input" type="checkbox" id="editBoardLocked" />
+                            }
+                            <label for="editBoardLocked" class="custom-control-label">@localizer["Locked"].Value</label>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-dark">
+                        @if (!string.IsNullOrEmpty(Model.BoardOutputViewModel.BoardAttachedFileName))
+                        {
+
+                            <ul class="mailbox-attachments d-flex align-items-stretch clearfix">
+                                <li>
+                                    <span class="mailbox-attachment-icon"><i class="far fa-file"></i></span>
+
+                                    <div class="mailbox-attachment-info">
+                                        <a id="aEditBoardAttachedFile" href="#" class="mailbox-attachment-name" data-file="@Model.BoardOutputViewModel.BoardAttachedFileBase64Data" data-contenttype="@Model.BoardOutputViewModel.BoardAttachedFileContentType" data-name="@($"{Model.BoardOutputViewModel.BoardAttachedFileName}{Model.BoardOutputViewModel.BoardAttachedFileExtension}")"><i class="fas fa-paperclip"></i>@Model.BoardOutputViewModel.BoardAttachedFileName@Model.BoardOutputViewModel.BoardAttachedFileExtension</a>
+                                        <span class="mailbox-attachment-size clearfix mt-1">
+                                            <span>
+                                                @(
+                                                    string.Format("{0:#,###0.#}", (int)(Model.BoardOutputViewModel.BoardAttachedFileSize / 1024))
+                                                    )KB
+                                            </span>
+                                        </span>
+                                    </div>
+                                </li>
+                            </ul>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <input type="file" id="editUploadedFile" name="editUploadedFile" accept=".zip" data-errorMessage="@localizer["File size must be smaller than 10MB."].Value">
+                        <p class="help-block">@localizer["Only zip extension allowed."].Value</p>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="float-right">
+                            <button id="btnFreeForumSubmitModify" type="submit" class="btn btn-primary">@localizer["Modify"].Value</button>
+                        </div>
+                        <a asp-controller="Forum" asp-action="FreeForum" class="btn btn-default">@localizer["List"].Value</a>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <nav class="navbar-expand navbar-dark" style="position: relative; display: block !important; overflow-x: auto; overflow-y:hidden; align-items: center ">
+                    <ul class="navbar-nav">
+                        <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                            <button id="btnFreeForumWrite" type="button" class="btn btn-success btn-block btn-sm" style="width: 100px !important;"><i class="fas fa-edit" style="padding-right:3px;"></i> @localizer["Write"].Value</button>
+                        </li>
+                        <li class="nav-item ml-auto">
+                            <div class="input-group input-group-sm">
+                                <select id="searchType" name="searchType" style="margin: 0px 3px 0px 0px;">
+                                    @if (selectedSearchType == "Title")
+                                    {
+                                        <option value="Title" selected>@localizer["Title"].Value</option>
+                                        <option value="Writer">@localizer["Writer"]</option>
+                                    }
+                                    else if (selectedSearchType == "Writer")
+                                    {
+                                        <option value="Title">@localizer["Title"].Value</option>
+                                        <option value="Writer" selected>@localizer["Writer"]</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="Title">@localizer["Title"].Value</option>
+                                        <option value="Writer">@localizer["Writer"]</option>
+                                    }
+                                </select>
+                                <input class="form-control" type="text" id="btnFreeForumSearchText" value="@typedSearchText">
+                                <div class="input-group-append">
+                                    <button id="btnFreeForumSearchBoard" class="btn btn-primary">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </nav>
+                <div style="overflow:auto;">
+                    <table id="tblFreeForum" class="table table-striped table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>@localizer["Type"].Value</th>
+                                <th>@localizer["Title"].Value</th>
+                                <th>@localizer["Writer"].Value</th>
+                                <th>@localizer["Created"].Value</th>
+                                <th>@localizer["Views"].Value</th>
+                                <th>@localizer["Attachment"].Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (Board noticeBoard in Model.NoticeBoards)
+                            {
+                                List<BoardComment> commentsOfUndeletedSelectedBoard = (await boardCommentRepository.GetOneBoardCommentsAsync(noticeBoard.Id)).Where(m => m.Deleted == false).ToList();
+                                List<BoardAttachedFile> boardAttachedFilesWithName = (await boardAttachedFileRepository.GetAllAsync()).Where(m => m.BoardId == noticeBoard.Id).Where(m => !string.IsNullOrEmpty(m.Name)).ToList();
+
+                                <tr style="background-color: lightgray;">
+                                    <td style="color:green;font-weight:bold;">@localizer["Notice"]</td>
+                                    @if (noticeBoard.Locked)
+                                    {
+                                        @if (loginedAccount.Nickname == noticeBoard.Writer || loginedAccount.Role == Role.Admin)@*작성자 또는 관리자인 경우*@
+                                        {
+                                            <td><i class="fa fa-lock-open" aria-hidden="true"></i>@Html.ActionLink($"{noticeBoard.Title} [{commentsOfUndeletedSelectedBoard.Count}]", "FreeForum", new {method = "detail", boardId = noticeBoard.Id, page = Model.Pager.CurrentPage}, new { style = "color: green; font-weight: bold;" })</td>
+                                        }
+                                        else
+                                        {
+                                            <td><i class="fa fa-lock" aria-hidden="true"></i><span style="font-weight:bold; color:green;"> @localizer["Only a writer and admin can see it."].Value</span></td>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <td>@Html.ActionLink($"{noticeBoard.Title} [{commentsOfUndeletedSelectedBoard.Count}]", "FreeForum", new {method = "detail", boardId = noticeBoard.Id, page = Model.Pager.CurrentPage}, new { style = "color: green; font-weight: bold;" })</td>
+                                    }
+
+                                    <td><span style="font-weight:bold; color:green;">@noticeBoard.Writer</span></td>
+
+                                    @if (loginedAccount.Role == Role.Admin || loginedAccount.Role == Role.User)
+                                    {
+                                        <td class="free_forum_board_created"><span style="font-weight:bold; color:green;">@noticeBoard.Created.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId)</span></td>
+                                    }
+                                    else if (loginedAccount.Role == Role.Anonymous)
+                                    {
+                                        <td class="free_forum_board_created"><span style="font-weight:bold; color:green;">@noticeBoard.Created.ToString("yyyy-MM-ddTHH:mm:ssZ")</span></td>
+                                    }
+                                    else
+                                    {
+                                        
+                                    }
+                                    
+                                    <td><span style="font-weight:bold; color:green;">@noticeBoard.View</span></td>
+                                    @if (boardAttachedFilesWithName.Count != 0)
+                                    {
+                                        <td><span style="font-weight:bold; color:green;"><i class="fas fa-paperclip"></i></span></td>
+                                    }
+                                    else
+                                    {
+                                        <td></td>
+                                    }
+                                </tr>
+                            }
+                            @foreach (Board board in Model.Boards)
+                            {
+                                List<BoardComment> commentsOfUndeletedSelectedBoard = (await boardCommentRepository.GetOneBoardCommentsAsync(board.Id)).Where(m => m.Deleted == false).ToList();
+                                List<BoardAttachedFile> attachedFilesWithName = (await boardAttachedFileRepository.GetAllAsync()).Where(m => m.BoardId == board.Id).Where(m => !string.IsNullOrEmpty(m.Name)).ToList();
+
+                                <tr>
+                                    <td>@localizer["Free Forum"]</td>
+                                    @if (board.Locked)
+                                    {
+                                        @if (loginedAccount.Nickname == board.Writer || loginedAccount.Role == Role.Admin)@*작성자 또는 관리자인 경우*@
+                                        {
+                                            <td><i class="fa fa-lock-open" aria-hidden="true"></i> @Html.ActionLink($"{board.Title} [{commentsOfUndeletedSelectedBoard.Count}]", "FreeForum", new {method = "detail", boardId = board.Id, page = Model.Pager.CurrentPage})</td>
+                                        }
+                                        else
+                                        {
+                                            <td><i class="fa fa-lock" aria-hidden="true"></i> @localizer["Only a writer and admin can see it."].Value</td>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <td>@Html.ActionLink($"{board.Title} [{commentsOfUndeletedSelectedBoard.Count}]", "FreeForum", new {method = "detail", boardId = board.Id, page = Model.Pager.CurrentPage})</td>
+                                    }
+
+                                    @if (accounts.Where(m => m.Role == Role.Admin).Where(m => m.Nickname == board.Writer).FirstOrDefault() != null) @*관리자가 쓴 게시물인 경우*@
+                                    {
+                                        <td><span style="font-weight:bold; color:green;">@board.Writer</span></td>
+                                    }
+                                    else
+                                    {
+                                        <td><span>@board.Writer</span></td>
+                                    }
+
+                                    @if (loginedAccount.Role == Role.Admin || loginedAccount.Role == Role.User)
+                                    {
+                                        <td class="free_forum_board_created">@board.Created.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId)</td>
+                                    }
+                                    else if (loginedAccount.Role == Role.Anonymous)
+                                    {
+                                        <td class="free_forum_board_created">@board.Created.ToString("yyyy-MM-ddTHH:mm:ssZ")</td>
+                                    }
+                                    else
+                                    {
+                                        
+                                    }
+                                    
+                                    <td>@board.View</td>
+                                    @if (attachedFilesWithName.Count != 0)
+                                    {
+                                        <td><i class="fas fa-paperclip"></i></td>
+                                    }
+                                    else
+                                    {
+                                        <td></td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <hr />
+
+                <nav aria-label="Page navigation example">
+                    @if (Model.Pager.TotalPages > 0)
+                    {
+                        <ul class="pagination justify-content-center">
+
+                            @if (Model.Pager.CurrentPage > 1)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-controller="Forum" asp-action="FreeForum" asp-route-page="1" asp-route-searchType="@selectedSearchType" asp-route-searchText="@typedSearchText">&lt;&lt;</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" asp-controller="Forum" asp-action="FreeForum" asp-route-page="@(Model.Pager.CurrentPage-1)" asp-route-searchType="@selectedSearchType" asp-route-searchText="@typedSearchText">&lt;</a>
+                                </li>
+                            }
+
+                            @for (int pageNumber = Model.Pager.StartPage; pageNumber <= Model.Pager.EndPage; pageNumber++)
+                            {
+                                <li class="page-item @(pageNumber == Model.Pager.CurrentPage ? "active" : "")">
+                                    <a class="page-link" asp-controller="Forum" asp-action="FreeForum" asp-route-page="@pageNumber" asp-route-searchType="@selectedSearchType" asp-route-searchText="@typedSearchText">@pageNumber</a>
+                                </li>
+                            }
+
+                            @if (Model.Pager.CurrentPage < Model.Pager.TotalPages)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-controller="Forum" asp-action="FreeForum" asp-route-page="@(Model.Pager.CurrentPage + 1)" asp-route-searchType="@selectedSearchType" asp-route-searchText="@typedSearchText">&gt;</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" asp-controller="Forum" asp-action="FreeForum" asp-route-page="@(Model.Pager.TotalPages)" asp-route-searchType="@selectedSearchType" asp-route-searchText="@typedSearchText">&gt;&gt;</a>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </nav>
+            }
+        </div>
+    </div>
+</section>
+
+<div class="modal" id="loading">
+    <img src="~/upload/Forum/FreeForum/ajax-loader.gif" />
+</div>
+
+@*<!--ConfirmDeleteDialogModal-->*@
+<div class="modal" tabindex="-1" role="dialog" id="confirmDeleteBoardDialogModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                @localizer["Are you sure to delete?"].Value
+            </div>
+            <div class="modal-footer">
+                <button id="btnFreeForumDeleteBoard" type="button" class="btn btn-danger" data-boardId="@Model.DetailBoardId">@localizer["Delete"].Value</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts{
+    @if (loginedAccount.Role == Role.Admin)
+    {
+        <script src="~/admin/custom/Forum/FreeForum/js/site.js" asp-append-version="true"></script>
+    }
+    else if (loginedAccount.Role == Role.User)
+    {
+        <script src="~/user/custom/Forum/FreeForum/js/site.js" asp-append-version="true"></script>
+    }
+    else if (loginedAccount.Role == Role.Anonymous)
+    {
+        <script src="~/anonymous/custom/Forum/FreeForum/js/site.js" asp-append-version="true"></script>
+    }
+    else
+    {
+
+    }
+}

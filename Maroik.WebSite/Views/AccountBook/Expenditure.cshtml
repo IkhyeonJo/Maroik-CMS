@@ -1,0 +1,430 @@
+﻿@using Maroik.WebSite.Utilities;
+@using Newtonsoft.Json
+@using System.Text
+@inject Maroik.Common.DataAccess.Contracts.IAssetRepository assetRepository
+
+@{
+    string currentCulture = Context.Features.Get<Microsoft.AspNetCore.Localization.IRequestCultureFeature>().RequestCulture.Culture.Name;
+
+    Context.Session.TryGetValue(Maroik.Common.Miscellaneous.Extensions.EnumHelper.GetDescription(Maroik.Common.Miscellaneous.Utilities.Session.Account), out byte[] resultByte);
+    string loginedAccountTimeZoneIanaId = JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).TimeZoneIanaId;
+    List<Asset> assets = (await assetRepository.GetAssetsAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email)).Where(x => !x.Deleted).OrderBy(x => x.ProductName).ToList();
+
+    DateTime currentTime = DateTime.UtcNow.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId);
+    string currentDate = currentTime.ToString("yyyy-MM-dd");
+    int currentHour = currentTime.Hour;
+    int currentMinute = currentTime.Minute;
+    int currentSecond = currentTime.Second;
+}
+
+@Html.Hidden("localizerPrevText", localizer["PrevText"].Value)
+@Html.Hidden("localizerNextText", localizer["NextText"].Value)
+@Html.Hidden("localizerJanuary", localizer["January"].Value)
+@Html.Hidden("localizerFebruary", localizer["February"].Value)
+@Html.Hidden("localizerMarch", localizer["March"].Value)
+@Html.Hidden("localizerApril", localizer["April"].Value)
+@Html.Hidden("localizerMay", localizer["May"].Value)
+@Html.Hidden("localizerJune", localizer["June"].Value)
+@Html.Hidden("localizerJuly", localizer["July"].Value)
+@Html.Hidden("localizerAugust", localizer["August"].Value)
+@Html.Hidden("localizerSeptember", localizer["September"].Value)
+@Html.Hidden("localizerOctober", localizer["October"].Value)
+@Html.Hidden("localizerNovember", localizer["November"].Value)
+@Html.Hidden("localizerDecember", localizer["December"].Value)
+@Html.Hidden("localizerJan", localizer["Jan"].Value)
+@Html.Hidden("localizerFeb", localizer["Feb"].Value)
+@Html.Hidden("localizerMar", localizer["Mar"].Value)
+@Html.Hidden("localizerApr", localizer["Apr"].Value)
+@Html.Hidden("localizerJun", localizer["Jun"].Value)
+@Html.Hidden("localizerJul", localizer["Jul"].Value)
+@Html.Hidden("localizerAug", localizer["Aug"].Value)
+@Html.Hidden("localizerSep", localizer["Sep"].Value)
+@Html.Hidden("localizerOct", localizer["Oct"].Value)
+@Html.Hidden("localizerNov", localizer["Nov"].Value)
+@Html.Hidden("localizerDec", localizer["Dec"].Value)
+@Html.Hidden("localizerSunday", localizer["Sunday"].Value)
+@Html.Hidden("localizerMonday", localizer["Monday"].Value)
+@Html.Hidden("localizerTuesday", localizer["Tuesday"].Value)
+@Html.Hidden("localizerWednesday", localizer["Wednesday"].Value)
+@Html.Hidden("localizerThursday", localizer["Thursday"].Value)
+@Html.Hidden("localizerFriday", localizer["Friday"].Value)
+@Html.Hidden("localizerSaturday", localizer["Saturday"].Value)
+@Html.Hidden("localizerSun", localizer["Sun"].Value)
+@Html.Hidden("localizerMon", localizer["Mon"].Value)
+@Html.Hidden("localizerTue", localizer["Tue"].Value)
+@Html.Hidden("localizerWed", localizer["Wed"].Value)
+@Html.Hidden("localizerThu", localizer["Thu"].Value)
+@Html.Hidden("localizerFri", localizer["Fri"].Value)
+@Html.Hidden("localizerSat", localizer["Sat"].Value)
+@Html.Hidden("localizerSu", localizer["Su"].Value)
+@Html.Hidden("localizerMo", localizer["Mo"].Value)
+@Html.Hidden("localizerTu", localizer["Tu"].Value)
+@Html.Hidden("localizerWe", localizer["We"].Value)
+@Html.Hidden("localizerTh", localizer["Th"].Value)
+@Html.Hidden("localizerFr", localizer["Fr"].Value)
+@Html.Hidden("localizerSa", localizer["Sa"].Value)
+@Html.Hidden("localizerYearSuffix", localizer["YearSuffix"]?.Value ?? "")
+
+<section class="content">
+    <div class="card card-primary">
+        <div class="card-header">
+            <h3 class="card-title">@localizer["AccountBook Expenditure"].Value</h3>
+        </div>
+
+        <div class="card-body">
+            <nav class="navbar-expand navbar-dark" style="position: relative; display: block !important; overflow-x: auto; overflow-y:hidden; align-items: center ">
+                <ul class="navbar-nav">
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-primary btn-block btn-sm" data-toggle="modal" data-target="#createExpenditureDialogModal" data-backdrop="static" data-keyboard="false" style="width: 100px !important;"><i class="fa fa-plus" style="padding-right:3px;"></i> @localizer["CREATE"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button id="btnEditExpenditureGridRow" type="button" class="btn btn-success btn-block btn-sm" data-errorMessageSelectGridRow="@localizer["Please select grid row"].Value" style="width: 100px !important;"><i class="fas fa-edit" style="padding-right:3px;"></i> @localizer["EDIT"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button id="btnConfirmDeleteExpenditure" type="button" class="btn btn-danger btn-block btn-sm" data-errorMessageSelectGridRow="@localizer["Please select grid row"].Value" style="width: 100px !important;"><i class="fa fa-trash" style="padding-right:3px;"></i> @localizer["DELETE"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button id="btnExportExcelExpenditure" type="button" class="btn btn-secondary btn-block btn-sm" style="width: 100px !important;"><i class="fas fa-file-excel" style="padding-right:3px;"></i> @localizer["EXCEL"].Value</button>
+                    </li>
+                    <li class="nav-item ml-auto">
+                        <input type="text" id="gridSearch" placeholder="@localizer["Search..."].Value" style="margin-bottom: 7px; text-align: center; font-size: .7em; padding: 5px 0; color: #000; border: none; " />
+                    </li>
+                </ul>
+            </nav>
+            @Html.AjaxGrid(Url.Action("Expenditure", "AccountBook"))
+        </div>
+    </div>
+</section>
+
+@*<!--createExpenditureDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="createExpenditureDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="createExpenditureTabs">
+                @*<!--Tab Menu-->*@
+                <ul>
+                    <li><a href="#createExpenditureTabs-1">@localizer["Add Expenditure"].Value</a></li>
+                </ul>
+                @*Tabs-1: Create Expenditure Modal*@
+                <div id="createExpenditureTabs-1">
+                    <form id="formCreateExpenditure">
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createExpenditureMainClass">@localizer["MainClass"].Value</label>
+                                <br />
+                                <select id="createExpenditureMainClass" name="createExpenditureMainClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="RegularSavings" selected="selected">@localizer["정기저축"].Value</option>
+                                    <option value="NonConsumerSpending">@localizer["비소비지출"].Value</option>
+                                    <option value="ConsumerSpending">@localizer["소비지출"].Value</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createExpenditureSubClass">@localizer["SubClass"].Value</label>
+                                <br />
+                                <select id="createExpenditureSubClass" name="createExpenditureSubClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @*정기저축*@
+                                    <option value="Deposit" selected="selected">@localizer["예적금"].Value</option>
+                                    <option value="Investment">@localizer["투자"].Value</option>
+                                    @*비소비지출*@
+                                    <option value="PublicPension" hidden="hidden">@localizer["공적연금"].Value</option>
+                                    <option value="DebtRepayment" hidden="hidden">@localizer["부채상환"].Value</option>
+                                    <option value="Tax" hidden="hidden">@localizer["세금"].Value</option>
+                                    <option value="SocialInsurance" hidden="hidden">@localizer["사회보험"].Value</option>
+                                    <option value="InterHouseholdTranserExpenses" hidden="hidden">@localizer["가구간 이전지출"].Value</option>
+                                    <option value="NonProfitOrganizationTransfer" hidden="hidden">@localizer["비영리단체 이전"].Value</option>
+                                    @*소비지출*@
+                                    <option value="MealOrEatOutExpenses" hidden="hidden">@localizer["식비/외식비"].Value</option>
+                                    <option value="HousingOrSuppliesCost" hidden="hidden">@localizer["주거/용품비"].Value</option>
+                                    <option value="EducationExpenses" hidden="hidden">@localizer["교육비"].Value</option>
+                                    <option value="MedicalExpenses" hidden="hidden">@localizer["의료비"].Value</option>
+                                    <option value="TransportationCost" hidden="hidden">@localizer["교통비"].Value</option>
+                                    <option value="CommunicationCost" hidden="hidden">@localizer["통신비"].Value</option>
+                                    <option value="LeisureOrCulture" hidden="hidden">@localizer["여가/문화"].Value</option>
+                                    <option value="ClothingOrShoes" hidden="hidden">@localizer["의류/신발"].Value</option>
+                                    <option value="PinMoney" hidden="hidden">@localizer["용돈"].Value</option>
+                                    <option value="ProtectionTypeInsurance" hidden="hidden">@localizer["보장성보험"].Value</option>
+                                    <option value="OtherExpenses" hidden="hidden">@localizer["기타지출"].Value</option>
+                                    <option value="UnknownExpenditure" hidden="hidden">@localizer["미파악지출"].Value</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createExpenditureContent">@localizer["Content"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter Content"].Value" id="createExpenditureContent" name="createExpenditureContent" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createExpenditureContent" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label id="labelCreateExpenditureAmount" for="createExpenditureAmount">@localizer["Amount"].Value</label>
+                                <input class="form-control form-control-sm" min="0" type="number" id="createExpenditureAmount" name="createExpenditureAmount" value="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createExpenditureDate">@localizer["Date"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter date"].Value" id="createExpenditureDate" name="createExpenditureDate" value="@(currentDate)" readonly>
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createExpenditureDate" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createExpenditureHour">@localizer["Hour"].Value</label>
+                                <br />
+                                <select id="createExpenditureHour" name="createExpenditureHour" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @for (int i = 0; i < 24; i++)
+                                    {
+                                        if (i == currentHour)
+                                        {
+                                            <option value="@i" selected="selected">@i</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@i">@i</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createExpenditureMinute">@localizer["Minute"].Value</label>
+                                <br />
+                                <select id="createExpenditureMinute" name="createExpenditureMinute" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @for (int i = 0; i < 60; i++)
+                                    {
+                                        if (i == currentMinute)
+                                        {
+                                            <option value="@i" selected="selected">@i</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@i">@i</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createExpenditureSecond">@localizer["Second"].Value</label>
+                                <br />
+                                <select id="createExpenditureSecond" name="createExpenditureSecond" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @for (int i = 0; i < 60; i++)
+                                    {
+                                        if (i == currentSecond)
+                                        {
+                                            <option value="@i" selected="selected">@i</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@i">@i</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createExpenditurePaymentMethod">@localizer["PaymentMethod"].Value</label>
+                                <br />
+                                <select id="createExpenditurePaymentMethod" name="createExpenditurePaymentMethod" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @foreach (var item in assets)
+                                    {
+                                        if (assets.First() == item)
+                                        {
+                                            <option value="@item.ProductName" selected="selected">@item.ProductName</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@item.ProductName">@item.ProductName</option>
+
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createExpenditureNote">@localizer["Note"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="false" id="createExpenditureNote" name="createExpenditureNote" value="">
+                            </div>
+                        </div>
+                        <div id="divCreateExpenditureMyDepositAsset" class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createExpenditureMyDepositAsset">@localizer["MyDepositAsset"].Value</label>
+                                <br />
+                                <select id="createExpenditureMyDepositAsset" name="createExpenditureMyDepositAsset" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @foreach (var item in assets)
+                                    {
+                                        <option value="@item.ProductName">@item.ProductName</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+                            <input type="submit" class="btn btn-primary" value="@localizer["Save"].Value" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--editExpenditureDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="editExpenditureDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="editExpenditureTabs">
+                @*<!--Tab Menu-->*@
+                <ul>
+                    <li><a href="#editExpenditureTabs-1">@localizer["Edit Expenditure"].Value</a></li>
+                </ul>
+                @*Tabs-1: Edit Expenditure Modal*@
+                <div id="editExpenditureTabs-1">
+                    <form id="formEditExpenditure">
+                        <input type="hidden" id="editExpenditureId" />
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editExpenditureMainClass">@localizer["MainClass"].Value</label>
+                                <br />
+                                <select id="editExpenditureMainClass" name="editExpenditureMainClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="RegularSavings" selected="selected">@localizer["정기저축"].Value</option>
+                                    <option value="NonConsumerSpending">@localizer["비소비지출"].Value</option>
+                                    <option value="ConsumerSpending">@localizer["소비지출"].Value</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editExpenditureSubClass">@localizer["SubClass"].Value</label>
+                                <br />
+                                <select id="editExpenditureSubClass" name="editExpenditureSubClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @*정기저축*@
+                                    <option value="Deposit" selected="selected">@localizer["예적금"].Value</option>
+                                    <option value="Investment">@localizer["투자"].Value</option>
+                                    @*비소비지출*@
+                                    <option value="PublicPension" hidden="hidden">@localizer["공적연금"].Value</option>
+                                    <option value="DebtRepayment" hidden="hidden">@localizer["부채상환"].Value</option>
+                                    <option value="Tax" hidden="hidden">@localizer["세금"].Value</option>
+                                    <option value="SocialInsurance" hidden="hidden">@localizer["사회보험"].Value</option>
+                                    <option value="InterHouseholdTranserExpenses" hidden="hidden">@localizer["가구간 이전지출"].Value</option>
+                                    <option value="NonProfitOrganizationTransfer" hidden="hidden">@localizer["비영리단체 이전"].Value</option>
+                                    @*소비지출*@
+                                    <option value="MealOrEatOutExpenses" hidden="hidden">@localizer["식비/외식비"].Value</option>
+                                    <option value="HousingOrSuppliesCost" hidden="hidden">@localizer["주거/용품비"].Value</option>
+                                    <option value="EducationExpenses" hidden="hidden">@localizer["교육비"].Value</option>
+                                    <option value="MedicalExpenses" hidden="hidden">@localizer["의료비"].Value</option>
+                                    <option value="TransportationCost" hidden="hidden">@localizer["교통비"].Value</option>
+                                    <option value="CommunicationCost" hidden="hidden">@localizer["통신비"].Value</option>
+                                    <option value="LeisureOrCulture" hidden="hidden">@localizer["여가/문화"].Value</option>
+                                    <option value="ClothingOrShoes" hidden="hidden">@localizer["의류/신발"].Value</option>
+                                    <option value="PinMoney" hidden="hidden">@localizer["용돈"].Value</option>
+                                    <option value="ProtectionTypeInsurance" hidden="hidden">@localizer["보장성보험"].Value</option>
+                                    <option value="OtherExpenses" hidden="hidden">@localizer["기타지출"].Value</option>
+                                    <option value="UnknownExpenditure" hidden="hidden">@localizer["미파악지출"].Value</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editExpenditureContent">@localizer["Content"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter Content"].Value" id="editExpenditureContent" name="editExpenditureContent" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="editExpenditureContent" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label id="labelEditExpenditureAmount" for="editExpenditureAmount">@localizer["Amount"].Value</label>
+                                <input class="form-control form-control-sm" min="0" type="number" id="editExpenditureAmount" name="editExpenditureAmount" value="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editExpenditureDate">@localizer["Date"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter date"].Value" id="editExpenditureDate" name="editExpenditureDate" value="" readonly>
+                                <span class="field-validation-valid text-danger" data-valmsg-for="editExpenditureDate" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editExpenditureHour">@localizer["Hour"].Value</label>
+                                <br />
+                                <select id="editExpenditureHour" name="editExpenditureHour" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="0" selected="selected">0</option>
+                                    @for (int i = 1; i < 24; i++)
+                                    {
+                                        <option value="@i">@i</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editExpenditureMinute">@localizer["Minute"].Value</label>
+                                <br />
+                                <select id="editExpenditureMinute" name="editExpenditureMinute" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="0" selected="selected">0</option>
+                                    @for (int i = 1; i < 60; i++)
+                                    {
+                                        <option value="@i">@i</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editExpenditureSecond">@localizer["Second"].Value</label>
+                                <br />
+                                <select id="editExpenditureSecond" name="editExpenditureSecond" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="0" selected="selected">0</option>
+                                    @for (int i = 1; i < 60; i++)
+                                    {
+                                        <option value="@i">@i</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editExpenditurePaymentMethod">@localizer["PaymentMethod"].Value</label>
+                                <br />
+                                <select id="editExpenditurePaymentMethod" name="editExpenditurePaymentMethod" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @foreach (var item in assets)
+                                    {
+                                        <option value="@item.ProductName">@item.ProductName</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editExpenditureNote">@localizer["Note"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="false" id="editExpenditureNote" name="editExpenditureNote" value="">
+                            </div>
+                        </div>
+                        <div id="divEditExpenditureMyDepositAsset" class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editExpenditureMyDepositAsset">@localizer["MyDepositAsset"].Value</label>
+                                <br />
+                                <select id="editExpenditureMyDepositAsset" name="editExpenditureMyDepositAsset" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @foreach (var item in assets)
+                                    {
+                                        <option value="@item.ProductName">@item.ProductName</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+                            <input type="submit" class="btn btn-primary" value="@localizer["Save"].Value" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--ConfirmDeleteDialogModal-->*@
+<div class="modal" tabindex="-1" role="dialog" id="confirmDeleteExpenditureDialogModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                @localizer["Are you sure to delete?"].Value
+            </div>
+            <div class="modal-footer">
+                <button id="btnDeleteExpenditure" type="button" class="btn btn-danger" data-errorMessageSelectGridRow="@localizer["Please select grid row"].Value">@localizer["DELETE"].Value</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts{
+    <script src="~/user/custom/AccountBook/Expenditure/js/site.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,369 @@
+﻿@using Maroik.WebSite.Utilities
+@using Newtonsoft.Json
+@using System.Text
+@inject Maroik.Common.DataAccess.Contracts.IAssetRepository assetRepository
+
+@{
+    string currentCulture = Context.Features.Get<Microsoft.AspNetCore.Localization.IRequestCultureFeature>().RequestCulture.Culture.Name;
+    Context.Session.TryGetValue(Maroik.Common.Miscellaneous.Extensions.EnumHelper.GetDescription(Maroik.Common.Miscellaneous.Utilities.Session.Account), out byte[] resultByte);
+    string loginedAccountTimeZoneIanaId = JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).TimeZoneIanaId;
+    List<Asset> assets = (await assetRepository.GetAssetsAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email)).Where(x => !x.Deleted).OrderBy(x => x.ProductName).ToList();
+
+    DateTime currentTime = DateTime.UtcNow.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId);
+    string currentDate = currentTime.ToString("yyyy-MM-dd");
+    int currentHour = currentTime.Hour;
+    int currentMinute = currentTime.Minute;
+    int currentSecond = currentTime.Second;
+}
+
+@Html.Hidden("localizerPrevText", localizer["PrevText"].Value)
+@Html.Hidden("localizerNextText", localizer["NextText"].Value)
+@Html.Hidden("localizerJanuary", localizer["January"].Value)
+@Html.Hidden("localizerFebruary", localizer["February"].Value)
+@Html.Hidden("localizerMarch", localizer["March"].Value)
+@Html.Hidden("localizerApril", localizer["April"].Value)
+@Html.Hidden("localizerMay", localizer["May"].Value)
+@Html.Hidden("localizerJune", localizer["June"].Value)
+@Html.Hidden("localizerJuly", localizer["July"].Value)
+@Html.Hidden("localizerAugust", localizer["August"].Value)
+@Html.Hidden("localizerSeptember", localizer["September"].Value)
+@Html.Hidden("localizerOctober", localizer["October"].Value)
+@Html.Hidden("localizerNovember", localizer["November"].Value)
+@Html.Hidden("localizerDecember", localizer["December"].Value)
+@Html.Hidden("localizerJan", localizer["Jan"].Value)
+@Html.Hidden("localizerFeb", localizer["Feb"].Value)
+@Html.Hidden("localizerMar", localizer["Mar"].Value)
+@Html.Hidden("localizerApr", localizer["Apr"].Value)
+@Html.Hidden("localizerJun", localizer["Jun"].Value)
+@Html.Hidden("localizerJul", localizer["Jul"].Value)
+@Html.Hidden("localizerAug", localizer["Aug"].Value)
+@Html.Hidden("localizerSep", localizer["Sep"].Value)
+@Html.Hidden("localizerOct", localizer["Oct"].Value)
+@Html.Hidden("localizerNov", localizer["Nov"].Value)
+@Html.Hidden("localizerDec", localizer["Dec"].Value)
+@Html.Hidden("localizerSunday", localizer["Sunday"].Value)
+@Html.Hidden("localizerMonday", localizer["Monday"].Value)
+@Html.Hidden("localizerTuesday", localizer["Tuesday"].Value)
+@Html.Hidden("localizerWednesday", localizer["Wednesday"].Value)
+@Html.Hidden("localizerThursday", localizer["Thursday"].Value)
+@Html.Hidden("localizerFriday", localizer["Friday"].Value)
+@Html.Hidden("localizerSaturday", localizer["Saturday"].Value)
+@Html.Hidden("localizerSun", localizer["Sun"].Value)
+@Html.Hidden("localizerMon", localizer["Mon"].Value)
+@Html.Hidden("localizerTue", localizer["Tue"].Value)
+@Html.Hidden("localizerWed", localizer["Wed"].Value)
+@Html.Hidden("localizerThu", localizer["Thu"].Value)
+@Html.Hidden("localizerFri", localizer["Fri"].Value)
+@Html.Hidden("localizerSat", localizer["Sat"].Value)
+@Html.Hidden("localizerSu", localizer["Su"].Value)
+@Html.Hidden("localizerMo", localizer["Mo"].Value)
+@Html.Hidden("localizerTu", localizer["Tu"].Value)
+@Html.Hidden("localizerWe", localizer["We"].Value)
+@Html.Hidden("localizerTh", localizer["Th"].Value)
+@Html.Hidden("localizerFr", localizer["Fr"].Value)
+@Html.Hidden("localizerSa", localizer["Sa"].Value)
+@Html.Hidden("localizerYearSuffix", localizer["YearSuffix"]?.Value ?? "")
+
+<section class="content">
+    <div class="card card-primary">
+        <div class="card-header">
+            <h3 class="card-title">@localizer["AccountBook Income"].Value</h3>
+        </div>
+
+        <div class="card-body">
+            <nav class="navbar-expand navbar-dark" style="position: relative; display: block !important; overflow-x: auto; overflow-y:hidden; align-items: center ">
+                <ul class="navbar-nav">
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-primary btn-block btn-sm" data-toggle="modal" data-target="#createIncomeDialogModal" data-backdrop="static" data-keyboard="false" style="width: 100px !important;"><i class="fa fa-plus" style="padding-right:3px;"></i> @localizer["CREATE"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button id="btnEditIncomeGridRow" type="button" class="btn btn-success btn-block btn-sm" data-errorMessageSelectGridRow="@localizer["Please select grid row"].Value" style="width: 100px !important;"><i class="fas fa-edit" style="padding-right:3px;"></i> @localizer["EDIT"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button id="btnConfirmDeleteIncome" type="button" class="btn btn-danger btn-block btn-sm" data-errorMessageSelectGridRow="@localizer["Please select grid row"].Value" style="width: 100px !important;"><i class="fa fa-trash" style="padding-right:3px;"></i> @localizer["DELETE"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button id="btnExportExcelIncome" type="button" class="btn btn-secondary btn-block btn-sm" style="width: 100px !important;"><i class="fas fa-file-excel" style="padding-right:3px;"></i> @localizer["EXCEL"].Value</button>
+                    </li>
+                    <li class="nav-item ml-auto">
+                        <input type="text" id="gridSearch" placeholder="@localizer["Search..."].Value" style="margin-bottom: 7px; text-align: center; font-size: .7em; padding: 5px 0; color: #000; border: none; " />
+                    </li>
+                </ul>
+            </nav>
+            @Html.AjaxGrid(Url.Action("Income", "AccountBook"))
+        </div>
+    </div>
+</section>
+
+@*<!--createIncomeDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="createIncomeDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="createIncomeTabs">
+                @*<!--Tab Menu-->*@
+                <ul>
+                    <li><a href="#createIncomeTabs-1">@localizer["Add Income"].Value</a></li>
+                </ul>
+                @*Tabs-1: Create Income Modal*@
+                <div id="createIncomeTabs-1">
+                    <form id="formCreateIncome">
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createIncomeMainClass">@localizer["MainClass"].Value</label>
+                                <br />
+                                <select id="createIncomeMainClass" name="createIncomeMainClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="RegularIncome" selected="selected">@localizer["정기수입"].Value</option>
+                                    <option value="IrregularIncome">@localizer["비정기수입"].Value</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createIncomeSubClass">@localizer["SubClass"].Value</label>
+                                <br />
+                                <select id="createIncomeSubClass" name="createIncomeSubClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="LaborIncome" selected="selected">@localizer["근로수입"].Value</option>
+                                    <option value="BusinessIncome">@localizer["사업수입"].Value</option>
+                                    <option value="PensionIncome">@localizer["연금수입"].Value</option>
+                                    <option value="FinancialIncome">@localizer["금융소득"].Value</option>
+                                    <option value="RentalIncome">@localizer["임대수입"].Value</option>
+                                    <option value="OtherIncome">@localizer["기타수입"].Value</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createIncomeContent">@localizer["Content"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter Content"].Value" id="createIncomeContent" name="createIncomeContent" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createIncomeContent" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label id="labelCreateIncomeAmount" for="createIncomeAmount">@localizer["Amount"].Value</label>
+                                <input class="form-control form-control-sm" min="0" type="number" id="createIncomeAmount" name="createIncomeAmount" value="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createIncomeDate">@localizer["Date"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter date"].Value" id="createIncomeDate" name="createIncomeDate" value="@(currentDate)" readonly>
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createIncomeDate" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createIncomeHour">@localizer["Hour"].Value</label>
+                                <br />
+                                <select id="createIncomeHour" name="createIncomeHour" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @for (int i = 0; i < 24; i++)
+                                    {
+                                        if (i == currentHour)
+                                        {
+                                            <option value="@i" selected="selected">@i</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@i">@i</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createIncomeMinute">@localizer["Minute"].Value</label>
+                                <br />
+                                <select id="createIncomeMinute" name="createIncomeMinute" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @for (int i = 0; i < 60; i++)
+                                    {
+                                        if (i == currentMinute)
+                                        {
+                                            <option value="@i" selected="selected">@i</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@i">@i</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createIncomeSecond">@localizer["Second"].Value</label>
+                                <br />
+                                <select id="createIncomeSecond" name="createIncomeSecond" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @for (int i = 0; i < 60; i++)
+                                    {
+                                        if (i == currentSecond)
+                                        {
+                                            <option value="@i" selected="selected">@i</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@i">@i</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createIncomeDepositMyAssetProductName">@localizer["DepositMyAssetProductName"].Value</label>
+                                <br />
+                                <select id="createIncomeDepositMyAssetProductName" name="createIncomeDepositMyAssetProductName" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @foreach (var item in assets)
+                                    {
+                                        if (assets.First() == item)
+                                        {
+                                            <option value="@item.ProductName" selected="selected">@item.ProductName</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@item.ProductName">@item.ProductName</option>
+
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createIncomeNote">@localizer["Note"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="false" id="createIncomeNote" name="createIncomeNote" value="">
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+                            <input type="submit" class="btn btn-primary" value="@localizer["Save"].Value" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--EditIncomeDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="editIncomeDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="editIncomeTabs">
+                @*<!--Tab Menu-->*@
+                <ul>
+                    <li><a href="#editIncomeTabs-1">@localizer["Edit Income"].Value</a></li>
+                </ul>
+                @*Tabs-1: Edit Income Modal*@
+                <div id="editIncomeTabs-1">
+                    <form id="formEditIncome">
+                        <input type="hidden" id="editIncomeId" />
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editIncomeMainClass">@localizer["MainClass"].Value</label>
+                                <br />
+                                <select id="editIncomeMainClass" name="editIncomeMainClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="RegularIncome">@localizer["정기수입"].Value</option>
+                                    <option value="IrregularIncome">@localizer["비정기수입"].Value</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editIncomeSubClass">@localizer["SubClass"].Value</label>
+                                <br />
+                                <select id="editIncomeSubClass" name="editIncomeSubClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="LaborIncome">@localizer["근로수입"].Value</option>
+                                    <option value="BusinessIncome">@localizer["사업수입"].Value</option>
+                                    <option value="PensionIncome">@localizer["연금수입"].Value</option>
+                                    <option value="FinancialIncome">@localizer["금융소득"].Value</option>
+                                    <option value="RentalIncome">@localizer["임대수입"].Value</option>
+                                    <option value="OtherIncome">@localizer["기타수입"].Value</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editIncomeContent">@localizer["Content"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter Content"].Value" id="editIncomeContent" name="editIncomeContent" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="editIncomeContent" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label id="labelEditIncomeAmount" for="editIncomeAmount">@localizer["Amount"].Value</label>
+                                <input class="form-control form-control-sm" min="0" type="number" id="editIncomeAmount" name="editIncomeAmount" value="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editIncomeDate">@localizer["Date"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@localizer["Please enter date"].Value" id="editIncomeDate" name="editIncomeDate" value="" readonly>
+                                <span class="field-validation-valid text-danger" data-valmsg-for="editIncomeDate" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editIncomeHour">@localizer["Hour"].Value</label>
+                                <br />
+                                <select id="editIncomeHour" name="editIncomeHour" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="0" selected="selected">0</option>
+                                    @for (int i = 1; i < 24; i++)
+                                    {
+                                        <option value="@i">@i</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editIncomeMinute">@localizer["Minute"].Value</label>
+                                <br />
+                                <select id="editIncomeMinute" name="editIncomeMinute" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="0" selected="selected">0</option>
+                                    @for (int i = 1; i < 60; i++)
+                                    {
+                                        <option value="@i">@i</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editIncomeSecond">@localizer["Second"].Value</label>
+                                <br />
+                                <select id="editIncomeSecond" name="editIncomeSecond" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="0" selected="selected">0</option>
+                                    @for (int i = 1; i < 60; i++)
+                                    {
+                                        <option value="@i">@i</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editIncomeDepositMyAssetProductName">@localizer["DepositMyAssetProductName"].Value</label>
+                                <br />
+                                <select id="editIncomeDepositMyAssetProductName" name="editIncomeDepositMyAssetProductName" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @foreach (var item in assets)
+                                    {
+                                        <option value="@item.ProductName">@item.ProductName</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editIncomeNote">@localizer["Note"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="false" id="editIncomeNote" name="editIncomeNote" value="">
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+                            <input type="submit" class="btn btn-primary" value="@localizer["Save"].Value" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--ConfirmDeleteDialogModal-->*@
+<div class="modal" tabindex="-1" role="dialog" id="confirmDeleteIncomeDialogModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                @localizer["Are you sure to delete?"].Value
+            </div>
+            <div class="modal-footer">
+                <button id="btnDeleteIncome" type="button" class="btn btn-danger" data-errorMessageSelectGridRow="@localizer["Please select grid row"].Value">@localizer["DELETE"].Value</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">@localizer["Close"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts{
+    <script src="~/user/custom/AccountBook/Income/js/site.js" asp-append-version="true"></script>
+}

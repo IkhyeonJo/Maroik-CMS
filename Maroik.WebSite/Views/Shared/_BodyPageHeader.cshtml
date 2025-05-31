@@ -1,0 +1,208 @@
+﻿@model Maroik.Common.DataAccess.Models.Account
+@using Maroik.WebSite.Utilities
+@using Maroik.Common.Miscellaneous.Utilities
+
+@{
+    string currentControllerName = ViewContext.RouteData.Values["Controller"].ToString();
+    string currentActionName = ViewContext.RouteData.Values["Action"].ToString();
+}
+
+@if (Model.Role == Role.Admin) // 로그인 한 사용자의 권한이 Admin인 경우
+{
+    IOrderedEnumerable<Category> tempAdminCategories = from adminCategory in DbCache.AdminCategories
+                                                       orderby adminCategory.Order ascending
+                                                       select adminCategory;
+    IEnumerable<SubCategory> tempAdminSubCategories = DbCache.AdminSubCategories;
+
+    foreach (Category tempAdminCategory in tempAdminCategories)
+    {
+        if (!string.IsNullOrEmpty(tempAdminCategory.Action)) // 단일 카테고리
+        {
+            if (tempAdminCategory.Controller == currentControllerName && tempAdminCategory.Action == currentActionName) // 선택된 것이라면
+            {
+                <div class="content-header">
+                    <div class="container-fluid">
+                        <div class="row mb-2">
+                            <div class="col-sm-6">
+                                <h1 class="m-0">@localizer[tempAdminCategory.DisplayName]</h1>
+                            </div>
+                            <div class="col-sm-6">
+                                <ol class="breadcrumb float-sm-right">
+                                    <li class="breadcrumb-item"><a href="/">@localizer["Home"]</a></li>
+                                    <li class="breadcrumb-item">@localizer[tempAdminCategory.DisplayName]</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                goto Finish;
+            }
+        }
+        else if (string.IsNullOrEmpty(tempAdminCategory.Action)) // 다중 카테고리
+        {
+            IOrderedEnumerable<SubCategory> tempAdminSelectedSubCategories = from tempAdminSubCategory in tempAdminSubCategories
+                                                                             where tempAdminCategory.Id == tempAdminSubCategory.CategoryId
+                                                                             orderby tempAdminSubCategory.Order ascending
+                                                                             select tempAdminSubCategory;
+
+            foreach (SubCategory tempAdminSelectedSubCategory in tempAdminSelectedSubCategories)
+            {
+                if (tempAdminCategory.Controller == currentControllerName && tempAdminSelectedSubCategory.Action == currentActionName)
+                {
+                    <div class="content-header">
+                        <div class="container-fluid">
+                            <div class="row mb-2">
+                                <div class="col-sm-6">
+                                    <h1 class="m-0">@localizer[tempAdminSelectedSubCategory.DisplayName]</h1>
+                                </div>
+                                <div class="col-sm-6">
+                                    <ol class="breadcrumb float-sm-right">
+                                        <li class="breadcrumb-item"><a href="/">@localizer["Home"]</a></li>
+                                        <li class="breadcrumb-item active">@localizer[tempAdminCategory.DisplayName]</li>
+                                        <li class="breadcrumb-item">@localizer[tempAdminSelectedSubCategory.DisplayName]</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    goto Finish;
+                }
+            }
+        }
+    }
+Finish:;
+}
+else if (Model.Role == Role.User) // 로그인 한 사용자의 권한이 User인 경우
+{
+    IOrderedEnumerable<Category> tempUserCategories = from userCategory in DbCache.UserCategories
+                                                      orderby userCategory.Order ascending
+                                                      select userCategory;
+    IEnumerable<SubCategory> tempUserSubCategories = DbCache.UserSubCategories;
+
+    foreach (Category tempUserCategory in tempUserCategories)
+    {
+        if (!string.IsNullOrEmpty(tempUserCategory.Action)) // 단일 카테고리
+        {
+            if (tempUserCategory.Controller == currentControllerName && tempUserCategory.Action == currentActionName) // 선택된 것이라면
+            {
+                <div class="content-header">
+                    <div class="container-fluid">
+                        <div class="row mb-2">
+                            <div class="col-sm-6">
+                                <h1 class="m-0">@localizer[tempUserCategory.DisplayName]</h1>
+                            </div>
+                            <div class="col-sm-6">
+                                <ol class="breadcrumb float-sm-right">
+                                    <li class="breadcrumb-item"><a href="/">@localizer["Home"]</a></li>
+                                    <li class="breadcrumb-item">@localizer[tempUserCategory.DisplayName]</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                goto Finish;
+            }
+        }
+        else if (string.IsNullOrEmpty(tempUserCategory.Action)) // 다중 카테고리
+        {
+            IOrderedEnumerable<SubCategory> tempUserSelectedSubCategories = from tempUserSubCategory in tempUserSubCategories
+                                                                            where tempUserCategory.Id == tempUserSubCategory.CategoryId
+                                                                            orderby tempUserSubCategory.Order ascending
+                                                                            select tempUserSubCategory;
+
+            foreach (SubCategory tempUserSelectedSubCategory in tempUserSelectedSubCategories)
+            {
+                if (tempUserCategory.Controller == currentControllerName && tempUserSelectedSubCategory.Action == currentActionName)
+                {
+                    <div class="content-header">
+                        <div class="container-fluid">
+                            <div class="row mb-2">
+                                <div class="col-sm-6">
+                                    <h1 class="m-0">@localizer[tempUserSelectedSubCategory.DisplayName]</h1>
+                                </div>
+                                <div class="col-sm-6">
+                                    <ol class="breadcrumb float-sm-right">
+                                        <li class="breadcrumb-item"><a href="/">@localizer["Home"]</a></li>
+                                        <li class="breadcrumb-item active">@localizer[tempUserCategory.DisplayName]</li>
+                                        <li class="breadcrumb-item">@localizer[tempUserSelectedSubCategory.DisplayName]</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    goto Finish;
+                }
+            }
+        }
+    }
+Finish:;
+}
+else if (Model.Role == Role.Anonymous) // 로그인 한 사용자의 권한이 User인 경우
+{
+    IOrderedEnumerable<Category> tempAnonymousCategories = from anonymousCategory in DbCache.AnonymousCategories
+                                                           orderby anonymousCategory.Order ascending
+                                                           select anonymousCategory;
+    IEnumerable<SubCategory> tempAnonymousSubCategories = DbCache.AnonymousSubCategories;
+
+    foreach (Category tempAnonymousCategory in tempAnonymousCategories)
+    {
+        if (!string.IsNullOrEmpty(tempAnonymousCategory.Action)) // 단일 카테고리
+        {
+            if (tempAnonymousCategory.Controller == currentControllerName && tempAnonymousCategory.Action == currentActionName) // 선택된 것이라면
+            {
+                <div class="content-header">
+                    <div class="container-fluid">
+                        <div class="row mb-2">
+                            <div class="col-sm-6">
+                                <h1 class="m-0">@localizer[tempAnonymousCategory.DisplayName]</h1>
+                            </div>
+                            <div class="col-sm-6">
+                                <ol class="breadcrumb float-sm-right">
+                                    <li class="breadcrumb-item"><a href="/">@localizer["Home"]</a></li>
+                                    <li class="breadcrumb-item">@localizer[tempAnonymousCategory.DisplayName]</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                goto Finish;
+            }
+        }
+        else if (string.IsNullOrEmpty(tempAnonymousCategory.Action)) // 다중 카테고리
+        {
+            IOrderedEnumerable<SubCategory> tempAnonymousSelectedSubCategories = from tempAnonymousSubCategory in tempAnonymousSubCategories
+                                                                                 where tempAnonymousCategory.Id == tempAnonymousSubCategory.CategoryId
+                                                                                 orderby tempAnonymousSubCategory.Order ascending
+                                                                                 select tempAnonymousSubCategory;
+
+            foreach (SubCategory tempAnonymousSelectedSubCategory in tempAnonymousSelectedSubCategories)
+            {
+                if (tempAnonymousCategory.Controller == currentControllerName && tempAnonymousSelectedSubCategory.Action == currentActionName)
+                {
+                    <div class="content-header">
+                        <div class="container-fluid">
+                            <div class="row mb-2">
+                                <div class="col-sm-6">
+                                    <h1 class="m-0">@localizer[tempAnonymousSelectedSubCategory.DisplayName]</h1>
+                                </div>
+                                <div class="col-sm-6">
+                                    <ol class="breadcrumb float-sm-right">
+                                        <li class="breadcrumb-item"><a href="/">@localizer["Home"]</a></li>
+                                        <li class="breadcrumb-item active">@localizer[tempAnonymousCategory.DisplayName]</li>
+                                        <li class="breadcrumb-item">@localizer[tempAnonymousSelectedSubCategory.DisplayName]</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    goto Finish;
+                }
+            }
+        }
+    }
+Finish:;
+}
+else // 버그임. 로그인한 사용자는 Admin 또는 User 밖에 없음.
+{
+
+}
