@@ -1,0 +1,812 @@
+﻿@using Maroik.WebSite.Models.ViewModels.DashBoard
+
+@model UserIndexOutputViewModel
+
+@{
+    var startYear = Convert.ToInt32(ViewBag.StartYear as string ?? "");
+    var endYear = DateTime.UtcNow.Year;
+    var selectedYear = Convert.ToInt32(ViewBag.SelectedYear as string ?? "");
+    var selectedMonth = Convert.ToInt32(ViewBag.SelectedMonth as string ?? "");
+
+    #region Year variables
+
+    var regularIncomeLaborIncomeYear = 0m;
+    var regularIncomeBusinessIncomeYear = 0m;
+    var regularIncomePensionIncomeYear = 0m;
+    var regularIncomeFinancialIncomeYear = 0m;
+    var regularIncomeRentalIncomeYear = 0m;
+    var regularIncomeOtherIncomeYear = 0m;
+
+    var percentageOfRegularIncomeLaborIncomeYear = 0d;
+    var percentageOfRegularIncomeBusinessIncomeYear = 0d;
+    var percentageOfRegularIncomePensionIncomeYear = 0d;
+    var percentageOfRegularIncomeFinancialIncomeYear = 0d;
+    var percentageOfRegularIncomeRentalIncomeYear = 0d;
+    var percentageOfRegularIncomeOtherIncomeYear = 0d;
+
+    var irregularIncomeLaborIncomeYear = 0m;
+    var irregularIncomeOtherIncomeYear = 0m;
+
+    var percentageOfIrregularIncomeLaborIncomeYear = 0d;
+    var percentageOfIrregularIncomeOtherIncomeYear = 0d;
+
+    var regularSavingsDepositYear = 0m;
+    var regularSavingsInvestmentYear = 0m;
+
+    var percentageOfRegularSavingsDepositYear = 0d;
+    var percentageOfRegularSavingsInvestmentYear = 0d;
+
+    var nonConsumerSpendingPublicPensionYear = 0m;
+    var nonConsumerSpendingDebtRepaymentYear = 0m;
+    var nonConsumerSpendingTaxYear = 0m;
+    var nonConsumerSpendingSocialInsuranceYear = 0m;
+    var nonConsumerSpendingInterHouseholdTransferExpensesYear = 0m;
+    var nonConsumerSpendingNonProfitOrganizationTransferYear = 0m;
+
+    var percentageOfNonConsumerSpendingPublicPensionYear = 0d;
+    var percentageOfNonConsumerSpendingDebtRepaymentYear = 0d;
+    var percentageOfNonConsumerSpendingTaxYear = 0d;
+    var percentageOfNonConsumerSpendingSocialInsuranceYear = 0d;
+    var percentageOfNonConsumerSpendingInterHouseholdTransferExpensesYear = 0d;
+    var percentageOfNonConsumerSpendingNonProfitOrganizationTransferYear = 0d;
+
+    var consumerSpendingMealOrEatOutExpensesYear = 0m;
+    var consumerSpendingHousingOrSuppliesCostYear = 0m;
+    var consumerSpendingEducationExpensesYear = 0m;
+    var consumerSpendingMedicalExpensesYear = 0m;
+    var consumerSpendingTransportationCostYear = 0m;
+    var consumerSpendingCommunicationCostYear = 0m;
+    var consumerSpendingLeisureOrCultureYear = 0m;
+    var consumerSpendingClothingOrShoesYear = 0m;
+    var consumerSpendingPinMoneyYear = 0m;
+    var consumerSpendingProtectionTypeInsuranceYear = 0m;
+    var consumerSpendingOtherExpensesYear = 0m;
+    var consumerSpendingUnknownExpenditureYear = 0m;
+
+    var percentageOfConsumerSpendingMealOrEatOutExpensesYear = 0d;
+    var percentageOfConsumerSpendingHousingOrSuppliesCostYear = 0d;
+    var percentageOfConsumerSpendingEducationExpensesYear = 0d;
+    var percentageOfConsumerSpendingMedicalExpensesYear = 0d;
+    var percentageOfConsumerSpendingTransportationCostYear = 0d;
+    var percentageOfConsumerSpendingCommunicationCostYear = 0d;
+    var percentageOfConsumerSpendingLeisureOrCultureYear = 0d;
+    var percentageOfConsumerSpendingClothingOrShoesYear = 0d;
+    var percentageOfConsumerSpendingPinMoneyYear = 0d;
+    var percentageOfConsumerSpendingProtectionTypeInsuranceYear = 0d;
+    var percentageOfConsumerSpendingOtherExpensesYear = 0d;
+    var percentageOfConsumerSpendingUnknownExpenditureYear = 0d;
+
+    #endregion
+
+    #region YearMonth variables
+
+    var regularIncomeLaborIncomeYearMonth = 0m;
+    var regularIncomeBusinessIncomeYearMonth = 0m;
+    var regularIncomePensionIncomeYearMonth = 0m;
+    var regularIncomeFinancialIncomeYearMonth = 0m;
+    var regularIncomeRentalIncomeYearMonth = 0m;
+    var regularIncomeOtherIncomeYearMonth = 0m;
+
+    var percentageOfRegularIncomeLaborIncomeYearMonth = 0d;
+    var percentageOfRegularIncomeBusinessIncomeYearMonth = 0d;
+    var percentageOfRegularIncomePensionIncomeYearMonth = 0d;
+    var percentageOfRegularIncomeFinancialIncomeYearMonth = 0d;
+    var percentageOfRegularIncomeRentalIncomeYearMonth = 0d;
+    var percentageOfRegularIncomeOtherIncomeYearMonth = 0d;
+
+    var irregularIncomeLaborIncomeYearMonth = 0m;
+    var irregularIncomeOtherIncomeYearMonth = 0m;
+
+    var percentageOfIrregularIncomeLaborIncomeYearMonth = 0d;
+    var percentageOfIrregularIncomeOtherIncomeYearMonth = 0d;
+
+    var regularSavingsDepositYearMonth = 0m;
+    var regularSavingsInvestmentYearMonth = 0m;
+
+    var percentageOfRegularSavingsDepositYearMonth = 0d;
+    var percentageOfRegularSavingsInvestmentYearMonth = 0d;
+
+    var nonConsumerSpendingPublicPensionYearMonth = 0m;
+    var nonConsumerSpendingDebtRepaymentYearMonth = 0m;
+    var nonConsumerSpendingTaxYearMonth = 0m;
+    var nonConsumerSpendingSocialInsuranceYearMonth = 0m;
+    var nonConsumerSpendingInterHouseholdTransferExpensesYearMonth = 0m;
+    var nonConsumerSpendingNonProfitOrganizationTransferYearMonth = 0m;
+
+    var percentageOfNonConsumerSpendingPublicPensionYearMonth = 0d;
+    var percentageOfNonConsumerSpendingDebtRepaymentYearMonth = 0d;
+    var percentageOfNonConsumerSpendingTaxYearMonth = 0d;
+    var percentageOfNonConsumerSpendingSocialInsuranceYearMonth = 0d;
+    var percentageOfNonConsumerSpendingInterHouseholdTransferExpensesYearMonth = 0d;
+    var percentageOfNonConsumerSpendingNonProfitOrganizationTransferYearMonth = 0d;
+
+    var consumerSpendingMealOrEatOutExpensesYearMonth = 0m;
+    var consumerSpendingHousingOrSuppliesCostYearMonth = 0m;
+    var consumerSpendingEducationExpensesYearMonth = 0m;
+    var consumerSpendingMedicalExpensesYearMonth = 0m;
+    var consumerSpendingTransportationCostYearMonth = 0m;
+    var consumerSpendingCommunicationCostYearMonth = 0m;
+    var consumerSpendingLeisureOrCultureYearMonth = 0m;
+    var consumerSpendingClothingOrShoesYearMonth = 0m;
+    var consumerSpendingPinMoneyYearMonth = 0m;
+    var consumerSpendingProtectionTypeInsuranceYearMonth = 0m;
+    var consumerSpendingOtherExpensesYearMonth = 0m;
+    var consumerSpendingUnknownExpenditureYearMonth = 0m;
+
+    var percentageOfConsumerSpendingMealOrEatOutExpensesYearMonth = 0d;
+    var percentageOfConsumerSpendingHousingOrSuppliesCostYearMonth = 0d;
+    var percentageOfConsumerSpendingEducationExpensesYearMonth = 0d;
+    var percentageOfConsumerSpendingMedicalExpensesYearMonth = 0d;
+    var percentageOfConsumerSpendingTransportationCostYearMonth = 0d;
+    var percentageOfConsumerSpendingCommunicationCostYearMonth = 0d;
+    var percentageOfConsumerSpendingLeisureOrCultureYearMonth = 0d;
+    var percentageOfConsumerSpendingClothingOrShoesYearMonth = 0d;
+    var percentageOfConsumerSpendingPinMoneyYearMonth = 0d;
+    var percentageOfConsumerSpendingProtectionTypeInsuranceYearMonth = 0d;
+    var percentageOfConsumerSpendingOtherExpensesYearMonth = 0d;
+    var percentageOfConsumerSpendingUnknownExpenditureYearMonth = 0d;
+
+    #endregion
+
+    if (Model.DefaultMonetaryUnit != null)
+    {
+        #region Year 수입
+
+        #region 대분류 = '정기수입'
+
+        var regularIncomeYear = Model.IncomeYearOutputViewModels.Where(x => x.MainClass == "RegularIncome").ToList();
+
+        var regularIncomeTotalYear = regularIncomeYear.Sum(v => v.Amount);
+        regularIncomeLaborIncomeYear = regularIncomeYear.Where(x => x.SubClass == "LaborIncome").Sum(v => v.Amount);
+        regularIncomeBusinessIncomeYear = regularIncomeYear.Where(x => x.SubClass == "BusinessIncome").Sum(v => v.Amount);
+        regularIncomePensionIncomeYear = regularIncomeYear.Where(x => x.SubClass == "PensionIncome").Sum(v => v.Amount);
+        regularIncomeFinancialIncomeYear = regularIncomeYear.Where(x => x.SubClass == "FinancialIncome").Sum(v => v.Amount);
+        regularIncomeRentalIncomeYear = regularIncomeYear.Where(x => x.SubClass == "RentalIncome").Sum(v => v.Amount);
+        regularIncomeOtherIncomeYear = regularIncomeYear.Where(x => x.SubClass == "OtherIncome").Sum(v => v.Amount);
+
+        if (regularIncomeTotalYear != 0)
+        {
+            percentageOfRegularIncomeLaborIncomeYear = 100 * ((double)regularIncomeLaborIncomeYear / (double)regularIncomeTotalYear);
+            percentageOfRegularIncomeBusinessIncomeYear = 100 * ((double)regularIncomeBusinessIncomeYear / (double)regularIncomeTotalYear);
+            percentageOfRegularIncomePensionIncomeYear = 100 * ((double)regularIncomePensionIncomeYear / (double)regularIncomeTotalYear);
+            percentageOfRegularIncomeFinancialIncomeYear = 100 * ((double)regularIncomeFinancialIncomeYear / (double)regularIncomeTotalYear);
+            percentageOfRegularIncomeRentalIncomeYear = 100 * ((double)regularIncomeRentalIncomeYear / (double)regularIncomeTotalYear);
+            percentageOfRegularIncomeOtherIncomeYear = 100 * ((double)regularIncomeOtherIncomeYear / (double)regularIncomeTotalYear);
+        }
+
+        #endregion
+
+        #region 대분류 = '비정기수입'
+
+        var irregularIncomeYear = Model.IncomeYearOutputViewModels.Where(x => x.MainClass == "IrregularIncome").ToList();
+
+        var irregularIncomeTotalYear = irregularIncomeYear.Sum(v => v.Amount);
+        irregularIncomeLaborIncomeYear = irregularIncomeYear.Where(x => x.SubClass == "LaborIncome").Sum(v => v.Amount);
+        irregularIncomeOtherIncomeYear = irregularIncomeYear.Where(x => x.SubClass == "OtherIncome").Sum(v => v.Amount);
+
+        if (irregularIncomeTotalYear != 0)
+        {
+            percentageOfIrregularIncomeLaborIncomeYear = 100 * ((double)irregularIncomeLaborIncomeYear / (double)irregularIncomeTotalYear);
+            percentageOfIrregularIncomeOtherIncomeYear = 100 * ((double)irregularIncomeOtherIncomeYear / (double)irregularIncomeTotalYear);
+        }
+
+        #endregion
+
+        #endregion
+
+        #region Year 지출
+
+        #region 대분류 = '정기저축'
+
+        var regularSavingsYear = Model.ExpenditureYearOutputViewModels.Where(x => x.MainClass == "RegularSavings").ToList();
+
+        var regularSavingsTotalYear = regularSavingsYear.Sum(v => v.Amount);
+        regularSavingsDepositYear = regularSavingsYear.Where(x => x.SubClass == "Deposit").Sum(v => v.Amount);
+        regularSavingsInvestmentYear = regularSavingsYear.Where(x => x.SubClass == "Investment").Sum(v => v.Amount);
+
+        if (regularSavingsTotalYear != 0)
+        {
+            percentageOfRegularSavingsDepositYear = 100 * ((double)regularSavingsDepositYear / (double)regularSavingsTotalYear);
+            percentageOfRegularSavingsInvestmentYear = 100 * ((double)regularSavingsInvestmentYear / (double)regularSavingsTotalYear);
+        }
+
+        #endregion
+
+        #region 대분류 = '비소비지출'
+
+        var nonconsumerSpendingYear = Model.ExpenditureYearOutputViewModels.Where(x => x.MainClass == "NonConsumerSpending").ToList();
+
+        var nonConsumerSpendingTotalYear = nonconsumerSpendingYear.Sum(v => v.Amount);
+        nonConsumerSpendingPublicPensionYear = nonconsumerSpendingYear.Where(x => x.SubClass == "PublicPension").Sum(v => v.Amount);
+        nonConsumerSpendingDebtRepaymentYear = nonconsumerSpendingYear.Where(x => x.SubClass == "DebtRepayment").Sum(v => v.Amount);
+        nonConsumerSpendingTaxYear = nonconsumerSpendingYear.Where(x => x.SubClass == "Tax").Sum(v => v.Amount);
+        nonConsumerSpendingSocialInsuranceYear = nonconsumerSpendingYear.Where(x => x.SubClass == "SocialInsurance").Sum(v => v.Amount);
+        nonConsumerSpendingInterHouseholdTransferExpensesYear = nonconsumerSpendingYear.Where(x => x.SubClass == "InterHouseholdTransferExpenses").Sum(v => v.Amount);
+        nonConsumerSpendingNonProfitOrganizationTransferYear = nonconsumerSpendingYear.Where(x => x.SubClass == "NonProfitOrganizationTransfer").Sum(v => v.Amount);
+
+        if (nonConsumerSpendingTotalYear != 0)
+        {
+            percentageOfNonConsumerSpendingPublicPensionYear = 100 * ((double)nonConsumerSpendingPublicPensionYear / (double)nonConsumerSpendingTotalYear);
+            percentageOfNonConsumerSpendingDebtRepaymentYear = 100 * ((double)nonConsumerSpendingDebtRepaymentYear / (double)nonConsumerSpendingTotalYear);
+            percentageOfNonConsumerSpendingTaxYear = 100 * ((double)nonConsumerSpendingTaxYear / (double)nonConsumerSpendingTotalYear);
+            percentageOfNonConsumerSpendingSocialInsuranceYear = 100 * ((double)nonConsumerSpendingSocialInsuranceYear / (double)nonConsumerSpendingTotalYear);
+            percentageOfNonConsumerSpendingInterHouseholdTransferExpensesYear = 100 * ((double)nonConsumerSpendingInterHouseholdTransferExpensesYear / (double)nonConsumerSpendingTotalYear);
+            percentageOfNonConsumerSpendingNonProfitOrganizationTransferYear = 100 * ((double)nonConsumerSpendingNonProfitOrganizationTransferYear / (double)nonConsumerSpendingTotalYear);
+        }
+
+        #endregion
+
+        #region 대분류 = '소비지출'
+
+        var consumerSpendingYear = Model.ExpenditureYearOutputViewModels.Where(x => x.MainClass == "ConsumerSpending").ToList();
+
+        var consumerSpendingTotalYear = consumerSpendingYear.Sum(v => v.Amount);
+        consumerSpendingMealOrEatOutExpensesYear = consumerSpendingYear.Where(x => x.SubClass == "MealOrEatOutExpenses").Sum(v => v.Amount);
+        consumerSpendingHousingOrSuppliesCostYear = consumerSpendingYear.Where(x => x.SubClass == "HousingOrSuppliesCost").Sum(v => v.Amount);
+        consumerSpendingEducationExpensesYear = consumerSpendingYear.Where(x => x.SubClass == "EducationExpenses").Sum(v => v.Amount);
+        consumerSpendingMedicalExpensesYear = consumerSpendingYear.Where(x => x.SubClass == "MedicalExpenses").Sum(v => v.Amount);
+        consumerSpendingTransportationCostYear = consumerSpendingYear.Where(x => x.SubClass == "TransportationCost").Sum(v => v.Amount);
+        consumerSpendingCommunicationCostYear = consumerSpendingYear.Where(x => x.SubClass == "CommunicationCost").Sum(v => v.Amount);
+        consumerSpendingLeisureOrCultureYear = consumerSpendingYear.Where(x => x.SubClass == "LeisureOrCulture").Sum(v => v.Amount);
+        consumerSpendingClothingOrShoesYear = consumerSpendingYear.Where(x => x.SubClass == "ClothingOrShoes").Sum(v => v.Amount);
+        consumerSpendingPinMoneyYear = consumerSpendingYear.Where(x => x.SubClass == "PinMoney").Sum(v => v.Amount);
+        consumerSpendingProtectionTypeInsuranceYear = consumerSpendingYear.Where(x => x.SubClass == "ProtectionTypeInsurance").Sum(v => v.Amount);
+        consumerSpendingOtherExpensesYear = consumerSpendingYear.Where(x => x.SubClass == "OtherExpenses").Sum(v => v.Amount);
+        consumerSpendingUnknownExpenditureYear = consumerSpendingYear.Where(x => x.SubClass == "UnknownExpenditure").Sum(v => v.Amount);
+
+        if (consumerSpendingTotalYear != 0)
+        {
+            percentageOfConsumerSpendingMealOrEatOutExpensesYear = 100 * ((double)consumerSpendingMealOrEatOutExpensesYear / (double)consumerSpendingTotalYear);
+            percentageOfConsumerSpendingHousingOrSuppliesCostYear = 100 * ((double)consumerSpendingHousingOrSuppliesCostYear / (double)consumerSpendingTotalYear);
+            percentageOfConsumerSpendingEducationExpensesYear = 100 * ((double)consumerSpendingEducationExpensesYear / (double)consumerSpendingTotalYear);
+            percentageOfConsumerSpendingMedicalExpensesYear = 100 * ((double)consumerSpendingMedicalExpensesYear / (double)consumerSpendingTotalYear);
+            percentageOfConsumerSpendingTransportationCostYear = 100 * ((double)consumerSpendingTransportationCostYear / (double)consumerSpendingTotalYear);
+            percentageOfConsumerSpendingCommunicationCostYear = 100 * ((double)consumerSpendingCommunicationCostYear / (double)consumerSpendingTotalYear);
+            percentageOfConsumerSpendingLeisureOrCultureYear = 100 * ((double)consumerSpendingLeisureOrCultureYear / (double)consumerSpendingTotalYear);
+            percentageOfConsumerSpendingClothingOrShoesYear = 100 * ((double)consumerSpendingClothingOrShoesYear / (double)consumerSpendingTotalYear);
+            percentageOfConsumerSpendingPinMoneyYear = 100 * ((double)consumerSpendingPinMoneyYear / (double)consumerSpendingTotalYear);
+            percentageOfConsumerSpendingProtectionTypeInsuranceYear = 100 * ((double)consumerSpendingProtectionTypeInsuranceYear / (double)consumerSpendingTotalYear);
+            percentageOfConsumerSpendingOtherExpensesYear = 100 * ((double)consumerSpendingOtherExpensesYear / (double)consumerSpendingTotalYear);
+            percentageOfConsumerSpendingUnknownExpenditureYear = 100 * ((double)consumerSpendingUnknownExpenditureYear / (double)consumerSpendingTotalYear);
+        }
+
+        #endregion
+
+        #endregion
+
+        #region YearMonth 수입
+
+        #region 대분류 = '정기수입'
+
+        var regularIncomeYearMonth = Model.IncomeYearMonthOutputViewModels.Where(x => x.MainClass == "RegularIncome").ToList();
+
+        var regularIncomeTotalYearMonth = regularIncomeYearMonth.Sum(v => v.Amount);
+        regularIncomeLaborIncomeYearMonth = regularIncomeYearMonth.Where(x => x.SubClass == "LaborIncome").Sum(v => v.Amount);
+        regularIncomeBusinessIncomeYearMonth = regularIncomeYearMonth.Where(x => x.SubClass == "BusinessIncome").Sum(v => v.Amount);
+        regularIncomePensionIncomeYearMonth = regularIncomeYearMonth.Where(x => x.SubClass == "PensionIncome").Sum(v => v.Amount);
+        regularIncomeFinancialIncomeYearMonth = regularIncomeYearMonth.Where(x => x.SubClass == "FinancialIncome").Sum(v => v.Amount);
+        regularIncomeRentalIncomeYearMonth = regularIncomeYearMonth.Where(x => x.SubClass == "RentalIncome").Sum(v => v.Amount);
+        regularIncomeOtherIncomeYearMonth = regularIncomeYearMonth.Where(x => x.SubClass == "OtherIncome").Sum(v => v.Amount);
+
+        if (regularIncomeTotalYearMonth != 0)
+        {
+            percentageOfRegularIncomeLaborIncomeYearMonth = 100 * ((double)regularIncomeLaborIncomeYearMonth / (double)regularIncomeTotalYearMonth);
+            percentageOfRegularIncomeBusinessIncomeYearMonth = 100 * ((double)regularIncomeBusinessIncomeYearMonth / (double)regularIncomeTotalYearMonth);
+            percentageOfRegularIncomePensionIncomeYearMonth = 100 * ((double)regularIncomePensionIncomeYearMonth / (double)regularIncomeTotalYearMonth);
+            percentageOfRegularIncomeFinancialIncomeYearMonth = 100 * ((double)regularIncomeFinancialIncomeYearMonth / (double)regularIncomeTotalYearMonth);
+            percentageOfRegularIncomeRentalIncomeYearMonth = 100 * ((double)regularIncomeRentalIncomeYearMonth / (double)regularIncomeTotalYearMonth);
+            percentageOfRegularIncomeOtherIncomeYearMonth = 100 * ((double)regularIncomeOtherIncomeYearMonth / (double)regularIncomeTotalYearMonth);
+        }
+
+        #endregion
+
+        #region 대분류 = '비정기수입'
+
+        var irregularIncomeYearMonth = Model.IncomeYearMonthOutputViewModels.Where(x => x.MainClass == "IrregularIncome").ToList();
+
+        var irregularIncomeTotalYearMonth = irregularIncomeYearMonth.Sum(v => v.Amount);
+        irregularIncomeLaborIncomeYearMonth = irregularIncomeYearMonth.Where(x => x.SubClass == "LaborIncome").Sum(v => v.Amount);
+        irregularIncomeOtherIncomeYearMonth = irregularIncomeYearMonth.Where(x => x.SubClass == "OtherIncome").Sum(v => v.Amount);
+
+        if (irregularIncomeTotalYearMonth != 0)
+        {
+            percentageOfIrregularIncomeLaborIncomeYearMonth = 100 * ((double)irregularIncomeLaborIncomeYearMonth / (double)irregularIncomeTotalYearMonth);
+            percentageOfIrregularIncomeOtherIncomeYearMonth = 100 * ((double)irregularIncomeOtherIncomeYearMonth / (double)irregularIncomeTotalYearMonth);
+        }
+
+        #endregion
+
+        #endregion
+
+        #region YearMonth 지출
+
+        #region 대분류 = '정기저축'
+
+        var regularSavingsYearMonth = Model.ExpenditureYearMonthOutputViewModels.Where(x => x.MainClass == "RegularSavings").ToList();
+
+        var regularSavingsTotalYearMonth = regularSavingsYearMonth.Sum(v => v.Amount);
+        regularSavingsDepositYearMonth = regularSavingsYearMonth.Where(x => x.SubClass == "Deposit").Sum(v => v.Amount);
+        regularSavingsInvestmentYearMonth = regularSavingsYearMonth.Where(x => x.SubClass == "Investment").Sum(v => v.Amount);
+
+        if (regularSavingsTotalYearMonth != 0)
+        {
+            percentageOfRegularSavingsDepositYearMonth = 100 * ((double)regularSavingsDepositYearMonth / (double)regularSavingsTotalYearMonth);
+            percentageOfRegularSavingsInvestmentYearMonth = 100 * ((double)regularSavingsInvestmentYearMonth / (double)regularSavingsTotalYearMonth);
+        }
+
+        #endregion
+
+        #region 대분류 = '비소비지출'
+
+        var nonConsumerSpendingYearMonth = Model.ExpenditureYearMonthOutputViewModels.Where(x => x.MainClass == "NonConsumerSpending").ToList();
+
+        var nonConsumerSpendingTotalYearMonth = nonConsumerSpendingYearMonth.Sum(v => v.Amount);
+        nonConsumerSpendingPublicPensionYearMonth = nonConsumerSpendingYearMonth.Where(x => x.SubClass == "PublicPension").Sum(v => v.Amount);
+        nonConsumerSpendingDebtRepaymentYearMonth = nonConsumerSpendingYearMonth.Where(x => x.SubClass == "DebtRepayment").Sum(v => v.Amount);
+        nonConsumerSpendingTaxYearMonth = nonConsumerSpendingYearMonth.Where(x => x.SubClass == "Tax").Sum(v => v.Amount);
+        nonConsumerSpendingSocialInsuranceYearMonth = nonConsumerSpendingYearMonth.Where(x => x.SubClass == "SocialInsurance").Sum(v => v.Amount);
+        nonConsumerSpendingInterHouseholdTransferExpensesYearMonth = nonConsumerSpendingYearMonth.Where(x => x.SubClass == "InterHouseholdTransferExpenses").Sum(v => v.Amount);
+        nonConsumerSpendingNonProfitOrganizationTransferYearMonth = nonConsumerSpendingYearMonth.Where(x => x.SubClass == "NonProfitOrganizationTransfer").Sum(v => v.Amount);
+
+        if (nonConsumerSpendingTotalYearMonth != 0)
+        {
+            percentageOfNonConsumerSpendingPublicPensionYearMonth = 100 * ((double)nonConsumerSpendingPublicPensionYearMonth / (double)nonConsumerSpendingTotalYearMonth);
+            percentageOfNonConsumerSpendingDebtRepaymentYearMonth = 100 * ((double)nonConsumerSpendingDebtRepaymentYearMonth / (double)nonConsumerSpendingTotalYearMonth);
+            percentageOfNonConsumerSpendingTaxYearMonth = 100 * ((double)nonConsumerSpendingTaxYearMonth / (double)nonConsumerSpendingTotalYearMonth);
+            percentageOfNonConsumerSpendingSocialInsuranceYearMonth = 100 * ((double)nonConsumerSpendingSocialInsuranceYearMonth / (double)nonConsumerSpendingTotalYearMonth);
+            percentageOfNonConsumerSpendingInterHouseholdTransferExpensesYearMonth = 100 * ((double)nonConsumerSpendingInterHouseholdTransferExpensesYearMonth / (double)nonConsumerSpendingTotalYearMonth);
+            percentageOfNonConsumerSpendingNonProfitOrganizationTransferYearMonth = 100 * ((double)nonConsumerSpendingNonProfitOrganizationTransferYearMonth / (double)nonConsumerSpendingTotalYearMonth);
+        }
+
+        #endregion
+
+        #region 대분류 = '소비지출'
+
+        var consumerSpendingYearMonth = Model.ExpenditureYearMonthOutputViewModels.Where(x => x.MainClass == "ConsumerSpending").ToList();
+
+        var consumerSpendingTotalYearMonth = consumerSpendingYearMonth.Sum(v => v.Amount);
+        consumerSpendingMealOrEatOutExpensesYearMonth = consumerSpendingYearMonth.Where(x => x.SubClass == "MealOrEatOutExpenses").Sum(v => v.Amount);
+        consumerSpendingHousingOrSuppliesCostYearMonth = consumerSpendingYearMonth.Where(x => x.SubClass == "HousingOrSuppliesCost").Sum(v => v.Amount);
+        consumerSpendingEducationExpensesYearMonth = consumerSpendingYearMonth.Where(x => x.SubClass == "EducationExpenses").Sum(v => v.Amount);
+        consumerSpendingMedicalExpensesYearMonth = consumerSpendingYearMonth.Where(x => x.SubClass == "MedicalExpenses").Sum(v => v.Amount);
+        consumerSpendingTransportationCostYearMonth = consumerSpendingYearMonth.Where(x => x.SubClass == "TransportationCost").Sum(v => v.Amount);
+        consumerSpendingCommunicationCostYearMonth = consumerSpendingYearMonth.Where(x => x.SubClass == "CommunicationCost").Sum(v => v.Amount);
+        consumerSpendingLeisureOrCultureYearMonth = consumerSpendingYearMonth.Where(x => x.SubClass == "LeisureOrCulture").Sum(v => v.Amount);
+        consumerSpendingClothingOrShoesYearMonth = consumerSpendingYearMonth.Where(x => x.SubClass == "ClothingOrShoes").Sum(v => v.Amount);
+        consumerSpendingPinMoneyYearMonth = consumerSpendingYearMonth.Where(x => x.SubClass == "PinMoney").Sum(v => v.Amount);
+        consumerSpendingProtectionTypeInsuranceYearMonth = consumerSpendingYearMonth.Where(x => x.SubClass == "ProtectionTypeInsurance").Sum(v => v.Amount);
+        consumerSpendingOtherExpensesYearMonth = consumerSpendingYearMonth.Where(x => x.SubClass == "OtherExpenses").Sum(v => v.Amount);
+        consumerSpendingUnknownExpenditureYearMonth = consumerSpendingYearMonth.Where(x => x.SubClass == "UnknownExpenditure").Sum(v => v.Amount);
+
+        if (consumerSpendingTotalYearMonth != 0)
+        {
+            percentageOfConsumerSpendingMealOrEatOutExpensesYearMonth = 100 * ((double)consumerSpendingMealOrEatOutExpensesYearMonth / (double)consumerSpendingTotalYearMonth);
+            percentageOfConsumerSpendingHousingOrSuppliesCostYearMonth = 100 * ((double)consumerSpendingHousingOrSuppliesCostYearMonth / (double)consumerSpendingTotalYearMonth);
+            percentageOfConsumerSpendingEducationExpensesYearMonth = 100 * ((double)consumerSpendingEducationExpensesYearMonth / (double)consumerSpendingTotalYearMonth);
+            percentageOfConsumerSpendingMedicalExpensesYearMonth = 100 * ((double)consumerSpendingMedicalExpensesYearMonth / (double)consumerSpendingTotalYearMonth);
+            percentageOfConsumerSpendingTransportationCostYearMonth = 100 * ((double)consumerSpendingTransportationCostYearMonth / (double)consumerSpendingTotalYearMonth);
+            percentageOfConsumerSpendingCommunicationCostYearMonth = 100 * ((double)consumerSpendingCommunicationCostYearMonth / (double)consumerSpendingTotalYearMonth);
+            percentageOfConsumerSpendingLeisureOrCultureYearMonth = 100 * ((double)consumerSpendingLeisureOrCultureYearMonth / (double)consumerSpendingTotalYearMonth);
+            percentageOfConsumerSpendingClothingOrShoesYearMonth = 100 * ((double)consumerSpendingClothingOrShoesYearMonth / (double)consumerSpendingTotalYearMonth);
+            percentageOfConsumerSpendingPinMoneyYearMonth = 100 * ((double)consumerSpendingPinMoneyYearMonth / (double)consumerSpendingTotalYearMonth);
+            percentageOfConsumerSpendingProtectionTypeInsuranceYearMonth = 100 * ((double)consumerSpendingProtectionTypeInsuranceYearMonth / (double)consumerSpendingTotalYearMonth);
+            percentageOfConsumerSpendingOtherExpensesYearMonth = 100 * ((double)consumerSpendingOtherExpensesYearMonth / (double)consumerSpendingTotalYearMonth);
+            percentageOfConsumerSpendingUnknownExpenditureYearMonth = 100 * ((double)consumerSpendingUnknownExpenditureYearMonth / (double)consumerSpendingTotalYearMonth);
+        }
+
+        #endregion
+
+        #endregion
+    }
+}
+
+@Html.Hidden("localizerLaborIncome", localizer["LaborIncome"].Value)
+@Html.Hidden("localizerBusinessIncome", localizer["BusinessIncome"].Value)
+@Html.Hidden("localizerPensionIncome", localizer["PensionIncome"].Value)
+@Html.Hidden("localizerFinancialIncome", localizer["FinancialIncome"].Value)
+@Html.Hidden("localizerRentalIncome", localizer["RentalIncome"].Value)
+@Html.Hidden("localizerOtherIncome", localizer["OtherIncome"].Value)
+@Html.Hidden("localizerDeposit", localizer["Deposit"].Value)
+@Html.Hidden("localizerInvestment", localizer["Investment"].Value)
+@Html.Hidden("localizerPublicPension", localizer["PublicPension"].Value)
+@Html.Hidden("localizerDebtRepayment", localizer["DebtRepayment"].Value)
+@Html.Hidden("localizerTax", localizer["Tax"].Value)
+@Html.Hidden("localizerSocialInsurance", localizer["SocialInsurance"].Value)
+@Html.Hidden("localizerInterHouseholdTransferExpenses", localizer["InterHouseholdTransferExpenses"].Value)
+@Html.Hidden("localizerNonProfitOrganizationTransfer", localizer["NonProfitOrganizationTransfer"].Value)
+@Html.Hidden("localizerMealOrEatOutExpenses", localizer["MealOrEatOutExpenses"].Value)
+@Html.Hidden("localizerHousingOrSuppliesCost", localizer["HousingOrSuppliesCost"].Value)
+@Html.Hidden("localizerEducationExpenses", localizer["EducationExpenses"].Value)
+@Html.Hidden("localizerMedicalExpenses", localizer["MedicalExpenses"].Value)
+@Html.Hidden("localizerTransportationCost", localizer["TransportationCost"].Value)
+@Html.Hidden("localizerCommunicationCost", localizer["CommunicationCost"].Value)
+@Html.Hidden("localizerLeisureOrCulture", localizer["LeisureOrCulture"].Value)
+@Html.Hidden("localizerClothingOrShoes", localizer["ClothingOrShoes"].Value)
+@Html.Hidden("localizerPinMoney", localizer["PinMoney"].Value)
+@Html.Hidden("localizerProtectionTypeInsurance", localizer["ProtectionTypeInsurance"].Value)
+@Html.Hidden("localizerOtherExpenses", localizer["OtherExpenses"].Value)
+@Html.Hidden("localizerUnknownExpenditure", localizer["UnknownExpenditure"].Value)
+
+@*수입*@
+@*정기수입*@
+@Html.Hidden($"{nameof(regularIncomeLaborIncomeYear)}", regularIncomeLaborIncomeYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(regularIncomeBusinessIncomeYear)}", regularIncomeBusinessIncomeYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(regularIncomePensionIncomeYear)}", regularIncomePensionIncomeYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(regularIncomeFinancialIncomeYear)}", regularIncomeFinancialIncomeYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(regularIncomeRentalIncomeYear)}", regularIncomeRentalIncomeYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(regularIncomeOtherIncomeYear)}", regularIncomeOtherIncomeYear.TrimTrailingZeros())
+
+@Html.Hidden($"{nameof(percentageOfRegularIncomeLaborIncomeYear)}", $"{percentageOfRegularIncomeLaborIncomeYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfRegularIncomeBusinessIncomeYear)}", $"{percentageOfRegularIncomeBusinessIncomeYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfRegularIncomePensionIncomeYear)}", $"{percentageOfRegularIncomePensionIncomeYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfRegularIncomeFinancialIncomeYear)}", $"{percentageOfRegularIncomeFinancialIncomeYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfRegularIncomeRentalIncomeYear)}", $"{percentageOfRegularIncomeRentalIncomeYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfRegularIncomeOtherIncomeYear)}", $"{percentageOfRegularIncomeOtherIncomeYear:0.00}")
+
+
+@Html.Hidden($"{nameof(regularIncomeLaborIncomeYearMonth)}", regularIncomeLaborIncomeYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(regularIncomeBusinessIncomeYearMonth)}", regularIncomeBusinessIncomeYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(regularIncomePensionIncomeYearMonth)}", regularIncomePensionIncomeYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(regularIncomeFinancialIncomeYearMonth)}", regularIncomeFinancialIncomeYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(regularIncomeRentalIncomeYearMonth)}", regularIncomeRentalIncomeYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(regularIncomeOtherIncomeYearMonth)}", regularIncomeOtherIncomeYearMonth.TrimTrailingZeros())
+
+@Html.Hidden($"{nameof(percentageOfRegularIncomeLaborIncomeYearMonth)}", $"{percentageOfRegularIncomeLaborIncomeYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfRegularIncomeBusinessIncomeYearMonth)}", $"{percentageOfRegularIncomeBusinessIncomeYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfRegularIncomePensionIncomeYearMonth)}", $"{percentageOfRegularIncomePensionIncomeYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfRegularIncomeFinancialIncomeYearMonth)}", $"{percentageOfRegularIncomeFinancialIncomeYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfRegularIncomeRentalIncomeYearMonth)}", $"{percentageOfRegularIncomeRentalIncomeYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfRegularIncomeOtherIncomeYearMonth)}", $"{percentageOfRegularIncomeOtherIncomeYearMonth:0.00}")
+
+@*비정기수입*@
+@Html.Hidden($"{nameof(irregularIncomeLaborIncomeYear)}", irregularIncomeLaborIncomeYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(irregularIncomeOtherIncomeYear)}", irregularIncomeOtherIncomeYear.TrimTrailingZeros())
+
+@Html.Hidden($"{nameof(percentageOfIrregularIncomeLaborIncomeYear)}", $"{percentageOfIrregularIncomeLaborIncomeYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfIrregularIncomeOtherIncomeYear)}", $"{percentageOfIrregularIncomeOtherIncomeYear:0.00}")
+
+
+@Html.Hidden($"{nameof(irregularIncomeLaborIncomeYearMonth)}", irregularIncomeLaborIncomeYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(irregularIncomeOtherIncomeYearMonth)}", irregularIncomeOtherIncomeYearMonth.TrimTrailingZeros())
+
+@Html.Hidden($"{nameof(percentageOfIrregularIncomeLaborIncomeYearMonth)}", $"{percentageOfIrregularIncomeLaborIncomeYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfIrregularIncomeOtherIncomeYearMonth)}", $"{percentageOfIrregularIncomeOtherIncomeYearMonth:0.00}")
+
+@*지출*@
+@*정기저축*@
+@Html.Hidden($"{nameof(regularSavingsDepositYear)}", regularSavingsDepositYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(regularSavingsInvestmentYear)}", regularSavingsInvestmentYear.TrimTrailingZeros())
+
+@Html.Hidden($"{nameof(percentageOfRegularSavingsDepositYear)}", $"{percentageOfRegularSavingsDepositYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfRegularSavingsInvestmentYear)}", $"{percentageOfRegularSavingsInvestmentYear:0.00}")
+
+
+@Html.Hidden($"{nameof(regularSavingsDepositYearMonth)}", regularSavingsDepositYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(regularSavingsInvestmentYearMonth)}", regularSavingsInvestmentYearMonth.TrimTrailingZeros())
+
+@Html.Hidden($"{nameof(percentageOfRegularSavingsDepositYearMonth)}", $"{percentageOfRegularSavingsDepositYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfRegularSavingsInvestmentYearMonth)}", $"{percentageOfRegularSavingsInvestmentYearMonth:0.00}")
+
+@*비소비지출*@
+@Html.Hidden($"{nameof(nonConsumerSpendingPublicPensionYear)}", nonConsumerSpendingPublicPensionYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(nonConsumerSpendingDebtRepaymentYear)}", nonConsumerSpendingDebtRepaymentYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(nonConsumerSpendingTaxYear)}", nonConsumerSpendingTaxYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(nonConsumerSpendingSocialInsuranceYear)}", nonConsumerSpendingSocialInsuranceYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(nonConsumerSpendingInterHouseholdTransferExpensesYear)}", nonConsumerSpendingInterHouseholdTransferExpensesYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(nonConsumerSpendingNonProfitOrganizationTransferYear)}", nonConsumerSpendingNonProfitOrganizationTransferYear.TrimTrailingZeros())
+
+@Html.Hidden($"{nameof(percentageOfNonConsumerSpendingPublicPensionYear)}", $"{percentageOfNonConsumerSpendingPublicPensionYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfNonConsumerSpendingDebtRepaymentYear)}", $"{percentageOfNonConsumerSpendingDebtRepaymentYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfNonConsumerSpendingTaxYear)}", $"{percentageOfNonConsumerSpendingTaxYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfNonConsumerSpendingSocialInsuranceYear)}", $"{percentageOfNonConsumerSpendingSocialInsuranceYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfNonConsumerSpendingInterHouseholdTransferExpensesYear)}", $"{percentageOfNonConsumerSpendingInterHouseholdTransferExpensesYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfNonConsumerSpendingNonProfitOrganizationTransferYear)}", $"{percentageOfNonConsumerSpendingNonProfitOrganizationTransferYear:0.00}")
+
+
+@Html.Hidden($"{nameof(nonConsumerSpendingPublicPensionYearMonth)}", nonConsumerSpendingPublicPensionYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(nonConsumerSpendingDebtRepaymentYearMonth)}", nonConsumerSpendingDebtRepaymentYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(nonConsumerSpendingTaxYearMonth)}", nonConsumerSpendingTaxYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(nonConsumerSpendingSocialInsuranceYearMonth)}", nonConsumerSpendingSocialInsuranceYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(nonConsumerSpendingInterHouseholdTransferExpensesYearMonth)}", nonConsumerSpendingInterHouseholdTransferExpensesYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(nonConsumerSpendingNonProfitOrganizationTransferYearMonth)}", nonConsumerSpendingNonProfitOrganizationTransferYearMonth.TrimTrailingZeros())
+
+@Html.Hidden($"{nameof(percentageOfNonConsumerSpendingPublicPensionYearMonth)}", $"{percentageOfNonConsumerSpendingPublicPensionYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfNonConsumerSpendingDebtRepaymentYearMonth)}", $"{percentageOfNonConsumerSpendingDebtRepaymentYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfNonConsumerSpendingTaxYearMonth)}", $"{percentageOfNonConsumerSpendingTaxYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfNonConsumerSpendingSocialInsuranceYearMonth)}", $"{percentageOfNonConsumerSpendingSocialInsuranceYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfNonConsumerSpendingInterHouseholdTransferExpensesYearMonth)}", $"{percentageOfNonConsumerSpendingInterHouseholdTransferExpensesYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfNonConsumerSpendingNonProfitOrganizationTransferYearMonth)}", $"{percentageOfNonConsumerSpendingNonProfitOrganizationTransferYearMonth:0.00}")
+
+@*소비지출*@
+@Html.Hidden($"{nameof(consumerSpendingMealOrEatOutExpensesYear)}", consumerSpendingMealOrEatOutExpensesYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingHousingOrSuppliesCostYear)}", consumerSpendingHousingOrSuppliesCostYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingEducationExpensesYear)}", consumerSpendingEducationExpensesYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingMedicalExpensesYear)}", consumerSpendingMedicalExpensesYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingTransportationCostYear)}", consumerSpendingTransportationCostYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingCommunicationCostYear)}", consumerSpendingCommunicationCostYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingLeisureOrCultureYear)}", consumerSpendingLeisureOrCultureYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingClothingOrShoesYear)}", consumerSpendingClothingOrShoesYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingPinMoneyYear)}", consumerSpendingPinMoneyYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingProtectionTypeInsuranceYear)}", consumerSpendingProtectionTypeInsuranceYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingOtherExpensesYear)}", consumerSpendingOtherExpensesYear.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingUnknownExpenditureYear)}", consumerSpendingUnknownExpenditureYear.TrimTrailingZeros())
+
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingMealOrEatOutExpensesYear)}", $"{percentageOfConsumerSpendingMealOrEatOutExpensesYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingHousingOrSuppliesCostYear)}", $"{percentageOfConsumerSpendingHousingOrSuppliesCostYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingEducationExpensesYear)}", $"{percentageOfConsumerSpendingEducationExpensesYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingMedicalExpensesYear)}", $"{percentageOfConsumerSpendingMedicalExpensesYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingTransportationCostYear)}", $"{percentageOfConsumerSpendingTransportationCostYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingCommunicationCostYear)}", $"{percentageOfConsumerSpendingCommunicationCostYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingLeisureOrCultureYear)}", $"{percentageOfConsumerSpendingLeisureOrCultureYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingClothingOrShoesYear)}", $"{percentageOfConsumerSpendingClothingOrShoesYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingPinMoneyYear)}", $"{percentageOfConsumerSpendingPinMoneyYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingProtectionTypeInsuranceYear)}", $"{percentageOfConsumerSpendingProtectionTypeInsuranceYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingOtherExpensesYear)}", $"{percentageOfConsumerSpendingOtherExpensesYear:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingUnknownExpenditureYear)}", $"{percentageOfConsumerSpendingUnknownExpenditureYear:0.00}")
+
+
+@Html.Hidden($"{nameof(consumerSpendingMealOrEatOutExpensesYearMonth)}", consumerSpendingMealOrEatOutExpensesYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingHousingOrSuppliesCostYearMonth)}", consumerSpendingHousingOrSuppliesCostYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingEducationExpensesYearMonth)}", consumerSpendingEducationExpensesYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingMedicalExpensesYearMonth)}", consumerSpendingMedicalExpensesYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingTransportationCostYearMonth)}", consumerSpendingTransportationCostYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingCommunicationCostYearMonth)}", consumerSpendingCommunicationCostYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingLeisureOrCultureYearMonth)}", consumerSpendingLeisureOrCultureYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingClothingOrShoesYearMonth)}", consumerSpendingClothingOrShoesYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingPinMoneyYearMonth)}", consumerSpendingPinMoneyYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingProtectionTypeInsuranceYearMonth)}", consumerSpendingProtectionTypeInsuranceYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingOtherExpensesYearMonth)}", consumerSpendingOtherExpensesYearMonth.TrimTrailingZeros())
+@Html.Hidden($"{nameof(consumerSpendingUnknownExpenditureYearMonth)}", consumerSpendingUnknownExpenditureYearMonth.TrimTrailingZeros())
+
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingMealOrEatOutExpensesYearMonth)}", $"{percentageOfConsumerSpendingMealOrEatOutExpensesYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingHousingOrSuppliesCostYearMonth)}", $"{percentageOfConsumerSpendingHousingOrSuppliesCostYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingEducationExpensesYearMonth)}", $"{percentageOfConsumerSpendingEducationExpensesYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingMedicalExpensesYearMonth)}", $"{percentageOfConsumerSpendingMedicalExpensesYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingTransportationCostYearMonth)}", $"{percentageOfConsumerSpendingTransportationCostYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingCommunicationCostYearMonth)}", $"{percentageOfConsumerSpendingCommunicationCostYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingLeisureOrCultureYearMonth)}", $"{percentageOfConsumerSpendingLeisureOrCultureYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingClothingOrShoesYearMonth)}", $"{percentageOfConsumerSpendingClothingOrShoesYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingPinMoneyYearMonth)}", $"{percentageOfConsumerSpendingPinMoneyYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingProtectionTypeInsuranceYearMonth)}", $"{percentageOfConsumerSpendingProtectionTypeInsuranceYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingOtherExpensesYearMonth)}", $"{percentageOfConsumerSpendingOtherExpensesYearMonth:0.00}")
+@Html.Hidden($"{nameof(percentageOfConsumerSpendingUnknownExpenditureYearMonth)}", $"{percentageOfConsumerSpendingUnknownExpenditureYearMonth:0.00}")
+
+<section class="content">
+    <div class="container-fluid">
+
+        @if (Model.MonetaryUnits.Count() != 0)
+        {
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-cog"></i> @localizer["Setting"].Value
+                            </h3>
+                            <div class="card-tools">
+                                <div class="input-group input-group-sm">
+                                    <select id="year" style="max-width:100%;">
+                                        @for (var i = endYear; i >= startYear; i--)
+                                        {
+                                            if (i == selectedYear)
+                                            {
+                                                var i1 = i;
+                                                <option value="@i" selected="selected">@i1</option>
+                                            }
+                                            else
+                                            {
+                                                var i1 = i;
+                                                <option value="@i">@i1</option>
+                                            }
+                                        }
+                                    </select>
+                                    <select id="month" style="max-width:100%;">
+                                        @for (var i = 1; i <= 12; i++)
+                                        {
+                                            if (i == selectedMonth)
+                                            {
+                                                var i1 = i;
+                                                <option value="@i" selected="selected">@i1</option>
+                                            }
+                                            else
+                                            {
+                                                var i1 = i;
+                                                <option value="@i">@i1</option>
+                                            }
+                                        }
+                                    </select>
+                                    <select id="monetaryUnit" style="max-width:100%;">
+                                        @foreach (var monetaryUnit in Model.MonetaryUnits)
+                                        {
+                                            if (Model.DefaultMonetaryUnit == monetaryUnit)
+                                            {
+                                                <option value="@monetaryUnit" selected="selected">@monetaryUnit</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@monetaryUnit">@monetaryUnit</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-pie mr-1"></i>
+                            @localizer["YearIncome"].Value
+                        </h3>
+                        <div class="card-tools">
+                            <ul class="nav nav-pills ml-auto">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#dashboardIncomeYearTabs-1"
+                                       data-toggle="tab">@localizer["Regular income"].Value</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link active" href="#dashboardIncomeYearTabs-2"
+                                       data-toggle="tab">@localizer["Irregular income"].Value</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content p-0">
+                            <div class="chart tab-pane" id="dashboardIncomeYearTabs-1"
+                                 style="position: relative; height: 380px;">
+                                <canvas id="regularIncomeYear"
+                                        style="min-height: 380px; height: 380px; max-height: 380px; max-width: 100%;"></canvas>
+                            </div>
+                            <div class="chart tab-pane active" id="dashboardIncomeYearTabs-2"
+                                 style="position: relative; height: 380px;">
+                                <canvas id="irregularIncomeYear"
+                                        style="min-height: 380px; height: 380px; max-height: 380px; max-width: 100%;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-pie mr-1"></i>
+                            @localizer["MonthIncome"].Value
+                        </h3>
+                        <div class="card-tools">
+                            <ul class="nav nav-pills ml-auto">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#dashboardIncomeYearMonthTabs-1"
+                                       data-toggle="tab">@localizer["Regular income"].Value</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link active" href="#dashboardIncomeYearMonthTabs-2"
+                                       data-toggle="tab">@localizer["Irregular income"].Value</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content p-0">
+                            <div class="chart tab-pane" id="dashboardIncomeYearMonthTabs-1"
+                                 style="position: relative; height: 380px;">
+                                <canvas id="regularIncomeYearMonth"
+                                        style="min-height: 380px; height: 380px; max-height: 380px; max-width: 100%;"></canvas>
+                            </div>
+                            <div class="chart tab-pane active" id="dashboardIncomeYearMonthTabs-2"
+                                 style="position: relative; height: 380px;">
+                                <canvas id="irregularIncomeYearMonth"
+                                        style="min-height: 380px; height: 380px; max-height: 380px; max-width: 100%;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-pie mr-1"></i>
+                            @localizer["YearExpenditure"].Value
+                        </h3>
+                        <div class="card-tools">
+                            <ul class="nav nav-pills ml-auto">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#dashboardExpenditureYearTabs-1"
+                                       data-toggle="tab">@localizer["Regular savings"].Value</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#dashboardExpenditureYearTabs-2"
+                                       data-toggle="tab">@localizer["NonConsumer spending"].Value</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link active" href="#dashboardExpenditureYearTabs-3"
+                                       data-toggle="tab">@localizer["Consumer spending"].Value</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content p-0">
+                            <div class="chart tab-pane" id="dashboardExpenditureYearTabs-1"
+                                 style="position: relative; height: 380px;">
+                                <canvas id="regularSavingsYear"
+                                        style="min-height: 380px; height: 380px; max-height: 380px; max-width: 100%;"></canvas>
+                            </div>
+                            <div class="chart tab-pane" id="dashboardExpenditureYearTabs-2"
+                                 style="position: relative; height: 380px;">
+                                <canvas id="nonConsumerSpendingYear"
+                                        style="min-height: 380px; height: 380px; max-height: 380px; max-width: 100%;"></canvas>
+                            </div>
+                            <div class="chart tab-pane active" id="dashboardExpenditureYearTabs-3"
+                                 style="position: relative; height: 380px;">
+                                <canvas id="consumerSpendingYear"
+                                        style="min-height: 380px; height: 380px; max-height: 380px; max-width: 100%;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-pie mr-1"></i>
+                            @localizer["MonthExpenditure"].Value
+                        </h3>
+                        <div class="card-tools">
+                            <ul class="nav nav-pills ml-auto">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#dashboardExpenditureYearMonthTabs-1"
+                                       data-toggle="tab">@localizer["Regular savings"].Value</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#dashboardExpenditureYearMonthTabs-2"
+                                       data-toggle="tab">@localizer["NonConsumer spending"].Value</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link active" href="#dashboardExpenditureYearMonthTabs-3"
+                                       data-toggle="tab">@localizer["Consumer spending"].Value</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content p-0">
+                            <div class="chart tab-pane" id="dashboardExpenditureYearMonthTabs-1"
+                                 style="position: relative; height: 380px;">
+                                <canvas id="regularSavingsYearMonth"
+                                        style="min-height: 380px; height: 380px; max-height: 380px; max-width: 100%;"></canvas>
+                            </div>
+                            <div class="chart tab-pane" id="dashboardExpenditureYearMonthTabs-2"
+                                 style="position: relative; height: 380px;">
+                                <canvas id="nonConsumerSpendingYearMonth"
+                                        style="min-height: 380px; height: 380px; max-height: 380px; max-width: 100%;"></canvas>
+                            </div>
+                            <div class="chart tab-pane active" id="dashboardExpenditureYearMonthTabs-3"
+                                 style="position: relative; height: 380px;">
+                                <canvas id="consumerSpendingYearMonth"
+                                        style="min-height: 380px; height: 380px; max-height: 380px; max-width: 100%;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/user/custom/DashBoard/UserIndex/js/site.js" asp-append-version="true"></script>
+}

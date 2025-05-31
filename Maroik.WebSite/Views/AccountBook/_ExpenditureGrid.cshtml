@@ -1,0 +1,35 @@
+﻿@model IQueryable<Maroik.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel>
+@* Should only include grid declaration *@
+
+@(Html
+    .Grid(Model)
+    .Build(columns =>
+    {
+        columns.Add(model => model.Id).Titled(localizer[nameof(Maroik.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.Id)]).Hidden();
+        columns.Add(model => model.MainClass).Titled(localizer[nameof(Maroik.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.MainClass)]);
+        columns.Add(model => model.SubClass).Titled(localizer[nameof(Maroik.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.SubClass)]);
+        columns.Add(model => model.Content).Titled(localizer[nameof(Maroik.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.Content)]);
+        columns.Add(model => model.Amount).Titled(localizer[nameof(Maroik.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.Amount)]);
+        columns.Add(model => model.MonetaryUnit).Titled(localizer[nameof(Maroik.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.MonetaryUnit)]);
+        columns.Add(model => model.PaymentMethod).Titled(localizer[nameof(Maroik.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.PaymentMethod)]);
+        columns.Add(model => model.Note).Titled(localizer[nameof(Maroik.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.Note)]);
+        columns.Add(model => model.MyDepositAsset).Titled(localizer[nameof(Maroik.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.MyDepositAsset)]);
+        columns.Add(model => model.Created).Titled(localizer[nameof(Maroik.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.Created)]);
+        columns.Add(model => model.Updated).Titled(localizer[nameof(Maroik.WebSite.Models.ViewModels.AccountBook.ExpenditureOutputViewModel.Updated)]);
+    })
+    .Id("expenditureGrid")
+    .Css("table table-striped")
+    .AppendCss("table-hover")
+    //.Attributed(new { data_type = "individuals" })
+    //.RowAttributed(model => new { @class = model.IsWorking == true ? "working" : null, data_id = model.Id })
+    .RowAttributed(model => new { @class = "table-inactive", data_id = model.Id})
+    .Using(GridFilterMode.Row)
+    .Empty(localizer["No data found"])
+    .Filterable()
+    .Sortable()
+    .Pageable(pager => {
+        pager.PageSizes = new Dictionary<Int32, string> { { 10, "10" }, { 25, "25" }, { 50, "50" }, {100, "100" } };
+        pager.ShowPageSizes = true;
+        pager.RowsPerPage = 10;
+    })
+)

@@ -1,0 +1,431 @@
+﻿@model Maroik.Common.DataAccess.Models.Account
+@using Maroik.Common.Miscellaneous.Utilities
+@using Maroik.WebSite.Utilities
+@using System.Text
+@using Newtonsoft.Json
+@using Maroik.WebSite.Models.ViewModels.Notice
+@using System.Text.RegularExpressions
+@inject Maroik.Common.DataAccess.Contracts.IFixedIncomeRepository fixedIncomeRepository
+@inject Maroik.Common.DataAccess.Contracts.IFixedExpenditureRepository fixedExpenditureRepository
+@{
+    string currentCulture = Context.Features.Get<Microsoft.AspNetCore.Localization.IRequestCultureFeature>().RequestCulture.Culture.Name;
+    Context.Session.TryGetValue(Maroik.Common.Miscellaneous.Extensions.EnumHelper.GetDescription(Maroik.Common.Miscellaneous.Utilities.Session.Account), out byte[] resultByte);
+    string loginedAccountTimeZoneIanaId = string.Empty;
+    try
+    {
+        loginedAccountTimeZoneIanaId = JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).TimeZoneIanaId;
+    }
+    catch
+    {
+        loginedAccountTimeZoneIanaId = string.Empty;
+    }
+    DateTime currentDate = new DateTime(Convert.ToInt32(Regex.Split(DateTime.UtcNow.ToLocalTime().ToString("yyyy-MM-dd"), "-")[0]), Convert.ToInt32(Regex.Split(DateTime.UtcNow.ToLocalTime().ToString("yyyy-MM-dd"), "-")[1]), Convert.ToInt32(Regex.Split(DateTime.UtcNow.ToLocalTime().ToString("yyyy-MM-dd"), "-")[2]));
+    List<FixedIncomeOutputViewModel> fixedIncomeOutputViewModels = new List<FixedIncomeOutputViewModel>();
+    List<FixedExpenditureOutputViewModel> fixedExpenditureOutputViewModels = new List<FixedExpenditureOutputViewModel>();
+    int fixedIncomesNoticedCount = 0;
+    int fixedExpenditureNoticedCount = 0;
+
+    int fixedIncomesExpiredCount = 0;
+    int fixedExpenditureExpiredCount = 0;
+
+    if (resultByte != null) // 로그인이 된 상태라면
+    {
+        foreach (FixedIncome item in await fixedIncomeRepository.GetFixedIncomesAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email))
+        {
+            bool noticedResult = false;
+
+            try
+            {
+                noticedResult = currentDate.Subtract(new DateTime(Convert.ToInt32(Regex.Split(DateTime.UtcNow.ToLocalTime().ToString("yyyy-MM-dd"), "-")[0]), item.DepositMonth, item.DepositDay)).TotalDays <= 0 && Math.Abs(currentDate.Subtract(new DateTime(Convert.ToInt32(Regex.Split(DateTime.UtcNow.ToLocalTime().ToString("yyyy-MM-dd"), "-")[0]), item.DepositMonth, item.DepositDay)).TotalDays) <= ServerSetting.NoticeMaturityDateDay;
+            }
+            catch // 윤년이 아닌데 2월 29일로 초기화 했을 때 예외 발생
+            {
+                noticedResult = false;
+            }
+
+            if (item.Unpunctuality) // 시간 미엄수 체크 시, 알림 뜨도록 설정
+            {
+                noticedResult = true;
+            }
+
+            fixedIncomeOutputViewModels.Add(new FixedIncomeOutputViewModel()
+            {
+                Id = item.Id,
+                MainClass = localizer[item.MainClass.ToString()].Value,
+                SubClass = localizer[item.SubClass.ToString()].Value,
+                Content = item.Content,
+                Amount = item.Amount,
+                DepositMonth = item.DepositMonth,
+                DepositDay = item.DepositDay,
+                MaturityDate = item.MaturityDate.ToString("yyyy-MM-dd"),
+                Note = item.Note,
+                DepositMyAssetProductName = item.DepositMyAssetProductName,
+                Created = item.Created.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId),
+                Updated = item.Updated.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId),
+                Noticed = noticedResult,
+                Expired = item.MaturityDate.Subtract(currentDate).TotalDays < 0
+            });
+        }
+
+        foreach (FixedExpenditure item in await fixedExpenditureRepository.GetFixedExpendituresAsync(JsonConvert.DeserializeObject<Account>(Encoding.Default.GetString(resultByte)).Email))
+        {
+            bool noticedResult = false;
+
+            try
+            {
+                noticedResult = currentDate.Subtract(new DateTime(Convert.ToInt32(Regex.Split(DateTime.UtcNow.ToLocalTime().ToString("yyyy-MM-dd"), "-")[0]), item.DepositMonth, item.DepositDay)).TotalDays <= 0 && Math.Abs(currentDate.Subtract(new DateTime(Convert.ToInt32(Regex.Split(DateTime.UtcNow.ToLocalTime().ToString("yyyy-MM-dd"), "-")[0]), item.DepositMonth, item.DepositDay)).TotalDays) <= ServerSetting.NoticeMaturityDateDay;
+            }
+            catch // 윤년이 아닌데 2월 29일로 초기화 했을 때 예외 발생
+            {
+                noticedResult = false;
+            }
+
+            if (item.Unpunctuality) // 시간 미엄수 체크 시, 알림 뜨도록 설정
+            {
+                noticedResult = true;
+            }
+
+            fixedExpenditureOutputViewModels.Add(new FixedExpenditureOutputViewModel()
+            {
+                Id = item.Id,
+                MainClass = localizer[item.MainClass.ToString()].Value,
+                SubClass = localizer[item.SubClass.ToString()].Value,
+                Content = item.Content,
+                Amount = item.Amount,
+                PaymentMethod = item.PaymentMethod,
+                MyDepositAsset = item.MyDepositAsset,
+                DepositMonth = item.DepositMonth,
+                DepositDay = item.DepositDay,
+                MaturityDate = item.MaturityDate.ToString("yyyy-MM-dd"),
+                Created = item.Created.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId),
+                Updated = item.Updated.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId),
+                Note = item.Note,
+                Noticed = noticedResult,
+                Expired = item.MaturityDate.Subtract(currentDate).TotalDays < 0
+            });
+        }
+        fixedIncomesNoticedCount = fixedIncomeOutputViewModels.Where(a => a.Noticed == true).Count();
+        fixedExpenditureNoticedCount = fixedExpenditureOutputViewModels.Where(a => a.Noticed == true).Count();
+
+        fixedIncomesExpiredCount = fixedIncomeOutputViewModels.Where(a => a.Expired == true).Count();
+        fixedExpenditureExpiredCount = fixedExpenditureOutputViewModels.Where(a => a.Expired == true).Count();
+    }
+    else // 로그인이 되지 않은 상태라면
+    {
+
+    }
+}
+
+@*<!-- Navbar -->*@
+@*<nav class="main-header navbar navbar-expand navbar-white navbar-light">*@
+<nav class="main-header navbar navbar-expand navbar-dark">
+    @*<!-- Left navbar links -->*@
+    <ul class="navbar-nav">
+        <li class="nav-item">
+            <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+        </li>
+        @*<li class="nav-item d-none d-sm-inline-block">
+        <a asp-controller="DashBoard" asp-action="Index" class="nav-link">Home</a>
+        </li>*@
+        @*<li class="nav-item d-none d-sm-inline-block">
+        <a href="#" class="nav-link">Contact</a>
+        </li>*@
+    </ul>
+
+    @*<!-- Right navbar links -->*@
+    <ul class="navbar-nav ml-auto">
+
+        @*
+        <!-- Navbar Search -->
+        <li class="nav-item">
+        <a class="nav-link" data-widget="navbar-search" href="#" role="button">
+        <i class="fas fa-search"></i>
+        </a>
+        <div class="navbar-search-block">
+        <form class="form-inline">
+        <div class="input-group input-group-sm">
+        <input class="form-control form-control-navbar" type="search" placeholder="Search" aria-label="Search">
+        <div class="input-group-append">
+        <button class="btn btn-navbar" type="submit">
+        <i class="fas fa-search"></i>
+        </button>
+        <button class="btn btn-navbar" type="button" data-widget="navbar-search">
+        <i class="fas fa-times"></i>
+        </button>
+        </div>
+        </div>
+        </form>
+        </div>
+        </li>
+        *@
+
+        @*
+        <!-- Messages Dropdown Menu -->
+        <li class="nav-item dropdown">
+        <a class="nav-link" data-toggle="dropdown" href="#">
+        <i class="far fa-comments"></i>
+        <span class="badge badge-danger navbar-badge">3</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+        <a href="#" class="dropdown-item">
+        <!-- Message Start -->
+        <div class="media">
+        <img src="dist/img/user1-128x128.jpg" alt="User Avatar" class="img-size-50 mr-3 img-circle">
+        <div class="media-body">
+        <h3 class="dropdown-item-title">
+        Brad Diesel
+        <span class="float-right text-sm text-danger"><i class="fas fa-star"></i></span>
+        </h3>
+        <p class="text-sm">Call me whenever you can...</p>
+        <p class="text-sm text-muted"><i class="far fa-clock mr-1"></i> 4 Hours Ago</p>
+        </div>
+        </div>
+        <!-- Message End -->
+        </a>
+        <div class="dropdown-divider"></div>
+        <a href="#" class="dropdown-item">
+        <!-- Message Start -->
+        <div class="media">
+        <img src="dist/img/user8-128x128.jpg" alt="User Avatar" class="img-size-50 img-circle mr-3">
+        <div class="media-body">
+        <h3 class="dropdown-item-title">
+        John Pierce
+        <span class="float-right text-sm text-muted"><i class="fas fa-star"></i></span>
+        </h3>
+        <p class="text-sm">I got your message bro</p>
+        <p class="text-sm text-muted"><i class="far fa-clock mr-1"></i> 4 Hours Ago</p>
+        </div>
+        </div>
+        <!-- Message End -->
+        </a>
+        <div class="dropdown-divider"></div>
+        <a href="#" class="dropdown-item">
+        <!-- Message Start -->
+        <div class="media">
+        <img src="dist/img/user3-128x128.jpg" alt="User Avatar" class="img-size-50 img-circle mr-3">
+        <div class="media-body">
+        <h3 class="dropdown-item-title">
+        Nora Silvester
+        <span class="float-right text-sm text-warning"><i class="fas fa-star"></i></span>
+        </h3>
+        <p class="text-sm">The subject goes here</p>
+        <p class="text-sm text-muted"><i class="far fa-clock mr-1"></i> 4 Hours Ago</p>
+        </div>
+        </div>
+        <!-- Message End -->
+        </a>
+        <div class="dropdown-divider"></div>
+        <a href="#" class="dropdown-item dropdown-footer">See All Messages</a>
+        </div>
+        </li>
+        *@
+
+
+        @*<!-- Notifications Dropdown Menu -->*@
+
+        @if (Model.Role == Role.Admin)
+        {
+            @*
+        <li class="nav-item dropdown">
+        <a class="nav-link" data-toggle="dropdown" href="#">
+        <i class="far fa-bell"></i>
+        <span class="badge badge-warning navbar-badge">15</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+        <span class="dropdown-item dropdown-header">15 Notifications</span>
+        <div class="dropdown-divider"></div>
+        <a href="#" class="dropdown-item">
+        <i class="fas fa-envelope mr-2"></i> 4 new messages
+        <span class="float-right text-muted text-sm">3 mins</span>
+        </a>
+        <div class="dropdown-divider"></div>
+        <a href="#" class="dropdown-item">
+        <i class="fas fa-users mr-2"></i> 8 friend requests
+        <span class="float-right text-muted text-sm">12 hours</span>
+        </a>
+        <div class="dropdown-divider"></div>
+        <a href="#" class="dropdown-item">
+        <i class="fas fa-file mr-2"></i> 3 new reports
+        <span class="float-right text-muted text-sm">2 days</span>
+        </a>
+        <div class="dropdown-divider"></div>
+        <a href="#" class="dropdown-item dropdown-footer">See All Notifications</a>
+        </div>
+        </li>
+        *@
+            @*<!-- Language Dropdown Menu -->*@
+            <li class="nav-item dropdown">
+                <a class="nav-link" data-toggle="dropdown" href="#">
+                    <i class="fas fa-globe"></i>
+                </a>
+                <div class="dropdown-menu" role="menu">
+                    <a id="aChangeCultureEnUS" class="dropdown-item @(currentCulture == "en-US" ? "active" : "")" style="cursor: pointer;">English</a>
+                    <a id="aChangeCultureKoKR" class="dropdown-item @(currentCulture == "ko-KR" ? "active" : "")" style="cursor: pointer;">한국어</a>
+                </div>
+            </li>
+        }
+        else if (Model.Role == Role.User)
+        {
+            if ((fixedIncomesNoticedCount + fixedIncomesExpiredCount + fixedExpenditureNoticedCount + fixedExpenditureExpiredCount) > 0)
+            {
+                <li class="nav-item dropdown">
+                    <a class="nav-link" data-toggle="dropdown" href="#">
+                        <i class="far fa-bell"></i>
+                        <span class="badge badge-warning navbar-badge">@(fixedIncomesNoticedCount + fixedIncomesExpiredCount + fixedExpenditureNoticedCount + fixedExpenditureExpiredCount)</span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+                        <span class="dropdown-item dropdown-header">@(fixedIncomesNoticedCount + fixedIncomesExpiredCount + fixedExpenditureNoticedCount + fixedExpenditureExpiredCount) @localizer["Notifications"].Value</span>
+                        <div class="dropdown-divider"></div>
+                        @if (fixedIncomesNoticedCount + fixedIncomesExpiredCount > 0)
+                        {
+                            <a href="@Url.Action("FixedIncome", "Notice")" class="dropdown-item">
+                                <i class="fas fa-file mr-2"></i>[@(fixedIncomesNoticedCount + fixedIncomesExpiredCount)] @localizer["FixedIncome new message"].Value
+                            </a>
+                            <div class="dropdown-divider"></div>
+                        }
+                        @if (fixedExpenditureNoticedCount + fixedExpenditureExpiredCount > 0)
+                        {
+                            <a href="@Url.Action("FixedExpenditure", "Notice")" class="dropdown-item">
+                                <i class="fas fa-file mr-2"></i>[@(fixedExpenditureNoticedCount + fixedExpenditureExpiredCount)] @localizer["FixedExpenditure new message"].Value
+                            </a>
+                            <div class="dropdown-divider"></div>
+                        }
+                        <span class="dropdown-item dropdown-footer">@localizer["Notifications"].Value</span>
+                    </div>
+                </li>
+            }
+
+            @*<!-- Language Dropdown Menu -->*@
+            <li class="nav-item dropdown">
+                <a class="nav-link" data-toggle="dropdown" href="#">
+                    <i class="fas fa-globe"></i>
+                </a>
+                <div class="dropdown-menu" role="menu">
+                    <a id="aChangeCultureEnUS" class="dropdown-item @(currentCulture == "en-US" ? "active" : "")" style="cursor: pointer;">English</a>
+                    <a id="aChangeCultureKoKR" class="dropdown-item @(currentCulture == "ko-KR" ? "active" : "")" style="cursor: pointer;">한국어</a>
+                </div>
+            </li>
+        }
+        else if (Model.Role == Role.Anonymous)
+        {
+
+        }
+
+        @*
+        <li class="nav-item">
+        <a class="nav-link" data-widget="fullscreen" href="#" role="button">
+        <i class="fas fa-expand-arrows-alt"></i>
+        </a>
+        </li>
+        <li class="nav-item">
+        <a class="nav-link" data-widget="control-sidebar" data-slide="true" href="#" role="button">
+        <i class="fas fa-th-large"></i>
+        </a>
+        </li>
+        *@
+        @if (Model.Role == Role.Admin)
+        {
+            <li class="nav-item dropdown user-menu">
+                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">
+                    <img src="@Model.AvatarImagePath" class="user-image img-circle elevation-2" alt="User Image">
+                    <span class="d-none d-md-inline">@Model.Nickname</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+                    @*<!-- User image -->*@
+                    <li class="user-header bg-primary">
+                        <img src="@Model.AvatarImagePath" class="img-circle elevation-2" alt="User Image">
+                        <p>
+                            @Model.Nickname
+                            <small>@localizer["Member since"] @Model.Created.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId).ToString("d")</small>
+                        </p>
+                    </li>
+                    @*
+                <!-- Menu Body -->
+                <li class="user-body">
+                <div class="row">
+                <div class="col-4 text-center">
+                <a href="#">Followers</a>
+                </div>
+                <div class="col-4 text-center">
+                <a href="#">Sales</a>
+                </div>
+                <div class="col-4 text-center">
+                <a href="#">Friends</a>
+                </div>
+                </div>
+                <!-- /.row -->
+                </li>
+                *@
+                    @*<!-- Menu Footer-->*@
+                    <li class="user-footer">
+                        <a asp-controller="Management" asp-action="Profile" class="btn btn-default btn-flat">@localizer["Profile"]</a>
+                        <a asp-controller="Account" asp-action="Logout" class="btn btn-default btn-flat float-right">@localizer["Sign out"]</a>
+                    </li>
+                </ul>
+            </li>
+        }
+        else if (Model.Role == Role.User)
+        {
+            <li class="nav-item dropdown user-menu">
+                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">
+                    <img src="@Model.AvatarImagePath" class="user-image img-circle elevation-2" alt="User Image">
+                    <span class="d-none d-md-inline">@Model.Nickname</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+                    @*<!-- User image -->*@
+                    <li class="user-header bg-primary">
+                        <img src="@Model.AvatarImagePath" class="img-circle elevation-2" alt="User Image">
+                        <p>
+                            @Model.Nickname
+                            <small>@localizer["Member since"] @Model.Created.ConvertTimeByTimeZoneIanaId(loginedAccountTimeZoneIanaId).ToString("d")</small>
+                        </p>
+                    </li>
+                    @*
+                <!-- Menu Body -->
+                <li class="user-body">
+                <div class="row">
+                <div class="col-4 text-center">
+                <a href="#">Followers</a>
+                </div>
+                <div class="col-4 text-center">
+                <a href="#">Sales</a>
+                </div>
+                <div class="col-4 text-center">
+                <a href="#">Friends</a>
+                </div>
+                </div>
+                <!-- /.row -->
+                </li>
+                *@
+                    @*<!-- Menu Footer-->*@
+                    <li class="user-footer">
+                        <a asp-controller="Management" asp-action="Profile" class="btn btn-default btn-flat">@localizer["Profile"]</a>
+                        <a asp-controller="Account" asp-action="Logout" class="btn btn-default btn-flat float-right">@localizer["Sign out"]</a>
+                    </li>
+                </ul>
+            </li>
+        }
+        else if (Model.Role == Role.Anonymous)
+        {
+            @*<!-- Language Dropdown Menu -->*@
+            <li class="nav-item dropdown">
+                <div class="btn-group" style="padding-right:10px;">
+                    <button type="button" class="btn btn-info btn-block dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-globe" style="padding-right:6px;"></i>@localizer["Language"]
+                    </button>
+                    <div class="dropdown-menu" role="menu">
+                        <a id="aChangeCultureEnUS" class="dropdown-item @(currentCulture == "en-US" ? "active" : "")" style="cursor: pointer;">English</a>
+                        <a id="aChangeCultureKoKR" class="dropdown-item @(currentCulture == "ko-KR" ? "active" : "")" style="cursor: pointer;">한국어</a>
+                    </div>
+                </div>
+            </li>
+
+            @*<!-- Login Button -->*@
+            <li class="nav-item dropdown">
+                <button id="btnMainTopBarLogin" class="btn btn-primary btn-block">
+                    <i class="fas fa-sign-in-alt" style="padding-right:6px;"></i>@localizer["Login"]
+                </button>
+            </li>
+        }
+    </ul>
+</nav>

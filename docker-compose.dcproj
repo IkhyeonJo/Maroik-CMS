@@ -6,10 +6,11 @@
     <ProjectGuid>16950bfb-9a7b-4326-b6e9-873b22449df3</ProjectGuid>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
     <DockerServiceUrl>{Scheme}://localhost:{ServicePort}</DockerServiceUrl>
-    <DockerServiceName>mylaboratory.website</DockerServiceName>
+    <DockerServiceName>maroik.website</DockerServiceName>
+    <DockerComposeBaseFilePath>docker-compose.debug</DockerComposeBaseFilePath>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="docker-compose.yml" />
+    <None Include="docker-compose.debug.yml" />
     <None Include=".dockerignore" />
   </ItemGroup>
 </Project>

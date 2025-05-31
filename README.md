@@ -1,55 +1,182 @@
-# How to run this project
+# Maroik [https://www.maroik.com]
 
-## execute [MyLaboratory.sln] -> Open [1.Web] folder -> right-click [docker-compose] -> click "Set as Startup Project" -> Press F5 Button
+## Introduction
+Maroik is a modern web application built with ASP.NET Core MVC, featuring a comprehensive set of tools for personal and business management. It includes features such as expense tracking, calendar management, bulletin boards, and role-based user management.
 
-# Login Account
+## Key Features
 
-## Admin Account ID: joeun3518@gmail.com
-## Admin Account Password: Pa$$w0rd
+### 1. Personal Finance Management
+- Expense tracking and categorization
+- Income recording
+- Budget management
+- Financial reports and analytics
+- Export to CSV/Excel
 
-## User Account ID: iloveopencv12@naver.com
-## User Account Password: Pa$$w0rd
+### 2. Calendar and Schedule Management
+- Daily/Weekly/Monthly calendar view
+- Event creation and management
+- Recurring events support
+- Calendar sharing between users
+- Event reminders
 
+### 3. Bulletin Board System
+- Multiple board categories
+- Post creation, editing, and deletion
+- Comment system
+- File attachments
+- Search functionality
 
+### 4. User Management
+- Role-based access control (Admin/User)
+- User profile management
+- Session-based authentication
+- Password management
+- Login activity tracking
 
+### 5. Admin Dashboard
+- User management
+- System settings
+- Backup management
+- Log monitoring
+- Analytics dashboard
 
+## Technologies Used
 
+### Backend
+- ASP.NET Core MVC 9.0
+  - Minimal APIs
+  - Hot Reload
+  - Improved performance
+  - Enhanced routing
+  - Better dependency injection
+- PostgreSQL 17
+- Entity Framework Core 9.0
+  - Improved query performance
+  - Better async support
+  - Enhanced change tracking
+- RESTful API
+  - OpenAPI/Swagger integration
+  - API versioning
+  - Rate limiting
+  - Request validation
+- Docker
+  - Multi-stage builds
+  - Container orchestration
+  - Environment isolation
+- Authentication & Authorization
+  - Session Authentication
+  - JWT Authentication
+  - Role-based access control
+  - OAuth2/OpenID Connect
+- Cross-Origin Resource Sharing (CORS)
+- API Documentation
+  - Swagger/OpenAPI
+  - API Explorer
+  - API versioning support
 
-# I'm currently looking for a job
-# If you want to hire me, please send email. 
-# Email Address: joeun3518@gmail.com
+### Frontend
+- AdminLTE 3
+- Bootstrap 5.3
+- jQuery 3.7
+- HTML5/CSS3
+- JavaScript ES2024
+- NonfactorGrid
+- Chart.js 4.4
+- Font Awesome 6
+- DataTables
+- SweetAlert2
 
-# MyLaboratory
-Welcome to IkHyeonJo's Laboratory!
+### Development Tools
+- Visual Studio 2023
+- JetBrains Rider
+- Git
+- Docker Compose
+- Postman
 
-I'm currently interested in make asp.net core mvc 5 WebServer!
+## Project Structure
+```
+Maroik/
+├── Maroik.AI/              # AI-related features
+├── Maroik.Common/          # Common data access and utilities
+├── Maroik.Crontab/         # Scheduled tasks management
+├── Maroik.DB/             # Database configuration
+├── Maroik.DeployOps/      # Deployment scripts
+├── Maroik.FileStorage/    # File storage management
+├── Maroik.Log/            # Logging system
+├── Maroik.SSL/            # SSL/TLS certificate management
+├── Maroik.WebAPI/         # RESTful API endpoints
+└── Maroik.WebSite/        # Frontend website
+```
 
-Docker, AdminLTE, MariaDB, Session Login, RESTful API, HTTPS etc.
+## Getting Started
 
-# IMPORTANT!! MUST Set this value [MyLaboratory.Site -> appsettings.json -> DomainName (According to Server Hostname)] & Mail Account & Docker-compose file's comment!!
-# IMPORTANT!! If the file name is too long, you can shorten the file name by rename or save the file to C:\ location
+### Prerequisites
+- .NET 9.0 SDK or later
+- Docker and Docker Compose
+- Visual Studio 2023 (Windows) or JetBrains Rider (Linux/Mac)
 
-☞ 프로젝트명 : 스마트 홈 IoT & 가계부
+### Running the Project
 
-☞ OS 및 사용 기술 : AWS, Amazon Linux, C#, .NET 5, Docker, Docker-Compose, HTTPS, HTML, CSS (Bootstrap), 
-　　　　　　　　　　　JS (JQeury), AdminLTE, ASP.NET Core MVC Pattern, MariaDB, MySQL WorkBrench(ERD), 
-　　　　　　　　　　　nonfactor-grid, EntityFrameWork Core, Xamarin Forms, REST API, GitHub Desktop, GitHub
+#### Windows
+1. Install Visual Studio 2023 or higher
+2. Open Maroik.sln
+3. Set docker-compose as startup project
+4. Press F5 to run in debug mode
 
-# Login
+#### Linux/Mac
+1. Install JetBrains Rider
+2. Start debug mode with docker-compose.debug.yml
+3. Configure mail settings in appsettings files
+
+## Deployment
+
+### Ubuntu Server 22.04.3
+1. Configure appsettings.Production.json with domain name and mail settings
+2. Set email credentials in DBBackup.sh and UploadFileBackup.sh
+3. Copy Maroik folder to /home/ubuntu/
+4. Open ports 80, 443, 5001
+5. Run Deploy.sh script
+
+## Default Accounts
+
+### Admin Account
+- ID: admin@maroik.com
+- Password: Pa$$w0rd
+
+### User Account
+- ID: demo@maroik.com
+- Password: Pa$$w0rd
+
+## Screenshots
+
+### Login
 ![Login](https://user-images.githubusercontent.com/20404991/132020270-488a1ab7-448c-44d9-938a-40ce32d6d364.jpg)
 
-# User-DashBoard
+### User Dashboard
 ![User-DashBoard](https://user-images.githubusercontent.com/20404991/132020299-e5adb366-9041-44f9-ad56-f2bb606028d5.jpg)
 
-# NonfactorGrid
+### NonfactorGrid
 ![NonfactorGrid](https://user-images.githubusercontent.com/20404991/132020455-e66897ef-ece8-4e71-b323-6ebb72f6b110.jpg)
 
-# UserProfile
+### User Profile
 ![UserProfile](https://user-images.githubusercontent.com/20404991/132020484-4b633287-a1b1-48b0-8340-ae3ead83235a.jpg)
 
-# WebAPI
+### WebAPI
 ![WebAPI](https://user-images.githubusercontent.com/20404991/132020514-13951172-3bcd-48a5-bfe0-a8328cdb766a.jpg)
 
+## Contributing
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-# Original Project
-![image](https://user-images.githubusercontent.com/20404991/133043989-7e532166-9b94-4516-a9cb-2be05631c470.png)
+## Support
+For issues and questions, please use the GitHub issue tracker.
+
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Special Notes
+- All backup files are automatically sent via email and can overwrite upload folders and SQL script folders when needed.
+- Mail account configuration is required for deployment.
