@@ -5,6 +5,17 @@
 ## Introduction
 Maroik is a modern web application built with ASP.NET Core MVC, featuring a comprehensive set of tools for personal and business management. It includes features such as expense tracking, calendar management, bulletin boards, and role-based user management.
 
+## How to run this project
+
+### Ubuntu Server 22.04.3
+1. Run Deploy.sh script
+
+## How to set this project
+
+### Ubuntu Server 22.04.3
+1. Configure ./Maroik.WebSite/appsettings.DockerComposeLocalDebug.json with domain name and mail settings
+![screenshot 2025-06-03 22-10-50](https://github.com/user-attachments/assets/69693b80-6219-4e74-a64b-c3b217448343)
+
 ## Key Features
 
 ### 1. Personal Finance Management
@@ -38,7 +49,6 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 ### 5. Admin Dashboard
 - User management
 - System settings
-- Backup management
 - Log monitoring
 - Analytics dashboard
 
@@ -129,15 +139,6 @@ Maroik/
 1. Install JetBrains Rider
 2. Start debug mode with docker-compose.debug.yml
 3. Configure mail settings in appsettings files
-
-## Deployment
-
-### Ubuntu Server 22.04.3
-1. Configure appsettings.Production.json with domain name and mail settings
-2. Set email credentials in DBBackup.sh and UploadFileBackup.sh
-3. Copy Maroik folder to /home/ubuntu/
-4. Open ports 80, 443, 5001
-5. Run Deploy.sh script
 
 ## Default Accounts
 
