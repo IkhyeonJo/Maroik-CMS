@@ -11,7 +11,7 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 1. Run ./Deploy.sh script
 2. Go to https://localhost/ [Default setting]
    
-## How to set this project
+## How to custom set this project
 
 ### Ubuntu Server 22.04.3
 1. Configure ./Maroik.WebSite/appsettings.DockerComposeLocalDebug.json with domain name and mail settings
