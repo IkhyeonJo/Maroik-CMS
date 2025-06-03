@@ -8,7 +8,7 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 ## How to run this project
 
 ### Ubuntu Server 22.04.3
-1. Run Deploy.sh script
+1. Run ./Deploy.sh script
 
 ## How to set this project
 
