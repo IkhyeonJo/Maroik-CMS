@@ -45,7 +45,7 @@ builder.Services.AddAuthentication(x =>
     x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(x =>
 {
-    x.RequireHttpsMetadata = true;
+    //x.RequireHttpsMetadata = true;
     x.SaveToken = true;
     x.TokenValidationParameters = new TokenValidationParameters
     {
@@ -203,17 +203,17 @@ if (!string.IsNullOrEmpty(ServerSetting.DockerCertPath) && !string.IsNullOrEmpty
             serverOptions.Limits.MinResponseDataRate = new MinDataRate(100, TimeSpan.FromSeconds(10));
             serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
             serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(1);
-            serverOptions.ConfigureHttpsDefaults(options =>
-            {
-                options.SslProtocols = SslProtocols.Tls12;
-                options.ServerCertificateSelector = (_, _) =>
-                {
-                    lock (certLock)
-                    {
-                        return currentCert!;
-                    }
-                };
-            });
+            // serverOptions.ConfigureHttpsDefaults(options =>
+            // {
+            //     options.SslProtocols = SslProtocols.Tls12;
+            //     options.ServerCertificateSelector = (_, _) =>
+            //     {
+            //         lock (certLock)
+            //         {
+            //             return currentCert!;
+            //         }
+            //     };
+            // });
         });
     });
 
@@ -270,10 +270,10 @@ else
             serverOptions.Limits.MinResponseDataRate = new MinDataRate(100, TimeSpan.FromSeconds(10));
             serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
             serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(1);
-            serverOptions.ConfigureHttpsDefaults(options =>
-            {
-                options.SslProtocols = SslProtocols.Tls12;
-            });
+            // serverOptions.ConfigureHttpsDefaults(options =>
+            // {
+            //     options.SslProtocols = SslProtocols.Tls12;
+            // });
         });
     });
 }
@@ -287,16 +287,7 @@ if (app.Environment.IsDevelopment())
     _ = app.UseDeveloperExceptionPage();
 }
 
-#region When you have server domain, uncomment
-app.UseRewriter(new RewriteOptions()
-   .AddRedirectToWwwPermanent()
-   .AddRedirectToHttpsPermanent()
-);
-#endregion
-
-#region When you don't have server domain, uncomment
-//app.UseHttpsRedirection();
-#endregion
+app.UseHttpsRedirection();
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
