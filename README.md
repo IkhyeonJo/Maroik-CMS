@@ -151,6 +151,22 @@ Maroik/
 2. Start debug mode with docker-compose.debug.yml
 3. Configure mail settings in appsettings files
 
+## Local LLM Setup
+The `maroik.ai` container can load a HuggingFace compatible model from the host.
+Place your model files in a directory on the host and mount it into the container
+through `docker-compose.yml`:
+
+```yaml
+maroik.ai:
+  environment:
+    - LOCAL_LLM_MODEL_PATH=/models
+  volumes:
+    - ./local_llm:/models:ro
+```
+
+The application exposes a `/llm/generate` endpoint that accepts a prompt and
+returns the generated text using the local model.
+
 ## Screenshots
 
 ### Login

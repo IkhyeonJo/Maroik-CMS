@@ -5,7 +5,8 @@ RUN apt-get update && apt-get install -y libpq-dev libicu-dev && apt-get clean &
 WORKDIR /app
 
 COPY ["Maroik.AI/requirements.txt", "Maroik.AI/"]
-RUN pip install --no-cache-dir -r /app/Maroik.AI/requirements.txt
+RUN pip install --no-cache-dir -r /app/Maroik.AI/requirements.txt \
+    --extra-index-url https://download.pytorch.org/whl/cpu
 
 COPY ./Maroik.AI/ /app/
 

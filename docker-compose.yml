@@ -106,8 +106,10 @@ services:
           - "8000"
         environment:
           - DBPASSWORD=qwer12!@#
+          - LOCAL_LLM_MODEL_PATH=/models
         volumes:
           - ./Maroik.AI:/app/
+          - ./local_llm:/models:ro
         depends_on:
           - postgresql
         restart: always
