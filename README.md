@@ -7,13 +7,13 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 
 ## How to run this project
 
-### Ubuntu Server 22.04.3
+### Ubuntu Server 24.04.2
 1. Run ./Deploy.sh script
 2. Go to https://localhost/ [Default setting]
    
 ## How to custom set this project
 
-### Ubuntu Server 22.04.3
+### Ubuntu Server 24.04.2
 1. Configure ./Maroik.WebSite/appsettings.DockerComposeLocalDebug.json with domain name and mail settings
 ![screenshot 2025-06-03 22-10-50](https://github.com/user-attachments/assets/69693b80-6219-4e74-a64b-c3b217448343)
 
