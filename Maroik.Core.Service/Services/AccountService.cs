@@ -218,18 +218,30 @@ public class AccountService(
 
         if (!existing.EmailConfirmed)
         {
+            // Pre-hijacking guard: nobody has proven they own this address yet, so this submission
+            // REPLACES the earlier registrant's password / nickname / time zone instead of just
+            // re-mailing a link for credentials someone else chose. Together with ConfirmEmailAsync
+            // requiring the registration password, the account only ever activates for the person
+            // holding both the mailbox and the password. Input is validated and hashed before the
+            // lock, so the BCrypt cost is never paid while holding it.
+            var nicknameResult = NicknamePolicy.Validate(newAccount.Nickname);
+            if (nicknameResult.IsError)
+                return RegisterResult.FromError(nicknameResult.FirstError);
+            string nickname = nicknameResult.Value;
+
+            if (!PasswordPolicy.IsValid(newAccount.PlainPassword))
+                return RegisterResult.Fail(PasswordPolicy.ViolationMessage);
+
+            string hashedPassword = passwordService.HashPassword(newAccount.PlainPassword ?? "");
+
             Account locked;
             await unitOfWork.BeginAsync(ct);
             try
             {
-                // Re-read under FOR UPDATE before regenerating/persisting the token: serializes
-                // against a concurrent ConfirmEmailAsync/ResendConfirmationEmailAsync write to the
-                // same row (both now take the same lock before writing) so this cannot resurrect a
-                // token a concurrent confirm just consumed, or vice versa. The lock is held only
-                // long enough to persist the (possibly-regenerated) token — released at Commit
-                // below, before the network mail send that follows, so a slow/degraded broker can
-                // no longer hold this row's lock (and this request's DB connection) open for the
-                // duration of the publish.
+                // Re-read under FOR UPDATE: serializes against a concurrent ConfirmEmailAsync /
+                // ResendConfirmationEmailAsync write to the same row, so this cannot overwrite an
+                // account a concurrent confirm just activated. The lock is released at Commit below,
+                // before the network mail send that follows.
                 Account? found = await accountRepository.FindByEmailForUpdateAsync(existing.Email.Value, ct);
                 if (found == null)
                 {
@@ -244,20 +256,41 @@ public class AccountService(
                     return RegisterResult.Fail(EnumHelper.GetDescription(AccountMessage.UserAlreadyCreated));
                 }
 
-                // Regenerate the token when it is missing OR has passed its 24h TTL, so a stale
-                // registration is always recoverable by re-registering.
-                if (string.IsNullOrEmpty(found.RegistrationToken) || !GuidToken.IsTokenAlive(found.RegistrationToken))
-                    found.RegenerateRegistrationToken(GuidToken.Generate());
+                // The account's own nickname (in any letter case) is not a conflict — only another
+                // account holding it is. The case-insensitive unique index still backstops a race.
+                if (!string.Equals(found.Nickname, nickname, StringComparison.OrdinalIgnoreCase)
+                    && await accountRepository.NicknameExistsIgnoreCaseAsync(nickname, ct))
+                {
+                    await unitOfWork.RollbackAsync(ct);
+                    return RegisterResult.Fail("'{0}' is a Nickname that already exists. Please enter another Nickname.", errorArgs: [nickname]);
+                }
 
-                await accountRepository.UpdateRegistrationTokenAsync(found.Email.Value, found.RegistrationToken, found.Updated, ct);
+                // A fresh token always: every link mailed for the replaced registration dies with it.
+                var replaceResult = found.ReplaceUnconfirmedRegistration(
+                    hashedPassword, nickname, newAccount.TimeZoneIanaId ?? "UTC", GuidToken.Generate(), newAccount.AgreedServiceTerms);
+                if (replaceResult.IsError)
+                {
+                    await unitOfWork.RollbackAsync(ct);
+                    return RegisterResult.FromError(replaceResult.FirstError);
+                }
+
+                await accountRepository.UpdateEntityAsync(found, ct);
                 await unitOfWork.CommitAsync(ct);
                 locked = found;
+            }
+            catch (Exception e) when (e.IsAccountNicknameUniqueViolation())
+            {
+                // Another registration took the nickname between the check above and the commit.
+                await unitOfWork.RollbackAsync(ct);
+                return RegisterResult.Fail("'{0}' is a Nickname that already exists. Please enter another Nickname.", errorArgs: [nickname]);
             }
             catch
             {
                 await unitOfWork.RollbackAsync(ct);
                 throw;
             }
+
+            logger.LogInformation("Unconfirmed registration replaced for {Email}", locked.Email.Value);
 
             // Mail send + final status write run unlocked, after the row lock above was released.
             // SendConfirmationEmailAndUpdateStatusAsync re-persists the same token it finds on
@@ -384,7 +417,28 @@ public class AccountService(
     }
 
     /// <inheritdoc />
-    public async Task<ConfirmEmailResult> ConfirmEmailAsync(string encryptedToken, CancellationToken ct = default)
+    public async Task<ConfirmEmailResult> ValidateRegistrationTokenAsync(string encryptedToken, CancellationToken ct = default)
+    {
+        string rawToken;
+        try { rawToken = rsa.Decrypt(encryptedToken); }
+        catch (Exception e)
+        {
+            logger.LogWarning(e, "Failed to decrypt registration token");
+            return new ConfirmEmailResult { InvalidToken = true, AccountCreated = false };
+        }
+
+        Account? account = await FindByRegistrationTokenAsync(rawToken, ct);
+        if (account == null || !GuidToken.IsTokenAlive(rawToken))
+        {
+            logger.LogWarning("Email confirmation link rejected: invalid or expired token");
+            return new ConfirmEmailResult { InvalidToken = true, AccountCreated = false };
+        }
+
+        // A live link: show the password form, echoing the still-encrypted token back into it.
+        return new ConfirmEmailResult { InvalidToken = false, AccountCreated = false, RegistrationToken = encryptedToken };
+    }
+
+    public async Task<ConfirmEmailResult> ConfirmEmailAsync(string encryptedToken, string password, CancellationToken ct = default)
     {
         string rawToken;
         try { rawToken = rsa.Decrypt(encryptedToken); }
@@ -427,6 +481,18 @@ public class AccountService(
             // token that no longer matches RegistrationToken (superseded by a concurrent resend) the
             // same way it rejects any other invalid token, and separately reports Conflict when the
             // locked row is already confirmed.
+            // The link proves the mailbox; the registration password proves the credentials. Both must
+            // belong to the same person, otherwise someone who pre-registered this address could have
+            // its owner activate an account with the pre-registrant's password. Checked against the
+            // locked row — the credentials actually being activated. An already-confirmed row skips
+            // this and falls through to ConfirmEmail's "already confirmed" answer.
+            if (!locked.EmailConfirmed && !passwordService.VerifyPassword(password, locked.HashedPassword))
+            {
+                await unitOfWork.RollbackAsync(ct);
+                logger.LogWarning("Email confirmation refused: password does not match the registration for {Email}", locked.Email.Value);
+                return new ConfirmEmailResult { WrongPassword = true, RegistrationToken = encryptedToken };
+            }
+
             var confirmResult = locked.ConfirmEmail(rawToken);
 
             if (confirmResult.IsError)

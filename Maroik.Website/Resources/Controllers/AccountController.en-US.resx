@@ -249,4 +249,7 @@
   <data name="reset-password-invalid" xml:space="preserve">
     <value>reset-password-invalid</value>
   </data>
+  <data name="The password does not match the one you registered with." xml:space="preserve">
+    <value>The password does not match the one you registered with. If you did not sign up with this password, please sign up again.</value>
+  </data>
 </root>

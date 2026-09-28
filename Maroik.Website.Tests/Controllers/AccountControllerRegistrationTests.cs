@@ -312,25 +312,109 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
     // -- ConfirmEmail -----------------------------------------------------------------
 
-    /// <summary>Confirm email valid token activates account.</summary>
+    private string EncryptToken(string rawToken)
+    {
+        using var scope = factory.Services.CreateScope();
+        return scope.ServiceProvider.GetRequiredService<IRsaService>().Encrypt(rawToken);
+    }
+
+    private bool IsEmailConfirmed(string email)
+    {
+        using var scope = factory.Services.CreateScope();
+        return scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Accounts.Single(a => a.Email == email).EmailConfirmed;
+    }
+
+    /// <summary>Opens the confirmation link, then submits its password form (antiforgery taken from that page).</summary>
+    private async Task<HttpResponseMessage> SubmitConfirmationAsync(string encryptedToken, string password)
+    {
+        string url = $"/Account/ConfirmEmail?registrationToken={Uri.EscapeDataString(encryptedToken)}";
+        var (cookie, token) = await GetAntiForgeryAsync(url);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/Account/ConfirmEmail");
+        request.Headers.Add("Cookie", $"{AntiForgeryCookieName}={cookie}");
+        request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["RegistrationToken"] = encryptedToken,
+            ["Password"] = password,
+            ["__RequestVerificationToken"] = token
+        });
+        return await _client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>Opening a live confirmation link shows the password form and activates nothing on its own.</summary>
     [Fact]
-    public async Task ConfirmEmail_ValidToken_ActivatesAccount()
+    public async Task ConfirmEmail_Get_ValidToken_ShowsThePasswordForm_AndDoesNotActivate()
     {
         string email = UniqueEmail();
         string rawToken = GuidToken.Generate();
         await SeedAccountAsync(email, emailConfirmed: false, registrationToken: rawToken);
 
-        using var scope = factory.Services.CreateScope();
-        var rsa = scope.ServiceProvider.GetRequiredService<IRsaService>();
-        string encryptedToken = rsa.Encrypt(rawToken);
+        var response = await _client.GetAsync($"/Account/ConfirmEmail?registrationToken={Uri.EscapeDataString(EncryptToken(rawToken))}", TestContext.Current.CancellationToken);
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        var response = await _client.GetAsync($"/Account/ConfirmEmail?registrationToken={Uri.EscapeDataString(encryptedToken)}", TestContext.Current.CancellationToken);
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("id=\"confirmEmailForm\"", html);
+        Assert.False(IsEmailConfirmed(email));
+    }
 
-        using var verifyScope = factory.Services.CreateScope();
-        var db = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var account = db.Accounts.Single(a => a.Email == email);
-        Assert.True(account.EmailConfirmed);
+    /// <summary>The link plus the password chosen at registration activates the account.</summary>
+    [Fact]
+    public async Task ConfirmEmail_Post_RegistrationPassword_ActivatesAccount()
+    {
+        string email = UniqueEmail();
+        string rawToken = GuidToken.Generate();
+        await SeedAccountAsync(email, emailConfirmed: false, registrationToken: rawToken);
+
+        var response = await SubmitConfirmationAsync(EncryptToken(rawToken), "OldPassword1!");
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.True(IsEmailConfirmed(email));
+    }
+
+    /// <summary>
+    /// Pre-hijacking guard: the link with any other password leaves the account unconfirmed and
+    /// re-shows the form, so an address someone else registered cannot be activated by its owner's click.
+    /// </summary>
+    [Fact]
+    public async Task ConfirmEmail_Post_WrongPassword_DoesNotActivate_AndReShowsTheForm()
+    {
+        string email = UniqueEmail();
+        string rawToken = GuidToken.Generate();
+        await SeedAccountAsync(email, emailConfirmed: false, registrationToken: rawToken);
+
+        var response = await SubmitConfirmationAsync(EncryptToken(rawToken), "SomeoneElses1!");
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("id=\"confirmEmailForm\"", html);
+        Assert.False(IsEmailConfirmed(email));
+    }
+
+    /// <summary>
+    /// Pre-hijacking guard end to end: re-registering an unconfirmed address replaces the earlier
+    /// registrant's password, so only the latest registrant's password can activate it.
+    /// </summary>
+    [Fact]
+    public async Task Register_UnconfirmedEmail_ReplacesTheEarlierRegistrantsPassword()
+    {
+        string email = UniqueEmail();
+        await SeedAccountAsync(email, emailConfirmed: false, registrationToken: GuidToken.Generate());
+
+        var response = await PostFormAsync("/Account/Register", new Dictionary<string, string>
+        {
+            ["Email"] = email,
+            ["Password"] = "OwnersPassword1!",
+            ["Nickname"] = "RegOwner_" + Guid.NewGuid().ToString("N")[..8],
+            ["AgreedServiceTerms"] = "true",
+            ["TimeZoneIanaId"] = "UTC"
+        });
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        using var scope = factory.Services.CreateScope();
+        var passwords = scope.ServiceProvider.GetRequiredService<IPasswordService>();
+        var account = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Accounts.Single(a => a.Email == email);
+        Assert.True(passwords.VerifyPassword("OwnersPassword1!", account.HashedPassword));
+        Assert.False(passwords.VerifyPassword("OldPassword1!", account.HashedPassword));
+        Assert.False(account.EmailConfirmed);
     }
 
     /// <summary>Confirm email already confirmed does not error.</summary>
@@ -341,11 +425,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         string rawToken = GuidToken.Generate();
         await SeedAccountAsync(email, emailConfirmed: true, registrationToken: rawToken);
 
-        using var scope = factory.Services.CreateScope();
-        var rsa = scope.ServiceProvider.GetRequiredService<IRsaService>();
-        string encryptedToken = rsa.Encrypt(rawToken);
-
-        var response = await _client.GetAsync($"/Account/ConfirmEmail?registrationToken={Uri.EscapeDataString(encryptedToken)}", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync($"/Account/ConfirmEmail?registrationToken={Uri.EscapeDataString(EncryptToken(rawToken))}", TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
     }

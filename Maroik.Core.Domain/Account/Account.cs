@@ -351,8 +351,9 @@ public sealed class Account : AggregateRoot<string>
     }
 
     /// <summary>
-    /// Updates the account's profile fields. Nickname is not included — it is set once at
-    /// registration and never changed afterward (the profile edit UI shows it read-only).
+    /// Updates the account's profile fields. Nickname is not included — it is set at registration
+    /// and never changed afterward (the profile edit UI shows it read-only); the only exception is
+    /// <see cref="ReplaceUnconfirmedRegistration"/>, before the registration is confirmed.
     /// </summary>
     public void UpdateProfile(string? avatarImagePath, TimeZoneId timeZone, string? defaultMonetaryUnit)
     {
@@ -407,6 +408,39 @@ public sealed class Account : AggregateRoot<string>
     {
         Message = message;
         Updated = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Replaces the credentials of a registration nobody has confirmed yet — the re-register path.
+    /// Until the email is confirmed no one has proven they own the address, so the latest
+    /// registrant's password, nickname, time zone and terms acceptance win, and the fresh
+    /// <paramref name="registrationToken"/> invalidates every confirmation link mailed earlier.
+    /// This is the one place a nickname changes after <see cref="Create"/>: an unconfirmed account
+    /// has not finished registering. Refused once the email is confirmed.
+    /// </summary>
+    public ErrorOr<Success> ReplaceUnconfirmedRegistration(
+        string hashedPassword, string nickname, string timeZoneValue, string registrationToken, bool agreedServiceTerms)
+    {
+        if (EmailConfirmed)
+            return LocalizableError.Conflict("Account.AlreadyConfirmed", "Email address is already confirmed.");
+
+        var nicknameResult = NicknamePolicy.Validate(nickname);
+        if (nicknameResult.IsError) return nicknameResult.Errors;
+
+        var tzResult = TimeZoneId.Create(timeZoneValue);
+        if (tzResult.IsError) return tzResult.Errors;
+
+        if (string.IsNullOrWhiteSpace(hashedPassword))
+            return LocalizableError.Validation("Account.PasswordEmpty", "Hashed password cannot be empty.");
+
+        HashedPassword = hashedPassword;
+        Nickname = nicknameResult.Value;
+        TimeZone = tzResult.Value;
+        AgreedServiceTerms = agreedServiceTerms;
+        RegistrationToken = registrationToken;
+        SecurityStamp = GenerateSecurityStamp();
+        Updated = DateTime.UtcNow;
+        return Result.Success;
     }
 
     /// <summary>

@@ -33,6 +33,17 @@ public class AccountServiceAuditLoggingTests
 
     private static readonly EmailTemplate _emailTemplate = new() { Subject = "s", Title = "t", Content0 = "c0", Content1 = "c1" };
 
+    /// <summary>
+    /// The password the confirmation tests present with the mailed link. Every test accepts it as
+    /// the registration password unless it sets its own <see cref="IPasswordService.VerifyPassword"/>
+    /// expectation; login tests use other passwords, so this match never leaks into them.
+    /// </summary>
+    private const string ConfirmPassword = "Confirm-Pass1!";
+
+    /// <summary>Accepts <see cref="ConfirmPassword"/> as the registration password of every mocked account.</summary>
+    public AccountServiceAuditLoggingTests() =>
+        _passwordService.Setup(p => p.VerifyPassword(ConfirmPassword, It.IsAny<string>())).Returns(true);
+
     private AccountService CreateSut() => new(_accountRepo.Object, _passwordService.Object, _mailClient.Object,
         _emailPublisher.Object, _settings, _rsa.Object, _logger, _unitOfWork.Object);
 
@@ -172,10 +183,46 @@ public class AccountServiceAuditLoggingTests
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.UpdateEmailConfirmationAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
-        await CreateSut().ConfirmEmailAsync("enc", TestContext.Current.CancellationToken);
+        await CreateSut().ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Only(LogLevel.Information, "Email confirmed");
         AssertNoSecretLogged(token, "enc");
+    }
+
+    /// <summary>A confirmation link presented with the wrong registration password is a security event: one Warning, no password or token in it.</summary>
+    [Fact]
+    public async Task ConfirmEmail_LogsWarning_WhenThePasswordDoesNotMatchTheRegistration()
+    {
+        string token = GuidToken.Generate();
+        Account account = ExistingAccount(emailConfirmed: false, registrationToken: token);
+        _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
+        _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+
+        await CreateSut().ConfirmEmailAsync("enc", "Guessed-Pass1!", TestContext.Current.CancellationToken);
+
+        Only(LogLevel.Warning, "Email confirmation refused: password does not match");
+        AssertNoSecretLogged("Guessed-Pass1!", token, "enc");
+    }
+
+    /// <summary>Replacing an unconfirmed registration (pre-hijacking guard) is an audit event: one Information entry, no password or hash in it.</summary>
+    [Fact]
+    public async Task Register_LogsInformation_WhenAnUnconfirmedRegistrationIsReplaced()
+    {
+        Account existing = ExistingAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$replaced");
+        _rsa.Setup(r => r.Encrypt(It.IsAny<string>())).Returns("enc-token");
+        _mailClient.Setup(m => m.GetMailConfirmationBody(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns("body");
+        _emailPublisher.Setup(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        await CreateSut().RegisterAsync(
+            new AccountRequest { Email = Email, PlainPassword = "PlainPass1!", Nickname = "Owner", TimeZoneIanaId = "UTC", AgreedServiceTerms = true },
+            _emailTemplate, TestContext.Current.CancellationToken);
+
+        Only(LogLevel.Information, "Unconfirmed registration replaced");
+        AssertNoSecretLogged("PlainPass1!", "$2a$13$replaced", "enc-token");
     }
 
     /// <summary>Verifies that an unknown confirmation token logs a Warning without the token or its ciphertext.</summary>
@@ -185,7 +232,7 @@ public class AccountServiceAuditLoggingTests
         _rsa.Setup(r => r.Decrypt("enc")).Returns("raw-token");
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
 
-        await CreateSut().ConfirmEmailAsync("enc", TestContext.Current.CancellationToken);
+        await CreateSut().ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Assert.Single(_logger.Collector.GetSnapshot(),
             r => r.Level == LogLevel.Warning && r.Message.Contains("Email confirmation rejected", StringComparison.Ordinal));

@@ -25,8 +25,15 @@ public interface IAccountService
     /// <summary>Re-sends the confirmation email to an unverified account.</summary>
     Task<RegisterResult> ResendConfirmationEmailAsync(string email, EmailTemplate emailTemplate, CancellationToken ct = default);
 
-    /// <summary>Activates an account after the user clicks the confirmation link in their email.</summary>
-    Task<ConfirmEmailResult> ConfirmEmailAsync(string registrationToken, CancellationToken ct = default);
+    /// <summary>Checks the mailed confirmation link before the password form is shown; activates nothing.</summary>
+    Task<ConfirmEmailResult> ValidateRegistrationTokenAsync(string registrationToken, CancellationToken ct = default);
+
+    /// <summary>
+    /// Activates an account only when the mailed confirmation link and the password chosen at
+    /// registration are presented together — proof that one person owns both the mailbox and the
+    /// credentials, so nobody can pre-register someone else's address and have its owner activate it.
+    /// </summary>
+    Task<ConfirmEmailResult> ConfirmEmailAsync(string registrationToken, string password, CancellationToken ct = default);
 
     /// <summary>Sends a password-reset email if the address belongs to a valid account.</summary>
     Task<bool> ForgotPasswordAsync(string email, EmailTemplate emailTemplate, CancellationToken ct = default);

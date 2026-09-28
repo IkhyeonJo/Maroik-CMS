@@ -150,4 +150,13 @@
   <data name="Your account has been successfully created" xml:space="preserve">
     <value>계정이 성공적으로 생성되었습니다.</value>
   </data>
+  <data name="Enter the password you chose when signing up to activate your account." xml:space="preserve">
+    <value>계정을 활성화하려면 회원가입 때 입력한 비밀번호를 입력해주십시오.</value>
+  </data>
+  <data name="Password" xml:space="preserve">
+    <value>비밀번호</value>
+  </data>
+  <data name="Activate account" xml:space="preserve">
+    <value>계정 활성화</value>
+  </data>
 </root>

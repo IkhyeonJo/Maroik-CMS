@@ -538,6 +538,36 @@ public class AuthorizationFilterTests
         Assert.Null(context.Result);
     }
 
+    /// <summary>
+    /// Activating an account is an anonymous POST: the confirmation form (mailed link + registration
+    /// password) must reach <c>AccountController.ConfirmEmail</c> without a session.
+    /// </summary>
+    [Fact]
+    public async Task OnAuthorizationAsync_AccountConfirmEmailPost_NotLoggedIn_Allows()
+    {
+        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        SetupMenu([], []);
+        var context = BuildContext("Account", "ConfirmEmail", "POST");
+
+        await CreateSut().OnAuthorizationAsync(context);
+
+        Assert.Null(context.Result);
+    }
+
+    /// <summary>A signed-in account has nothing to confirm; the confirmation POST stays anonymous-only, like the GET link.</summary>
+    [Fact]
+    public async Task OnAuthorizationAsync_AccountConfirmEmailPost_LoggedIn_Denies()
+    {
+        SignIn(Role.User);
+        SetupMenu([], []);
+        var context = BuildContext("Account", "ConfirmEmail", "POST");
+
+        await CreateSut().OnAuthorizationAsync(context);
+
+        var redirect = Assert.IsType<RedirectResult>(context.Result);
+        Assert.Equal("/Dashboard/AnonymousIndex", redirect.Url);
+    }
+
     /// <summary>An account persisted with neither role (a stale or hand-edited row) gets an explicit redirect on POST, not an empty response.</summary>
     [Fact]
     public async Task OnAuthorizationAsync_Post_LoggedInWithAnUnknownRole_RedirectsToTheAnonymousDashboard()

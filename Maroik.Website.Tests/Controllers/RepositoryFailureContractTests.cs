@@ -96,7 +96,15 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false });
         string encrypted = host.Services.CreateScope().ServiceProvider.GetRequiredService<IRsaService>().Encrypt(rawToken);
 
-        var response = await client.GetAsync($"/Account/ConfirmEmail?registrationToken={Uri.EscapeDataString(encrypted)}", TestContext.Current.CancellationToken);
+        var (cookie, token) = await AntiForgeryAsync(client, $"/Account/ConfirmEmail?registrationToken={Uri.EscapeDataString(encrypted)}");
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/Account/ConfirmEmail");
+        request.Headers.Add("Cookie", cookie);
+        request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["RegistrationToken"] = encrypted, ["Password"] = "OldPassword1!", ["__RequestVerificationToken"] = token,
+        });
+        var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
