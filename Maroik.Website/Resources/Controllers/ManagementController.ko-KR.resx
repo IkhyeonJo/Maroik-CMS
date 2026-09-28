@@ -1,0 +1,540 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Account create successfully done." xml:space="preserve">
+    <value>계정 생성이 성공적으로 완료되었습니다.</value>
+  </data>
+  <data name="Action" xml:space="preserve">
+    <value>액션</value>
+  </data>
+  <data name="AgreedServiceTerms" xml:space="preserve">
+    <value>약관동의</value>
+  </data>
+  <data name="AvatarImagePath" xml:space="preserve">
+    <value>아바타 이미지 경로</value>
+  </data>
+  <data name="CategoryId" xml:space="preserve">
+    <value>카테고리ID</value>
+  </data>
+  <data name="Controller" xml:space="preserve">
+    <value>컨트롤러</value>
+  </data>
+  <data name="Created" xml:space="preserve">
+    <value>생성일</value>
+  </data>
+  <data name="Deleted" xml:space="preserve">
+    <value>삭제</value>
+  </data>
+  <data name="DisplayName" xml:space="preserve">
+    <value>표시이름</value>
+  </data>
+  <data name="Email" xml:space="preserve">
+    <value>이메일</value>
+  </data>
+  <data name="Email address is wrong" xml:space="preserve">
+    <value>이메일 주소가 잘못됐습니다.</value>
+  </data>
+  <data name="EmailConfirmed" xml:space="preserve">
+    <value>이메일 확인</value>
+  </data>
+  <data name="Fail to find the account by given email address" xml:space="preserve">
+    <value>주어진 이메일 주소로 계정을 찾는데 실패하였습니다.</value>
+  </data>
+  <data name="File Size must be smaller than {0}MB." xml:space="preserve">
+    <value>파일 사이즈는 {0}MB 미만이어야 합니다.</value>
+  </data>
+  <data name="Nickname" xml:space="preserve">
+    <value>닉네임</value>
+  </data>
+  <data name="Nickname is must be between 1 and 255 characters" xml:space="preserve">
+    <value>닉네임 자릿수는 한자리 또는 255자리 사이여야 합니다.</value>
+  </data>
+  <data name="'{0}' is a Nickname that already exists. Please enter another Nickname." xml:space="preserve">
+    <value>'{0}'은(는) 이미 존재하는 닉네임입니다. 다른 닉네임을 입력해 주세요.</value>
+  </data>
+  <data name="HashedPassword" xml:space="preserve">
+    <value>해쉬 비밀번호</value>
+  </data>
+  <data name="IconPath" xml:space="preserve">
+    <value>아이콘경로</value>
+  </data>
+  <data name="Id" xml:space="preserve">
+    <value>아이디</value>
+  </data>
+  <data name="Input is invalid" xml:space="preserve">
+    <value>유효하지 않은 입력값입니다.</value>
+  </data>
+  <data name="Invalid email form" xml:space="preserve">
+    <value>유효하지 않은 이메일 형식입니다.</value>
+  </data>
+  <data name="Invalid password. Please check again." xml:space="preserve">
+    <value>유효하지 않은 비밀번호입니다. 다시 확인해주세요.</value>
+  </data>
+  <data name="Locked" xml:space="preserve">
+    <value>잠금</value>
+  </data>
+  <data name="LoginAttempt" xml:space="preserve">
+    <value>로그인 횟수</value>
+  </data>
+  <data name="Message" xml:space="preserve">
+    <value>메시지</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>이름</value>
+  </data>
+  <data name="Only .jpg or jpeg or .png file allowed" xml:space="preserve">
+    <value>파일 확장자 jpg 또는 jpeg 또는 png 만 허용됩니다.</value>
+  </data>
+  <data name="Order" xml:space="preserve">
+    <value>순서</value>
+  </data>
+  <data name="Password changed. Please sign in again." xml:space="preserve">
+    <value>비밀번호가 변경되었습니다. 다시 로그인해 주세요.</value>
+  </data>
+  <data name="Password must be at least 8 characters and contain at 3 of 4 of the following: upper case (A-Z), lower case (a-z), number (0-9) and special character (e.g. !@#$%^&amp;*)" xml:space="preserve">
+    <value>비밀번호는 8자리 이상이어야 하며 대소문자 및 숫자와 특수문자를 포함해야합니다.</value>
+  </data>
+  <data name="Please attach a file" xml:space="preserve">
+    <value>파일 첨부하여 주십시오</value>
+  </data>
+  <data name="Please enter Nickname" xml:space="preserve">
+    <value>닉네임을 입력해주세요.</value>
+  </data>
+  <data name="RegistrationToken" xml:space="preserve">
+    <value>등록토큰</value>
+  </data>
+  <data name="ResetPasswordToken" xml:space="preserve">
+    <value>비밀번호 초기화 토큰</value>
+  </data>
+  <data name="Role" xml:space="preserve">
+    <value>역할</value>
+  </data>
+  <data name="Successfully created the category" xml:space="preserve">
+    <value>카테고리가 성공적으로 생성되었습니다.</value>
+  </data>
+  <data name="Successfully created the subCategory" xml:space="preserve">
+    <value>서브카테고리가 성공적으로 생성되었습니다.</value>
+  </data>
+  <data name="Successfully deleted the account" xml:space="preserve">
+    <value>계정 삭제가 성공적으로 완료되었습니다.</value>
+  </data>
+  <data name="Successfully deleted the category" xml:space="preserve">
+    <value>카테고리가 성공적으로 삭제되었습니다.</value>
+  </data>
+  <data name="Successfully deleted the subCategory" xml:space="preserve">
+    <value>서브카테고리가 성공적으로 삭제되었습니다.</value>
+  </data>
+  <data name="Successfully updated the account" xml:space="preserve">
+    <value>계정이 성공적으로 업데이트되었습니다.</value>
+  </data>
+  <data name="Successfully updated the category" xml:space="preserve">
+    <value>카테고리가 성공적으로 업데이트되었습니다.</value>
+  </data>
+  <data name="Successfully updated the subCategory" xml:space="preserve">
+    <value>서브카테고리가 성공적으로 업데이트되었습니다.</value>
+  </data>
+  <data name="This account has already been created." xml:space="preserve">
+    <value>이미 생성된 계정입니다.</value>
+  </data>
+  <data name="Updated" xml:space="preserve">
+    <value>업데이트일</value>
+  </data>
+  <data name="Please select time zone" xml:space="preserve">
+    <value>시간대를 선택해 주세요</value>
+  </data>
+  <data name="TimeZone" xml:space="preserve">
+    <value>시간대</value>
+  </data>
+  <data name="TimeZoneIanaId" xml:space="preserve">
+    <value>시간대</value>
+  </data>
+  <data name="content length is must be between 0 and 16384 characters." xml:space="preserve">
+    <value>내용 길이는 1~16384 글자여야 합니다.</value>
+  </data>
+  <data name="No PrivateNoteBoard exists" xml:space="preserve">
+    <value>해당 사적 메모가 존재하지 않습니다.</value>
+  </data>
+  <data name="Only .jpg or jpeg or .png file allowed." xml:space="preserve">
+    <value>.jpg 또는 .jpeg 또는 .png 파일만 가능합니다.</value>
+  </data>
+  <data name="Only zip extension allowed." xml:space="preserve">
+    <value>zip 확장자만 가능합니다.</value>
+  </data>
+  <data name="Please attach a file." xml:space="preserve">
+    <value>파일을 첨부해주세요.</value>
+  </data>
+  <data name="Please enter a comment." xml:space="preserve">
+    <value>댓글을 입력해주세요.</value>
+  </data>
+  <data name="Please Login to edit board" xml:space="preserve">
+    <value>게시물을 수정하기 위해 로그인해주세요</value>
+  </data>
+  <data name="Please Login to write board" xml:space="preserve">
+    <value>게시물을 작성하기 위해 로그인 해주십시오.</value>
+  </data>
+  <data name="Please Login to write comment." xml:space="preserve">
+    <value>댓글을 작성하기 위해 로그인 해주십시오.</value>
+  </data>
+  <data name="The board has been successfully created." xml:space="preserve">
+    <value>게시물이 성공적으로 작성되었습니다.</value>
+  </data>
+  <data name="The board has been successfully deleted." xml:space="preserve">
+    <value>게시물이 성공적으로 삭제되었습니다.</value>
+  </data>
+  <data name="The board has been successfully updated." xml:space="preserve">
+    <value>게시물이 성공적으로 수정되었습니다.</value>
+  </data>
+  <data name="Title length is must be between 1 and 100 characters." xml:space="preserve">
+    <value>제목 길이는 1~100 글자여야 합니다.</value>
+  </data>
+  <data name="You do not have permission to delete." xml:space="preserve">
+    <value>삭제할 권한이 없습니다.</value>
+  </data>
+  <data name="File may be infected with a virus." xml:space="preserve">
+    <value>파일이 바이러스에 감염되었을 수 있습니다.</value>
+  </data>
+  <data name="The file could not be scanned for viruses. Please try again later." xml:space="preserve">
+    <value>파일의 바이러스 검사를 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.</value>
+  </data>
+  <data name="SVG format is not allowed" xml:space="preserve">
+    <value>SVG 포맷은 허락되지 않습니다</value>
+  </data>
+  <data name="Invalid image file" xml:space="preserve">
+    <value>유효하지 않은 이미지 파일입니다</value>
+  </data>
+  <data name="'{0}' is not a recognised time-zone ID." xml:space="preserve">
+    <value>'{0}'은(는) 인식할 수 없는 시간대 ID입니다.</value>
+  </data>
+  <data name="'{0}' is not a valid email address." xml:space="preserve">
+    <value>'{0}'은(는) 올바른 이메일 주소가 아닙니다.</value>
+  </data>
+  <data name="Email address must be {0} characters or fewer." xml:space="preserve">
+    <value>이메일 주소는 {0}자 이하여야 합니다.</value>
+  </data>
+  <data name="Agreed Service Terms was not checked. Please try sign up again and login again." xml:space="preserve">
+    <value>약관에 동의하지 않으셨습니다. 회원가입을 다시 진행한 후 로그인해 주십시오.</value>
+  </data>
+  <data name="Asset category (item) cannot be empty." xml:space="preserve">
+    <value>자산 항목(분류)은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Asset category cannot be empty." xml:space="preserve">
+    <value>자산 항목은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Board type cannot be empty." xml:space="preserve">
+    <value>게시판 유형은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Board type is not a recognised value." xml:space="preserve">
+    <value>게시판 유형이 인식할 수 없는 값입니다.</value>
+  </data>
+  <data name="Cannot add a comment to a deleted post." xml:space="preserve">
+    <value>삭제된 게시글에는 댓글을 추가할 수 없습니다.</value>
+  </data>
+  <data name="Cannot add a comment to a locked post." xml:space="preserve">
+    <value>잠긴 게시글에는 댓글을 추가할 수 없습니다.</value>
+  </data>
+  <data name="Cannot change the currency of an existing asset." xml:space="preserve">
+    <value>기존 자산의 화폐단위는 변경할 수 없습니다.</value>
+  </data>
+  <data name="Cannot deposit a different currency into this asset." xml:space="preserve">
+    <value>이 자산에는 다른 화폐단위로 입금할 수 없습니다.</value>
+  </data>
+  <data name="Cannot update a deleted post." xml:space="preserve">
+    <value>삭제된 게시글은 수정할 수 없습니다.</value>
+  </data>
+  <data name="Cannot withdraw a different currency from this asset." xml:space="preserve">
+    <value>이 자산에서는 다른 화폐단위로 출금할 수 없습니다.</value>
+  </data>
+  <data name="Category name cannot be empty." xml:space="preserve">
+    <value>카테고리 이름은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Comment author (writer) cannot be empty." xml:space="preserve">
+    <value>댓글 작성자는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Comment content cannot be empty." xml:space="preserve">
+    <value>댓글 내용은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Comment does not belong to this post." xml:space="preserve">
+    <value>댓글이 이 게시글에 속하지 않습니다.</value>
+  </data>
+  <data name="Comment is already deleted." xml:space="preserve">
+    <value>이미 삭제된 댓글입니다.</value>
+  </data>
+  <data name="Currency code cannot be empty." xml:space="preserve">
+    <value>화폐 코드는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Deposit asset product name cannot be empty." xml:space="preserve">
+    <value>입금 자산 상품명은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Deposit day is not valid for the selected month." xml:space="preserve">
+    <value>입금일이 선택한 월에 유효하지 않습니다.</value>
+  </data>
+  <data name="Deposit month must be between 1 and 12." xml:space="preserve">
+    <value>입금월은 1에서 12 사이여야 합니다.</value>
+  </data>
+  <data name="Email address cannot be empty." xml:space="preserve">
+    <value>이메일 주소는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Email address is already confirmed." xml:space="preserve">
+    <value>이메일 주소가 이미 인증되었습니다.</value>
+  </data>
+  <data name="Email must be confirmed before resetting the password." xml:space="preserve">
+    <value>비밀번호를 재설정하기 전에 이메일 인증을 완료해야 합니다.</value>
+  </data>
+  <data name="Email verification was not completed. Please try sign up again." xml:space="preserve">
+    <value>이메일 인증이 완료되지 않았습니다. 다시 회원가입을 진행해 주시길 바랍니다.</value>
+  </data>
+  <data name="Error occurred while processing about account registration" xml:space="preserve">
+    <value>계정 생성 중 에러가 발생하였습니다.</value>
+  </data>
+  <data name="Error occurred while processing about account status" xml:space="preserve">
+    <value>계정 상태 처리 중 에러가 발생하였습니다.</value>
+  </data>
+  <data name="Error occurred while processing about confirm email account status" xml:space="preserve">
+    <value>이메일 확인 계정 상태 처리 중 에러가 발생하였습니다.</value>
+  </data>
+  <data name="Error occurred while processing about reset password" xml:space="preserve">
+    <value>비밀번호 초기화 중 에러가 발생하였습니다.</value>
+  </data>
+  <data name="Error occurred while processing about sending account authentication mail" xml:space="preserve">
+    <value>계정 인증 메일 전송 중 에러가 발생하였습니다.</value>
+  </data>
+  <data name="Failed to resend email" xml:space="preserve">
+    <value>이메일 재전송에 실패하였습니다.</value>
+  </data>
+  <data name="Failed to upload the attached file." xml:space="preserve">
+    <value>첨부 파일 업로드에 실패하였습니다.</value>
+  </data>
+  <data name="File name cannot be empty." xml:space="preserve">
+    <value>파일 이름은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="File size cannot be negative." xml:space="preserve">
+    <value>파일 크기는 음수일 수 없습니다.</value>
+  </data>
+  <data name="File storage path cannot be empty." xml:space="preserve">
+    <value>파일 저장 경로는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="HTML color code cannot be empty." xml:space="preserve">
+    <value>HTML 색상 코드는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Hashed password cannot be empty." xml:space="preserve">
+    <value>해시된 비밀번호는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Invalid email confirmation token." xml:space="preserve">
+    <value>유효하지 않은 이메일 확인 토큰입니다.</value>
+  </data>
+  <data name="Invalid image file." xml:space="preserve">
+    <value>유효하지 않은 이미지 파일입니다.</value>
+  </data>
+  <data name="Invalid or expired password-reset token." xml:space="preserve">
+    <value>유효하지 않거나 만료된 비밀번호 재설정 토큰입니다.</value>
+  </data>
+  <data name="Main expense category cannot be empty." xml:space="preserve">
+    <value>지출 대분류는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Main income category cannot be empty." xml:space="preserve">
+    <value>수입 대분류는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="New hashed password cannot be empty." xml:space="preserve">
+    <value>새 해시된 비밀번호는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Nickname cannot be empty." xml:space="preserve">
+    <value>닉네임은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Nickname must be {0} characters or fewer." xml:space="preserve">
+    <value>닉네임은 {0}자 이하여야 합니다.</value>
+  </data>
+  <data name="Nickname contains characters that are not allowed." xml:space="preserve">
+    <value>닉네임에 사용할 수 없는 문자가 포함되어 있습니다.</value>
+  </data>
+  <data name="Payment method (asset name) cannot be empty." xml:space="preserve">
+    <value>결제수단(자산명)은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Payment method cannot be empty." xml:space="preserve">
+    <value>결제수단은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Post author (writer) cannot be empty." xml:space="preserve">
+    <value>게시글 작성자는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Post content must be {0} characters or fewer." xml:space="preserve">
+    <value>게시글 내용은 {0}자 이하여야 합니다.</value>
+  </data>
+  <data name="Post is already deleted." xml:space="preserve">
+    <value>이미 삭제된 게시글입니다.</value>
+  </data>
+  <data name="Post title cannot be empty." xml:space="preserve">
+    <value>게시글 제목은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Post title must be {0} characters or fewer." xml:space="preserve">
+    <value>게시글 제목은 {0}자 이하여야 합니다.</value>
+  </data>
+  <data name="Product name cannot be empty." xml:space="preserve">
+    <value>상품명은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Role must be either Admin or User." xml:space="preserve">
+    <value>권한은 Admin 또는 User여야 합니다.</value>
+  </data>
+  <data name="Sub expense category cannot be empty." xml:space="preserve">
+    <value>지출 소분류는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Sub income category cannot be empty." xml:space="preserve">
+    <value>수입 소분류는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Sub-category name cannot be empty." xml:space="preserve">
+    <value>하위 카테고리 이름은 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Time-zone ID cannot be empty." xml:space="preserve">
+    <value>시간대 ID는 비워둘 수 없습니다.</value>
+  </data>
+  <data name="Unknown expenditure main class." xml:space="preserve">
+    <value>알 수 없는 지출 대분류입니다.</value>
+  </data>
+  <data name="Unknown income main class." xml:space="preserve">
+    <value>알 수 없는 수입 대분류입니다.</value>
+  </data>
+  <data name="You do not have permission to write a comment." xml:space="preserve">
+    <value>댓글을 작성할 권한이 없습니다.</value>
+  </data>
+  <data name="Your Account is Deleted. Please contact the administrator." xml:space="preserve">
+    <value>삭제된 계정입니다. 관리자에게 문의해 주세요.</value>
+  </data>
+  <data name="Your Account is Locked, Please reset your password by clicking Forgot password Button" xml:space="preserve">
+    <value>계정이 잠겼습니다. '비밀번호 찾기' 버튼을 통해 비밀번호를 초기화해 주시길 바랍니다.</value>
+  </data>
+  <data name="invalid-image" xml:space="preserve">
+    <value>유효하지 않은 이미지입니다.</value>
+  </data>
+  <data name="reset-password-invalid" xml:space="preserve">
+    <value>비밀번호 재설정 요청이 유효하지 않습니다.</value>
+  </data>
+  <data name="svg-not-allowed" xml:space="preserve">
+    <value>SVG 파일은 허용되지 않습니다.</value>
+  </data>
+  <data name="Comment must be {0} characters or fewer." xml:space="preserve">
+    <value>댓글은 {0}자 이하여야 합니다.</value>
+  </data>
+  <data name="File name must be {0} characters or fewer." xml:space="preserve">
+    <value>파일 이름은 {0}자 이하여야 합니다.</value>
+  </data>
+  <data name="File extension must be {0} characters or fewer." xml:space="preserve">
+    <value>파일 확장자는 {0}자 이하여야 합니다.</value>
+  </data>
+  <data name="File storage path must be {0} characters or fewer." xml:space="preserve">
+    <value>파일 저장 경로는 {0}자 이하여야 합니다.</value>
+  </data>
+</root>

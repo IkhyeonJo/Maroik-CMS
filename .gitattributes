@@ -1,1 +1,29 @@
+# Normalize every text file to LF in the repo and on checkout, on every OS.
+# This is the single source of truth for line endings; it overrides a machine's
+# core.autocrlf. `text=auto` still content-sniffs text vs binary.
 * text=auto eol=lf
+
+# Client scripts and JSON configs — declared explicitly so their line endings
+# never depend on content sniffing or on any local core.autocrlf setting.
+*.ts    text eol=lf
+*.tsx   text eol=lf
+*.mts   text eol=lf
+*.cts   text eol=lf
+*.js    text eol=lf
+*.jsx   text eol=lf
+*.mjs   text eol=lf
+*.cjs   text eol=lf
+*.json  text eol=lf
+
+# .NET source, project / solution files, and resources — also declared
+# explicitly, all LF (Visual Studio 2022 and Rider both handle LF .sln fine).
+*.cs            text eol=lf
+*.cshtml        text eol=lf
+*.razor         text eol=lf
+*.csproj        text eol=lf
+*.props         text eol=lf
+*.targets       text eol=lf
+*.sln           text eol=lf
+*.resx          text eol=lf
+*.config        text eol=lf
+*.DotSettings   text eol=lf

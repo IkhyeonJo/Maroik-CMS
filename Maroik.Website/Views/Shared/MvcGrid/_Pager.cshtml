@@ -1,0 +1,83 @@
+@*
+    Shared/MvcGrid/_Pager.cshtml
+    NonFactors MVC Grid pager partial view — part of the nonfactors.grid.mvc6 library.
+    Renders First/Prev/page-number/Next/Last navigation buttons for the data grid.
+    Also renders a page-size selector (dropdown or text input) when Model.ShowPageSizes is true.
+    Disabled state is applied to boundary buttons when already on the first or last page.
+*@
+@model IGridPager
+@{
+    int totalPages = Model.TotalPages;
+    int currentPage = Model.CurrentPage;
+    int firstDisplayPage = Model.FirstDisplayPage;
+}
+
+    <div class="@($"mvc-grid-pager {Model.CssClasses}".Trim())" data-show-page-sizes="@Model.ShowPageSizes" data-total-rows="@Model.TotalRows">
+    @if (totalPages > 0)
+    {
+        if (currentPage > 1)
+        {
+        <button type="button" data-page="1">&#171;</button>
+        <button type="button" data-page="@(currentPage - 1)">&#8249;</button>
+        }
+        else
+        {
+        <button type="button" disabled>&#171;</button>
+        <button type="button" disabled>&#8249;</button>
+        }
+        for (int page = firstDisplayPage; page <= totalPages && page < firstDisplayPage + Model.PagesToDisplay; page++)
+        {
+            if (page == currentPage)
+            {
+        <button type="button" class="active" data-page="@(page)">@(page)</button>
+            }
+            else
+            {
+        <button type="button" data-page="@(page)">@(page)</button>
+            }
+        }
+        if (currentPage < totalPages)
+        {
+        <button type="button" data-page="@(currentPage + 1)">&#8250;</button>
+        <button type="button" data-page="@totalPages">&#187;</button>
+        }
+        else
+        {
+        <button type="button" disabled>&#8250;</button>
+        <button type="button" disabled>&#187;</button>
+        }
+        if (Model.ShowPageSizes)
+        {
+        <div class="mvc-grid-page-sizes">
+        @if (Model.PageSizes.Count > 0)
+        {
+            <select class="mvc-grid-pager-rows">
+            @foreach (var size in Model.PageSizes)
+            {
+                if (Model.RowsPerPage == size.Key)
+                {
+                <option value="@size.Key" selected>@size.Value</option>
+                }
+                else
+                {
+                <option value="@size.Key">@size.Value</option>
+                }
+            }
+            </select>
+        }
+        else
+        {
+            <input class="mvc-grid-pager-rows" value="@Model.RowsPerPage" />
+        }
+        </div>
+        }
+        else
+        {
+        <input class="mvc-grid-pager-rows" type="hidden" value="@Model.RowsPerPage" />
+        }
+    }
+    else
+    {
+        <input class="mvc-grid-pager-rows" type="hidden" value="@Model.RowsPerPage" />
+    }
+    </div>

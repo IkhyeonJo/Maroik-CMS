@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>Maroik</id>
+    <title>Maroik Web Application</title>
+    <version>1.0.0</version>
+    <authors>IkhyeonJo</authors>
+    <description>
+      Maroik is an ASP.NET Core web application built with Clean Architecture principles.
+      Features PostgreSQL, Redis, and file storage support.
+    </description>
+    <language>ko-KR</language>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/IkhyeonJo/Maroik-CMS</projectUrl>
+    <releaseNotes>
+      * Initial release.
+    </releaseNotes>
+    <packageTypes>
+      <packageType name="Template" />
+    </packageTypes>
+    <tags>Web ASP.NET Maroik CleanArchitecture</tags>
+    <readme>README.md</readme>
+  </metadata>
+  <files>
+    <file src=".\**" target="content" exclude="**\bin\**;**\obj\**;**\.git\**;**\*.user;**\.vs\**;**\.vscode\**;**\.idea\**;**\.gitignore" />
+    <file src="README.md" />
+  </files>
+</package>

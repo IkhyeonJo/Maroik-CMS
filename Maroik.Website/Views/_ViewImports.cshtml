@@ -1,0 +1,17 @@
+﻿@*
+    _ViewImports.cshtml
+    Global Razor directives applied to every view in the Maroik.Website project.
+    - Imports NonFactors.Mvc.Grid for the data-grid tag helpers.
+    - Imports the project's own namespaces (models, DTOs, utilities).
+    - Registers all MVC tag helpers.
+    - Injects IViewLocalizer as "Localizer" so every view can use @Localizer["key"] for i18n strings.
+*@
+@using NonFactors.Mvc.Grid
+@using Maroik.Website
+@using Maroik.Website.Extensions
+@using Maroik.Core.Contract.Dtos
+@using Maroik.Core.Domain.Account
+@using Maroik.Core.Domain.Localization
+@using Maroik.Core.Contract.Misc.Extensions
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@inject Microsoft.AspNetCore.Mvc.Localization.IViewLocalizer Localizer

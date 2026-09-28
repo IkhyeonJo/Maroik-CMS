@@ -1,0 +1,9 @@
+﻿@*
+    Exception/_ViewStart.cshtml
+    Overrides the application-level _ViewStart for all views inside the Exception folder.
+    Switches the layout to the minimal _ExceptionLayout (no sidebar / navigation)
+    so error and access-denied pages render correctly even when session state is unavailable.
+*@
+@{
+    Layout = "~/Views/Shared/_ExceptionLayout.cshtml";
+}

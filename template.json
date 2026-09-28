@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json.schemastore.org/template",
+  "author": "IkhyeonJo",
+  "classifications": [
+    "Web",
+    "ASP.NET",
+    "Clean Architecture"
+  ],
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "identity": "Maroik.Template",
+  "name": "Maroik Web Application",
+  "shortName": "maroik",
+  "sourceName": "Maroik",
+  "templateFileExtensions": [ ".cs", ".csproj", ".sln" ],
+  "preferNameDirectory": true,
+  "sources": [
+    {
+      "include": [
+        "**/*"
+      ],
+      "exclude": [
+        ".vs/**",
+        ".vscode/**",
+        ".git/**",
+        ".idea/**",
+        ".template.config/**"
+      ],
+      "modifiers": [
+        {
+          "condition": "true",
+          "copyOnly": [ "*.dll", "*.png", "*.ico", "*.jpg", "*.jpeg" ]
+        }
+      ]
+    }
+  ]
+}

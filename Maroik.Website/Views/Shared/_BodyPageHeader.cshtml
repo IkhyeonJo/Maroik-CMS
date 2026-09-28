@@ -1,0 +1,41 @@
+@*
+    Shared/_BodyPageHeader.cshtml
+    AdminLTE content-header partial rendered once per page via _Layout.
+    Displays the page title (h1) and a breadcrumb trail based on the currently active menu item.
+    The active Category/SubCategory match is resolved once per request by ViewBagPopulatorFilter
+    (via MenuNavigationMatcher.ResolveActiveMenuItem) and exposed as ViewBag.ActiveCategory /
+    ViewBag.ActiveSubCategory, so this partial only renders — it no longer re-derives the match.
+*@
+@model Maroik.Core.Contract.Dtos.AccountResponse
+
+@{
+    var activeCategory = ViewBag.ActiveCategory as CategoryResponse;
+    var activeSubCategory = ViewBag.ActiveSubCategory as SubCategoryResponse;
+}
+
+@if (activeCategory != null)
+{
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">@Localizer[(activeSubCategory?.DisplayName ?? activeCategory.DisplayName)!]</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="/">@Localizer["Home"]</a></li>
+                        @if (activeSubCategory != null)
+                        {
+                            <li class="breadcrumb-item active">@Localizer[activeCategory.DisplayName!]</li>
+                            <li class="breadcrumb-item">@Localizer[activeSubCategory.DisplayName!]</li>
+                        }
+                        else
+                        {
+                            <li class="breadcrumb-item">@Localizer[activeCategory.DisplayName!]</li>
+                        }
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+}

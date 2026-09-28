@@ -1,0 +1,115 @@
+﻿@*
+    Account/ConfirmEmail.cshtml
+    Email confirmation landing page opened via the link sent to the user after registration.
+    Renders one of four states based on ViewBag flags (InvalidToken, AccountCreated):
+      - invalidToken=false, accountCreated=false : Email was already confirmed — shows "Back to Login".
+      - invalidToken=false, accountCreated=true  : Account created successfully — shows success message.
+      - invalidToken=true,  accountCreated=false : Token is invalid or expired — shows error + re-register hint.
+      - invalidToken=true,  accountCreated=true  : Unexpected exception state — shows error details.
+*@
+@{
+    bool invalidToken = ViewBag.InvalidToken ?? false;
+    bool accountCreated = ViewBag.AccountCreated ?? false;
+    string error = TempData["Error"] as string ?? "";
+}
+
+
+@switch (invalidToken)
+{
+    // 1. Email already verified. [Go to login screen] <- button
+    case false when !accountCreated:
+        <div class="register-box">
+            <div class="card card-outline card-primary">
+                <div class="card-header text-center">
+                    <a asp-controller="Dashboard" asp-action="AnonymousIndex" class="h1"><b>Maroik</b></a>
+                </div>
+                <div class="card-body">
+                    <p class="login-box-msg"><span style="font-weight:bold; color: black;">@Localizer["You have already verified your email"]</span></p>
+                    <div class="social-auth-links text-center mt-2 mb-3">
+                        <a asp-controller="Account" asp-action="Login" class="btn btn-block btn-primary">
+                            <i class="fas fa-sign-in-alt" style="padding-right:3px;"></i>@Localizer["Back To Login Page"]
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        break;
+    // 1. Account created successfully. [Go to login screen] <- button
+    case false when accountCreated:
+        <div class="register-box">
+            <div class="card card-outline card-primary">
+                <div class="card-header text-center">
+                    <a asp-controller="Dashboard" asp-action="AnonymousIndex" class="h1"><b>Maroik</b></a>
+                </div>
+                <div class="card-body">
+                    <p class="login-box-msg"><span style="font-weight:bold; color: green; ">@Localizer["Your account has been successfully created"]</span></p>
+                    <div class="social-auth-links text-center mt-2 mb-3">
+                        <a asp-controller="Account" asp-action="Login" class="btn btn-block btn-primary">
+                            <i class="fas fa-sign-in-alt" style="padding-right:3px;"></i>@Localizer["Back To Login Page"]
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        break;
+    // 1. Invalid confirmation code. [Go to login screen] <- button
+    case true when !accountCreated:
+        <div class="register-box">
+            <div class="card card-outline card-primary">
+                <div class="card-header text-center">
+                    <a asp-controller="Dashboard" asp-action="AnonymousIndex" class="h1"><b>Maroik</b></a>
+                </div>
+                <div class="card-body">
+                    <p class="login-box-msg">
+                        <span style="font-weight:bold; color: red; ">@Localizer["The authentication token is invalid."]</span>
+                    </p>
+                    <div class="social-auth-links text-center mt-2 mb-3">
+                        <p class="mb-0">
+                            <span style="font-weight:bold; color: black; ">
+                                @Localizer["The validity period of the authentication token may have expired or membership registration may have already been completed."]
+                                <br />
+                                <br />
+                                @Localizer["If you have not registered as a member,"]
+                                <br />
+                                @Localizer["please try signing up again."]
+                                <br />
+                                <br />
+                                @Localizer["If the problem persists,"]
+                                <br />
+                                @Localizer["please contact your"] <a href="mailto:admin@maroik.com">@Localizer["administrator"]</a>.
+                            </span>
+                        </p>
+                        <br />
+                        <a asp-controller="Account" asp-action="Login" class="btn btn-block btn-primary">
+                            <i class="fas fa-sign-in-alt" style="padding-right:3px;"></i>@Localizer["Back To Login Page"]
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        break;
+    // 1. (This should not happen) [Page used when an exception occurs during email activation]
+    case true when accountCreated:
+        <div class="register-box">
+            <div class="card card-outline card-primary">
+                <div class="card-header text-center">
+                    <a asp-controller="Dashboard" asp-action="AnonymousIndex" class="h1"><b>Maroik</b></a>
+                </div>
+                <div class="card-body">
+                    <p class="login-box-msg">
+                        <span style="font-weight:bold; color: red; ">@Localizer["Exception!!"]</span>
+                    </p>
+                    <div class="social-auth-links text-center mt-2 mb-3">
+                        <p class="mb-0">
+                            <span style="font-weight:bold; color: red; ">@error</span>
+                        </p>
+                        <br />
+                        <a asp-controller="Account" asp-action="Login" class="btn btn-block btn-primary">
+                            <i class="fas fa-sign-in-alt" style="padding-right:3px;"></i>@Localizer["Back To Login Page"]
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        break;
+}

@@ -1,0 +1,40 @@
+﻿@*
+    AccountBook/_IncomeGrid.cshtml
+    NonFactors MVC Grid partial for the income transaction list.
+    Renders a filterable, sortable data table of IncomeOutputViewModel records.
+    Each row is clickable to populate the edit form in the parent Income.cshtml view.
+    Note: this partial should contain only the grid declaration (NonFactors constraint).
+*@
+@model IQueryable<Maroik.Website.Models.ViewModels.AccountBook.IncomeOutputViewModel>
+@* Should only include grid declaration *@
+
+@(Html
+    .Grid(Model)
+    .Build(columns =>
+    {
+        columns.Add(model => model.Id).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.IncomeOutputViewModel.Id)]).Hidden();
+        columns.Add(model => model.MainClass).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.IncomeOutputViewModel.MainClass)]);
+        columns.Add(model => model.SubClass).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.IncomeOutputViewModel.SubClass)]);
+        columns.Add(model => model.Content).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.IncomeOutputViewModel.Content)]);
+        columns.Add(model => model.Amount).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.IncomeOutputViewModel.Amount)]).Formatted("{0:0.##}");
+        columns.Add(model => model.MonetaryUnit).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.IncomeOutputViewModel.MonetaryUnit)]);
+        columns.Add(model => model.DepositMyAssetProductName).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.IncomeOutputViewModel.DepositMyAssetProductName)]);
+        columns.Add(model => model.Created).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.IncomeOutputViewModel.Created)]);
+        columns.Add(model => model.Updated).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.IncomeOutputViewModel.Updated)]);
+        columns.Add(model => model.Note).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.IncomeOutputViewModel.Note)]);
+    })
+    .Id("incomeGrid")
+    .Css("table table-striped")
+    .AppendCss("table-hover")
+    //.Attributed(new { data_type = "individuals" })
+    .RowAttributed(model => new { @class = "table-inactive clsGridRow", data_id = model.Id})
+    .Using(GridFilterMode.Row)
+    .Empty(Localizer["No data found"])
+    .Filterable()
+    .Sortable()
+    .Pageable(pager => {
+        pager.PageSizes = new Dictionary<int, string> { { 10, "10" }, { 25, "25" }, { 50, "50" }, {100, "100" } };
+        pager.ShowPageSizes = true;
+        pager.RowsPerPage = 10;
+    })
+)

@@ -1,0 +1,29 @@
+**/.classpath
+**/.dockerignore
+**/.env
+**/.git
+**/.gitignore
+**/.project
+**/.settings
+**/.toolstarget
+**/.vs
+**/.vscode
+**/*.*proj.user
+**/*.dbmdl
+**/*.jfm
+**/azds.yaml
+**/bin
+**/charts
+**/docker-compose*
+**/Dockerfile*
+**/node_modules
+**/npm-debug.log
+# Stale host source maps must not enter the build context. The tsbuild stage regenerates
+# them inside the image when TS_SOURCEMAPS=true (docker-compose.debug.yml) and copies them
+# forward stage-to-stage, which .dockerignore does not affect.
+**/wwwroot/**/custom/**/*.js.map
+**/obj
+**/secrets.dev.yaml
+**/values.dev.yaml
+LICENSE
+README.md

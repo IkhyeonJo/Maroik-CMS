@@ -1,0 +1,20 @@
+@*
+    Shared/_MainFooter.cshtml
+    AdminLTE main footer partial rendered once per page via _Layout.
+    Displays the copyright year range (2021–current year in the user's local time zone)
+    and the application domain name link from ViewBag.DomainName.
+    The year is computed server-side using the user's IANA time-zone ID to match the user's local date.
+*@
+@model Maroik.Core.Contract.Dtos.AccountResponse
+
+<footer class="main-footer text-sm">
+    @switch (Model.Role)
+    {
+        case Role.Admin:
+        case Role.User:
+        case Role.Anonymous:
+            <strong><span id="mainFooterYear">Copyright &copy; 2021-@(ViewBag.CopyrightYear) </span><a href="@ViewBag.DomainName">Maroik</a>.</strong>
+            break;
+    }
+    All rights reserved.
+</footer>
