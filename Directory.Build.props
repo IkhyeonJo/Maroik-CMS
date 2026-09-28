@@ -1,0 +1,21 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <NoWarn>1591</NoWarn>
+    <!-- Compiler warnings fail the build so they cannot accumulate unnoticed.
+         The solution currently builds warning-clean; keep it that way. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- .editorconfig code-style violations (IDExxxx) are enforced at build time too. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+</Project>

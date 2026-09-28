@@ -5,49 +5,24 @@
 ## Introduction
 Maroik is a modern web application built with ASP.NET Core MVC, featuring a comprehensive set of tools for personal and business management. It includes features such as expense tracking, calendar management, bulletin boards, and role-based user management.
 
-## How to run this project
-
-### Ubuntu Server 24.04.2
-1. Run ./Deploy.sh script
-2. Go to https://localhost/ [Default setting]
-   
-## How to custom set this project
-
-### Ubuntu Server 24.04.2
-1. Configure ./Maroik.WebSite/appsettings.DockerComposeLocalDebug.json with domain name and mail settings
-![screenshot 2025-06-03 22-10-50](https://github.com/user-attachments/assets/69693b80-6219-4e74-a64b-c3b217448343)
-
-## Default Accounts
-
-### Admin Account
-- ID: admin@maroik.com
-- Password: Pa$$w0rd
-
-### User Account
-- ID: demo@maroik.com
-- Password: Pa$$w0rd
+This repository is the open-source portfolio edition of Maroik: the full application source and test suites, a local Docker Compose stack, and a seed database that contains only the default admin and demo accounts. Production deployment scripts, CI/CD pipelines, and production data are not included.
 
 ## Key Features
 
 ### 1. Personal Finance Management
 - Expense tracking and categorization
 - Income recording
-- Budget management
 - Financial reports and analytics
-- Export to CSV/Excel
+- Export to Excel
 
 ### 2. Calendar and Schedule Management
-- Daily/Weekly/Monthly calendar view
+- Monthly calendar view
 - Event creation and management
-- Recurring events support
-- Calendar sharing between users
-- Event reminders
 
 ### 3. Bulletin Board System
-- Multiple board categories
 - Post creation, editing, and deletion
 - Comment system
-- File attachments
+- File attachments (virus-scanned with ClamAV)
 - Search functionality
 
 ### 4. User Management
@@ -55,47 +30,29 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 - User profile management
 - Session-based authentication
 - Password management
-- Login activity tracking
 
 ### 5. Admin Dashboard
 - User management
 - System settings
-- Log monitoring
 - Analytics dashboard
 
 ## Technologies Used
 
 ### Backend
-- ASP.NET Core MVC 9.0
-  - Minimal APIs
-  - Hot Reload
-  - Improved performance
-  - Enhanced routing
-  - Better dependency injection
+- ASP.NET Core MVC 10.0
 - PostgreSQL 17
-- Entity Framework Core 9.0
-  - Improved query performance
-  - Better async support
-  - Enhanced change tracking
-- RESTful API
-  - OpenAPI/Swagger integration
-  - API versioning
-  - Rate limiting
-  - Request validation
+- Entity Framework Core 10.0
+- Valkey (Redis-compatible) — session store and Data Protection key ring
+- RabbitMQ 4 — outbound e-mail queue consumed by `Maroik.Worker`
+- ClamAV — upload scanning in `Maroik.FileStorage`
 - Docker
   - Multi-stage builds
   - Container orchestration
   - Environment isolation
 - Authentication & Authorization
   - Session Authentication
-  - JWT Authentication
   - Role-based access control
-  - OAuth2/OpenID Connect
 - Cross-Origin Resource Sharing (CORS)
-- API Documentation
-  - Swagger/OpenAPI
-  - API Explorer
-  - API versioning support
 
 ### Frontend
 - AdminLTE 3
@@ -103,6 +60,14 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 - jQuery 3.7
 - HTML5/CSS3
 - JavaScript ES2024
+- TypeScript 7.0
+  - The custom client scripts are authored in TypeScript at `Maroik.Website/TypeScripts/{admin,anonymous,user}/custom/**/site.ts` and compiled 1:1 by `tsc` to `Maroik.Website/wwwroot/**/custom/**/site.js` (no bundler, no Babel — the emitted `.js` is byte-faithful to the original, minus comments and an IIFE wrapper).
+  - Compiled under `--strict`; each file is an IIFE-wrapped global script (no `import`/`export`).
+  - Scripts keep only DOM wiring, widget init, AJAX transport, and notifications — business logic lives in `Maroik.Core.*` (DDD + Clean Architecture). Client-side rule checks are UX mirrors; the server always re-validates.
+  - `wwwroot/**/site.js` is build output and git-ignored. Docker Compose builds generate it in the Dockerfile's Node stage; running the site on the host, or running the client-script tests, needs Node 22 + `npm ci` in `Maroik.Website/`.
+  - MSBuild runs `tsc` on `dotnet build` when `node_modules/` is present; Docker builds run it in a dedicated `node:22-alpine` stage.
+  - Unit-tested with Vitest + jsdom in `Maroik.Website/TypeScripts.Tests/` (one `*.test.ts` per script, exercising the compiled `site.js`).
+  - Details: `Maroik.Website/TypeScripts/README.md`.
 - NonfactorGrid
 - Chart.js 4.4
 - Font Awesome 6
@@ -110,7 +75,7 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 - SweetAlert2
 
 ### Development Tools
-- Visual Studio 2022
+- Visual Studio
 - JetBrains Rider
 - Git
 - Docker Compose
@@ -119,29 +84,66 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 ## Project Structure
 ```
 Maroik/
-├── Maroik.AI/              # AI-related features
-├── Maroik.Common/          # Common data access and utilities
-├── Maroik.Crontab/         # Scheduled tasks management
-├── Maroik.DB/             # Database configuration
-├── Maroik.DeployOps/      # Deployment scripts
-├── Maroik.FileStorage/    # File storage management
-├── Maroik.Log/            # Logging system
-├── Maroik.SSL/            # SSL/TLS certificate management
-├── Maroik.WebAPI/         # RESTful API endpoints
-└── Maroik.WebSite/        # Frontend website
+├── Maroik.Core.Domain/      # Entities, value objects, policies (depends on nothing)
+├── Maroik.Core.Contract/    # Interfaces and DTOs
+├── Maroik.Core.Service/     # Use-case orchestration, transactions, DTO mapping
+├── Maroik.Core.Repository/  # EF Core repositories
+├── Maroik.Core.PostgreSQL/  # EF Core DbContext and ORM models
+├── Maroik.Core.Client/      # SMTP, file storage, ClamAV, RabbitMQ clients
+├── Maroik.Website/          # ASP.NET Core MVC host (controllers, views, TypeScript)
+├── Maroik.FileStorage/      # Internal file upload/download API
+├── Maroik.Worker/           # Background e-mail sender (RabbitMQ consumer)
+├── Maroik.DB/               # PostgreSQL init script (schema + admin/demo seed data)
+├── Maroik.SSL/              # Self-signed localhost certificate for local HTTPS
+└── *.Tests/                 # One test project per source project, plus E2E
+```
+
+## Naming Conventions
+- Code projects (assemblies, namespaces, types) follow the .NET Framework Design Guidelines for acronym casing: acronyms of three or more letters use PascalCase (e.g. `Ssl`, `Http`), while two-letter acronyms stay uppercase (e.g. `DB`, `IO`).
+- Folders that are not code projects — `Maroik.SSL`, `Maroik.DB`, `Maroik.Log` — intentionally keep their existing casing, because docker-compose volume mounts reference them by name.
+
+## Testing
+Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all. Coverage target: line >= 80 %, branch >= 65 %.
+
+| Tests | What they cover | Needs Docker |
+|---|---|---|
+| `Maroik.Core.Domain.Tests`, `Maroik.Core.Contract.Tests` | entities, policies, value objects, DTOs, the layering / package-reference architecture rules | no |
+| `Maroik.Core.Service.Tests` | use-case orchestration (mocked repositories) | no |
+| `Maroik.Core.Repository.Tests` | EF Core repositories against a real PostgreSQL 17 loaded from `Maroik.DB/.../Debugging/Init.sql` | yes |
+| `Maroik.Core.PostgreSQL.Tests` | the EF model against the real schema of the init script (tables, columns, keys, foreign keys, indexes) | yes |
+| `Maroik.Core.Client.Tests` | mail (in-process SMTP server), file storage, ClamAV, RabbitMQ publisher and health check (real RabbitMQ) | yes |
+| `Maroik.Worker.Tests` | the e-mail consumer and the worker host, against a real RabbitMQ and an SMTP relay | yes |
+| `Maroik.FileStorage.Tests` | the file-storage service | no |
+| `Maroik.Website.Tests` | controllers, filters, views and start-up through `WebApplicationFactory` against a real PostgreSQL | yes |
+| `Maroik.Website/TypeScripts.Tests` | every client script (Vitest + jsdom), run with `npm test` in `Maroik.Website/` | no |
+| `Maroik.E2E.Tests` | the running site in a real browser (Playwright) | yes |
+
+```bash
+dotnet build Maroik.sln -p:RunClientScriptTests=false
+dotnet test --project Maroik.Core.Service.Tests            # any single project
+(cd Maroik.Website && npm ci && npm test)                  # client scripts
 ```
 
 ## Getting Started
 
 ### Prerequisites
-- .NET 9.0 SDK or later
+- .NET 10.0 SDK or later
 - Docker and Docker Compose
-- Visual Studio 2022 (Windows) or JetBrains Rider (Linux/Mac)
+- Visual Studio (Windows) or JetBrains Rider (Linux/Mac) — optional, for container debugging
 
-### Running the Project
+### Quick start (Docker Compose)
+```bash
+docker compose -f docker-compose.debug.yml up -d --build
+```
+- Website: https://localhost/ (self-signed certificate — accept the browser warning)
+- Mail inbox (Mailpit): http://localhost:8025 — every e-mail the app sends (registration confirmation, password reset) lands here, so no real mail account is needed.
+
+The database is created from `Maroik.DB/PostgreSQL/SQL_Init_Script/Debugging/Init.sql` on the first start. To start over from a clean seed, run `docker compose -f docker-compose.debug.yml down -v`.
+
+### IDE debugging
 
 #### Windows
-1. Install Visual Studio 2022 or higher
+1. Install Visual Studio
 2. Open Maroik.sln
 3. Set docker-compose as startup project
 4. Press F5 to run in debug mode
@@ -149,7 +151,21 @@ Maroik/
 #### Linux/Mac
 1. Install JetBrains Rider
 2. Start debug mode with docker-compose.debug.yml
-3. Configure mail settings in appsettings files
+
+### Configuration
+All local settings live in `.env.debug` (read by `docker-compose.debug.yml`). Every value in it — database and broker passwords, the RSA key pair, the self-signed certificate in `Maroik.SSL/` — is a throwaway default generated for this public repository. **Generate your own before exposing an instance anywhere.** The file documents how to regenerate the RSA key pair.
+
+## Default Accounts
+
+### Admin Account
+- ID: admin@maroik.com
+- Password: demoO12!!
+
+### User Account (demo)
+- ID: demo@maroik.com
+- Password: demoO12!!
+
+The login page is pre-filled with the demo account. Its dashboard is pinned to June 2025, where the seeded sample data lives.
 
 ## Screenshots
 
@@ -157,16 +173,13 @@ Maroik/
 ![Login](https://user-images.githubusercontent.com/20404991/132020270-488a1ab7-448c-44d9-938a-40ce32d6d364.jpg)
 
 ### User Dashboard
-![User-DashBoard](https://user-images.githubusercontent.com/20404991/132020299-e5adb366-9041-44f9-ad56-f2bb606028d5.jpg)
+![User-Dashboard](https://user-images.githubusercontent.com/20404991/132020299-e5adb366-9041-44f9-ad56-f2bb606028d5.jpg)
 
 ### NonfactorGrid
 ![NonfactorGrid](https://user-images.githubusercontent.com/20404991/132020455-e66897ef-ece8-4e71-b323-6ebb72f6b110.jpg)
 
 ### User Profile
 ![UserProfile](https://user-images.githubusercontent.com/20404991/132020484-4b633287-a1b1-48b0-8340-ae3ead83235a.jpg)
-
-### WebAPI
-![WebAPI](https://user-images.githubusercontent.com/20404991/132020514-13951172-3bcd-48a5-bfe0-a8328cdb766a.jpg)
 
 ## Contributing
 1. Fork the repository
@@ -180,7 +193,3 @@ For issues and questions, please use the GitHub issue tracker.
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Special Notes
-- All backup files are automatically sent via email and can overwrite upload folders and SQL script folders when needed.
-- Mail account configuration is required for deployment.

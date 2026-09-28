@@ -1,0 +1,107 @@
+@*
+    Shared/_MainLeftSideBar.cshtml
+    AdminLTE left sidebar partial rendered once per page via _Layout.
+    Model: AccountResponse of the logged-in user.
+    Renders the brand logo (links to the role-appropriate dashboard) and the dynamic navigation menu.
+    Menu items come from ViewBag.{Role}Categories / ViewBag.{Role}SubCategories, resolved into a
+    sorted, active-flagged tree by MenuNavigationMapper.ToSidebarMenu (shared with _BodyPageHeader
+    and the matching logic in AuthorizationFilter) — this partial only renders the result.
+*@
+@using Maroik.Website.Mappings
+@model Maroik.Core.Contract.Dtos.AccountResponse
+
+@{
+    string currentControllerName = ViewContext.RouteData.Values["Controller"]?.ToString() ?? "";
+    string currentActionName = ViewContext.RouteData.Values["Action"]?.ToString() ?? "";
+
+    var roleCategories = Model.Role switch
+    {
+        Role.Admin => (IEnumerable<CategoryResponse>)ViewBag.AdminCategories,
+        Role.User => (IEnumerable<CategoryResponse>)ViewBag.UserCategories,
+        _ => (IEnumerable<CategoryResponse>)ViewBag.AnonymousCategories
+    };
+    var roleSubCategories = Model.Role switch
+    {
+        Role.Admin => (IEnumerable<SubCategoryResponse>)ViewBag.AdminSubCategories,
+        Role.User => (IEnumerable<SubCategoryResponse>)ViewBag.UserSubCategories,
+        _ => (IEnumerable<SubCategoryResponse>)ViewBag.AnonymousSubCategories
+    };
+
+    var sidebarMenu = roleCategories.ToSidebarMenu(roleSubCategories, currentControllerName, currentActionName);
+}
+
+<aside class="main-sidebar sidebar-dark-primary elevation-4">
+    @*<!-- Brand Logo -->*@
+    @switch (Model.Role)
+    {
+        case Role.Admin:
+            <a asp-controller="Dashboard" asp-action="AdminIndex" class="brand-link">
+                <img src="~/admin/dist/img/MaroikLogo.png" alt="Maroik Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+                <span class="brand-text font-weight-light">Maroik</span>
+            </a>
+            break;
+        case Role.User:
+            <a asp-controller="Dashboard" asp-action="UserIndex" class="brand-link">
+                <img src="~/user/dist/img/MaroikLogo.png" alt="Maroik Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+                <span class="brand-text font-weight-light">Maroik</span>
+            </a>
+            break;
+        case Role.Anonymous:
+            <a asp-controller="Dashboard" asp-action="AnonymousIndex" class="brand-link">
+                <img src="~/anonymous/dist/img/MaroikLogo.png" alt="Maroik Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+                <span class="brand-text font-weight-light">Maroik</span>
+            </a>
+            break;
+    }
+
+    @*<!-- Sidebar -->*@
+    <div class="sidebar">
+        @*<!-- SidebarSearch Form -->*@
+
+        @*<!-- Sidebar Menu -->*@
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                @*<!-- Add icons to the links using the .nav-icon class
+                with font-awesome or any other icon font library -->*@
+
+                @foreach (var categoryItem in sidebarMenu.Categories)
+                {
+                    if (categoryItem.SubCategories.Count == 0)
+                    {
+                        <li class="nav-item">
+                            <a asp-controller="@categoryItem.Category.Controller" asp-action="@categoryItem.Category.Action" class="nav-link@(categoryItem.IsActive ? " active" : "")">
+                                <i class="@categoryItem.Category.IconPath"></i>
+                                <p>
+                                    @Localizer[categoryItem.Category.DisplayName!]
+                                </p>
+                            </a>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item@(categoryItem.IsActive ? " menu-open" : "")">
+                            <a href="#" class="nav-link@(categoryItem.IsActive ? " active" : "")">
+                                <i class="@categoryItem.Category.IconPath"></i>
+                                <p>
+                                    @Localizer[categoryItem.Category.DisplayName!]
+                                    <i class="right fas fa-angle-left"></i>
+                                </p>
+                            </a>
+                            <ul class="nav nav-treeview">
+                                @foreach (var subCategoryItem in categoryItem.SubCategories)
+                                {
+                                    <li class="nav-item">
+                                        <a asp-controller="@categoryItem.Category.Controller" asp-action="@subCategoryItem.SubCategory.Action" class="nav-link@(subCategoryItem.IsActive ? " active" : "")">
+                                            <i class="@subCategoryItem.SubCategory.IconPath"></i>
+                                            <p>@Localizer[subCategoryItem.SubCategory.DisplayName!]</p>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </li>
+                    }
+                }
+            </ul>
+        </nav>
+    </div>
+</aside>

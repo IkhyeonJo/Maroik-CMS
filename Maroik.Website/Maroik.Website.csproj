@@ -1,0 +1,126 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TargetFramework>net10.0</TargetFramework>
+    <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
+    <UserSecretsId>957902df-6958-4b22-86f9-1a890874d3a3</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
+    <AssemblyName>Maroik.Website</AssemblyName>
+    <RootNamespace>Maroik.Website</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    The Node / TypeScript toolchain for the custom client scripts (TypeScripts/, see
+    TypeScripts/README.md) lives inside this project folder. Keep it out of the .NET
+    project so `node_modules` (~75 packages) doesn't drown Solution Explorer and — more
+    importantly — isn't swept into `dotnet publish` by the Web SDK's `**\*.json` Content
+    rule. The compiled wwwroot/**/site.js still publishes as normal `wwwroot` content.
+  -->
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);node_modules\**</DefaultItemExcludes>
+    <!-- `tsc` runs via the CompileClientTypeScript target below; stop VS's bundled
+         TypeScript MSBuild build from also compiling TypeScripts/**. -->
+    <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- toolchain files: still visible in the tree (as None), but not web content / not published -->
+    <Content Remove="package.json;package-lock.json;tsconfig.json;tsconfig.build.json;vitest.config.mts;TypeScripts\**;TypeScripts.Tests\**" />
+    <None Include="package.json;package-lock.json;tsconfig.json;tsconfig.build.json" />   <!-- .mts already covered by the SDK None glob -->
+    <!-- site.js.map is published as-is when present (container debug build), and is simply
+         absent from a release build (tsconfig.build.json emits none). Do NOT <Content Remove>
+         it here: the debug and prod Docker builds share one `dotnet publish -c Release`. -->
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="DocumentFormat.OpenXml" />
+    <PackageReference Include="HtmlAgilityPack" />
+    <PackageReference Include="HtmlSanitizer" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" />
+    <PackageReference Include="NonFactors.Grid.Mvc6" />
+    <PackageReference Include="NuGet.Packaging" />
+    <PackageReference Include="NuGet.Protocol" />
+    <PackageReference Include="SecurityCodeScan.VS2019">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Maroik.Core.Client\Maroik.Core.Client.csproj" />
+    <ProjectReference Include="..\Maroik.Core.Contract\Maroik.Core.Contract.csproj" />
+    <ProjectReference Include="..\Maroik.Core.Repository\Maroik.Core.Repository.csproj" />
+    <ProjectReference Include="..\Maroik.Core.Service\Maroik.Core.Service.csproj" />
+  </ItemGroup>
+
+  <!--
+    Custom client scripts: TypeScripts/**/*.ts  ->(tsc)->  wwwroot/**/*.js  (1:1, no bundler).
+    See TypeScripts/README.md.
+
+    This target compiles them as part of `dotnet build` / `dotnet run`, but ONLY where the
+    npm toolchain has been installed (Maroik.Website/node_modules/typescript present), or when
+    `-p:BuildClientTypeScript=true` is passed (CI does). The generated wwwroot/**/*.js is
+    git-ignored; the Docker `build` stage has no Node and gets it from the Dockerfile's
+    dedicated `tsbuild` Node stage instead.
+    npm's exit code propagates, so a TypeScript error fails the .NET build on dev machines.
+
+    Debug builds run `npm run build:debug` (tsconfig.json: sourceMap + inlineSources) instead
+    of the map-free `npm run build`, so plain `dotnet build`/`dotnet run` AND Rider/VS
+    container "Fast Mode" debugging get a Chrome-debuggable site.js.map with no extra step -
+    Fast Mode builds on the host and bind-mounts wwwroot into the container, so the
+    Dockerfile's TS_SOURCEMAPS build arg never runs for it. Release builds keep the map-free
+    `npm run build`. See "Debugging in Chrome" in TypeScripts/README.md.
+  -->
+  <PropertyGroup>
+    <_ClientTypeScriptNpmScript Condition="'$(Configuration)' == 'Debug'">build:debug</_ClientTypeScriptNpmScript>
+    <_ClientTypeScriptNpmScript Condition="'$(_ClientTypeScriptNpmScript)' == ''">build</_ClientTypeScriptNpmScript>
+  </PropertyGroup>
+  <Target Name="CompileClientTypeScript"
+          BeforeTargets="BeforeBuild"
+          Condition="Exists('$(MSBuildProjectDirectory)/node_modules/typescript') Or '$(BuildClientTypeScript)' == 'true'">
+    <Message Importance="high" Text="tsc: compiling TypeScripts/**/*.ts -> wwwroot/**/*.js (npm run $(_ClientTypeScriptNpmScript))" />
+    <Exec Command="npm run $(_ClientTypeScriptNpmScript)" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <!--
+    Run the jsdom test suite for the client scripts (Maroik.Website/TypeScripts.Tests)
+    after the build. ON by default for local / Rider / VS builds (i.e. any `dotnet build`
+    where `npm ci` has been run). Incremental: it re-runs only when a *.ts source, a test,
+    or a toolchain config actually changed since the last run, so a C#-only edit + build
+    skips it. Force off for a one-off fast build with `-p:RunClientScriptTests=false`.
+
+    Skipped automatically where `node_modules/vitest` is absent (the .NET SDK Docker
+    stage, CI that doesn't `npm ci` here); the Dockerfile `tsbuild` stage covers Docker.
+  -->
+  <PropertyGroup Condition="'$(RunClientScriptTests)' == ''">
+    <RunClientScriptTests>true</RunClientScriptTests>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(RunClientScriptTests)' == 'true'">
+    <_ClientScriptTestInput Include="TypeScripts/**/*.ts;TypeScripts.Tests/**/*.ts" />
+    <_ClientScriptTestInput Include="tsconfig.json;vitest.config.mts;package.json" />
+  </ItemGroup>
+
+  <Target Name="RunClientScriptTests"
+          AfterTargets="Build"
+          Condition="'$(RunClientScriptTests)' == 'true' And Exists('$(MSBuildProjectDirectory)/node_modules/vitest')"
+          Inputs="@(_ClientScriptTestInput)"
+          Outputs="$(IntermediateOutputPath)clientscripttests.stamp">
+    <Message Importance="high" Text="vitest: running TypeScripts.Tests" />
+    <Exec Command="npx vitest run" WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <Touch Files="$(IntermediateOutputPath)clientscripttests.stamp" AlwaysCreate="true" />
+  </Target>
+
+</Project>

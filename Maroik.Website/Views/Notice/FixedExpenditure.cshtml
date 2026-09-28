@@ -1,0 +1,359 @@
+﻿@*
+    Notice/FixedExpenditure.cshtml
+    Fixed (recurring) expenditure management page.
+    Displays a NonFactors MVC Grid of all fixed expenditure entries (partial view _FixedExpenditureGrid).
+    A toolbar provides Create/Edit/Delete buttons for CRUD operations.
+    The create/edit form uses a date-picker (Tempusdominus) for the MaturityDate field.
+    The asset dropdown is populated from ViewBag.Assets so the user can select which
+    account will be debited for the recurring payment.
+    Noticed/Expired flags are computed server-side and shown as coloured badges in the grid.
+    localization strings for the calendar widget are injected as hidden form fields.
+*@
+@using Maroik.Core.Domain.Finance
+@{
+    var assets = ViewBag.Assets as List<AssetResponse> ?? [];
+    string? defaultAssetProductName = ViewBag.DefaultAssetProductName as string;
+}
+
+@Html.Hidden("localizerPrevText", Localizer["PrevText"].Value)
+@Html.Hidden("localizerNextText", Localizer["NextText"].Value)
+@Html.Hidden("localizerJanuary", Localizer["January"].Value)
+@Html.Hidden("localizerFebruary", Localizer["February"].Value)
+@Html.Hidden("localizerMarch", Localizer["March"].Value)
+@Html.Hidden("localizerApril", Localizer["April"].Value)
+@Html.Hidden("localizerMay", Localizer["May"].Value)
+@Html.Hidden("localizerJune", Localizer["June"].Value)
+@Html.Hidden("localizerJuly", Localizer["July"].Value)
+@Html.Hidden("localizerAugust", Localizer["August"].Value)
+@Html.Hidden("localizerSeptember", Localizer["September"].Value)
+@Html.Hidden("localizerOctober", Localizer["October"].Value)
+@Html.Hidden("localizerNovember", Localizer["November"].Value)
+@Html.Hidden("localizerDecember", Localizer["December"].Value)
+@Html.Hidden("localizerJan", Localizer["Jan"].Value)
+@Html.Hidden("localizerFeb", Localizer["Feb"].Value)
+@Html.Hidden("localizerMar", Localizer["Mar"].Value)
+@Html.Hidden("localizerApr", Localizer["Apr"].Value)
+@Html.Hidden("localizerJun", Localizer["Jun"].Value)
+@Html.Hidden("localizerJul", Localizer["Jul"].Value)
+@Html.Hidden("localizerAug", Localizer["Aug"].Value)
+@Html.Hidden("localizerSep", Localizer["Sep"].Value)
+@Html.Hidden("localizerOct", Localizer["Oct"].Value)
+@Html.Hidden("localizerNov", Localizer["Nov"].Value)
+@Html.Hidden("localizerDec", Localizer["Dec"].Value)
+@Html.Hidden("localizerSunday", Localizer["Sunday"].Value)
+@Html.Hidden("localizerMonday", Localizer["Monday"].Value)
+@Html.Hidden("localizerTuesday", Localizer["Tuesday"].Value)
+@Html.Hidden("localizerWednesday", Localizer["Wednesday"].Value)
+@Html.Hidden("localizerThursday", Localizer["Thursday"].Value)
+@Html.Hidden("localizerFriday", Localizer["Friday"].Value)
+@Html.Hidden("localizerSaturday", Localizer["Saturday"].Value)
+@Html.Hidden("localizerSun", Localizer["Sun"].Value)
+@Html.Hidden("localizerMon", Localizer["Mon"].Value)
+@Html.Hidden("localizerTue", Localizer["Tue"].Value)
+@Html.Hidden("localizerWed", Localizer["Wed"].Value)
+@Html.Hidden("localizerThu", Localizer["Thu"].Value)
+@Html.Hidden("localizerFri", Localizer["Fri"].Value)
+@Html.Hidden("localizerSat", Localizer["Sat"].Value)
+@Html.Hidden("localizerSu", Localizer["Su"].Value)
+@Html.Hidden("localizerMo", Localizer["Mo"].Value)
+@Html.Hidden("localizerTu", Localizer["Tu"].Value)
+@Html.Hidden("localizerWe", Localizer["We"].Value)
+@Html.Hidden("localizerTh", Localizer["Th"].Value)
+@Html.Hidden("localizerFr", Localizer["Fr"].Value)
+@Html.Hidden("localizerSa", Localizer["Sa"].Value)
+@Html.Hidden("localizerYearSuffix", Localizer["YearSuffix"].Value)
+@Html.Hidden("localizerNoMaturityDate", Localizer["No MaturityDate"].Value)
+@Html.Hidden("localizerToday", Localizer["Today"].Value)
+@Html.Hidden("localizerMaturityDateError", Localizer["The maturity date cannot be earlier than the current date."].Value)
+
+@* Expenditure main→sub-class taxonomy, the deposit-asset sub-class set, the deposit
+   month→max-day rule and the "no maturity date" sentinel — authoritative in
+   ExpenditureClassPolicy / FixedSchedulePolicy; the form reads these instead of hardcoding them. *@
+@Html.Hidden("expenditureSubClassMap", JsonSerialization.ToClientJson(ExpenditureClassPolicy.SubClassesByMainClass))
+@Html.Hidden("expenditureDepositAssetSubClasses", JsonSerialization.ToClientJson(ExpenditureClassPolicy.DepositAssetSubClasses))
+@Html.Hidden("maxDepositDayByMonth", JsonSerialization.ToClientJson(FixedSchedulePolicy.MaxDepositDayByMonth))
+@Html.Hidden("noMaturityDate", FixedSchedulePolicy.NoMaturityDateIso)
+@Html.Hidden("localizerFailedToLoadAmountLabel", Localizer["Failed to load the amount label."].Value)
+
+<section class="content">
+    <div class="card card-primary">
+        <div class="card-header">
+            <h3 class="card-title">@Localizer["Notice FixedExpenditure"].Value</h3>
+            <br />
+            <h3 class="card-title"><span class="text-danger">@Localizer["Red Row"].Value</span><b>: @Localizer["Maturity date has been passed."]</b></h3>
+            <br />
+            <h3 class="card-title"><span class="text-info">@Localizer["LightBlue Row"].Value</span><b>: @Localizer["Deposit date is near."].Value</b></h3>
+        </div>
+
+        <div class="card-body">
+            <nav class="navbar-expand navbar-dark" style="position: relative; display: block !important; overflow-x: auto; overflow-y:hidden; align-items: center ">
+                <ul class="navbar-nav">
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button type="button" class="btn btn-primary btn-block btn-sm" data-toggle="modal" data-target="#createFixedExpenditureDialogModal" data-backdrop="static" data-keyboard="false" style="width: 100px !important;"><i class="fa fa-plus" style="padding-right:3px;"></i> @Localizer["CREATE"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button id="btnEditFixedExpenditureGridRow" type="button" class="btn btn-success btn-block btn-sm" data-errorMessageSelectGridRow="@Localizer["Please select grid row"].Value" style="width: 100px !important;"><i class="fas fa-edit" style="padding-right:3px;"></i> @Localizer["EDIT"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button id="btnConfirmDeleteFixedExpenditure" type="button" class="btn btn-danger btn-block btn-sm" data-errorMessageSelectGridRow="@Localizer["Please select grid row"].Value" style="width: 100px !important;"><i class="fa fa-trash" style="padding-right:3px;"></i> @Localizer["DELETE"].Value</button>
+                    </li>
+                    <li class="nav-item" style="padding-bottom: 10px; padding-right: 7px;">
+                        <button id="btnExportExcelFixedExpenditure" type="button" class="btn btn-secondary btn-block btn-sm" style="width: 100px !important;"><i class="fas fa-file-excel" style="padding-right:3px;"></i> @Localizer["EXCEL"].Value</button>
+                    </li>
+                    <li class="nav-item ml-auto">
+                        <input type="text" id="gridSearch" placeholder="@Localizer["Search..."].Value" style="margin-bottom: 7px; text-align: center; font-size: .7em; padding: 5px 0; color: #000; border: none; " />
+                    </li>
+                </ul>
+            </nav>
+            @Html.AjaxGrid(Url.Action("FixedExpenditure", "Notice")!)
+        </div>
+    </div>
+</section>
+
+@*<!--createFixedExpenditureDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="createFixedExpenditureDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="createFixedExpenditureTabs">
+                @*<!--Tab Menu-->*@
+                <ul>
+                    <li><a href="#createFixedExpenditureTabs-1">@Localizer["Add FixedExpenditure"].Value</a></li>
+                </ul>
+                @*Tabs-1: Create FixedExpenditure Modal*@
+                <div id="createFixedExpenditureTabs-1">
+                    <form id="formCreateFixedExpenditure">
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedExpenditureMainClass">@Localizer["MainClass"].Value</label>
+                                <br />
+                                <select id="createFixedExpenditureMainClass" name="createFixedExpenditureMainClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="RegularSavings" selected="selected">@Localizer["RegularSavings"].Value</option>
+                                    <option value="NonConsumerSpending">@Localizer["NonConsumerSpending"].Value</option>
+                                    <option value="ConsumerSpending">@Localizer["ConsumerSpending"].Value</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedExpenditureSubClass">@Localizer["SubClass"].Value</label>
+                                <br />
+                                <select id="createFixedExpenditureSubClass" name="createFixedExpenditureSubClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @Html.ExpenditureSubClassOptions(Localizer)
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedExpenditureContent">@Localizer["Content"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Contents"].Value" id="createFixedExpenditureContent" name="createFixedExpenditureContent" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createFixedExpenditureContent" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label id="labelCreateFixedExpenditureAmount" for="createFixedExpenditureAmount">@Localizer["Amount"].Value</label>
+                                <input class="form-control form-control-sm" min="0" type="number" id="createFixedExpenditureAmount" name="createFixedExpenditureAmount" value="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedExpenditureDepositMonth">@Localizer["WithdrawalMonth"].Value</label>
+                                <br />
+                                <select id="createFixedExpenditureDepositMonth" name="createFixedExpenditureDepositMonth" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="1" selected="selected">1</option>
+                                    @for (int i = 2; i <= 12; i++)
+                                    {
+                                        int i1 = i;
+                                        <option value="@i">@i1</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedExpenditureDepositDay">@Localizer["WithdrawalDay"].Value</label>
+                                <br />
+                                <select id="createFixedExpenditureDepositDay" name="createFixedExpenditureDepositDay" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="1" selected="selected">1</option>
+                                    @for (int i = 2; i <= 31; i++)
+                                    {
+                                        int i1 = i;
+                                        <option value="@i">@i1</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedExpenditureMaturityDate">@Localizer["MaturityDate"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter MaturityDate"].Value" id="createFixedExpenditureMaturityDate" name="createFixedExpenditureMaturityDate" value="" readonly>
+                                <span class="field-validation-valid text-danger" data-valmsg-for="createFixedExpenditureMaturityDate" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedExpenditureNote">@Localizer["Note"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="false" id="createFixedExpenditureNote" name="createFixedExpenditureNote" value="">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="createFixedExpenditurePaymentMethod">@Localizer["PaymentMethod"].Value</label>
+                                <br />
+                                <select id="createFixedExpenditurePaymentMethod" name="createFixedExpenditurePaymentMethod" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @foreach (var item in assets)
+                                    {
+                                        <option value="@item.ProductName" selected="@(item.ProductName == defaultAssetProductName ? "selected" : null)">@item.ProductName</option>
+                                    }
+                                </select>
+                            </div>
+                            <div id="divCreateFixedExpenditureMyDepositAsset" class="form-group col-md-6 mb-3">
+                                <label for="createFixedExpenditureMyDepositAsset">@Localizer["MyDepositAsset"].Value</label>
+                                <br />
+                                <select id="createFixedExpenditureMyDepositAsset" name="createFixedExpenditureMyDepositAsset" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @foreach (var item in assets)
+                                    {
+                                        <option value="@item.ProductName">@item.ProductName</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer["Close"].Value</button>
+                            <input type="submit" class="btn btn-primary" value="@Localizer["Save"].Value" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--editFixedExpenditureDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="editFixedExpenditureDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="editFixedExpenditureTabs">
+                @*<!--Tab Menu-->*@
+                <ul>
+                    <li><a href="#editFixedExpenditureTabs-1">@Localizer["Edit FixedExpenditure"].Value</a></li>
+                </ul>
+                @*Tabs-1: Edit FixedExpenditure Modal*@
+                <div id="editFixedExpenditureTabs-1">
+                    <form id="formEditFixedExpenditure">
+                        <input type="hidden" id="editFixedExpenditureId" />
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedExpenditureMainClass">@Localizer["MainClass"].Value</label>
+                                <br />
+                                <select id="editFixedExpenditureMainClass" name="editFixedExpenditureMainClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="RegularSavings" selected="selected">@Localizer["RegularSavings"].Value</option>
+                                    <option value="NonConsumerSpending">@Localizer["NonConsumerSpending"].Value</option>
+                                    <option value="ConsumerSpending">@Localizer["ConsumerSpending"].Value</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedExpenditureSubClass">@Localizer["SubClass"].Value</label>
+                                <br />
+                                <select id="editFixedExpenditureSubClass" name="editFixedExpenditureSubClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @Html.ExpenditureSubClassOptions(Localizer)
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedExpenditureContent">@Localizer["Content"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Contents"].Value" id="editFixedExpenditureContent" name="editFixedExpenditureContent" value="">
+                                <span class="field-validation-valid text-danger" data-valmsg-for="editFixedExpenditureContent" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label id="labelEditFixedExpenditureAmount" for="editFixedExpenditureAmount">@Localizer["Amount"].Value</label>
+                                <input class="form-control form-control-sm" min="0" type="number" id="editFixedExpenditureAmount" name="editFixedExpenditureAmount" value="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedExpenditureDepositMonth">@Localizer["WithdrawalMonth"].Value</label>
+                                <br />
+                                <select id="editFixedExpenditureDepositMonth" name="editFixedExpenditureDepositMonth" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="1" selected="selected">1</option>
+                                    @for (int i = 2; i <= 12; i++)
+                                    {
+                                        int i1 = i;
+                                        <option value="@i">@i1</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedExpenditureDepositDay">@Localizer["WithdrawalDay"].Value</label>
+                                <br />
+                                <select id="editFixedExpenditureDepositDay" name="editFixedExpenditureDepositDay" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    <option value="1" selected="selected">1</option>
+                                    @for (int i = 2; i <= 31; i++)
+                                    {
+                                        int i1 = i;
+                                        <option value="@i">@i1</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedExpenditureMaturityDate">@Localizer["MaturityDate"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter MaturityDate"].Value" id="editFixedExpenditureMaturityDate" name="editFixedExpenditureMaturityDate" value="" readonly>
+                                <span class="field-validation-valid text-danger" data-valmsg-for="editFixedExpenditureMaturityDate" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedExpenditureNote">@Localizer["Note"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="false" id="editFixedExpenditureNote" name="editFixedExpenditureNote" value="">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedExpenditurePaymentMethod">@Localizer["PaymentMethod"].Value</label>
+                                <br />
+                                <select id="editFixedExpenditurePaymentMethod" name="editFixedExpenditurePaymentMethod" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @foreach (var item in assets)
+                                    {
+                                        <option value="@item.ProductName">@item.ProductName</option>
+                                    }
+                                </select>
+                            </div>
+                            <div id="divEditFixedExpenditureMyDepositAsset" class="form-group col-md-6 mb-3">
+                                <label for="editFixedExpenditureMyDepositAsset">@Localizer["MyDepositAsset"].Value</label>
+                                <br />
+                                <select id="editFixedExpenditureMyDepositAsset" name="editFixedExpenditureMyDepositAsset" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @foreach (var item in assets)
+                                    {
+                                        <option value="@item.ProductName">@item.ProductName</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="editFixedExpenditureUnpunctuality">@Localizer["Unpunctuality"].Value</label>
+                                <input class="form-control form-control-sm" type="checkbox" id="editFixedExpenditureUnpunctuality" name="editFixedExpenditureUnpunctuality" />
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer["Close"].Value</button>
+                            <input type="submit" class="btn btn-primary" value="@Localizer["Save"].Value" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--ConfirmDeleteDialogModal-->*@
+<div class="modal" tabindex="-1" role="dialog" id="confirmDeleteFixedExpenditureDialogModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                @Localizer["Are you sure to delete?"].Value
+            </div>
+            <div class="modal-footer">
+                <button id="btnDeleteFixedExpenditure" type="button" class="btn btn-danger" data-errorMessageSelectGridRow="@Localizer["Please select grid row"].Value">@Localizer["DELETE"].Value</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer["Close"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+@* Page-specific JavaScript: site.js *@
+@section Scripts{
+    <script src="~/user/custom/Notice/FixedExpenditure/js/site.js" asp-append-version="true"></script>
+}

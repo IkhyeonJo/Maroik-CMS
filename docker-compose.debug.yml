@@ -1,0 +1,200 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Maroik — LOCAL / DEBUG compose stack.
+#
+# Used by Rider / Visual Studio container debugging (docker-compose.dcproj sets
+# DockerComposeBaseFilePath = docker-compose.debug) and by a plain
+#   docker compose -f docker-compose.debug.yml up -d --build
+# Reads .env.debug (local-only defaults), seeds the DB from the Debugging SQL script
+# (schema + the admin and demo accounts), uses a self-signed localhost cert, publishes 80/443 to
+# the host, catches all outgoing mail in Mailpit (http://localhost:8025), and builds
+# the website image with TypeScript source maps on (TS_SOURCEMAPS=true) so site.js can
+# be stepped as site.ts.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Named volumes — Docker-managed, survive `down`; wiped only by `down -v`.
+volumes:
+      datasource:            # PostgreSQL data directory (/var/lib/postgresql/data)
+      dataprotection-keys:   # ASP.NET Core default Data Protection key-ring location (/root/.aspnet/DataProtection-Keys). The website does NOT use it: Program.cs persists the ring to Valkey (ConnectionStrings__Valkey, set in the env file) and, only without Valkey, to <ContentRoot>/dataprotection-keys (not this volume). FileStorage uses no Data Protection at all.
+      valkey-data:           # Valkey (Redis-compatible) append-only file persistence
+      rabbitmq-data:         # RabbitMQ node data (durable queues, definitions)
+
+# Private bridge network. Nothing here is published except what maroik.website and
+# mailpit map to the host below, so infra talks over service DNS names on `backend` only.
+networks:
+       backend:
+
+services:
+    # ── Valkey ────────────────────────────────────────────────────────────────
+    # Redis-compatible cache / data store (sessions, transient app state).
+    valkey:
+      image: valkey/valkey:9-alpine
+      container_name: Maroik.Valkey
+      restart: unless-stopped
+      expose:
+        - "6379"                       # visible to other containers on `backend`, NOT published to the host
+      volumes:
+        - valkey-data:/data
+      networks:
+        - backend
+      command: valkey-server --appendonly yes   # enable AOF persistence to valkey-data
+      healthcheck:                     # `depends_on: condition: service_healthy` gates the app on this
+        test: ["CMD", "valkey-cli", "ping"]
+        interval: 5s
+        timeout: 3s
+        retries: 5
+
+    # ── RabbitMQ ─────────────────────────────────────────────────────────────
+    # Message broker for Maroik.Worker (e.g. outbound email jobs).
+    rabbitmq:
+      image: rabbitmq:4-management-alpine   # -management = adds the web UI / rabbitmqadmin on 15672
+      container_name: Maroik.RabbitMQ
+      restart: unless-stopped
+      expose:
+        - "5672"                       # AMQP protocol port
+        - "15672"                      # management UI (still only on `backend`, not published)
+      env_file:
+        - .env.debug                   # RABBITMQ_DEFAULT_USER / _PASS etc.
+      volumes:
+        - rabbitmq-data:/var/lib/rabbitmq
+      networks:
+        - backend
+      healthcheck:
+        test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+
+    # ── Mailpit ──────────────────────────────────────────────────────────────
+    # Local SMTP catcher: every e-mail the app sends (registration confirmation,
+    # password reset) lands in the web inbox at http://localhost:8025 instead of
+    # leaving the machine. Accepts any SMTP credentials over plain SMTP, matching the
+    # ServerSetting__SmtpOptions__* values in .env.debug.
+    mailpit:
+      image: axllent/mailpit:latest
+      container_name: Maroik.Mailpit
+      restart: unless-stopped
+      expose:
+        - "1025"                       # SMTP, only on `backend`
+      ports:
+        - "8025:8025"                  # web inbox, published to the host
+      environment:
+        - MP_SMTP_AUTH_ACCEPT_ANY=1
+        - MP_SMTP_AUTH_ALLOW_INSECURE=1
+      networks:
+        - backend
+
+    # ── ClamAV ───────────────────────────────────────────────────────────────
+    # Virus scanner; Maroik.FileStorage streams every upload to it over TCP 3310.
+    # No health check / restart policy here — the DB signature load makes first
+    # readiness slow, and nothing uses `depends_on` on it.
+    clamav:
+      image: clamav/clamav:latest
+      container_name: Maroik.Clamav
+      expose:
+        - "3310"                       # clamd TCP socket
+      networks:
+        - backend
+
+    # ── PostgreSQL ───────────────────────────────────────────────────────────
+    # Primary database. Schema is DB-first: the mounted SQL scripts run once, on an
+    # empty data volume, via the Postgres image's /docker-entrypoint-initdb.d hook.
+    postgresql:
+      image: postgres:17
+      container_name: Maroik.PostgreSQL
+      env_file:
+        - .env.debug                   # POSTGRES_PASSWORD, POSTGRES_DB=Maroik, ...
+      volumes:
+        - datasource:/var/lib/postgresql/data
+        - ./Maroik.DB/PostgreSQL/SQL_Init_Script/Debugging:/docker-entrypoint-initdb.d   # schema + admin/demo account seed data
+      expose:
+        - "5432"
+      networks:
+        - backend
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U postgres -d Maroik"]
+        interval: 5s
+        timeout: 3s
+        retries: 5
+
+    # ── Maroik.Website ───────────────────────────────────────────────────────
+    # The ASP.NET Core MVC app — the only service published to the host here.
+    maroik.website:
+        build :
+         context : .                                  # build context = repo root (Dockerfile COPYs across projects)
+         dockerfile : Maroik.Website/Dockerfile
+         # TS_SOURCEMAPS=true -> the Dockerfile "tsbuild" stage runs `npm run build:debug`
+         # (tsconfig.json: sourceMap + inlineSources) instead of `npm run build`. That emits
+         # wwwroot/{area}/custom/{Feature}/{Page}/js/site.js.map next to each site.js, with the
+         # original .ts inlined in the map and a //# sourceMappingURL= comment on the site.js.
+         # The maps are baked into the image and served as normal wwwroot content, so Chrome
+         # DevTools (and Rider/VS container debugging) map site.js -> the real site.ts.
+         # Rebuild the image after toggling this: `docker compose -f docker-compose.debug.yml up -d --build maroik.website`.
+         # Leave it unset/"false" for a release image so no debug artifact ships.
+         # See Maroik.Website/TypeScripts/README.md ("Debugging in Chrome").
+         args :
+           TS_SOURCEMAPS : "true"
+        container_name: Maroik.Website
+        networks :
+          - backend
+        ports:
+          - "80:80"                    # host:container — published so a browser on the dev machine can hit the app
+          - "443:443"
+        env_file:
+          - .env.debug
+        environment:
+          # Kestrel serves HTTPS directly in debug using a self-signed localhost cert
+          # (mounted below; generated for this repository, local use only).
+          - ASPNETCORE_Kestrel__Certificates__Default__Path=/etc/ssl/localhost1.pem
+          - ASPNETCORE_Kestrel__Certificates__Default__KeyPath=/etc/ssl/localhostprivkey1.pem
+        volumes:
+          - ./Maroik.SSL/localhost1.pem:/etc/ssl/localhost1.pem:ro                 # self-signed cert (read-only)
+          - ./Maroik.SSL/localhostprivkey1.pem:/etc/ssl/localhostprivkey1.pem:ro   # its private key (read-only)
+          - ./Maroik.Log/:/app/Maroik.Log:rw                                       # app writes logs to the host tree
+          - dataprotection-keys:/root/.aspnet/DataProtection-Keys                  # default key-ring path; unused while Valkey is configured (see the volume note above)
+        depends_on:                    # wait for each dependency's health check to pass before starting
+          postgresql:
+            condition: service_healthy
+          valkey:
+            condition: service_healthy
+          rabbitmq:
+            condition: service_healthy
+
+    # ── Maroik.FileStorage ───────────────────────────────────────────────────
+    # Internal file-serving/upload API. Not published; reached only from
+    # maroik.website over `backend`. Runs plain HTTP on 80 (no TLS inside the net).
+    maroik.filestorage:
+        build :
+         context : .
+         dockerfile : Maroik.FileStorage/Dockerfile
+        container_name: Maroik.FileStorage
+        networks :
+          - backend
+        expose:
+          - "80"
+        env_file:
+          - .env.debug
+        environment:
+          - ASPNETCORE_URLS=http://+:80   # bind HTTP only; TLS is not used on the private network
+        volumes:
+          - ./Maroik.FileStorage/upload/:/app/upload:rw            # uploaded files persisted to the host tree
+          - dataprotection-keys:/root/.aspnet/DataProtection-Keys  # unused: FileStorage does not use Data Protection
+
+    # ── Maroik.Worker ────────────────────────────────────────────────────────
+    # Headless background service: consumes RabbitMQ messages (e.g. sends email).
+    # No network ports at all. Needs only PostgreSQL + rabbitmq.
+    maroik.worker:
+        build :
+         context : .
+         dockerfile : Maroik.Worker/Dockerfile
+        container_name: Maroik.Worker
+        networks :
+          - backend
+        env_file:
+          - .env.debug
+        volumes:
+          - ./Maroik.Log/:/app/Maroik.Log:rw
+        depends_on:
+          postgresql:
+            condition: service_healthy
+          rabbitmq:
+            condition: service_healthy

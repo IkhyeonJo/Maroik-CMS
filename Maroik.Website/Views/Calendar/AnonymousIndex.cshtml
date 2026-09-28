@@ -1,0 +1,414 @@
+﻿@*
+    Calendar/AnonymousIndex.cshtml
+    Public read-only calendar view for anonymous users.
+    Uses the CalendarOutputViewModel to render all shared (Anonymous-type) calendars and their events
+    in a FullCalendar.js grid. Events are serialised to JSON for the FullCalendar initialisation script.
+    The time grid is scrolled to the user's current local time on page load.
+    No create/edit/delete controls are shown; the calendar is read-only.
+*@
+@using Maroik.Website.Models.ViewModels.Calendar
+@using Maroik.Core.Domain.Calendar
+@model CalendarOutputViewModel
+
+@{
+    var timeIntervals = Model.TimeIntervals;
+}
+
+@* Reminder lead-time bounds + the "notify at HH:MM" list — authoritative in CalendarReminderPolicy
+   / the view model. This page only displays reminders (disabled inputs), but it reads the same
+   values so it never drifts from the create/edit pages. *@
+@Html.Hidden("maxMinutesBeforeEvent", CalendarReminderPolicy.MaxMinutesBeforeEvent)
+@Html.Hidden("maxHoursBeforeEvent", CalendarReminderPolicy.MaxHoursBeforeEvent)
+@Html.Hidden("maxDaysBeforeEvent", CalendarReminderPolicy.MaxDaysBeforeEvent)
+@Html.Hidden("maxWeeksBeforeEvent", CalendarReminderPolicy.MaxWeeksBeforeEvent)
+@Html.Hidden("reminderTimeIntervals", JsonSerialization.ToClientJson(Model.TimeIntervals))
+@Html.Hidden("defaultReminderTimeOfDay", CalendarReminderPolicy.DefaultReminderTimeOfDay)
+
+@Html.Hidden("localizerEmail", Localizer["Email"].Value)
+@Html.Hidden("localizerNotification", Localizer["Notification"].Value)
+@Html.Hidden("localizerMinutes", Localizer["Minutes"].Value)
+@Html.Hidden("localizerHours", Localizer["Hours"].Value)
+@Html.Hidden("localizerDays", Localizer["Days"].Value)
+@Html.Hidden("localizerWeeks", Localizer["Weeks"].Value)
+@Html.Hidden("localizerBeforeAt", Localizer["BeforeAt"].Value)
+@Html.Hidden("localizerPrevText", Localizer["PrevText"].Value)
+@Html.Hidden("localizerNextText", Localizer["NextText"].Value)
+@Html.Hidden("localizerJanuary", Localizer["January"].Value)
+@Html.Hidden("localizerFebruary", Localizer["February"].Value)
+@Html.Hidden("localizerMarch", Localizer["March"].Value)
+@Html.Hidden("localizerApril", Localizer["April"].Value)
+@Html.Hidden("localizerMay", Localizer["May"].Value)
+@Html.Hidden("localizerJune", Localizer["June"].Value)
+@Html.Hidden("localizerJuly", Localizer["July"].Value)
+@Html.Hidden("localizerAugust", Localizer["August"].Value)
+@Html.Hidden("localizerSeptember", Localizer["September"].Value)
+@Html.Hidden("localizerOctober", Localizer["October"].Value)
+@Html.Hidden("localizerNovember", Localizer["November"].Value)
+@Html.Hidden("localizerDecember", Localizer["December"].Value)
+@Html.Hidden("localizerJan", Localizer["Jan"].Value)
+@Html.Hidden("localizerFeb", Localizer["Feb"].Value)
+@Html.Hidden("localizerMar", Localizer["Mar"].Value)
+@Html.Hidden("localizerApr", Localizer["Apr"].Value)
+@Html.Hidden("localizerJun", Localizer["Jun"].Value)
+@Html.Hidden("localizerJul", Localizer["Jul"].Value)
+@Html.Hidden("localizerAug", Localizer["Aug"].Value)
+@Html.Hidden("localizerSep", Localizer["Sep"].Value)
+@Html.Hidden("localizerOct", Localizer["Oct"].Value)
+@Html.Hidden("localizerNov", Localizer["Nov"].Value)
+@Html.Hidden("localizerDec", Localizer["Dec"].Value)
+@Html.Hidden("localizerSunday", Localizer["Sunday"].Value)
+@Html.Hidden("localizerMonday", Localizer["Monday"].Value)
+@Html.Hidden("localizerTuesday", Localizer["Tuesday"].Value)
+@Html.Hidden("localizerWednesday", Localizer["Wednesday"].Value)
+@Html.Hidden("localizerThursday", Localizer["Thursday"].Value)
+@Html.Hidden("localizerFriday", Localizer["Friday"].Value)
+@Html.Hidden("localizerSaturday", Localizer["Saturday"].Value)
+@Html.Hidden("localizerSun", Localizer["Sun"].Value)
+@Html.Hidden("localizerMon", Localizer["Mon"].Value)
+@Html.Hidden("localizerTue", Localizer["Tue"].Value)
+@Html.Hidden("localizerWed", Localizer["Wed"].Value)
+@Html.Hidden("localizerThu", Localizer["Thu"].Value)
+@Html.Hidden("localizerFri", Localizer["Fri"].Value)
+@Html.Hidden("localizerSat", Localizer["Sat"].Value)
+@Html.Hidden("localizerSu", Localizer["Su"].Value)
+@Html.Hidden("localizerMo", Localizer["Mo"].Value)
+@Html.Hidden("localizerTu", Localizer["Tu"].Value)
+@Html.Hidden("localizerWe", Localizer["We"].Value)
+@Html.Hidden("localizerTh", Localizer["Th"].Value)
+@Html.Hidden("localizerFr", Localizer["Fr"].Value)
+@Html.Hidden("localizerSa", Localizer["Sa"].Value)
+@Html.Hidden("localizerYearSuffix", Localizer["YearSuffix"].Value)
+@Html.Hidden("localizerIETFLanguageTag", Localizer["IETFLanguageTag"].Value)
+@Html.Hidden("localizerPrev", Localizer["Prev"].Value)
+@Html.Hidden("localizerNext", Localizer["Next"].Value)
+@Html.Hidden("localizerPrevYear", Localizer["PrevYear"].Value)
+@Html.Hidden("localizerNextYear", Localizer["NextYear"].Value)
+@Html.Hidden("localizerToday", Localizer["Today"].Value)
+@Html.Hidden("localizerMonth", Localizer["Month"].Value)
+@Html.Hidden("localizerWeek", Localizer["Week"].Value)
+@Html.Hidden("localizerDay", Localizer["Day"].Value)
+@Html.Hidden("localizerList", Localizer["List"].Value)
+@Html.Hidden("localizerDayGridMonth", Localizer["DayGridMonth"].Value)
+@Html.Hidden("localizerDayGridWeek", Localizer["DayGridWeek"].Value)
+@Html.Hidden("localizerDayGridDay", Localizer["DayGridDay"].Value)
+@Html.Hidden("localizerTimeGridWeek", Localizer["TimeGridWeek"].Value)
+@Html.Hidden("localizerTimeGridDay", Localizer["TimeGridDay"].Value)
+@Html.Hidden("localizerListYear", Localizer["ListYear"].Value)
+@Html.Hidden("localizerListMonth", Localizer["ListMonth"].Value)
+@Html.Hidden("localizerListWeek", Localizer["ListWeek"].Value)
+@Html.Hidden("localizerListDay", Localizer["ListDay"].Value)
+@Html.Hidden("localizerConfirmDelete", Localizer["ConfirmDelete"].Value)
+@Html.Hidden("localizerThisFieldRequired", Localizer["ThisFieldRequired"].Value)
+@Html.Hidden("localizerErrorInvalidNumber", Localizer["ErrorInvalidNumber"].Value)
+@Html.Hidden("localizerErrorRangeMinute", Localizer["ErrorRangeMinute"].Value)
+@Html.Hidden("localizerErrorRangeHour", Localizer["ErrorRangeHour"].Value)
+@Html.Hidden("localizerErrorRangeDay", Localizer["ErrorRangeDay"].Value)
+@Html.Hidden("localizerErrorRangeWeek", Localizer["ErrorRangeWeek"].Value)
+@Html.Hidden("localizerFailedToLoadCalendars", Localizer["FailedToLoadCalendars"].Value)
+@Html.Hidden("otherCalendarEventOutputViewModels", JsonSerialization.ToClientJson(Model.OtherCalendarEventOutputViewModels))
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="sticky-top mb-3">
+                    <div class="card">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <h4 class="card-title">@Localizer["Other calendars"]</h4>
+                        </div>
+                        <div class="card-body">
+                            <div id="otherCalendars">
+                                @foreach (var otherCalendar in Model.OtherCalendars)
+                                {
+                                    <label id="@($"lblOtherCalendar{otherCalendar.Id}")" style="position: relative; border:1px solid #ccc; padding:10px; margin:0 0 10px; display:block">
+                                        <input type="checkbox" class="chkOtherCalendar" style="accent-color:@otherCalendar.HtmlColorCode" checked />
+                                        <label style="padding-left:0.3em;">@otherCalendar.Name</label>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-9">
+                <div class="card card-primary">
+                    <div class="card-body p-0">
+                        <div id="calendar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@*<!--otherCalendarEventPopup-->*@
+<div id="otherCalendarEventPopup" class="event-popup" style="display: none; position: absolute;">
+    <div class="popup-header">
+        <h5 id="otherCalendarEventPopupTitle"></h5>
+        <button type="button" id="closeOtherCalendarEventPopup">&times;</button>
+    </div>
+    <div id="divOtherCalendarEventPopupAllDayChecked" class="popup-body" style="display:none;">
+        <p><strong>@Localizer["StartDate"].Value:</strong> <span id="otherCalendarEventPopupStartAllDayChecked"></span></p>
+        <p><strong>@Localizer["EndDate"].Value:</strong> <span id="otherCalendarEventPopupEndAllDayChecked"></span></p>
+    </div>
+    <div id="divOtherCalendarEventPopupAllDayUnchecked" class="popup-body" style="display:none;">
+        <p><strong>@Localizer["StartDate"].Value:</strong> <span id="otherCalendarEventPopupStartAllDayUnchecked"></span></p>
+        <p><span id="otherCalendarEventPopupStartTimeZoneAllDayUnchecked"></span></p>
+        <p><strong>@Localizer["EndDate"].Value:</strong> <span id="otherCalendarEventPopupEndAllDayUnchecked"></span></p>
+        <p><span id="otherCalendarEventPopupEndTimeZoneAllDayUnchecked"></span></p>
+    </div>
+    <div class="popup-footer">
+        <button id="viewOtherCalendarEventPopup" class="btn btn-primary btn-sm">@Localizer["View"].Value</button>
+    </div>
+</div>
+
+@*<!--viewCalendarEventTaskDialogModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="viewCalendarEventTaskDialogModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div id="viewCalendarEventTaskTabs">
+                @*<!--Tab EventTask-->*@
+                <ul>
+                    <li><a href="#viewCalendarEventTaskTabs-1">@Localizer["View Event"].Value</a></li>
+                </ul>
+                @*Tabs-1: View Calendar Event Modal*@
+                <div id="viewCalendarEventTaskTabs-1">
+                    <form id="formViewCalendarEvent">
+                        <input type="hidden" id="viewCalendarEventId" />
+                        <div class="form-row">
+                            <div class="form-group col-md-12 mb-3">
+                                <label for="viewCalendarEventName">@Localizer["Name"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="viewCalendarEventName" name="viewCalendarEventName" value="" maxlength="100" disabled/>
+                                <span class="field-validation-valid text-danger" data-valmsg-for="viewCalendarEventName" data-valmsg-replace="true"></span>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="viewCalendarEventAllDay">@Localizer["All day"].Value</label>
+                                <input class="form-control form-control-sm" type="checkbox" id="viewCalendarEventAllDay" name="viewCalendarEventAllDay" disabled/>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="viewCalendarEventRepeatCycle">@Localizer["Repeat cycle"].Value</label>
+                                <br />
+                                <select id="viewCalendarEventRepeatCycle" name="viewCalendarEventRepeatCycle" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;" disabled>
+                                    <option value="DoesNotRepeat" selected>@Localizer["Does not repeat"].Value</option>
+                                    @*
+                                    <option value="Daily">@Localizer["Daily"].Value</option>
+                                    <option value="WeeklyOnMonday">@Localizer["Weekly on Monday"].Value</option>
+                                    <option value="MonthlyOnTheFirstMonday">@Localizer["Monthly on the"].Value</option>
+                                    <option value="AnnuallyOnJune3">@Localizer["Annually on June 3"].Value</option>
+                                    <option value="Custom...">@Localizer["Custom..."].Value</option>
+                                    *@
+                                </select>
+                            </div>
+                        </div>
+                        <div id="divViewEventAllDayChecked">
+                            <div class="form-row">
+                                <div class="form-group col-md-6 mb-3">
+                                    <label for="viewCalendarEventAllDayCheckedStartDate">@Localizer["StartDate"].Value</label>
+                                    <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter StartDate"].Value" id="viewCalendarEventAllDayCheckedStartDate" name="viewCalendarEventAllDayCheckedStartDate" value="" readonly disabled>
+                                    <span class="field-validation-valid text-danger" data-valmsg-for="viewCalendarEventAllDayCheckedStartDate" data-valmsg-replace="true"></span>
+                                </div>
+                                <div class="form-group col-md-6 mb-3">
+                                    <label for="viewCalendarEventAllDayCheckedEndDate">@Localizer["EndDate"].Value</label>
+                                    <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter EndDate"].Value" id="viewCalendarEventAllDayCheckedEndDate" name="viewCalendarEventAllDayCheckedEndDate" value="" readonly disabled>
+                                    <span class="field-validation-valid text-danger" data-valmsg-for="viewCalendarEventAllDayCheckedEndDate" data-valmsg-replace="true"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="divViewEventAllDayUnchecked">
+                            <div class="form-row">
+                                <div class="form-group col-md-6 mb-3">
+                                    <label for="viewCalendarEventAllDayUncheckedStartDate">@Localizer["StartDate"].Value</label>
+                                    <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter StartDate"].Value" id="viewCalendarEventAllDayUncheckedStartDate" name="viewCalendarEventAllDayUncheckedStartDate" value="" readonly disabled>
+                                    <span class="field-validation-valid text-danger" data-valmsg-for="viewCalendarEventAllDayUncheckedStartDate" data-valmsg-replace="true"></span>
+                                </div>
+                                <div class="form-group col-md-6 mb-3">
+                                    <label for="viewCalendarEventAllDayUncheckedStartTime">@Localizer["StartTime"].Value</label>
+                                    <br />
+                                    <select id="viewCalendarEventAllDayUncheckedStartTime" name="viewCalendarEventAllDayUncheckedStartTime" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;" disabled>
+                                        @foreach (string time in timeIntervals)
+                                        {
+                                            <option value="@time">@time</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group col-md-6 mb-3">
+                                    <label for="viewCalendarEventAllDayUncheckedEndDate">@Localizer["EndDate"].Value</label>
+                                    <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter EndDate"].Value" id="viewCalendarEventAllDayUncheckedEndDate" name="viewCalendarEventAllDayUncheckedEndDate" value="" readonly disabled>
+                                    <span class="field-validation-valid text-danger" data-valmsg-for="viewCalendarEventAllDayUncheckedEndDate" data-valmsg-replace="true"></span>
+                                </div>
+                                <div class="form-group col-md-6 mb-3">
+                                    <label for="viewCalendarEventAllDayUncheckedEndTime">@Localizer["EndTime"].Value</label>
+                                    <br />
+                                    <select id="viewCalendarEventAllDayUncheckedEndTime" name="viewCalendarEventAllDayUncheckedEndTime" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;" disabled>
+                                        @foreach (string time in timeIntervals)
+                                        {
+                                            <option value="@time">@time</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group col-md-6 mb-3">
+                                    <label for="viewCalendarEventAllDayUncheckedStartTimeZone">@Localizer["StartTimeZone"].Value</label>
+                                    <select id="viewCalendarEventAllDayUncheckedStartTimeZone" name="viewCalendarEventAllDayUncheckedStartTimeZone" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;" disabled>
+                                        @foreach (var timeZoneOption in (IEnumerable<TimeZoneOptionDto>)ViewBag.TimeZoneOptions)
+                                        {
+                                            <option value="@timeZoneOption.IanaId">@timeZoneOption.DisplayName</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-6 mb-3">
+                                    <label for="viewCalendarEventAllDayUncheckedEndTimeZone">@Localizer["EndTimeZone"].Value</label>
+                                    <select id="viewCalendarEventAllDayUncheckedEndTimeZone" name="viewCalendarEventAllDayUncheckedEndTimeZone" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;" disabled>
+                                        @foreach (var timeZoneOption in (IEnumerable<TimeZoneOptionDto>)ViewBag.TimeZoneOptions)
+                                        {
+                                            <option value="@timeZoneOption.IanaId">@timeZoneOption.DisplayName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-12 mb-3">
+                                <label for="viewCalendarEventLocation">@Localizer["Location"].Value</label>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Location"].Value" id="viewCalendarEventLocation" name="viewCalendarEventLocation" value="" disabled>
+                                <span class="field-validation-valid text-danger" data-valmsg-for="viewCalendarEventLocation" data-valmsg-replace="true"></span>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-12 mb-3">
+                                <label for="viewCalendarEventDescription">@Localizer["Description"].Value</label>
+                                <textarea class="form-control form-control-sm" id="viewCalendarEventDescription" name="viewCalendarEventDescription" maxlength="16384" disabled></textarea> @*maxlength: 16KB*@
+                            </div>
+                        </div>
+
+                        <div id="divViewCalendarEventAttachedFile" class="form-row" style="display:none;">
+                            <ul class="mailbox-attachments d-flex align-items-stretch clearfix">
+                                <li>
+                                    <span class="mailbox-attachment-icon"><i class="far fa-file"></i></span>
+
+                                    <div class="mailbox-attachment-info">
+                                        <a id="aViewCalendarEventAttachedFile" href="#" class="mailbox-attachment-name"><i class="fas fa-paperclip"></i></a>
+                                        <span class="mailbox-attachment-size clearfix mt-1">
+                                            <span id="spanViewCalendarEventAttachedFile">
+                                            </span>
+                                        </span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="viewCalendarEventMyCalendar">@Localizer["My Calendar"].Value</label>
+                                <br />
+                                <select id="viewCalendarEventMyCalendar" name="viewCalendarEventMyCalendar" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;" disabled></select>
+                            </div>
+                            <div class="form-group col-md-6 mb-3">
+                                <label for="viewCalendarEventStatus">@Localizer["Status"].Value</label>
+                                <br />
+                                <select id="viewCalendarEventStatus" name="viewCalendarEventStatus" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;" disabled>
+                                    <option value="Busy" selected>@Localizer["Busy"].Value</option>
+                                    <option value="Free">@Localizer["Free"].Value</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="divViewEventNotificationAllDayChecked" class="form-row" style="display:none;">
+                            <div class="form-group col-md-12 mb-3">
+                                <label for="viewCalendarEventNotificationAllDayChecked">@Localizer["Notification"].Value</label>
+                                <br />
+
+                                @*
+                                <div class="divViewEventNotificationAllDayCheckedRow">
+                                <select class='form-control-sm viewCalendarEventSelNotificationMethodAllDayChecked' style='width:20%;text-overflow:ellipsis;' disabled>
+                                <option value='Email'>@Localizer["Email"].Value</option>
+                                <option value='Notification'>@Localizer["Notification"].Value</option>
+                                </select>
+
+                                <input type='number' class='form-control-sm viewCalendarEventSelNotificationNumberAllDayChecked' style='width:30%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="0" max="@CalendarReminderPolicy.MaxDaysBeforeEvent" disabled>
+
+                                <select class='form-control-sm viewCalendarEventSelNotificationTimeTypeAllDayChecked' style='width:30%;text-overflow:ellipsis;' disabled>
+                                <option value='Days' selected>@Localizer["Days"].Value</option>
+                                <option value='Weeks'>@Localizer["Weeks"].Value</option>
+                                </select>
+                                <label style="padding-left:5px;padding-right:5px;">@Localizer["before at"].Value</label>
+                                <select class='form-control-sm viewCalendarEventSelNotificationTimeAllDayChecked' style='width:11%;text-overflow:ellipsis;' disabled>
+                                @foreach (var time in timeIntervals)
+                                {
+                                if (time == CalendarReminderPolicy.DefaultReminderTimeOfDay) // Default time
+                                {
+                                <option value="@time" selected>@time</option>
+                                }
+                                else
+                                {
+                                <option value="@time">@time</option>
+                                }
+                                }
+                                </select>
+
+                                <br />
+                                <div class="error-message" style="color: red; font-size: 0.9em; display: none;"></div>
+
+                                </div>
+                                *@
+
+                                <input style="margin-top:20px; display:none;" class="btn btn-primary" type="button" id="viewCalendarEventNotificationAllDayChecked" name="viewCalendarEventNotificationAllDayChecked" value="">
+                            </div>
+                        </div>
+
+                        <div id="divViewEventNotificationAllDayUnchecked" class="form-row" style="display:none;">
+                            <div class="form-group col-md-12 mb-3">
+                                <label for="viewCalendarEventNotificationAllDayUnchecked">@Localizer["Notification"].Value</label>
+                                <br />
+
+                                @*
+                                <div class="divViewEventNotificationAllDayUncheckedRow" style="padding-bottom:5px;">
+                                <select class='form-control-sm viewCalendarEventSelNotificationMethodAllDayUnchecked' style='width:20%;text-overflow:ellipsis;' disabled>
+                                <option value='Email'>@Localizer["Email"].Value</option>
+                                <option value='Notification'>@Localizer["Notification"].Value</option>
+                                </select>
+
+                                <input type='number' class='form-control-sm viewCalendarEventSelNotificationNumberAllDayUnchecked' style='width:30%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="0" max="@CalendarReminderPolicy.MaxMinutesBeforeEvent" disabled>
+
+                                <select class='form-control-sm viewCalendarEventSelNotificationTimeTypeAllDayUnchecked' style='width:30%;text-overflow:ellipsis;' disabled>
+                                <option value='Minutes' selected>@Localizer["Minutes"].Value</option>
+                                <option value='Hours'>@Localizer["Hours"].Value</option>
+                                <option value='Days'>@Localizer["Days"].Value</option>
+                                <option value='Weeks'>@Localizer["Weeks"].Value</option>
+                                </select>
+
+                                <br />
+                                <div class="error-message" style="color: red; font-size: 0.9em; display: none;"></div>
+
+                                </div>
+                                *@
+                                <input style="margin-top:20px; display:none;" class="btn btn-primary" type="button" id="viewCalendarEventNotificationAllDayUnchecked" name="viewCalendarEventNotificationAllDayUnchecked" value="">
+                            </div>
+                        </div>
+
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer["Close"].Value</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Page-specific CSS: site.css *@
+@section Styles {
+    <link rel="stylesheet" href="~/anonymous/custom/Calendar/AnonymousIndex/css/site.css" asp-append-version="true">
+}
+
+@* Page-specific JavaScript: site.js *@
+@section Scripts {
+    <script src="~/anonymous/custom/Calendar/AnonymousIndex/js/site.js" asp-append-version="true"></script>
+}

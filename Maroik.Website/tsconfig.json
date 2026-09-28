@@ -1,0 +1,44 @@
+{
+  // Type-checks AND emits the custom client scripts.
+  //   src : TypeScripts/{area}/custom/{Feature}/{Page}/js/site.ts   (+ TypeScripts/global.d.ts)
+  //   out : wwwroot/{area}/custom/{Feature}/{Page}/js/site.js       (1:1, no bundler)
+  // Each site.ts wraps its body in an IIFE and has no import/export, so with
+  // moduleDetection:"legacy" every file stays a plain global <script>, exactly like today.
+  //
+  // This is the DEBUG config: it emits wwwroot/**/custom/**/site.js.map (with the .ts source inlined)
+  // so Chrome DevTools maps site.js -> site.ts. `npm run build:debug`
+  // and `npm run watch` use it. Release builds use tsconfig.build.json (no maps) — that
+  // is what `npm run build`, a Release .csproj build and the prod Docker image run.
+  // See TypeScripts/README.md ("Debugging in Chrome").
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleDetection": "legacy",
+    "moduleResolution": "bundler",
+
+    "rootDir": "TypeScripts",
+    "outDir": "wwwroot",
+
+    "strict": true,
+    "noImplicitAny": true,
+    "alwaysStrict": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "removeComments": true,
+    "newLine": "lf",
+    "skipLibCheck": true,
+
+    // Debug-only. Emits site.js.map next to each site.js with a trailing
+    // //# sourceMappingURL= comment; inlineSources embeds the .ts text in the map so
+    // DevTools needs nothing served from TypeScripts/. tsconfig.build.json turns both off.
+    "sourceMap": true,
+    "inlineSources": true,
+
+    // TS 7 no longer auto-includes node_modules/@types; list every ambient plugin type.
+    "types": ["jquery", "jqueryui", "jquery.validation", "toastr", "summernote", "chart.js"]
+  },
+  "include": ["TypeScripts/**/*.ts"],
+  "exclude": ["node_modules", "wwwroot", "bin", "obj", "TypeScripts.Tests"]
+}

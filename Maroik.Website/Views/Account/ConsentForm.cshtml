@@ -1,0 +1,17 @@
+﻿@*
+    Account/ConsentForm.cshtml
+    Service terms / consent form displayed in a new tab when the user clicks the "terms" link
+    on the registration page. The agreement title and body text are loaded via IViewLocalizer
+    (keys "AgreementTitle" and "AgreementContent") so they can be localised per culture.
+*@
+<div class="register-box">
+    <div class="card card-outline card-primary">
+        <div class="card-header text-center">
+            <a asp-controller="Dashboard" asp-action="AnonymousIndex" class="h1"><b>Maroik</b></a>
+        </div>
+        <div class="card-body">
+            <p class="login-box-msg">@Localizer["AgreementTitle"]</p>
+            @Localizer["AgreementContent"]
+        </div>
+    </div>
+</div>

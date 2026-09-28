@@ -1,0 +1,219 @@
+###############################
+# Core EditorConfig Options   #
+###############################
+root = true
+# All files
+[*]
+indent_style = space
+
+# XML project files
+[*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj}]
+indent_size = 2
+
+# XML config files
+[*.{props,targets,ruleset,config,nuspec,resx,vsixmanifest,vsct}]
+indent_size = 2
+
+# Code files
+[*.{cs,csx,vb,vbx}]
+indent_size = 4
+insert_final_newline = true
+charset = utf-8
+###############################
+# .NET Coding Conventions     #
+###############################
+[*.{cs,vb}]
+# Organize usings
+dotnet_sort_system_directives_first = true
+# this. preferences
+dotnet_style_qualification_for_field = false:silent
+dotnet_style_qualification_for_property = false:silent
+dotnet_style_qualification_for_method = false:silent
+dotnet_style_qualification_for_event = false:silent
+# Language keywords vs BCL types preferences
+dotnet_style_predefined_type_for_locals_parameters_members = true:silent
+dotnet_style_predefined_type_for_member_access = true:silent
+# Parentheses preferences
+dotnet_style_parentheses_in_arithmetic_binary_operators = never_if_unnecessary:silent
+dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity:silent
+dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:silent
+dotnet_style_parentheses_in_other_operators = never_if_unnecessary:silent
+# Modifier preferences
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:silent
+dotnet_style_readonly_field = true:suggestion
+# Expression-level preferences
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_explicit_tuple_names = true:suggestion
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_coalesce_expression = true:suggestion
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:silent
+dotnet_style_prefer_inferred_tuple_names = true:suggestion
+dotnet_style_prefer_inferred_anonymous_type_member_names = true:suggestion
+dotnet_style_prefer_auto_properties = true:silent
+dotnet_style_prefer_conditional_expression_over_assignment = true:silent
+dotnet_style_prefer_conditional_expression_over_return = true:silent
+###############################
+# Naming Conventions          #
+###############################
+# Style Definitions
+dotnet_naming_style.pascal_case_style.capitalization             = pascal_case
+# Use PascalCase for constant fields  
+dotnet_naming_rule.constant_fields_should_be_pascal_case.severity = warning
+dotnet_naming_rule.constant_fields_should_be_pascal_case.symbols  = constant_fields
+dotnet_naming_rule.constant_fields_should_be_pascal_case.style = pascal_case_style
+dotnet_naming_symbols.constant_fields.applicable_kinds            = field
+dotnet_naming_symbols.constant_fields.applicable_accessibilities  = *
+dotnet_naming_symbols.constant_fields.required_modifiers          = const
+tab_width = 4
+dotnet_naming_rule.private_members_with_underscore.symbols  = private_fields
+dotnet_naming_rule.private_members_with_underscore.style = prefix_underscore
+dotnet_naming_rule.private_members_with_underscore.severity = warning
+dotnet_naming_symbols.private_fields.applicable_kinds           = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.prefix_underscore.capitalization = camel_case
+dotnet_naming_style.prefix_underscore.required_prefix = _
+dotnet_style_operator_placement_when_wrapping = beginning_of_line
+end_of_line = crlf
+###############################
+# C# Coding Conventions       #
+###############################
+[*.cs]
+# var preferences
+csharp_style_var_for_built_in_types = false:silent
+csharp_style_var_when_type_is_apparent = true:silent
+csharp_style_var_elsewhere = true:silent
+# Expression-bodied members
+csharp_style_expression_bodied_methods = true:silent
+csharp_style_expression_bodied_constructors = false:silent
+csharp_style_expression_bodied_operators = true:silent
+csharp_style_expression_bodied_properties = true:silent
+csharp_style_expression_bodied_indexers = true:silent
+csharp_style_expression_bodied_accessors = true:silent
+# Pattern matching preferences
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+# Null-checking preferences
+csharp_style_throw_expression = true:suggestion
+csharp_style_conditional_delegate_call = true:suggestion
+# Modifier preferences
+csharp_preferred_modifier_order = public,required,private,internal,protected,extern,volatile,static,override,abstract,new,async,unsafe,virtual,sealed,file,readonly:suggestion
+# Expression-level preferences
+# Braces: per-statement rules (if/else not required; foreach/using when multiline) live in
+# Maroik.sln.DotSettings (BRACES_FOR_*). csharp_prefer_braces would override all of them in Rider.
+csharp_style_deconstructed_variable_declaration = true:suggestion
+csharp_prefer_simple_default_expression = true:suggestion
+csharp_style_pattern_local_over_anonymous_function = true:suggestion
+csharp_style_inlined_variable_declaration = true:suggestion
+# Namespaces
+csharp_style_namespace_declarations = file_scoped:warning
+###############################
+# C# Formatting Rules         #
+###############################
+# New line preferences
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+# Indentation preferences
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+csharp_indent_labels = flush_left
+# Space preferences
+csharp_space_after_cast = false
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_parentheses = false
+csharp_space_before_colon_in_inheritance_clause = true
+csharp_space_after_colon_in_inheritance_clause = true
+csharp_space_around_binary_operators = before_and_after
+csharp_space_between_method_declaration_empty_parameter_list_parentheses = false
+csharp_space_between_method_call_name_and_opening_parenthesis = false
+csharp_space_between_method_call_empty_parameter_list_parentheses = false
+# Wrapping preferences
+csharp_preserve_single_line_statements = true
+csharp_preserve_single_line_blocks = true
+csharp_using_directive_placement = outside_namespace:suggestion
+csharp_prefer_simple_using_statement = true:suggestion
+csharp_style_expression_bodied_lambdas = true:silent
+csharp_style_expression_bodied_local_functions = false:silent
+
+##############################################
+# TypeScript / JavaScript                    #
+# Client scripts: authored in               #
+#   Maroik.Website/TypeScripts/**            #
+#   Maroik.Website/TypeScripts.Tests/**      #
+# compiled 1:1 to wwwroot/**/site.js.        #
+# `ij_*` keys below are the Rider / WebStorm #
+# code-style equivalents (read from here).   #
+##############################################
+
+[*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}]
+indent_size = 4
+tab_width = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+max_line_length = 160
+
+# ---- Rider / WebStorm (IntelliJ EditorConfig keys) ----
+ij_continuation_indent_size = 4
+ij_visual_guides = 160
+ij_smart_tabs = false
+ij_wrap_on_typing = false
+
+ij_typescript_use_double_quotes = true
+ij_typescript_use_semicolon_after_statement = true
+ij_typescript_force_semicolon_style = true
+ij_typescript_force_quote_style = true
+ij_typescript_spaces_within_object_literal_braces = true
+ij_typescript_spaces_within_object_type_braces = true
+ij_typescript_spaces_within_imports = true
+ij_typescript_space_after_comma = true
+ij_typescript_space_before_comma = false
+ij_typescript_space_after_property_colon = true
+ij_typescript_space_before_property_colon = false
+ij_typescript_space_before_function_left_parenth = false
+ij_typescript_space_before_if_parentheses = true
+ij_typescript_space_before_method_call_parentheses = false
+ij_typescript_indent_chained_calls = true
+ij_typescript_align_multiline_parameters = false
+ij_typescript_align_multiline_binary_operation = false
+ij_typescript_keep_blank_lines_in_code = 1
+ij_typescript_blank_lines_around_function = 1
+ij_typescript_blank_lines_after_imports = 1
+ij_typescript_import_sort_members = true
+ij_typescript_use_explicit_js_extension = never
+ij_typescript_prefer_as_type_cast = true
+
+ij_javascript_use_double_quotes = true
+ij_javascript_use_semicolon_after_statement = true
+ij_javascript_force_semicolon_style = true
+ij_javascript_force_quote_style = true
+ij_javascript_spaces_within_object_literal_braces = true
+ij_javascript_space_after_comma = true
+ij_javascript_indent_chained_calls = true
+ij_javascript_keep_blank_lines_in_code = 1
+
+# The `tsc` output of the client-script migration (TypeScripts/**/*.ts -> here).
+# Generated, never hand-edited — mark it so Rider / ReSharper skips inspections &
+# format-on-save, and don't touch its bytes.
+[Maroik.Website/wwwroot/**/custom/**/site.js]
+generated_code = true
+trim_trailing_whitespace = false
+insert_final_newline = false
+max_line_length = off
+
+# EF Core scaffolded/generated persistence models and DbContext. Mark them so Rider / ReSharper and
+# the Roslyn analyzers skip style inspections & cleanup for them, and don't touch their bytes.
+[Maroik.Core.PostgreSQL/**.cs]
+generated_code = true
+
+[*.{json,json5,jsonc}]
+indent_size = 2
+insert_final_newline = true

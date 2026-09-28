@@ -1,0 +1,540 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Account create successfully done." xml:space="preserve">
+    <value>Account create successfully done.</value>
+  </data>
+  <data name="Action" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="AgreedServiceTerms" xml:space="preserve">
+    <value>AgreedServiceTerms</value>
+  </data>
+  <data name="AvatarImagePath" xml:space="preserve">
+    <value>AvatarImagePath</value>
+  </data>
+  <data name="CategoryId" xml:space="preserve">
+    <value>CategoryId</value>
+  </data>
+  <data name="Controller" xml:space="preserve">
+    <value>Controller</value>
+  </data>
+  <data name="Created" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="Deleted" xml:space="preserve">
+    <value>Deleted</value>
+  </data>
+  <data name="DisplayName" xml:space="preserve">
+    <value>DisplayName</value>
+  </data>
+  <data name="Email" xml:space="preserve">
+    <value>Email</value>
+  </data>
+  <data name="Email address is wrong" xml:space="preserve">
+    <value>Email address is wrong</value>
+  </data>
+  <data name="EmailConfirmed" xml:space="preserve">
+    <value>EmailConfirmed</value>
+  </data>
+  <data name="Fail to find the account by given email address" xml:space="preserve">
+    <value>Fail to find the account by given email address</value>
+  </data>
+  <data name="File Size must be smaller than {0}MB." xml:space="preserve">
+    <value>File Size must be smaller than {0}MB.</value>
+  </data>
+  <data name="Nickname" xml:space="preserve">
+    <value>Nickname</value>
+  </data>
+  <data name="Nickname is must be between 1 and 255 characters" xml:space="preserve">
+    <value>Nickname is must be between 1 and 255 characters</value>
+  </data>
+  <data name="'{0}' is a Nickname that already exists. Please enter another Nickname." xml:space="preserve">
+    <value>'{0}' is a Nickname that already exists. Please enter another Nickname.</value>
+  </data>
+  <data name="HashedPassword" xml:space="preserve">
+    <value>HashedPassword</value>
+  </data>
+  <data name="IconPath" xml:space="preserve">
+    <value>IconPath</value>
+  </data>
+  <data name="Id" xml:space="preserve">
+    <value>Id</value>
+  </data>
+  <data name="Input is invalid" xml:space="preserve">
+    <value>Input is invalid</value>
+  </data>
+  <data name="Invalid email form" xml:space="preserve">
+    <value>Invalid email form</value>
+  </data>
+  <data name="Invalid password. Please check again." xml:space="preserve">
+    <value>Invalid password. Please check again.</value>
+  </data>
+  <data name="Locked" xml:space="preserve">
+    <value>Locked</value>
+  </data>
+  <data name="LoginAttempt" xml:space="preserve">
+    <value>LoginAttempt</value>
+  </data>
+  <data name="Message" xml:space="preserve">
+    <value>Message</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Only .jpg or jpeg or .png file allowed" xml:space="preserve">
+    <value>Only .jpg or jpeg or .png file allowed</value>
+  </data>
+  <data name="Order" xml:space="preserve">
+    <value>Order</value>
+  </data>
+  <data name="Password changed. Please sign in again." xml:space="preserve">
+    <value>Password changed. Please sign in again.</value>
+  </data>
+  <data name="Password must be at least 8 characters and contain at 3 of 4 of the following: upper case (A-Z), lower case (a-z), number (0-9) and special character (e.g. !@#$%^&amp;*)" xml:space="preserve">
+    <value>Password must be at least 8 characters and contain at 3 of 4 of the following: upper case (A-Z), lower case (a-z), number (0-9) and special character (e.g. !@#$%^&amp;*)</value>
+  </data>
+  <data name="Please attach a file" xml:space="preserve">
+    <value>Please attach a file</value>
+  </data>
+  <data name="Please enter Nickname" xml:space="preserve">
+    <value>Please enter Nickname</value>
+  </data>
+  <data name="RegistrationToken" xml:space="preserve">
+    <value>RegistrationToken</value>
+  </data>
+  <data name="ResetPasswordToken" xml:space="preserve">
+    <value>ResetPasswordToken</value>
+  </data>
+  <data name="Role" xml:space="preserve">
+    <value>Role</value>
+  </data>
+  <data name="Successfully created the category" xml:space="preserve">
+    <value>Successfully created the category</value>
+  </data>
+  <data name="Successfully created the subCategory" xml:space="preserve">
+    <value>Successfully created the subCategory</value>
+  </data>
+  <data name="Successfully deleted the account" xml:space="preserve">
+    <value>Successfully deleted the account</value>
+  </data>
+  <data name="Successfully deleted the category" xml:space="preserve">
+    <value>Successfully deleted the category</value>
+  </data>
+  <data name="Successfully deleted the subCategory" xml:space="preserve">
+    <value>Successfully deleted the subCategory</value>
+  </data>
+  <data name="Successfully updated the account" xml:space="preserve">
+    <value>Successfully updated the account</value>
+  </data>
+  <data name="Successfully updated the category" xml:space="preserve">
+    <value>Successfully updated the category</value>
+  </data>
+  <data name="Successfully updated the subCategory" xml:space="preserve">
+    <value>Successfully updated the subCategory</value>
+  </data>
+  <data name="This account has already been created." xml:space="preserve">
+    <value>This account has already been created.</value>
+  </data>
+  <data name="Updated" xml:space="preserve">
+    <value>Updated</value>
+  </data>
+  <data name="Please select time zone" xml:space="preserve">
+    <value>Please select time zone</value>
+  </data>
+  <data name="TimeZone" xml:space="preserve">
+    <value>TimeZone</value>
+  </data>
+  <data name="TimeZoneIanaId" xml:space="preserve">
+    <value>TimeZone</value>
+  </data>
+  <data name="content length is must be between 0 and 16384 characters." xml:space="preserve">
+    <value>content length is must be between 0 and 16384 characters.</value>
+  </data>
+  <data name="No PrivateNoteBoard exists" xml:space="preserve">
+    <value>No PrivateNoteBoard exists</value>
+  </data>
+  <data name="Only .jpg or jpeg or .png file allowed." xml:space="preserve">
+    <value>Only .jpg or jpeg or .png file allowed.</value>
+  </data>
+  <data name="Only zip extension allowed." xml:space="preserve">
+    <value>Only zip extension allowed.</value>
+  </data>
+  <data name="Please attach a file." xml:space="preserve">
+    <value>Please attach a file.</value>
+  </data>
+  <data name="Please enter a comment." xml:space="preserve">
+    <value>Please enter a comment.</value>
+  </data>
+  <data name="Please Login to edit board" xml:space="preserve">
+    <value>Please Login to edit board</value>
+  </data>
+  <data name="Please Login to write board" xml:space="preserve">
+    <value>Please Login to write board</value>
+  </data>
+  <data name="Please Login to write comment." xml:space="preserve">
+    <value>Please Login to write comment.</value>
+  </data>
+  <data name="The board has been successfully created." xml:space="preserve">
+    <value>The board has been successfully created.</value>
+  </data>
+  <data name="The board has been successfully deleted." xml:space="preserve">
+    <value>The board has been successfully deleted.</value>
+  </data>
+  <data name="The board has been successfully updated." xml:space="preserve">
+    <value>The board has been successfully updated.</value>
+  </data>
+  <data name="Title length is must be between 1 and 100 characters." xml:space="preserve">
+    <value>Title length is must be between 1 and 100 characters.</value>
+  </data>
+  <data name="You do not have permission to delete." xml:space="preserve">
+    <value>You do not have permission to delete.</value>
+  </data>
+  <data name="File may be infected with a virus." xml:space="preserve">
+    <value>File may be infected with a virus.</value>
+  </data>
+  <data name="The file could not be scanned for viruses. Please try again later." xml:space="preserve">
+    <value>The file could not be scanned for viruses. Please try again later.</value>
+  </data>
+  <data name="SVG format is not allowed" xml:space="preserve">
+    <value>SVG format is not allowed</value>
+  </data>
+  <data name="Invalid image file" xml:space="preserve">
+    <value>Invalid image file</value>
+  </data>
+  <data name="'{0}' is not a recognised time-zone ID." xml:space="preserve">
+    <value>'{0}' is not a recognised time-zone ID.</value>
+  </data>
+  <data name="'{0}' is not a valid email address." xml:space="preserve">
+    <value>'{0}' is not a valid email address.</value>
+  </data>
+  <data name="Email address must be {0} characters or fewer." xml:space="preserve">
+    <value>Email address must be {0} characters or fewer.</value>
+  </data>
+  <data name="Agreed Service Terms was not checked. Please try sign up again and login again." xml:space="preserve">
+    <value>Agreed Service Terms was not checked. Please try sign up again and login again.</value>
+  </data>
+  <data name="Asset category (item) cannot be empty." xml:space="preserve">
+    <value>Asset category (item) cannot be empty.</value>
+  </data>
+  <data name="Asset category cannot be empty." xml:space="preserve">
+    <value>Asset category cannot be empty.</value>
+  </data>
+  <data name="Board type cannot be empty." xml:space="preserve">
+    <value>Board type cannot be empty.</value>
+  </data>
+  <data name="Board type is not a recognised value." xml:space="preserve">
+    <value>Board type is not a recognised value.</value>
+  </data>
+  <data name="Cannot add a comment to a deleted post." xml:space="preserve">
+    <value>Cannot add a comment to a deleted post.</value>
+  </data>
+  <data name="Cannot add a comment to a locked post." xml:space="preserve">
+    <value>Cannot add a comment to a locked post.</value>
+  </data>
+  <data name="Cannot change the currency of an existing asset." xml:space="preserve">
+    <value>Cannot change the currency of an existing asset.</value>
+  </data>
+  <data name="Cannot deposit a different currency into this asset." xml:space="preserve">
+    <value>Cannot deposit a different currency into this asset.</value>
+  </data>
+  <data name="Cannot update a deleted post." xml:space="preserve">
+    <value>Cannot update a deleted post.</value>
+  </data>
+  <data name="Cannot withdraw a different currency from this asset." xml:space="preserve">
+    <value>Cannot withdraw a different currency from this asset.</value>
+  </data>
+  <data name="Category name cannot be empty." xml:space="preserve">
+    <value>Category name cannot be empty.</value>
+  </data>
+  <data name="Comment author (writer) cannot be empty." xml:space="preserve">
+    <value>Comment author (writer) cannot be empty.</value>
+  </data>
+  <data name="Comment content cannot be empty." xml:space="preserve">
+    <value>Comment content cannot be empty.</value>
+  </data>
+  <data name="Comment does not belong to this post." xml:space="preserve">
+    <value>Comment does not belong to this post.</value>
+  </data>
+  <data name="Comment is already deleted." xml:space="preserve">
+    <value>Comment is already deleted.</value>
+  </data>
+  <data name="Currency code cannot be empty." xml:space="preserve">
+    <value>Currency code cannot be empty.</value>
+  </data>
+  <data name="Deposit asset product name cannot be empty." xml:space="preserve">
+    <value>Deposit asset product name cannot be empty.</value>
+  </data>
+  <data name="Deposit day is not valid for the selected month." xml:space="preserve">
+    <value>Deposit day is not valid for the selected month.</value>
+  </data>
+  <data name="Deposit month must be between 1 and 12." xml:space="preserve">
+    <value>Deposit month must be between 1 and 12.</value>
+  </data>
+  <data name="Email address cannot be empty." xml:space="preserve">
+    <value>Email address cannot be empty.</value>
+  </data>
+  <data name="Email address is already confirmed." xml:space="preserve">
+    <value>Email address is already confirmed.</value>
+  </data>
+  <data name="Email must be confirmed before resetting the password." xml:space="preserve">
+    <value>Email must be confirmed before resetting the password.</value>
+  </data>
+  <data name="Email verification was not completed. Please try sign up again." xml:space="preserve">
+    <value>Email verification was not completed. Please try sign up again.</value>
+  </data>
+  <data name="Error occurred while processing about account registration" xml:space="preserve">
+    <value>Error occurred while processing about account registration</value>
+  </data>
+  <data name="Error occurred while processing about account status" xml:space="preserve">
+    <value>Error occurred while processing about account status</value>
+  </data>
+  <data name="Error occurred while processing about confirm email account status" xml:space="preserve">
+    <value>Error occurred while processing about confirm email account status</value>
+  </data>
+  <data name="Error occurred while processing about reset password" xml:space="preserve">
+    <value>Error occurred while processing about reset password</value>
+  </data>
+  <data name="Error occurred while processing about sending account authentication mail" xml:space="preserve">
+    <value>Error occurred while processing about sending account authentication mail</value>
+  </data>
+  <data name="Failed to resend email" xml:space="preserve">
+    <value>Failed to resend email</value>
+  </data>
+  <data name="Failed to upload the attached file." xml:space="preserve">
+    <value>Failed to upload the attached file.</value>
+  </data>
+  <data name="File name cannot be empty." xml:space="preserve">
+    <value>File name cannot be empty.</value>
+  </data>
+  <data name="File size cannot be negative." xml:space="preserve">
+    <value>File size cannot be negative.</value>
+  </data>
+  <data name="File storage path cannot be empty." xml:space="preserve">
+    <value>File storage path cannot be empty.</value>
+  </data>
+  <data name="HTML color code cannot be empty." xml:space="preserve">
+    <value>HTML color code cannot be empty.</value>
+  </data>
+  <data name="Hashed password cannot be empty." xml:space="preserve">
+    <value>Hashed password cannot be empty.</value>
+  </data>
+  <data name="Invalid email confirmation token." xml:space="preserve">
+    <value>Invalid email confirmation token.</value>
+  </data>
+  <data name="Invalid image file." xml:space="preserve">
+    <value>Invalid image file.</value>
+  </data>
+  <data name="Invalid or expired password-reset token." xml:space="preserve">
+    <value>Invalid or expired password-reset token.</value>
+  </data>
+  <data name="Main expense category cannot be empty." xml:space="preserve">
+    <value>Main expense category cannot be empty.</value>
+  </data>
+  <data name="Main income category cannot be empty." xml:space="preserve">
+    <value>Main income category cannot be empty.</value>
+  </data>
+  <data name="New hashed password cannot be empty." xml:space="preserve">
+    <value>New hashed password cannot be empty.</value>
+  </data>
+  <data name="Nickname cannot be empty." xml:space="preserve">
+    <value>Nickname cannot be empty.</value>
+  </data>
+  <data name="Nickname must be {0} characters or fewer." xml:space="preserve">
+    <value>Nickname must be {0} characters or fewer.</value>
+  </data>
+  <data name="Nickname contains characters that are not allowed." xml:space="preserve">
+    <value>Nickname contains characters that are not allowed.</value>
+  </data>
+  <data name="Payment method (asset name) cannot be empty." xml:space="preserve">
+    <value>Payment method (asset name) cannot be empty.</value>
+  </data>
+  <data name="Payment method cannot be empty." xml:space="preserve">
+    <value>Payment method cannot be empty.</value>
+  </data>
+  <data name="Post author (writer) cannot be empty." xml:space="preserve">
+    <value>Post author (writer) cannot be empty.</value>
+  </data>
+  <data name="Post content must be {0} characters or fewer." xml:space="preserve">
+    <value>Post content must be {0} characters or fewer.</value>
+  </data>
+  <data name="Post is already deleted." xml:space="preserve">
+    <value>Post is already deleted.</value>
+  </data>
+  <data name="Post title cannot be empty." xml:space="preserve">
+    <value>Post title cannot be empty.</value>
+  </data>
+  <data name="Post title must be {0} characters or fewer." xml:space="preserve">
+    <value>Post title must be {0} characters or fewer.</value>
+  </data>
+  <data name="Product name cannot be empty." xml:space="preserve">
+    <value>Product name cannot be empty.</value>
+  </data>
+  <data name="Role must be either Admin or User." xml:space="preserve">
+    <value>Role must be either Admin or User.</value>
+  </data>
+  <data name="Sub expense category cannot be empty." xml:space="preserve">
+    <value>Sub expense category cannot be empty.</value>
+  </data>
+  <data name="Sub income category cannot be empty." xml:space="preserve">
+    <value>Sub income category cannot be empty.</value>
+  </data>
+  <data name="Sub-category name cannot be empty." xml:space="preserve">
+    <value>Sub-category name cannot be empty.</value>
+  </data>
+  <data name="Time-zone ID cannot be empty." xml:space="preserve">
+    <value>Time-zone ID cannot be empty.</value>
+  </data>
+  <data name="Unknown expenditure main class." xml:space="preserve">
+    <value>Unknown expenditure main class.</value>
+  </data>
+  <data name="Unknown income main class." xml:space="preserve">
+    <value>Unknown income main class.</value>
+  </data>
+  <data name="You do not have permission to write a comment." xml:space="preserve">
+    <value>You do not have permission to write a comment.</value>
+  </data>
+  <data name="Your Account is Deleted. Please contact the administrator." xml:space="preserve">
+    <value>Your Account is Deleted. Please contact the administrator.</value>
+  </data>
+  <data name="Your Account is Locked, Please reset your password by clicking Forgot password Button" xml:space="preserve">
+    <value>Your Account is Locked, Please reset your password by clicking Forgot password Button</value>
+  </data>
+  <data name="invalid-image" xml:space="preserve">
+    <value>invalid-image</value>
+  </data>
+  <data name="reset-password-invalid" xml:space="preserve">
+    <value>reset-password-invalid</value>
+  </data>
+  <data name="svg-not-allowed" xml:space="preserve">
+    <value>svg-not-allowed</value>
+  </data>
+  <data name="Comment must be {0} characters or fewer." xml:space="preserve">
+    <value>Comment must be {0} characters or fewer.</value>
+  </data>
+  <data name="File name must be {0} characters or fewer." xml:space="preserve">
+    <value>File name must be {0} characters or fewer.</value>
+  </data>
+  <data name="File extension must be {0} characters or fewer." xml:space="preserve">
+    <value>File extension must be {0} characters or fewer.</value>
+  </data>
+  <data name="File storage path must be {0} characters or fewer." xml:space="preserve">
+    <value>File storage path must be {0} characters or fewer.</value>
+  </data>
+</root>

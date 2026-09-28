@@ -7,6 +7,10 @@
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
     <DockerServiceUrl>{Scheme}://localhost:{ServicePort}</DockerServiceUrl>
     <DockerServiceName>maroik.website</DockerServiceName>
-    <DockerComposeBaseFilePath>docker-compose</DockerComposeBaseFilePath>
+    <DockerComposeBaseFilePath>docker-compose.debug</DockerComposeBaseFilePath>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="docker-compose.debug.yml" />
+    <None Include=".dockerignore" />
+  </ItemGroup>
 </Project>

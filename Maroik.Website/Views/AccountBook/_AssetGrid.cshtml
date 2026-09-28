@@ -1,0 +1,39 @@
+﻿@*
+    AccountBook/_AssetGrid.cshtml
+    NonFactors MVC Grid partial for the asset list.
+    Renders a filterable, sortable data table of AssetOutputViewModel records.
+    Each row is clickable to populate the edit form in the parent Asset.cshtml view.
+    Note: this partial should contain only the grid declaration (NonFactors constraint).
+*@
+@model IQueryable<Maroik.Website.Models.ViewModels.AccountBook.AssetOutputViewModel>
+
+@* Should only include grid declaration *@
+
+@(Html
+    .Grid(Model)
+    .Build(columns =>
+    {
+        columns.Add(model => model.ProductName).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.AssetOutputViewModel.ProductName)]);
+        columns.Add(model => model.Item).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.AssetOutputViewModel.Item)]);
+        columns.Add(model => model.Amount).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.AssetOutputViewModel.Amount)]).Formatted("{0:0.##}");
+        columns.Add(model => model.MonetaryUnit).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.AssetOutputViewModel.MonetaryUnit)]);
+        columns.Add(model => model.Created).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.AssetOutputViewModel.Created)]);
+        columns.Add(model => model.Updated).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.AssetOutputViewModel.Updated)]);
+        columns.Add(model => model.Note).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.AssetOutputViewModel.Note)]);
+        columns.Add(model => model.Deleted).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.AccountBook.AssetOutputViewModel.Deleted)]);
+    })
+    .Id("assetGrid")
+    .Css("table table-striped")
+    .AppendCss("table-hover")
+    //.Attributed(new { data_type = "individuals" })
+    .RowAttributed(model => new { @class = "table-inactive clsGridRow", data_productName = model.ProductName })
+    .Using(GridFilterMode.Row)
+    .Empty(Localizer["No data found"])
+    .Filterable()
+    .Sortable()
+    .Pageable(pager => {
+        pager.PageSizes = new Dictionary<int, string> { { 10, "10" }, { 25, "25" }, { 50, "50" }, {100, "100" } };
+        pager.ShowPageSizes = true;
+        pager.RowsPerPage = 10;
+    })
+)
