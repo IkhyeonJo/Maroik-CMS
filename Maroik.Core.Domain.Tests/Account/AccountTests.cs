@@ -489,6 +489,84 @@ public class AccountTests
         Assert.True(account.Deleted);
     }
 
+    // -- ReplaceUnconfirmedRegistration ---------------------------------------
+
+    /// <summary>
+    /// A re-registration of an unconfirmed account replaces the password, nickname, time zone,
+    /// terms flag and token with the latest registrant's values — nobody has proven they own the
+    /// address yet, so the first registrant has no claim to keep.
+    /// </summary>
+    [Fact]
+    public void ReplaceUnconfirmedRegistration_ReplacesTheCredentials_WhenUnconfirmed()
+    {
+        var account = ValidAccount(hashedPassword: "old-hash", nickname: "Squatter", timeZone: "UTC", agreedServiceTerms: false);
+        string oldStamp = account.SecurityStamp;
+        string newToken = GuidToken.Generate();
+
+        var result = account.ReplaceUnconfirmedRegistration("new-hash", "  Real   Owner ", "Asia/Seoul", newToken, agreedServiceTerms: true);
+
+        Assert.False(result.IsError);
+        Assert.Equal("new-hash", account.HashedPassword);
+        Assert.Equal("Real Owner", account.Nickname);
+        Assert.Equal("Asia/Seoul", account.TimeZone.Value);
+        Assert.Equal(newToken, account.RegistrationToken);
+        Assert.True(account.AgreedServiceTerms);
+        Assert.NotEqual(oldStamp, account.SecurityStamp);
+        Assert.False(account.EmailConfirmed);
+    }
+
+    /// <summary>The link mailed for the replaced registration can no longer confirm the account; the new one can.</summary>
+    [Fact]
+    public void ReplaceUnconfirmedRegistration_InvalidatesThePreviouslyMailedToken()
+    {
+        string oldToken = GuidToken.Generate();
+        string newToken = GuidToken.Generate();
+        var account = ValidAccount(registrationToken: oldToken);
+
+        account.ReplaceUnconfirmedRegistration("new-hash", "Owner", "UTC", newToken, agreedServiceTerms: true);
+
+        Assert.True(account.ConfirmEmail(oldToken).IsError);
+        Assert.False(account.ConfirmEmail(newToken).IsError);
+    }
+
+    /// <summary>A confirmed account's credentials can never be replaced by a registration.</summary>
+    [Fact]
+    public void ReplaceUnconfirmedRegistration_ReturnsConflict_AndChangesNothing_WhenAlreadyConfirmed()
+    {
+        string token = GuidToken.Generate();
+        var account = ValidAccount(hashedPassword: "owner-hash", nickname: "Owner", registrationToken: token);
+        account.ConfirmEmail(token);
+
+        var result = account.ReplaceUnconfirmedRegistration("attacker-hash", "Attacker", "UTC", GuidToken.Generate(), agreedServiceTerms: true);
+
+        Assert.True(result.IsError);
+        Assert.Equal("Account.AlreadyConfirmed", result.FirstError.Code);
+        Assert.Equal("owner-hash", account.HashedPassword);
+        Assert.Equal("Owner", account.Nickname);
+        Assert.Null(account.RegistrationToken);
+    }
+
+    /// <summary>An invalid nickname, time zone or empty hash is refused and leaves the account untouched.</summary>
+    [Theory]
+    [InlineData("new-hash", "", "UTC", "Account.NicknameEmpty")]
+    [InlineData("new-hash", "admin", "UTC", "Account.NicknameReserved")]
+    [InlineData("new-hash", "Owner", "Not/AZone", "TimeZoneId.Invalid")]
+    [InlineData("", "Owner", "UTC", "Account.PasswordEmpty")]
+    public void ReplaceUnconfirmedRegistration_ReturnsError_AndChangesNothing_WhenInputIsInvalid(
+        string hashedPassword, string nickname, string timeZone, string expectedCode)
+    {
+        string token = GuidToken.Generate();
+        var account = ValidAccount(hashedPassword: "old-hash", nickname: "Squatter", registrationToken: token);
+
+        var result = account.ReplaceUnconfirmedRegistration(hashedPassword, nickname, timeZone, GuidToken.Generate(), agreedServiceTerms: true);
+
+        Assert.True(result.IsError);
+        Assert.Equal(expectedCode, result.FirstError.Code);
+        Assert.Equal("old-hash", account.HashedPassword);
+        Assert.Equal("Squatter", account.Nickname);
+        Assert.Equal(token, account.RegistrationToken);
+    }
+
     // -- RegenerateRegistrationTokenIfEmpty -----------------------------------
 
     /// <summary>Regenerate registration token if empty sets token, when current is null.</summary>

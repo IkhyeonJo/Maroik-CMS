@@ -32,6 +32,17 @@ public class AccountServiceTests
 
     private static readonly EmailTemplate _emailTemplate = new() { Subject = "subject", Title = "title", Content0 = "c0", Content1 = "c1" };
 
+    /// <summary>
+    /// The password the confirmation tests present with the mailed link. Every test accepts it as
+    /// the registration password unless it sets its own <see cref="IPasswordService.VerifyPassword"/>
+    /// expectation; login tests use other passwords, so this match never leaks into them.
+    /// </summary>
+    private const string ConfirmPassword = "Confirm-Pass1!";
+
+    /// <summary>Accepts <see cref="ConfirmPassword"/> as the registration password of every mocked account.</summary>
+    public AccountServiceTests() =>
+        _passwordService.Setup(p => p.VerifyPassword(ConfirmPassword, It.IsAny<string>())).Returns(true);
+
     private AccountService CreateSut() => new(
         _accountRepo.Object,
         _passwordService.Object,
@@ -548,18 +559,16 @@ public class AccountServiceTests
     {
         string token = GuidToken.Generate();
         var existing = ActiveAccount(emailConfirmed: false, registrationToken: token);
-        _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(existing);
-        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(existing);
-        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
         _rsa.Setup(r => r.Encrypt(It.IsAny<string>())).Returns("enc-token");
         SetupMailSuccess();
         var sut = CreateSut();
 
-        var request = new AccountRequest { Email = existing.Email.Value, HashedPassword = "pw" };
-        RegisterResult result = await sut.RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
+        RegisterResult result = await sut.RegisterAsync(NewRegistration(), _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.True(result.ShowResendEmail);
+        _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     /// <summary>Verifies that <c>RegisterAsync</c> returns fail when account already confirmed.</summary>
@@ -659,7 +668,7 @@ public class AccountServiceTests
         _rsa.Setup(r => r.Decrypt(It.IsAny<string>())).Throws(new Exception("bad cipher"));
         var sut = CreateSut();
 
-        ConfirmEmailResult result = await sut.ConfirmEmailAsync("bad-encrypted-token", TestContext.Current.CancellationToken);
+        ConfirmEmailResult result = await sut.ConfirmEmailAsync("bad-encrypted-token", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Assert.True(result.InvalidToken);
         Assert.False(result.AccountCreated);
@@ -674,7 +683,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
         var sut = CreateSut();
 
-        ConfirmEmailResult result = await sut.ConfirmEmailAsync("enc", TestContext.Current.CancellationToken);
+        ConfirmEmailResult result = await sut.ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Assert.True(result.InvalidToken);
         Assert.False(result.AccountCreated);
@@ -690,7 +699,7 @@ public class AccountServiceTests
             .ReturnsAsync(ActiveAccount());
         var sut = CreateSut();
 
-        ConfirmEmailResult result = await sut.ConfirmEmailAsync("enc-expired", TestContext.Current.CancellationToken);
+        ConfirmEmailResult result = await sut.ConfirmEmailAsync("enc-expired", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Assert.True(result.InvalidToken);
         Assert.False(result.AccountCreated);
@@ -710,7 +719,7 @@ public class AccountServiceTests
             .ReturnsAsync(1);
         var sut = CreateSut();
 
-        ConfirmEmailResult result = await sut.ConfirmEmailAsync("enc", TestContext.Current.CancellationToken);
+        ConfirmEmailResult result = await sut.ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Assert.False(result.InvalidToken);
         Assert.True(result.AccountCreated);
@@ -739,7 +748,7 @@ public class AccountServiceTests
             .ReturnsAsync(0);
         var sut = CreateSut();
 
-        ConfirmEmailResult result = await sut.ConfirmEmailAsync("enc", TestContext.Current.CancellationToken);
+        ConfirmEmailResult result = await sut.ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Assert.True(result.InvalidToken);
         Assert.False(result.AccountCreated);
@@ -764,7 +773,7 @@ public class AccountServiceTests
             .ReturnsAsync(1);
         var sut = CreateSut();
 
-        await sut.ConfirmEmailAsync("enc", TestContext.Current.CancellationToken);
+        await sut.ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
 
         _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -782,7 +791,7 @@ public class AccountServiceTests
             .ReturnsAsync(1);
         var sut = CreateSut();
 
-        ConfirmEmailResult result = await sut.ConfirmEmailAsync("enc", TestContext.Current.CancellationToken);
+        ConfirmEmailResult result = await sut.ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Assert.False(result.InvalidToken);
         Assert.False(result.AccountCreated);
@@ -1024,10 +1033,13 @@ public class AccountServiceTests
         RegistrationToken = GuidToken.Generate()
     };
 
+    private const string ReplacementHash = "$2a$13$replacement";
+
     private void SetupUnconfirmedAccountForRegister(Account existing, Account? lockedRead)
     {
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(lockedRead);
+        _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns(ReplacementHash);
     }
 
     /// <summary>Verifies that <c>GetAllAccountsAsync</c> maps every repository row.</summary>
@@ -1146,13 +1158,13 @@ public class AccountServiceTests
             It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
-    /// <summary>A failing token write under the lock releases it and propagates instead of mailing a dead link.</summary>
+    /// <summary>A failing write of the replaced registration under the lock releases it and propagates instead of mailing a dead link.</summary>
     [Fact]
-    public async Task RegisterAsync_Unconfirmed_RollsBackAndRethrows_WhenPersistingTheTokenFails()
+    public async Task RegisterAsync_Unconfirmed_RollsBackAndRethrows_WhenPersistingTheReplacementFails()
     {
         var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
         SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
-        _accountRepo.Setup(r => r.UpdateRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("db down"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -1160,6 +1172,111 @@ public class AccountServiceTests
 
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Pre-hijacking guard: re-registering an address nobody has confirmed replaces the earlier
+    /// registrant's password, nickname and time zone with the new submission and issues a fresh
+    /// token, so the confirmation mail the owner receives activates the owner's credentials.
+    /// </summary>
+    [Fact]
+    public async Task RegisterAsync_Unconfirmed_ReplacesTheEarlierRegistrantsCredentials()
+    {
+        string squatterToken = GuidToken.Generate();
+        var existing = ActiveAccount(emailConfirmed: false, registrationToken: squatterToken); // nickname "User", time zone "UTC"
+        SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
+        _rsa.Setup(r => r.Encrypt(It.IsAny<string>())).Returns("enc-token");
+        SetupMailSuccess();
+        Account? saved = null;
+        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()))
+            .Callback<Account, CancellationToken>((a, _) => saved = a).Returns(Task.CompletedTask);
+
+        var request = NewRegistration(nickname: "Owner", password: "OwnerPass1!");
+        request.TimeZoneIanaId = "Asia/Seoul";
+        RegisterResult result = await CreateSut().RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _passwordService.Verify(p => p.HashPassword("OwnerPass1!"), Times.Once);
+        Assert.NotNull(saved);
+        Assert.Equal(ReplacementHash, saved.HashedPassword);
+        Assert.Equal("Owner", saved.Nickname);
+        Assert.Equal("Asia/Seoul", saved.TimeZone.Value);
+        Assert.NotEqual(squatterToken, saved.RegistrationToken);
+        Assert.True(GuidToken.IsTokenAlive(saved.RegistrationToken!));
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>Re-registering with a nickname another account already holds is refused before anything is written or mailed.</summary>
+    [Fact]
+    public async Task RegisterAsync_Unconfirmed_ReturnsNicknameConflict_WhenAnotherAccountHoldsTheNickname()
+    {
+        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
+        _accountRepo.Setup(r => r.NicknameExistsIgnoreCaseAsync("Taken", It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        RegisterResult result = await CreateSut().RegisterAsync(NewRegistration(nickname: "Taken"), _emailTemplate, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Success);
+        Assert.Equal("'{0}' is a Nickname that already exists. Please enter another Nickname.", result.ErrorKey);
+        Assert.Equal(["Taken"], result.ErrorArgs);
+        _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// The account's own current nickname is not a conflict: keeping it (or changing only its case)
+    /// must not be refused by the uniqueness check that the account itself would trip.
+    /// </summary>
+    [Fact]
+    public async Task RegisterAsync_Unconfirmed_KeepsItsOwnNickname_WithoutAConflictCheck()
+    {
+        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate()); // nickname "User"
+        SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
+        _accountRepo.Setup(r => r.NicknameExistsIgnoreCaseAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _rsa.Setup(r => r.Encrypt(It.IsAny<string>())).Returns("enc-token");
+        SetupMailSuccess();
+
+        RegisterResult result = await CreateSut().RegisterAsync(NewRegistration(nickname: "user"), _emailTemplate, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal("user", existing.Nickname);
+        _accountRepo.Verify(r => r.NicknameExistsIgnoreCaseAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A concurrent registration taking the same nickname surfaces at commit as the unique index; it is reported as a nickname conflict.</summary>
+    [Fact]
+    public async Task RegisterAsync_Unconfirmed_ReturnsNicknameConflict_WhenTheUniqueIndexRacesAtCommit()
+    {
+        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
+        _unitOfWork.Setup(u => u.CommitAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("duplicate key", new Exception("23505: duplicate key value violates unique constraint \"Account_unique_index_0\"")));
+
+        RegisterResult result = await CreateSut().RegisterAsync(NewRegistration(nickname: "Racer"), _emailTemplate, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Success);
+        Assert.Equal("'{0}' is a Nickname that already exists. Please enter another Nickname.", result.ErrorKey);
+        Assert.Equal(["Racer"], result.ErrorArgs);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A weak password or an invalid nickname is refused before hashing or taking the row lock.</summary>
+    [Theory]
+    [InlineData("TestUser", "weak")]
+    [InlineData("admin", "PlainPass1!")]
+    public async Task RegisterAsync_Unconfirmed_RefusesInvalidInput_BeforeHashingOrLocking(string nickname, string password)
+    {
+        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
+
+        RegisterResult result = await CreateSut().RegisterAsync(NewRegistration(nickname, password), _emailTemplate, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Success);
+        _passwordService.Verify(p => p.HashPassword(It.IsAny<string>()), Times.Never);
+        _accountRepo.Verify(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     /// <summary>A failure while reconciling a confirmed account's status is logged and reported as a status error.</summary>
@@ -1302,6 +1419,90 @@ public class AccountServiceTests
         Assert.Equal("Error occurred while processing about sending account authentication mail", result.ErrorKey);
     }
 
+    // -- ConfirmEmailAsync: registration password -------------------------------
+
+    /// <summary>
+    /// The link alone does not activate the account: a password that does not match the one chosen at
+    /// registration leaves it unconfirmed, keeps the token for a retry, and writes nothing.
+    /// </summary>
+    [Fact]
+    public async Task ConfirmEmailAsync_ReturnsWrongPassword_AndConfirmsNothing_WhenThePasswordDoesNotMatch()
+    {
+        string token = GuidToken.Generate();
+        var account = ActiveAccount(emailConfirmed: false, registrationToken: token);
+        SetupConfirmLookup(account, account, token);
+        _passwordService.Setup(p => p.VerifyPassword("Not-The-Password1!", account.HashedPassword)).Returns(false);
+
+        ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", "Not-The-Password1!", TestContext.Current.CancellationToken);
+
+        Assert.True(result.WrongPassword);
+        Assert.False(result.InvalidToken);
+        Assert.False(result.AccountCreated);
+        Assert.Equal("enc", result.RegistrationToken);
+        Assert.False(account.EmailConfirmed);
+        _accountRepo.Verify(r => r.UpdateEmailConfirmationAsync(
+            It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>The registration password is checked against the locked row's hash — the credentials actually being activated.</summary>
+    [Fact]
+    public async Task ConfirmEmailAsync_ChecksThePasswordAgainstTheLockedRow()
+    {
+        string token = GuidToken.Generate();
+        var account = ActiveAccount(emailConfirmed: false, registrationToken: token);
+        SetupConfirmLookup(account, account, token);
+        _accountRepo.Setup(r => r.UpdateEmailConfirmationAsync(
+                It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
+
+        Assert.True(result.AccountCreated);
+        _passwordService.Verify(p => p.VerifyPassword(ConfirmPassword, account.HashedPassword), Times.Once);
+    }
+
+    // -- ValidateRegistrationTokenAsync --------------------------------------------
+
+    /// <summary>A live link for an unconfirmed account shows the password form (its token is echoed back) and changes nothing.</summary>
+    [Fact]
+    public async Task ValidateRegistrationTokenAsync_ReturnsTheTokenForTheForm_WhenTheLinkIsLive()
+    {
+        string token = GuidToken.Generate();
+        _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
+        _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(token, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ActiveAccount(emailConfirmed: false, registrationToken: token));
+
+        ConfirmEmailResult result = await CreateSut().ValidateRegistrationTokenAsync("enc", TestContext.Current.CancellationToken);
+
+        Assert.False(result.InvalidToken);
+        Assert.False(result.AccountCreated);
+        Assert.Equal("enc", result.RegistrationToken);
+        _unitOfWork.VerifyNoOtherCalls();
+    }
+
+    /// <summary>An undecryptable, unknown or expired link is invalid and shows no form.</summary>
+    [Theory]
+    [InlineData("undecryptable")]
+    [InlineData("unknown")]
+    [InlineData("expired")]
+    public async Task ValidateRegistrationTokenAsync_ReturnsInvalidToken_WhenTheLinkIsDead(string kind)
+    {
+        string token = kind == "expired" ? BuildExpiredToken() : GuidToken.Generate();
+        if (kind == "undecryptable")
+            _rsa.Setup(r => r.Decrypt("enc")).Throws(new FormatException("bad cipher"));
+        else
+            _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
+        _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(token, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(kind == "unknown" ? null : ActiveAccount(emailConfirmed: false, registrationToken: token));
+
+        ConfirmEmailResult result = await CreateSut().ValidateRegistrationTokenAsync("enc", TestContext.Current.CancellationToken);
+
+        Assert.True(result.InvalidToken);
+        Assert.False(result.AccountCreated);
+        Assert.Null(result.RegistrationToken);
+    }
+
     // -- ConfirmEmailAsync: locked re-read branches ------------------------------
 
     private void SetupConfirmLookup(Account found, Account? locked, string rawToken)
@@ -1318,7 +1519,7 @@ public class AccountServiceTests
         string token = GuidToken.Generate();
         SetupConfirmLookup(ActiveAccount(emailConfirmed: false, registrationToken: token), locked: null, token);
 
-        ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", TestContext.Current.CancellationToken);
+        ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Assert.True(result.InvalidToken);
         Assert.False(result.AccountCreated);
@@ -1334,7 +1535,7 @@ public class AccountServiceTests
         var superseded = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
         SetupConfirmLookup(stale, superseded, token);
 
-        ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", TestContext.Current.CancellationToken);
+        ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Assert.True(result.InvalidToken);
         Assert.True(result.AccountCreated);
@@ -1353,7 +1554,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.UpdateMessageAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("db down"));
 
-        ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", TestContext.Current.CancellationToken);
+        ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Assert.False(result.InvalidToken);
         Assert.False(result.AccountCreated);
@@ -1372,7 +1573,7 @@ public class AccountServiceTests
                 It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("db down"));
 
-        ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", TestContext.Current.CancellationToken);
+        ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Assert.True(result.InvalidToken);
         Assert.True(result.AccountCreated);
@@ -1391,7 +1592,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("db down"));
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => CreateSut().ConfirmEmailAsync("enc", TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => CreateSut().ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken));
 
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

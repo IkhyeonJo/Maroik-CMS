@@ -194,17 +194,50 @@ public class AccountController(
     #endregion
 
     #region ConfirmEmail
-    /// <summary>Validates the email-confirmation token from the registration link and activates the account.</summary>
+    /// <summary>
+    /// Opens the link mailed after registration. A live link shows a form asking for the password
+    /// chosen at registration; opening the link alone activates nothing.
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> ConfirmEmail(string registrationToken, CancellationToken ct)
     {
-        var result = await accountService.ConfirmEmailAsync(registrationToken, ct);
+        var result = await accountService.ValidateRegistrationTokenAsync(registrationToken, ct);
 
-        if (!string.IsNullOrEmpty(result.ErrorKey))
+        ViewBag.InvalidToken = result.InvalidToken;
+        ViewBag.AccountCreated = result.AccountCreated;
+        ViewBag.RegistrationToken = result.RegistrationToken;
+        return View();
+    }
+
+    /// <summary>
+    /// Activates the account when the mailed link and the registration password are presented
+    /// together, so an address someone else pre-registered is never activated with their password.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmEmail(LoginInputViewModel loginInputViewModel, CancellationToken ct)
+    {
+        _ = ModelState.Remove(nameof(loginInputViewModel.Email));
+        _ = ModelState.Remove(nameof(loginInputViewModel.Nickname));
+
+        if (!ModelState.IsValid)
+        {
+            // Re-render the form with the token; ModelState carries the field errors.
+            ViewBag.RegistrationToken = loginInputViewModel.RegistrationToken;
+            return View();
+        }
+
+        var result = await accountService.ConfirmEmailAsync(
+            loginInputViewModel.RegistrationToken ?? "", loginInputViewModel.Password ?? "", ct);
+
+        if (result.WrongPassword)
+            TempData["Error"] = localizer["The password does not match the one you registered with."].Value;
+        else if (!string.IsNullOrEmpty(result.ErrorKey))
             TempData["Error"] = localizer[result.ErrorKey].Value;
 
         ViewBag.InvalidToken = result.InvalidToken;
         ViewBag.AccountCreated = result.AccountCreated;
+        ViewBag.RegistrationToken = result.RegistrationToken;
         return View();
     }
     #endregion

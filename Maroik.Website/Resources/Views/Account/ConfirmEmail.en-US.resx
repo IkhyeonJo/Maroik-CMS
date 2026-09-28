@@ -150,4 +150,13 @@
   <data name="Your account has been successfully created" xml:space="preserve">
     <value>Your account has been successfully created</value>
   </data>
+  <data name="Enter the password you chose when signing up to activate your account." xml:space="preserve">
+    <value>Enter the password you chose when signing up to activate your account.</value>
+  </data>
+  <data name="Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Activate account" xml:space="preserve">
+    <value>Activate account</value>
+  </data>
 </root>

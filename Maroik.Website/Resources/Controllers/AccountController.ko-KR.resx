@@ -249,4 +249,7 @@
   <data name="reset-password-invalid" xml:space="preserve">
     <value>비밀번호 재설정 요청이 유효하지 않습니다.</value>
   </data>
+  <data name="The password does not match the one you registered with." xml:space="preserve">
+    <value>회원가입 때 입력한 비밀번호와 일치하지 않습니다. 이 비밀번호로 가입하지 않으셨다면 다시 회원가입해주십시오.</value>
+  </data>
 </root>

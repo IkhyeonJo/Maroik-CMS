@@ -42,6 +42,9 @@ public class LoginInputViewModel
     /// <summary>One-time token sent via email for the password-reset flow.</summary>
     public string? ResetPasswordToken { get; set; }
 
+    /// <summary>Encrypted token from the confirmation link, posted back with the registration password to activate the account.</summary>
+    public string? RegistrationToken { get; set; }
+
     /// <summary>Locale/culture string (e.g. "en-US") selected by the user on the login page.</summary>
     public string? Culture { get; set; }
 
