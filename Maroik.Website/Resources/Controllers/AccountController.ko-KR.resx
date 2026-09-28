@@ -126,8 +126,8 @@
   <data name="Click the link below to reset your password" xml:space="preserve">
     <value>비밀번호 초기화하기 위해 아래의 링크를 클릭해주세요.</value>
   </data>
-  <data name="Click the link below to verify your Email" xml:space="preserve">
-    <value>이메일 검증을 위해 아래의 링크를 클릭해주십시오.</value>
+  <data name="Click the link below, then enter the password you chose when signing up to verify your Email" xml:space="preserve">
+    <value>아래 링크를 연 뒤, 회원가입 때 입력한 비밀번호를 입력하여 이메일을 인증해주십시오.</value>
   </data>
   <data name="Email or Password is wrong" xml:space="preserve">
     <value>이메일이나 비밀번호가 틀렸습니다.</value>

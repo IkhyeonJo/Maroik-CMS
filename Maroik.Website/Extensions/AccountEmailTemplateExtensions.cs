@@ -17,7 +17,7 @@ public static class AccountEmailTemplateExtensions
         {
             Subject = localizer["Maroik Email Confirmation"].Value,
             Title = localizer["Welcome to Maroik"].Value,
-            Content0 = localizer["Click the link below to verify your Email"].Value,
+            Content0 = localizer["Click the link below, then enter the password you chose when signing up to verify your Email"].Value,
             Content1 = localizer["If this link does not work, please copy & paste this link to your Internet URL"].Value
         };
 
