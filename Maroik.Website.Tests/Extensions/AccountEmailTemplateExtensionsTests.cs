@@ -31,7 +31,7 @@ public class AccountEmailTemplateExtensionsTests
 
         Assert.Equal("Maroik Email Confirmation", template.Subject);
         Assert.Equal("Welcome to Maroik", template.Title);
-        Assert.Equal("Click the link below to verify your Email", template.Content0);
+        Assert.Equal("Click the link below, then enter the password you chose when signing up to verify your Email", template.Content0);
         Assert.Equal("If this link does not work, please copy & paste this link to your Internet URL", template.Content1);
     }
 

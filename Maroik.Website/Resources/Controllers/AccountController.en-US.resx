@@ -126,8 +126,8 @@
   <data name="Click the link below to reset your password" xml:space="preserve">
     <value>Click the link below to reset your password</value>
   </data>
-  <data name="Click the link below to verify your Email" xml:space="preserve">
-    <value>Click the link below to verify your Email</value>
+  <data name="Click the link below, then enter the password you chose when signing up to verify your Email" xml:space="preserve">
+    <value>Click the link below, then enter the password you chose when signing up to verify your Email</value>
   </data>
   <data name="Email or Password is wrong" xml:space="preserve">
     <value>Email or Password is wrong</value>
