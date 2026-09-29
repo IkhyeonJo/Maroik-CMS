@@ -13,8 +13,10 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class NoticeControllerTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
+    /// <summary>Signs in as a User and sends a GET to <paramref name="url"/> with the session cookie.</summary>
     private async Task<HttpResponseMessage> GetAsUserAsync(string url)
     {
         var session = await AuthenticatedSessionHelper.LoginAsync(

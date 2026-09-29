@@ -11,6 +11,7 @@ namespace Maroik.Website.Tests.Mappings;
 /// </summary>
 public class ManagementViewModelMapperTests
 {
+    /// <summary>An admin account view created/updated at the given UTC times.</summary>
     private static AdminAccountResponse SampleAccount(DateTime created, DateTime updated) => new()
     {
         Email = "user@example.com",

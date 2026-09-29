@@ -18,15 +18,25 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class CalendarServiceTests
 {
+    /// <summary>Mock <c>ICalendarRepository</c> injected into the system under test.</summary>
     private readonly Mock<ICalendarRepository> _calendarRepo = new();
+    /// <summary>Mock <c>ICalendarEventRepository</c> injected into the system under test.</summary>
     private readonly Mock<ICalendarEventRepository> _eventRepo = new();
+    /// <summary>Mock <c>ICalendarEventAttachedFileRepository</c> injected into the system under test.</summary>
     private readonly Mock<ICalendarEventAttachedFileRepository> _eventFileRepo = new();
+    /// <summary>Mock <c>ICalendarEventReminderRepository</c> injected into the system under test.</summary>
     private readonly Mock<ICalendarEventReminderRepository> _reminderRepo = new();
+    /// <summary>Mock <c>ICalendarSharedRepository</c> injected into the system under test.</summary>
     private readonly Mock<ICalendarSharedRepository> _sharedRepo = new();
+    /// <summary>Mock <c>IOtherCalendarRepository</c> injected into the system under test.</summary>
     private readonly Mock<IOtherCalendarRepository> _otherCalendarRepo = new();
+    /// <summary>Mock <c>IFileClient</c> injected into the system under test.</summary>
     private readonly Mock<IFileClient> _fileClient = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Mock <c>IAttachmentContentService</c> injected into the system under test.</summary>
     private readonly Mock<IAttachmentContentService> _attachmentContent = new();
+    /// <summary>Settings with a fake file-storage URL.</summary>
     private readonly IOptions<ServerSetting> _settings =
         Options.Create(new ServerSetting { FileStorageBaseUrl = "https://files.example.com" });
 
@@ -39,6 +49,7 @@ public class CalendarServiceTests
         _unitOfWork.Setup(u => u.DisposeAsync()).Returns(ValueTask.CompletedTask);
     }
 
+    /// <summary>The service under test over the mocked dependencies.</summary>
     private CalendarService CreateSut() => new(
         _calendarRepo.Object,
         _eventRepo.Object,
@@ -54,6 +65,7 @@ public class CalendarServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A persisted calendar owned by <paramref name="email"/>.</summary>
     private static Calendar MakeCalendar(long id = 1, string name = "MyCalendar", string email = "user@example.com") =>
         Calendar.Reconstitute(
             id: id,
@@ -65,6 +77,7 @@ public class CalendarServiceTests
             created: DateTime.UtcNow,
             updated: DateTime.UtcNow);
 
+    /// <summary>A persisted event in calendar <paramref name="calendarId"/>.</summary>
     private static CalendarEvent MakeCalendarEvent(long id = 1, long calendarId = 1, string title = "Event") =>
         CalendarEvent.Reconstitute(
             id: id,
@@ -955,7 +968,7 @@ public class CalendarServiceTests
 
     /// <summary>
     /// Verifies the ownership fix: submitting a <see cref="CalendarSharedRequest"/> for a calendar
-    /// not owned by <paramref name="email"/> is rejected instead of silently updating it, which
+    /// not owned by the calling account is rejected instead of silently updating it, which
     /// previously let one admin change another admin's calendar's sharing (public/anonymous
     /// visibility) by supplying an arbitrary <c>CalendarId</c>.
     /// </summary>
@@ -1080,6 +1093,7 @@ public class CalendarServiceTests
 
     // -- EnsureCalendarSharedAsync: races and failures ---------------------------
 
+    /// <summary>An exception whose message looks like a PostgreSQL unique violation on the <c>CalendarShared</c> primary key.</summary>
     private static Exception SharedPkViolation() =>
         new("23505: duplicate key value violates unique constraint \"CalendarShared_pk\"");
 

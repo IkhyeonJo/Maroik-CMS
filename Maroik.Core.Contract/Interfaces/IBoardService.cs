@@ -60,10 +60,11 @@ public interface IBoardService
     Task<ServiceResult> WriteBoardAsync(BoardRequest request, bool isAdmin, AttachedFileDto? attachedFile, CancellationToken ct = default);
 
     /// <summary>
-    /// Edits an existing post. Only the original author (matched by <paramref name="writerNickname"/>) may edit.
-    /// Replaces the attached file if <paramref name="newFile"/> is provided.
-    /// The editor may raise the post's lock via <see cref="BoardRequest.Locked"/>, but only an
-    /// <paramref name="isAdmin"/> editor may clear an existing lock.
+    /// Edits an existing post. Only the original author (matched by <paramref name="writerNickname"/>) may edit
+    /// its title and content, and may set or clear its lock via <see cref="BoardRequest.Locked"/>. An
+    /// <paramref name="isAdmin"/> requester who is not the author may only clear an existing lock (title
+    /// and content stay untouched). Replaces the attached file if <paramref name="newFile"/> is provided and
+    /// clears it when it is not.
     /// </summary>
     Task<ServiceResult> EditBoardAsync(BoardRequest request, string writerNickname, bool isAdmin, AttachedFileDto? newFile, CancellationToken ct = default);
 
@@ -107,9 +108,10 @@ public interface IBoardService
 
     /// <summary>
     /// Prepares HTML content for display by downloading each inline Summernote image,
-    /// embedding it as Base64 in <c>data-file</c> / <c>data-contentType</c> attributes,
-    /// and replacing the stored file path in <c>alt</c> with its RSA-encrypted form.
-    /// Returns the transformed HTML and a flag indicating whether any images were present.
+    /// embedding it as Base64 in <c>data-file</c> / <c>data-contenttype</c> attributes,
+    /// and replacing the stored file path in <c>alt</c> with its RSA-encrypted form (an image that
+    /// cannot be downloaded is removed). Returns the transformed HTML and a flag indicating whether
+    /// any images were present.
     /// </summary>
     Task<(string Html, bool HasImages)> PrepareHtmlForDisplayAsync(string html, CancellationToken ct = default);
 }

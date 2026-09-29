@@ -56,7 +56,8 @@ public class AttachmentContentService(
 
         // Use a GUID-based file name to avoid collisions and prevent path traversal via the original name.
         string imageFile = $"{Guid.NewGuid():N}{ext}";
-        string filePath = Path.Combine("upload", area, subArea, "summernote", "images", imageFile);
+        // A storage key, not a local path: always "/"-separated, whatever OS this runs on.
+        string filePath = $"upload/{area}/{subArea}/summernote/images/{imageFile}";
 
         bool uploaded = await fileClient.UploadAsync(file.Bytes, file.ContentType, filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
         if (!uploaded)
@@ -142,9 +143,10 @@ public class AttachmentContentService(
     /// <summary>
     /// An <c>&lt;img&gt;</c>'s <c>alt</c> is normally the RSA-OAEP token this service round-trips
     /// back to the real storage path. Returns the decrypted path, or <see langword="null"/> when
-    /// <paramref name="alt"/> is empty or not a valid token (<see cref="IRsaService.Decrypt"/> throws
-    /// FormatException / CryptographicException) — the guarded-decrypt shape the account-token flows
-    /// already use, so a forged post can't turn the save into an unhandled 500.
+    /// <paramref name="alt"/> is empty or not a valid token (<see cref="IRsaService.Decrypt"/> throws —
+    /// a CryptographicException for a malformed or undecryptable value; the failure is logged at
+    /// Warning) — the guarded-decrypt shape the account-token flows already use, so a forged post
+    /// can't turn the save into an unhandled 500.
     /// </summary>
     private string? TryDecryptImageAlt(string alt)
     {

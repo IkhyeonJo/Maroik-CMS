@@ -58,5 +58,6 @@ public partial class Income
     /// </summary>
     public string Note { get; set; } = null!;
 
+    /// <summary>The asset the income is deposited into; carries the amount's currency.</summary>
     public virtual Asset Asset { get; set; } = null!;
 }

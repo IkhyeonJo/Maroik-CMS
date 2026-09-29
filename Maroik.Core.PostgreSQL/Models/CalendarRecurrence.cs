@@ -58,5 +58,6 @@ public partial class CalendarRecurrence
     /// </summary>
     public DateTime Updated { get; set; }
 
+    /// <summary>Events that repeat by this rule.</summary>
     public virtual ICollection<CalendarEvent> CalendarEvents { get; set; } = new List<CalendarEvent>();
 }

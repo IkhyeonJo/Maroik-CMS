@@ -17,6 +17,7 @@ public sealed class Email : ValueObject
     /// <summary>Longest address the persisted <c>character varying(255)</c> e-mail columns accept.</summary>
     public const int MaxLength = ShortTextPolicy.MaxLength;
 
+    /// <summary>Wraps an already-normalized address; reached only through the factories.</summary>
     private Email(string value) => Value = value;
 
     /// <summary>

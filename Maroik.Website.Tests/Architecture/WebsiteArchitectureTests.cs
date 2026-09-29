@@ -28,12 +28,18 @@ namespace Maroik.Website.Tests.Architecture;
 /// </summary>
 public class WebsiteArchitectureTests
 {
+    /// <summary>The assembly containing <c>ViewBagPopulatorFilter</c>, referenced by these architecture rules.</summary>
     private static readonly Assembly _websiteAssembly = typeof(ViewBagPopulatorFilter).Assembly;
+    /// <summary>The assembly containing <c>IAccountRepository</c>, referenced by these architecture rules.</summary>
     private static readonly Assembly _contractAssembly = typeof(IAccountRepository).Assembly;
 
+    /// <summary>Root namespace of the Repository layer.</summary>
     private const string RepositoryNamespace = "Maroik.Core.Repository";
+    /// <summary>Root namespace of the external-system clients.</summary>
     private const string ClientNamespace = "Maroik.Core.Client";
+    /// <summary>Root namespace of the Service layer.</summary>
     private const string ServiceNamespace = "Maroik.Core.Service";
+    /// <summary>Root namespace of the EF Core persistence model.</summary>
     private const string PostgreSqlNamespace = "Maroik.Core.PostgreSQL";
 
     /// <summary>

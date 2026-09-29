@@ -13,7 +13,7 @@ namespace Maroik.Website.Tests.Extensions;
 /// <see cref="object.ToString"/> is not overridden (it returns the CLR type name). Every controller
 /// in this codebase that renders a dynamic-value <c>ServiceResult</c> error currently calls
 /// <c>_localizer[key, args].Value</c>, so those messages render with an un-substituted <c>{0}</c> in
-/// production — <see cref="ToPlainString"/> should replace that call at each such call site, but that
+/// production — <see cref="LocalizedHtmlStringExtensions.ToPlainString"/> should replace that call at each such call site, but that
 /// wider rollout is a separate follow-up; only <c>ManagementController.CreateAccount</c>'s nickname-
 /// conflict path (which this extension unblocks) has been switched over so far.
 /// </para>

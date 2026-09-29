@@ -14,7 +14,9 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class FixedIncomeServiceTests
 {
+    /// <summary>Mock <c>IFixedIncomeRepository</c> injected into the system under test.</summary>
     private readonly Mock<IFixedIncomeRepository> _fixedIncomeRepo = new();
+    /// <summary>Mock <c>IAssetBalanceDomainService</c> injected into the system under test.</summary>
     private readonly Mock<IAssetBalanceDomainService> _assetBalance = new();
 
     /// <summary>Bridges the id-lookup and no-lock asset read the service now uses to the list-/lock-based
@@ -28,13 +30,16 @@ public class FixedIncomeServiceTests
             .Returns((string e, string p, CancellationToken c) => _assetBalance.Object.GetAssetAsync(e, p, c));
     }
 
+    /// <summary>The service under test over the mocked dependencies.</summary>
     private FixedIncomeService CreateSut() => new(_fixedIncomeRepo.Object, _assetBalance.Object);
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A persisted, active savings asset named <paramref name="name"/>.</summary>
     private static Asset MakeSavingsAsset(string name = "SavingsAccount", string currency = "KRW") =>
         Asset.Reconstitute(name, "user@example.com", "SavingsAsset", 0m, currency, null, false, DateTime.UtcNow, DateTime.UtcNow);
 
+    /// <summary>A valid fixed-income request with the given classes.</summary>
     private static FixedIncomeRequest ValidRequest(string mainClass = "RegularIncome", string subClass = "LaborIncome") => new()
     {
         MainClass = mainClass,
@@ -340,15 +345,19 @@ public class FixedIncomeServiceTests
 
     // -- Search / GetById -------------------------------------------------------
 
+    /// <summary>Owner e-mail used by the existing items and asset lookups.</summary>
     private const string Email = "user@example.com";
 
+    /// <summary>A persisted fixed income deposited into "SavingsAccount".</summary>
     private static FixedIncome ExistingIncome(long id = 1) =>
         FixedIncome.Reconstitute(id, Email, "RegularIncome", "LaborIncome", null, 500m, "KRW", "SavingsAccount",
             1, 15, new DateTime(2030, 12, 31), null, false, DateTime.UtcNow, DateTime.UtcNow);
 
+    /// <summary>A deleted (archived) savings asset named <paramref name="name"/>.</summary>
     private static Asset ArchivedAsset(string name = "SavingsAccount") =>
         Asset.Reconstitute(name, Email, "SavingsAsset", 0m, "KRW", null, true, DateTime.UtcNow, DateTime.UtcNow);
 
+    /// <summary>Sets <paramref name="r"/>'s id to 1 (an update request) and returns it.</summary>
     private static FixedIncomeRequest WithId(FixedIncomeRequest r) { r.Id = 1; return r; }
 
     /// <summary>The search is delegated to the repository and its rows are mapped to responses.</summary>

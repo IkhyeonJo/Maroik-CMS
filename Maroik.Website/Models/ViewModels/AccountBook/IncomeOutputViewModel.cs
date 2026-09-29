@@ -42,12 +42,12 @@ public class IncomeOutputViewModel
     [Display(Name = "DepositMyAssetProductName")]
     public string? DepositMyAssetProductName { get; set; }
 
-    /// <summary>UTC timestamp when the income was recorded.</summary>
+    /// <summary>When the income was recorded, converted to the viewer's time zone.</summary>
     [Required(ErrorMessage = "Please enter Created")]
     [Display(Name = "Created")]
     public DateTime Created { get; set; }
 
-    /// <summary>UTC timestamp of the most recent update to this income record.</summary>
+    /// <summary>When this income record was last updated, converted to the viewer's time zone.</summary>
     [Required(ErrorMessage = "Please enter Updated")]
     [Display(Name = "Updated")]
     public DateTime Updated { get; set; }

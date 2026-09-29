@@ -7,6 +7,7 @@ namespace Maroik.Core.Domain.Tests.Finance;
 /// </summary>
 public class ExpenditureTests
 {
+    /// <summary>A valid KRW lunch expenditure paid from "My Card".</summary>
     private static Expenditure ValidExpenditure() =>
         Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "Lunch", 15000m, "KRW", "My Card", null).Value;
 

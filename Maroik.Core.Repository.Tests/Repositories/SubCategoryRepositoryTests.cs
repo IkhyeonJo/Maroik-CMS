@@ -18,6 +18,7 @@ public sealed class SubCategoryRepositoryTests(DatabaseFixture database) : Repos
 {
     private SubCategoryRepository Sut => new(Context);
 
+    /// <summary>An unsaved sub-category row under category <paramref name="categoryId"/>, visible to <paramref name="role"/>.</summary>
     private static OrmSubCategory MakeSubCategory(long categoryId, string name, string role = Role.User, long order = 1) => new()
     {
         CategoryId = categoryId,
@@ -48,6 +49,7 @@ public sealed class SubCategoryRepositoryTests(DatabaseFixture database) : Repos
         return category.Id;
     }
 
+    /// <summary>Inserts <paramref name="items"/>, saves, and clears the change tracker so later reads hit the database.</summary>
     private async Task SeedAsync(params OrmSubCategory[] items)
     {
         await Context.SubCategories.AddRangeAsync(items);

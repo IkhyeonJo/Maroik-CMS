@@ -22,11 +22,14 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
     
+    /// <summary>Seeds (if missing) an account for <paramref name="email"/> with <paramref name="role"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsync(string email, string role = Role.User) =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", role, TestContext.Current.CancellationToken);
 
+    /// <summary>Inserts a calendar owned by <paramref name="ownerEmail"/> (optionally with one event and sharing flags) directly into the database and returns its id.</summary>
     private async Task<long> SeedCalendarAsync(string ownerEmail, string name, string? eventTitle = null, bool sharedToUsers = false, bool sharedToAnonymous = false)
     {
         using var scope = factory.Services.CreateScope();
@@ -54,6 +57,7 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
         return calendar.Id;
     }
 
+    /// <summary>Adds calendar <paramref name="calendarId"/> to the "other calendars" of <paramref name="subscriberEmail"/>.</summary>
     private async Task SubscribeAsync(string subscriberEmail, long calendarId)
     {
         using var scope = factory.Services.CreateScope();
@@ -62,6 +66,7 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
+    /// <summary>Posts <paramref name="body"/> as JSON to <paramref name="url"/>, asserts 200, and returns the response body.</summary>
     private async Task<string> PostJsonAsync(AuthenticatedSession session, string url, object? body = null)
     {
         using var request = session.BuildJsonPostRequest(url, body);
@@ -70,6 +75,7 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
         return await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
     }
 
+    /// <summary>A JSON body listing the calendars with the given ids (the other fields are placeholders).</summary>
     private static object CalendarsPayload(params long[] ids) => new { Calendars = ids.Select(id => new { Id = id, Name = "x", Description = "", TimeZoneIanaId = "UTC", HtmlColorCode = "#3788d8" }).ToArray() };
 
     // -- GetCalendarEvents ---------------------------------------------------------------------
@@ -300,6 +306,7 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
 
     // -- UploadImageFile: pre-upload validation ---------------------------------------------------------
 
+    /// <summary>Uploads an editor image to <c>/Calendar/UploadImageFile</c>, asserts 200, and returns the response body.</summary>
     private async Task<string> UploadAsync(AuthenticatedSession session, string fileName, byte[] bytes)
     {
         var form = new MultipartFormDataContent { { new ByteArrayContent(bytes), "summernoteImageFile", fileName } };

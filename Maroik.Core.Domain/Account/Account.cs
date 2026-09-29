@@ -444,21 +444,6 @@ public sealed class Account : AggregateRoot<string>
     }
 
     /// <summary>
-    /// Assigns a new registration token only when the current token is null or empty.
-    /// Used in the resend-confirmation flow when the original token was cleared.
-    /// </summary>
-    public void RegenerateRegistrationTokenIfEmpty(string newToken)
-    {
-        if (!string.IsNullOrEmpty(RegistrationToken))
-        {
-            return;
-        }
-
-        RegistrationToken = newToken;
-        Updated = DateTime.UtcNow;
-    }
-
-    /// <summary>
     /// Unconditionally replaces the registration token — the resend / re-register flow calls this
     /// when the stored token is missing <em>or expired</em>, so a stale, un-confirmable registration
     /// can always be recovered by requesting a fresh email. No-op once the email is confirmed
@@ -497,8 +482,9 @@ public sealed class Account : AggregateRoot<string>
     }
 
     /// <summary>
-    /// Admin-level composite update. Validates and replaces the time-zone;
-    /// resets the login counter whenever the account is unlocked.
+    /// Admin-level composite update. Validates and replaces the time-zone (a null one keeps the
+    /// current zone) and the role (null keeps it; otherwise Admin or User only); resets the login
+    /// counter whenever the account is unlocked.
     /// </summary>
     public ErrorOr<Success> AdminUpdate(
         string? role,

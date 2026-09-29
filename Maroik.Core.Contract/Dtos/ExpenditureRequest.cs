@@ -25,7 +25,7 @@ public class ExpenditureRequest
     /// <summary>Asset product name used as payment method (foreign key to Asset.ProductName).</summary>
     public string? PaymentMethod { get; set; }
 
-    /// <summary>Asset that was debited (same as PaymentMethod in most cases).</summary>
+    /// <summary>Asset credited by a transfer-type expenditure (must differ from <see cref="PaymentMethod"/>); ignored otherwise.</summary>
     public string? MyDepositAsset { get; set; }
 
     /// <summary>UTC timestamp when the expenditure occurred / was recorded.</summary>

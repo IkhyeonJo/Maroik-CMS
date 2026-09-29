@@ -8,6 +8,7 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class TimeZoneCatalogServiceTests
 {
+    /// <summary>The service under test.</summary>
     private static TimeZoneCatalogService CreateSut() => new();
 
     /// <summary>Get time zone options returns non empty list.</summary>

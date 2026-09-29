@@ -78,5 +78,6 @@ public partial class FixedIncome
     /// </summary>
     public bool Unpunctuality { get; set; }
 
+    /// <summary>The asset the income is deposited into; carries the amount's currency.</summary>
     public virtual Asset Asset { get; set; } = null!;
 }

@@ -19,6 +19,7 @@ public class WorkerHostTests(WorkerBrokerFixture broker) : IClassFixture<WorkerB
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
+    /// <summary>Command-line arguments pointing the worker host at <paramref name="rabbitMq"/> and a local SMTP relay (the database is an unused dummy).</summary>
     private static string[] Args(string rabbitMq, int smtpPort = 2525, string? smtpSsl = "false") =>
     [
         $"--ConnectionStrings:RabbitMQ={rabbitMq}",
@@ -137,6 +138,7 @@ public class WorkerHostTests(WorkerBrokerFixture broker) : IClassFixture<WorkerB
         Assert.Equal(0u, (await checkChannel.QueueDeclarePassiveAsync(QueueNames.Email, Ct)).MessageCount); // acked
     }
 
+    /// <summary>Declares both queues exactly as the worker does.</summary>
     private static async Task DeclareQueuesAsync(IChannel channel)
     {
         // the same declarations the worker makes (identical arguments, so this is accepted whichever side gets there first)
@@ -144,6 +146,7 @@ public class WorkerHostTests(WorkerBrokerFixture broker) : IClassFixture<WorkerB
         await channel.QueueDeclareAsync(QueueNames.Email, durable: true, exclusive: false, autoDelete: false, arguments: QueueNames.CreateEmailQueueArguments(), cancellationToken: Ct);
     }
 
+    /// <summary>Polls <paramref name="condition"/> every 100 ms; throws <see cref="TimeoutException"/> after 20 seconds.</summary>
     private static async Task WaitUntilAsync(Func<bool> condition)
     {
         for (var deadline = DateTime.UtcNow.AddSeconds(20); DateTime.UtcNow < deadline; await Task.Delay(100, Ct))

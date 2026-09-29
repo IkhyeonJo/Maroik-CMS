@@ -19,6 +19,7 @@ public sealed class E2EDatabase(string connectionString)
     /// <summary>The password every seeded account signs in with.</summary>
     private const string DefaultPassword = "E2ePassw0rd!";
 
+    /// <summary>A random 10-character key for building unique e-mails, nicknames and names.</summary>
     private static string NewKey() => Guid.NewGuid().ToString("N")[..10];
 
     /// <summary>
@@ -93,6 +94,7 @@ public sealed class E2EDatabase(string connectionString)
         return result is null or DBNull ? default : (T)Convert.ChangeType(result, Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T));
     }
 
+    /// <summary>A command for <paramref name="sql"/> with each named parameter bound (<see langword="null"/> as <c>DBNull</c>).</summary>
     private static NpgsqlCommand Build(NpgsqlConnection connection, string sql, (string Name, object? Value)[] parameters)
     {
         var command = new NpgsqlCommand(sql, connection);

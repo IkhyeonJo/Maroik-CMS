@@ -29,8 +29,9 @@ public interface IMailClient
     public string GetMailConfirmationBody(string registrationToken, string title, string content0, string content1, string domainName);
 
     /// <summary>
-    /// Sends an HTML email via SMTP. Returns a successful <see cref="ServiceResult"/>, or a failed one
-    /// carrying the exception message in <see cref="ServiceResult.ErrorKey"/>.
+    /// Sends an HTML email via SMTP. Returns a successful <see cref="ServiceResult"/>, or a
+    /// <see cref="ServiceErrorType.Failure"/> carrying a generic message (the exception itself is logged,
+    /// never returned, so SMTP server details cannot reach a caller).
     /// </summary>
     public Task<ServiceResult> SendMailAsync(string toEmail, string subject, string body, ServerSetting settings, CancellationToken ct = default);
 }

@@ -1,3 +1,5 @@
+using Maroik.Core.Domain.Account;
+
 namespace Maroik.Website.Constants;
 
 /// <summary>
@@ -6,7 +8,10 @@ namespace Maroik.Website.Constants;
 /// </summary>
 public static class ValidationMessages
 {
-    /// <summary>The password-complexity rule's message (the rule itself is <c>PasswordPolicy.Pattern</c> in the Domain).</summary>
-    public const string PasswordComplexity =
-        "Password must be at least 8 characters and contain at 3 of 4 of the following: upper case (A-Z), lower case (a-z), number (0-9) and special character (e.g. !@#$%^&*)";
+    /// <summary>
+    /// The password rule's message — the same text the services return
+    /// (<see cref="PasswordPolicy.ViolationMessage"/>), so the client-side and server-side rejections
+    /// read identically and share one resx entry per page.
+    /// </summary>
+    public const string PasswordComplexity = PasswordPolicy.ViolationMessage;
 }

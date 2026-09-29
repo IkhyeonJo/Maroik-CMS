@@ -7,9 +7,12 @@ namespace Maroik.Core.Domain.Tests.Calendar;
 /// </summary>
 public class CalendarEventTests
 {
+    /// <summary>Start of the event built by <see cref="ValidEvent"/>.</summary>
     private static readonly DateTime _start = new(2025, 6, 1, 9, 0, 0, DateTimeKind.Utc);
+    /// <summary>End of the event built by <see cref="ValidEvent"/> (one hour after <see cref="_start"/>).</summary>
     private static readonly DateTime _end = new(2025, 6, 1, 10, 0, 0, DateTimeKind.Utc);
 
+    /// <summary>A persisted one-hour UTC event titled "Team Meeting".</summary>
     private static CalendarEvent ValidEvent(long id = 1, long calendarId = 10) =>
         CalendarEvent.Reconstitute(id, calendarId, "Team Meeting", null, false, _start, _end, "UTC", "UTC", null, null, null, DateTime.UtcNow, DateTime.UtcNow);
 

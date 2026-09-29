@@ -14,7 +14,9 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class FixedExpenditureServiceTests
 {
+    /// <summary>Mock <c>IFixedExpenditureRepository</c> injected into the system under test.</summary>
     private readonly Mock<IFixedExpenditureRepository> _fixedExpenditureRepo = new();
+    /// <summary>Mock <c>IAssetBalanceDomainService</c> injected into the system under test.</summary>
     private readonly Mock<IAssetBalanceDomainService> _assetBalance = new();
 
     /// <summary>Bridges the id-lookup and no-lock asset read the service now uses to the list-/lock-based
@@ -28,15 +30,18 @@ public class FixedExpenditureServiceTests
             .Returns((string e, string p, CancellationToken c) => _assetBalance.Object.GetAssetAsync(e, p, c));
     }
 
+    /// <summary>The service under test over the mocked dependencies.</summary>
     private FixedExpenditureService CreateSut() => new(
         _fixedExpenditureRepo.Object,
         _assetBalance.Object);
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A persisted, active asset named <paramref name="name"/> in <paramref name="unit"/>.</summary>
     private static Asset MakeAsset(string name, string unit = "KRW") =>
         Asset.Reconstitute(name, "user@example.com", "FreeDepositAndWithdrawal", 1000m, unit, null, false, DateTime.UtcNow, DateTime.UtcNow);
 
+    /// <summary>A valid consumer-spending request (no deposit target).</summary>
     private static FixedExpenditureRequest ConsumerRequest() => new()
     {
         MainClass = "ConsumerSpending",
@@ -48,6 +53,7 @@ public class FixedExpenditureServiceTests
         MaturityDate = new DateTime(2030, 12, 31)
     };
 
+    /// <summary>A valid regular-savings request with a deposit target.</summary>
     private static FixedExpenditureRequest SavingsRequest() => new()
     {
         MainClass = "RegularSavings",
@@ -400,18 +406,22 @@ public class FixedExpenditureServiceTests
 
     // -- Search / GetById -------------------------------------------------------
 
+    /// <summary>Owner e-mail the asset lookups are keyed on.</summary>
     private const string Email = "user@example.com";
 
+    /// <summary>A persisted consumer-spending fixed expenditure paid from <paramref name="payment"/>.</summary>
     private static FixedExpenditure ExistingConsumer(long id = 1, string payment = "Wallet") =>
         FixedExpenditure.Reconstitute(id, Email, "ConsumerSpending", "MealOrEatOutExpenses", null, 100m, "KRW",
             payment, null, 1, 15, new DateTime(2030, 12, 31), null, false, DateTime.UtcNow, DateTime.UtcNow);
 
+    /// <summary>Makes the asset lookup return each of <paramref name="assets"/> by product name.</summary>
     private void GivenAssets(params Asset[] assets)
     {
         foreach (Asset a in assets)
             _assetBalance.Setup(r => r.GetAssetAsync(Email, a.ProductName, It.IsAny<CancellationToken>())).ReturnsAsync(a);
     }
 
+    /// <summary>A deleted (archived) asset named <paramref name="name"/>.</summary>
     private static Asset ArchivedAsset(string name) =>
         Asset.Reconstitute(name, Email, "FreeDepositAndWithdrawal", 1000m, "KRW", null, true, DateTime.UtcNow, DateTime.UtcNow);
 
@@ -479,6 +489,7 @@ public class FixedExpenditureServiceTests
 
     // -- UpdateAsync: asset rules ---------------------------------------------------
 
+    /// <summary>Sets <paramref name="r"/>'s id to 1 (an update request) and returns it.</summary>
     private static FixedExpenditureRequest WithId(FixedExpenditureRequest r) { r.Id = 1; return r; }
 
     /// <summary>An update naming an archived payment asset is refused before the record is looked up.</summary>

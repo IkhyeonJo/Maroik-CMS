@@ -9,6 +9,7 @@ namespace Maroik.Core.Domain.Tests.Finance;
 /// </summary>
 public class AssetTests
 {
+    /// <summary>Creates a valid asset; each argument can be overridden per test.</summary>
     private static Asset ValidAsset(
         string productName = "My Bank",
         string email = "user@example.com",

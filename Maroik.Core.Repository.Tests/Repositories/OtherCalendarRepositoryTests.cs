@@ -17,6 +17,7 @@ public sealed class OtherCalendarRepositoryTests(DatabaseFixture database) : Rep
 {
     private OtherCalendarRepository Sut => new(Context);
 
+    /// <summary>Ensures <paramref name="email"/> exists and subscribes it to each of <paramref name="calendarIds"/>.</summary>
     private async Task SeedAsync(string email, params long[] calendarIds)
     {
         await EnsureAccountsAsync(email);

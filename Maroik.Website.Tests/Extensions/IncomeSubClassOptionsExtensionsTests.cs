@@ -16,6 +16,7 @@ namespace Maroik.Website.Tests.Extensions;
 /// </summary>
 public class IncomeSubClassOptionsExtensionsTests
 {
+    /// <summary>A localizer that returns each key as its own value.</summary>
     private static IViewLocalizer MakeEchoLocalizer()
     {
         var mock = new Mock<IViewLocalizer>();
@@ -23,6 +24,7 @@ public class IncomeSubClassOptionsExtensionsTests
         return mock.Object;
     }
 
+    /// <summary>Writes <paramref name="content"/> to a string with the default HTML encoder.</summary>
     private static string Render(Microsoft.AspNetCore.Html.IHtmlContent content)
     {
         var writer = new StringWriter(new StringBuilder());
@@ -57,6 +59,7 @@ public class IncomeSubClassOptionsExtensionsTests
         Assert.Contains("selected", firstOptionTag);
     }
 
+    /// <summary>The number of non-overlapping occurrences of <paramref name="needle"/> in <paramref name="haystack"/>.</summary>
     private static int CountOccurrences(string haystack, string needle)
     {
         int count = 0, index = 0;

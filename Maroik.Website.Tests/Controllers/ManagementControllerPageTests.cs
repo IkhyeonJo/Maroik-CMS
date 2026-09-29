@@ -17,13 +17,17 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Board type of the private note.</summary>
     private const string PrivateNoteType = "PrivateNote";
 
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
     
+    /// <summary>Seeds (if missing) an account for <paramref name="email"/> with <paramref name="role"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsync(string email, string role = Role.User) =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", role, TestContext.Current.CancellationToken);
 
+    /// <summary>Inserts a private note by <paramref name="writer"/> directly into the database and returns its id.</summary>
     private long SeedNote(string writer, string title, string content = "Body", bool deleted = false)
     {
         using var scope = factory.Services.CreateScope();
@@ -38,6 +42,7 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
         return board.Id;
     }
 
+    /// <summary>Inserts a comment by <paramref name="writer"/> on board <paramref name="boardId"/>.</summary>
     private void SeedComment(long boardId, string writer, string content)
     {
         using var scope = factory.Services.CreateScope();
@@ -50,6 +55,7 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
         db.SaveChanges();
     }
 
+    /// <summary>The stored view count of board <paramref name="boardId"/>.</summary>
     private long ViewCount(long boardId)
     {
         using var scope = factory.Services.CreateScope();
@@ -57,6 +63,7 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
         return db.Boards.AsNoTracking().Single(b => b.Id == boardId).View;
     }
 
+    /// <summary>Sends a GET to <paramref name="url"/>, with the session cookie when given and marked as an AJAX request when <paramref name="ajax"/> is set.</summary>
     private async Task<HttpResponseMessage> GetAsync(string url, AuthenticatedSession? session, bool ajax = false)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -65,10 +72,13 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
         return await _client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
+    /// <summary>The response body as a string.</summary>
     private static async Task<string> BodyAsync(HttpResponseMessage response) =>
         await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
+    /// <summary>URL of the private-note detail page for note <paramref name="id"/>.</summary>
     private static string Detail(long id) => $"/Management/PrivateNote?method=detail&boardId={id}";
+    /// <summary>URL of the private-note edit page for note <paramref name="id"/>.</summary>
     private static string Edit(long id) => $"/Management/PrivateNote?method=edit&boardId={id}";
 
     /// <summary>On a private note's detail page an administrator's comment is marked, and the note's owner gets a delete link on their own comments.</summary>
@@ -316,6 +326,7 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
 
     // -- UploadImageFile: pre-upload validation -------------------------------------------------------------
 
+    /// <summary>Uploads an editor image to <c>/Management/UploadImageFile</c>, asserts 200, and returns the response body.</summary>
     private async Task<string> UploadAsync(AuthenticatedSession session, string fileName, byte[] bytes)
     {
         var form = new MultipartFormDataContent { { new ByteArrayContent(bytes), "summernoteImageFile", fileName } };

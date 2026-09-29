@@ -8,8 +8,10 @@ namespace Maroik.Core.Domain.Tests.Primitives;
 /// </summary>
 public class ValueObjectTests
 {
+    /// <summary>Minimal value object made of a name and a number.</summary>
     private sealed class SamplePair(string? name, int number) : ValueObject
     {
+        /// <inheritdoc />
         protected override IEnumerable<object?> GetAtomicValues()
         {
             yield return name;
@@ -17,8 +19,10 @@ public class ValueObjectTests
         }
     }
 
+    /// <summary>Same components as <see cref="SamplePair"/> but a different type, to check type-sensitive equality.</summary>
     private sealed class OtherPair(string? name, int number) : ValueObject
     {
+        /// <inheritdoc />
         protected override IEnumerable<object?> GetAtomicValues()
         {
             yield return name;

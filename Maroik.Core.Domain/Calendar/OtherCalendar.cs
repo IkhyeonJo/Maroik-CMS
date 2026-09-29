@@ -20,6 +20,7 @@ public sealed class OtherCalendar : AggregateRoot<(string AccountEmail, long Cal
     /// <summary>ID of the calendar being subscribed to.</summary>
     public long CalendarId { get; private set; }
 
+    /// <summary>Builds the subscription with its composite (email, calendar ID) identity; reached only through the factories.</summary>
     private OtherCalendar(Email accountEmail, long calendarId)
         : base((accountEmail.Value, calendarId))
     {

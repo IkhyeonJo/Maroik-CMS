@@ -10,7 +10,7 @@ namespace Maroik.Website.Models.ViewModels.Management;
 /// </summary>
 public class AccountInputViewModel
 {
-    /// <summary>Account email address ?? acts as the primary key in the database.</summary>
+    /// <summary>Account email address — acts as the primary key in the database.</summary>
     [Required(ErrorMessage = "Please enter Email")]
     [Display(Name = "Email")]
     public string? Email { get; set; }
@@ -40,7 +40,7 @@ public class AccountInputViewModel
     [Display(Name = "Time zone")]
     public string? TimeZoneIanaId { get; set; }
 
-    /// <summary>When <see langword="true"/> the account cannot log in until manually unlocked by an admin.</summary>
+    /// <summary>When <see langword="true"/> the account cannot log in until an admin unlocks it or its owner resets the password.</summary>
     [Display(Name = "Locked")]
     public bool Locked { get; set; }
 
@@ -62,7 +62,7 @@ public class AccountInputViewModel
     [Display(Name = "ResetPasswordToken")]
     public string? ResetPasswordToken { get; set; }
 
-    /// <summary>Status or feedback message displayed to the user after an account operation.</summary>
+    /// <summary>Admin-facing note / status text stored on the account (e.g. the lock reason or the last mail status).</summary>
     [Required(ErrorMessage = "Please enter Message")]
     [Display(Name = "Message")]
     public string? Message { get; set; }

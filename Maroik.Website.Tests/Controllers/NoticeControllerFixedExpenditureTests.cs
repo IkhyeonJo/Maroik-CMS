@@ -15,11 +15,15 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>The account every test in this class signs in as.</summary>
     private const string Email = "notice-expenditure-user@test.com";
+    /// <summary>The asset the fixed expenditures are paid from.</summary>
     private const string AssetProductName = "notice-expenditure-asset";
 
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
+    /// <summary>Signs in as <see cref="Email"/> and makes sure its asset <see cref="AssetProductName"/> exists.</summary>
     private async Task<AuthenticatedSession> LoginAsync()
     {
         var session = await AuthenticatedSessionHelper.LoginAsync(factory, _client, Email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
@@ -64,6 +68,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         Unpunctuality = false
     };
 
+    /// <summary>A content string unique to this call, prefixed with the calling test's name.</summary>
     private static string UniqueContent([System.Runtime.CompilerServices.CallerMemberName] string testName = "") =>
         $"{testName}-{Guid.NewGuid():N}";
 

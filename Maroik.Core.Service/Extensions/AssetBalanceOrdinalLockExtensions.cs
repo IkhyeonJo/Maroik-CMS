@@ -63,11 +63,11 @@ public static class AssetBalanceOrdinalLockExtensions
         /// <see cref="ApplyAssetBalanceAdjustmentsAsync(IAssetBalanceDomainService, Dictionary{string, Asset}, IEnumerable{AssetBalanceAdjustment}, string, string, CancellationToken)"/>
         /// overload instead, to reuse that fetch rather than repeating it here.
         /// </summary>
-        /// <param name="accountEmail"></param>
+        /// <param name="accountEmail">Owner of every asset named in <paramref name="adjustments"/>.</param>
         /// <param name="adjustments">Adjustments to apply; entries with an empty <see cref="AssetBalanceAdjustment.AssetName"/> are skipped.</param>
         /// <param name="notFoundErrorCode">Error code used when a non-empty asset name does not resolve to an asset.</param>
         /// <param name="notFoundErrorMessage">Error message used when a non-empty asset name does not resolve to an asset.</param>
-        /// <param name="ct"></param>
+        /// <param name="ct">Cancellation token.</param>
         public async Task<ErrorOr<Success>> ApplyAssetBalanceAdjustmentsAsync(
             string accountEmail,
             IEnumerable<AssetBalanceAdjustment> adjustments,
@@ -93,7 +93,7 @@ public static class AssetBalanceOrdinalLockExtensions
         /// <param name="adjustments">Adjustments to apply; entries with an empty <see cref="AssetBalanceAdjustment.AssetName"/> are skipped.</param>
         /// <param name="notFoundErrorCode">Error code used when a non-empty asset name does not resolve to an asset.</param>
         /// <param name="notFoundErrorMessage">Error message used when a non-empty asset name does not resolve to an asset.</param>
-        /// <param name="ct"></param>
+        /// <param name="ct">Cancellation token.</param>
         public async Task<ErrorOr<Success>> ApplyAssetBalanceAdjustmentsAsync(
             Dictionary<string, Asset> assets,
             IEnumerable<AssetBalanceAdjustment> adjustments,

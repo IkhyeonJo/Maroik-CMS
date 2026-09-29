@@ -252,4 +252,7 @@
   <data name="The password does not match the one you registered with." xml:space="preserve">
     <value>The password does not match the one you registered with. If you did not sign up with this password, please sign up again.</value>
   </data>
+  <data name="Password must be at least 8 characters (and at most 72) and contain at least 3 of 4 of the following: upper case (A-Z), lower case (a-z), number (0-9) and special character (e.g. !@#$%^&amp;*)." xml:space="preserve">
+    <value>Password must be at least 8 characters (and at most 72) and contain at least 3 of 4 of the following: upper case (A-Z), lower case (a-z), number (0-9) and special character (e.g. !@#$%^&amp;*).</value>
+  </data>
 </root>

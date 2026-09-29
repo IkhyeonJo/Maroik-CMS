@@ -10,8 +10,9 @@ namespace Maroik.Core.Service.Services;
 /// <summary>
 /// Implementation of <see cref="IMenuService"/> that delegates navigation menu management
 /// to <see cref="ICategoryRepository"/> and <see cref="ISubCategoryRepository"/>.
-/// All write operations turn a caught exception into a <see cref="ServiceResult.Failure"/> and a
-/// missing row into a <see cref="ServiceResult.NotFound"/>, so the controller can surface a
+/// All write operations turn a caught exception into a <see cref="ServiceResult.Failure"/>, and the
+/// updates turn a missing row into a <see cref="ServiceResult.NotFound"/> (a delete of a missing row is
+/// a no-op success), so the controller can surface a
 /// user-friendly error (and react to its kind) without exposing internal details.
 /// </summary>
 public class MenuService(

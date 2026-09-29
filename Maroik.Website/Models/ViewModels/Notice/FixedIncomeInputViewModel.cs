@@ -6,7 +6,7 @@ namespace Maroik.Website.Models.ViewModels.Notice;
 /// <summary>
 /// Form model for creating or editing a fixed (recurring) income entry.
 /// Fixed incomes recur on a specific day of a specific month and have a maturity date.
-/// An <see cref="Unpunctuality"/> flag tracks whether the expected deposit arrived on time.
+/// The <see cref="Unpunctuality"/> flag is the user's "always notify" choice for an income whose timing is not punctual.
 /// </summary>
 public class FixedIncomeInputViewModel
 {
@@ -59,8 +59,8 @@ public class FixedIncomeInputViewModel
     public string? DepositMyAssetProductName { get; set; }
 
     /// <summary>
-    /// When <see langword="true"/> the expected deposit did not arrive on the scheduled date.
-    /// Used in the Notice page to highlight late or missed recurring income.
+    /// User-chosen "always notify" flag: when <see langword="true"/> the schedule is always counted as
+    /// noticed (highlighted on the Notice page and in the header badge), regardless of its date.
     /// </summary>
     [Display(Name = "Unpunctuality")]
     public bool Unpunctuality { get; set; }

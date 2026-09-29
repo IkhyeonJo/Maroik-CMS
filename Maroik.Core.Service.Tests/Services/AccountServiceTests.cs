@@ -21,15 +21,23 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class AccountServiceTests
 {
+    /// <summary>Mock <c>IAccountRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAccountRepository> _accountRepo = new();
+    /// <summary>Mock <c>IPasswordService</c> injected into the system under test.</summary>
     private readonly Mock<IPasswordService> _passwordService = new();
+    /// <summary>Mock <c>IMailClient</c> injected into the system under test.</summary>
     private readonly Mock<IMailClient> _mailClient = new();
+    /// <summary>Mock <c>IEmailPublisher</c> injected into the system under test.</summary>
     private readonly Mock<IEmailPublisher> _emailPublisher = new();
+    /// <summary>Mock <c>IRsaService</c> injected into the system under test.</summary>
     private readonly Mock<IRsaService> _rsa = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Settings with a 5-attempt lockout threshold.</summary>
     private readonly IOptions<ServerSetting> _settings =
         Options.Create(new ServerSetting { MaxLoginAttempt = 5, DomainName = "https://example.com" });
 
+    /// <summary>Minimal mail template passed to the mail-sending methods.</summary>
     private static readonly EmailTemplate _emailTemplate = new() { Subject = "subject", Title = "title", Content0 = "c0", Content1 = "c1" };
 
     /// <summary>
@@ -43,6 +51,7 @@ public class AccountServiceTests
     public AccountServiceTests() =>
         _passwordService.Setup(p => p.VerifyPassword(ConfirmPassword, It.IsAny<string>())).Returns(true);
 
+    /// <summary>The service under test over the mocked dependencies.</summary>
     private AccountService CreateSut() => new(
         _accountRepo.Object,
         _passwordService.Object,
@@ -55,6 +64,7 @@ public class AccountServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A persisted account (confirmed, unlocked, terms agreed unless overridden) whose state is set by the arguments.</summary>
     private static Account ActiveAccount(
         string email = "user@example.com",
         bool deleted = false,
@@ -85,6 +95,7 @@ public class AccountServiceTests
             securityStamp: "stamp",
             mustChangePassword: false);
 
+    /// <summary>Arranges mail bodies to render and the e-mail queue publish to succeed.</summary>
     private void SetupMailSuccess()
     {
         _mailClient.Setup(m => m.GetMailConfirmationBody(
@@ -97,6 +108,7 @@ public class AccountServiceTests
             .Returns(Task.CompletedTask);
     }
 
+    /// <summary>Arranges mail bodies to render but the e-mail queue publish to throw (broker unreachable).</summary>
     private void SetupMailFailure()
     {
         _mailClient.Setup(m => m.GetMailConfirmationBody(
@@ -1025,6 +1037,7 @@ public class AccountServiceTests
 
     // -- Concurrency / failure branches ----------------------------------------
 
+    /// <summary>A registration request with the given nickname and password.</summary>
     private static AccountRequest NewRegistration(string nickname = "TestUser", string password = "PlainPass1!") => new()
     {
         Email = "new@example.com",
@@ -1033,8 +1046,10 @@ public class AccountServiceTests
         RegistrationToken = GuidToken.Generate()
     };
 
+    /// <summary>Hash returned for the new password when an unconfirmed registration is re-submitted.</summary>
     private const string ReplacementHash = "$2a$13$replacement";
 
+    /// <summary>Arranges a re-registration: the plain read returns <paramref name="existing"/>, the locked re-read returns <paramref name="lockedRead"/>, and hashing yields <see cref="ReplacementHash"/>.</summary>
     private void SetupUnconfirmedAccountForRegister(Account existing, Account? lockedRead)
     {
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(existing);
@@ -1505,6 +1520,7 @@ public class AccountServiceTests
 
     // -- ConfirmEmailAsync: locked re-read branches ------------------------------
 
+    /// <summary>Arranges e-mail confirmation: <c>"enc"</c> decrypts to <paramref name="rawToken"/>, the token lookup returns <paramref name="found"/>, and the locked re-read returns <paramref name="locked"/>.</summary>
     private void SetupConfirmLookup(Account found, Account? locked, string rawToken)
     {
         _rsa.Setup(r => r.Decrypt("enc")).Returns(rawToken);
@@ -1704,6 +1720,7 @@ public class AccountServiceTests
 
     // -- Private helpers ------------------------------------------------------
 
+    /// <summary>A token in the <c>GuidToken</c> layout (UTC timestamp + GUID, base64) issued 25 hours ago.</summary>
     private static string BuildExpiredToken()
     {
         byte[] time = BitConverter.GetBytes(DateTime.UtcNow.AddHours(-25).ToBinary());

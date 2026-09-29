@@ -12,10 +12,14 @@ namespace Maroik.Website.Tests.Services;
 /// </summary>
 public class CertificateManagerTests : IDisposable
 {
+    /// <summary>A fresh temporary folder holding this test's certificate files.</summary>
     private readonly string _tempDir = Directory.CreateTempSubdirectory(nameof(CertificateManagerTests)).FullName;
+    /// <summary>Path of the certificate PEM in <see cref="_tempDir"/>.</summary>
     private string CertPath => Path.Combine(_tempDir, "cert.pem");
+    /// <summary>Path of the private-key PEM in <see cref="_tempDir"/>.</summary>
     private string KeyPath => Path.Combine(_tempDir, "privkey.pem");
 
+    /// <summary>A self-signed certificate for <paramref name="subject"/> signed by <paramref name="key"/>, as PEM plus its thumbprint.</summary>
     private static (string CertPem, string Thumbprint) GenerateCert(ECDsa key, string subject)
     {
         var request = new CertificateRequest(subject, key, HashAlgorithmName.SHA256);
@@ -23,6 +27,7 @@ public class CertificateManagerTests : IDisposable
         return (cert.ExportCertificatePem(), cert.Thumbprint);
     }
 
+    /// <summary>Writes the certificate and key PEMs to <see cref="CertPath"/> and <see cref="KeyPath"/>.</summary>
     private void WriteCertFiles(string certPem, string keyPem)
     {
         File.WriteAllText(CertPath, certPem);
@@ -46,6 +51,7 @@ public class CertificateManagerTests : IDisposable
     // Let's Encrypt's "live" files are symlinks to versioned files under "archive". On Windows (git-for-Windows checkouts)
     // such a link is a small text file holding the link target, so the real file has to be located from that text.
 
+    /// <summary>Creates certbot-style <c>live/</c> and <c>archive/</c> folders for <paramref name="site"/> and returns the file paths within them.</summary>
     private (string LiveCert, string LiveKey, string ArchiveCert, string ArchiveKey) WindowsLayout(string site)
     {
         string live = Directory.CreateDirectory(Path.Combine(_tempDir, "live", site)).FullName;

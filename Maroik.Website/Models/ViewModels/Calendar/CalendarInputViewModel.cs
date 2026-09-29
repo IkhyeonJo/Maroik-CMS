@@ -5,13 +5,13 @@ using Maroik.Core.Contract.Dtos;
 namespace Maroik.Website.Models.ViewModels.Calendar;
 
 /// <summary>
-/// View model passed to the Calendar create/edit form.
-/// Carries the current user's existing calendars so the form can display
-/// a calendar-selector dropdown when creating or editing an event.
+/// JSON request body of the calendar endpoints: <c>CreateCalendar</c> / <c>UpdateCalendar</c> /
+/// <c>DeleteCalendar</c> act on the first entry of <see cref="Calendars"/>, and <c>GetCalendarEvents</c>
+/// fetches the events of the calendars it lists.
 /// </summary>
 public class CalendarInputViewModel
 {
-    /// <summary>All calendars owned by the logged-in user; pre-populated by the controller.</summary>
+    /// <summary>The calendar(s) the request is about, as posted by the client script.</summary>
     // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Global
     public IEnumerable<CalendarRequest> Calendars { get; set; } = [];
 }

@@ -26,6 +26,7 @@ namespace Maroik.Website.Tests.Filters;
 /// </summary>
 public class ThrottleEmailSendAttributeTests
 {
+    /// <summary>An action context for <paramref name="controllerName"/>/<paramref name="action"/> whose bound argument is <paramref name="boundArgument"/>, with <paramref name="cache"/> registered when given.</summary>
     private static (ActionExecutingContext context, FakeController controller) BuildContext(
         object? boundArgument, IDistributedCache? cache, string action = "ForgotPassword", string controllerName = "Account",
         Action<IServiceCollection>? configureServices = null)
@@ -72,6 +73,7 @@ public class ThrottleEmailSendAttributeTests
         return (executingContext, controller);
     }
 
+    /// <summary>A next-delegate that calls <paramref name="onNext"/> and reports <paramref name="exception"/> (handled only when there is none).</summary>
     private static ActionExecutionDelegate NextReturning(Action onNext, Exception? exception = null) => () =>
     {
         onNext();
@@ -83,6 +85,7 @@ public class ThrottleEmailSendAttributeTests
         });
     };
 
+    /// <summary>A bound model carrying an e-mail, like the forgot-password form.</summary>
     private sealed class ModelWithEmail
     {
         /// <summary>The address the throttle attribute reads from the bound model.</summary>

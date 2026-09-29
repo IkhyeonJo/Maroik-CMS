@@ -10,6 +10,7 @@ namespace Maroik.Core.PostgreSQL.Tests.Infrastructure;
 /// </summary>
 public abstract class SchemaDatabaseFixture(string initScriptRelativePath) : IAsyncLifetime
 {
+    /// <summary>Throwaway PostgreSQL 17 container the init script is loaded into.</summary>
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17").WithDatabase("maroik").Build();
 
     /// <summary>Connection string of the loaded database.</summary>
@@ -47,6 +48,7 @@ public abstract class SchemaDatabaseFixture(string initScriptRelativePath) : IAs
         return connection;
     }
 
+    /// <summary>Walks up from the test binary's folder to the directory holding <c>Maroik.sln</c>.</summary>
     private static string FindRepositoryRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

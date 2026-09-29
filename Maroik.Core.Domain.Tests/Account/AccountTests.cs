@@ -9,6 +9,7 @@ namespace Maroik.Core.Domain.Tests.Account;
 /// </summary>
 public class AccountTests
 {
+    /// <summary>Creates a valid new account through <c>Account.Create</c>; each argument can be overridden per test.</summary>
     private static Domain.Account.Account ValidAccount(
         string email = "user@example.com",
         string hashedPassword = "hashed",
@@ -565,33 +566,6 @@ public class AccountTests
         Assert.Equal("old-hash", account.HashedPassword);
         Assert.Equal("Squatter", account.Nickname);
         Assert.Equal(token, account.RegistrationToken);
-    }
-
-    // -- RegenerateRegistrationTokenIfEmpty -----------------------------------
-
-    /// <summary>Regenerate registration token if empty sets token, when current is null.</summary>
-    [Fact]
-    public void RegenerateRegistrationTokenIfEmpty_SetsToken_WhenCurrentIsNull()
-    {
-        string token = GuidToken.Generate();
-        var account = ValidAccount(registrationToken: token);
-        account.ConfirmEmail(token);
-        Assert.Null(account.RegistrationToken);
-
-        account.RegenerateRegistrationTokenIfEmpty("new-tok");
-
-        Assert.Equal("new-tok", account.RegistrationToken);
-    }
-
-    /// <summary>Regenerate registration token if empty does not overwrite, when token exists.</summary>
-    [Fact]
-    public void RegenerateRegistrationTokenIfEmpty_DoesNotOverwrite_WhenTokenExists()
-    {
-        var account = ValidAccount(registrationToken: "existing");
-
-        account.RegenerateRegistrationTokenIfEmpty("new-tok");
-
-        Assert.Equal("existing", account.RegistrationToken);
     }
 
     // -- UpdateProfile --------------------------------------------------------

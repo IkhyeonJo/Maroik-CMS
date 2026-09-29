@@ -11,12 +11,13 @@ using Microsoft.Extensions.Options;
 namespace Maroik.Core.Service.Services;
 
 /// <summary>
-/// Implementation of <see cref="IBoardService"/> for forum post management.
-/// File attachments are virus-scanned by ClamAV, image-validated,
-/// and stored/retrieved via the file-storage microservice (<see cref="IFileClient"/>).
-/// Summernote inline images are uploaded to the file-storage service and the returned URL
-/// is embedded in the HTML content. Post/comment write operations use <see cref="IUnitOfWork"/>
-/// transactions to keep post and attachment records in sync.
+/// Implementation of <see cref="IBoardService"/> for forum post / private note management.
+/// Zip attachments are checked against <c>AttachmentUploadPolicy</c> and stored/retrieved via the
+/// file-storage microservice (<see cref="IFileClient"/>, which virus-scans them with ClamAV).
+/// Summernote inline images go through <see cref="IAttachmentContentService"/>: image-validated,
+/// stored in the file-storage service, and referenced from the HTML by their RSA-encrypted storage
+/// path in <c>alt</c> (embedded as base64 only when the post is rendered). Post/comment write
+/// operations use <see cref="IUnitOfWork"/> transactions to keep post and attachment records in sync.
 /// </summary>
 public class BoardService(
     IBoardRepository boardRepository,
@@ -196,8 +197,8 @@ public class BoardService(
             // reach this point, but only to clear an existing lock (see below) -- everything else
             // is rejected. This is the only way an admin can ever clear a lock on someone else's
             // post, since the ownership gate below would otherwise block them from this method
-            // entirely (ForumController.IsBoardExists already lets an admin open the edit page for
-            // any locked post for exactly this reason).
+            // entirely. (The Forum edit page itself is owner-only, so this path is reached by
+            // posting to EditFreeBoard directly rather than through that page.)
             bool isOwner = board.CanBeEditedBy(writerNickname);
             bool adminClearingSomeoneElsesLock = !request.Locked && board.CanLockBeClearedBy(writerNickname, isAdmin);
             switch (isOwner)
@@ -495,8 +496,10 @@ public class BoardService(
         => attachmentContent.DownloadFileAsync(filePath, ct);
 
     /// <summary>
-    /// Builds the remote storage path for a board attachment.
-    /// A GUID prefix is prepended to the file name to prevent collisions.
+    /// Builds the remote storage path for a board attachment
+    /// (<c>upload/{area}/{boardType}/boardAttachedFiles/{boardId}/{GUID}{ext}</c>). The original file
+    /// name is replaced by an upper-case GUID (only its extension is kept), so names cannot collide or
+    /// traverse paths; the original name is kept on the attachment record instead.
     /// </summary>
     private static string BuildAttachedFilePath(string boardType, long boardId, string fileName)
     {
@@ -504,7 +507,8 @@ public class BoardService(
         string area = _boardAreaMap.GetValueOrDefault(boardType, "Forum");
         string guid = Guid.NewGuid().ToString().ToUpper();
         string ext = Path.GetExtension(fileName);
-        return Path.Combine("upload", area, boardType, "boardAttachedFiles", $"{boardId}", $"{guid}{ext}");
+        // A storage key, not a local path: always "/"-separated, whatever OS this runs on.
+        return $"upload/{area}/{boardType}/boardAttachedFiles/{boardId}/{guid}{ext}";
     }
 
     /// <inheritdoc />

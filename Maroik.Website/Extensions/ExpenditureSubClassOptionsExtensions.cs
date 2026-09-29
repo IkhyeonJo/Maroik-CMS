@@ -16,7 +16,7 @@ namespace Maroik.Website.Extensions;
 /// Shared by the create/edit forms in both <c>Views/AccountBook/Expenditure.cshtml</c> and
 /// <c>Views/Notice/FixedExpenditure.cshtml</c>, which otherwise repeated this identical
 /// default-computation + rendering loop four times. Takes the calling view's own
-/// <paramref name="localizer"/> (rather than resolving one itself) so each page's subclass labels
+/// <c>localizer</c> (rather than resolving one itself) so each page's subclass labels
 /// keep resolving from that page's own resource file, exactly as before this was extracted.
 /// </summary>
 public static class ExpenditureSubClassOptionsExtensions

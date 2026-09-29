@@ -13,8 +13,9 @@ namespace Maroik.Core.Service.Services;
 /// <summary>
 /// Implementation of <see cref="ICalendarService"/> covering the full calendar feature set:
 /// calendars, events, reminders, file attachments, sharing, and subscriptions.
-/// Event attachments are virus-scanned by ClamAV and image-validated before upload.
-/// Files are stored in and retrieved from the file-storage microservice.
+/// Event attachments (zip only, per <c>AttachmentUploadPolicy</c>) are stored in and retrieved from the
+/// file-storage microservice, which virus-scans them with ClamAV; Summernote inline images in an event
+/// description go through <see cref="IAttachmentContentService"/> (image-validated before upload).
 /// All multistep write operations use <see cref="IUnitOfWork"/> transactions.
 /// </summary>
 public class CalendarService(
@@ -30,9 +31,12 @@ public class CalendarService(
     IOptions<ServerSetting> settings,
     ILogger<CalendarService> logger) : ICalendarService
 {
-    // Calendar also has a surrogate-key "Calendar_pk" (on ID) that raises the same SQLSTATE 23505
-    // on a PK collision; naming this constraint explicitly (via IsPostgresUniqueViolationOn) keeps
-    // that unrelated failure mode from being misreported as "name already exists" below.
+    /// <summary>
+    /// The per-account unique calendar-name constraint. Calendar also has a surrogate-key
+    /// "Calendar_pk" (on ID) that raises the same SQLSTATE 23505 on a PK collision; naming this
+    /// constraint explicitly (via IsPostgresUniqueViolationOn) keeps that unrelated failure mode from
+    /// being misreported as "name already exists" below.
+    /// </summary>
     private const string NameUniqueConstraint = "Calendar_AccountEmail_Name_unique";
 
     /// <summary>CalendarShared's primary-key constraint (on CalendarId), for classifying a concurrent-insert race.</summary>
@@ -384,8 +388,8 @@ public class CalendarService(
         await unitOfWork.BeginAsync(ct);
         try
         {
-            // A subscription must only ever be created for a calendar an admin has explicitly
-            // marked shared to Users (CalendarShared.User) — otherwise any account could grant
+            // A subscription must only ever be created for a calendar its owner has explicitly
+            // shared with Users (CalendarShared.User) — otherwise any account could grant
             // itself read access to any calendar's events by supplying an arbitrary CalendarId.
             // Locked (FOR UPDATE) on exactly the rows this call depends on: this serializes against
             // a concurrent UpdateCalendarSharedAsync unsharing (and deleting subscriptions for) one
@@ -664,18 +668,22 @@ public class CalendarService(
         }
     }
 
+    /// <summary>Generic failure returned (after logging) when a calendar write throws unexpectedly.</summary>
     private static ServiceResult UnexpectedFailure => ServiceResult.Failure(
         "Calendar.Unexpected", "The operation could not be completed. Please try again.");
 
     /// <summary>
-    /// Builds the remote storage path for a calendar event attachment.
-    /// Uses a GUID prefix to avoid collisions and isolate files per event.
+    /// Builds the remote storage path for a calendar event attachment
+    /// (<c>upload/Calendar/{roleIndex}/calendarEventAttachedFiles/{eventId}/{GUID}{ext}</c>). The original
+    /// file name is replaced by an upper-case GUID (only its extension is kept), so names cannot collide
+    /// or traverse paths, and each event gets its own folder.
     /// </summary>
     private static string BuildEventFilePath(string roleIndex, long eventId, string fileName)
     {
         string guid = Guid.NewGuid().ToString().ToUpper();
         string ext = Path.GetExtension(fileName);
-        return Path.Combine("upload", "Calendar", roleIndex, "calendarEventAttachedFiles", $"{eventId}", $"{guid}{ext}");
+        // A storage key, not a local path: always "/"-separated, whatever OS this runs on.
+        return $"upload/Calendar/{roleIndex}/calendarEventAttachedFiles/{eventId}/{guid}{ext}";
     }
 
     /// <summary>

@@ -12,6 +12,7 @@ namespace Maroik.Core.Domain.Tests.Architecture;
 /// </summary>
 public class DomainArchitectureTests
 {
+    /// <summary>The Maroik.Core.Domain assembly inspected by these architecture rules.</summary>
     private static readonly Assembly _domainAssembly = typeof(Domain.Account.Account).Assembly;
 
     /// <summary>Domain should not depend on any other layer.</summary>
@@ -214,6 +215,7 @@ public class DomainArchitectureTests
     /// </summary>
     private sealed class DoesNotCallRawErrorFactory : ICustomRule
     {
+        /// <summary>The raw <c>ErrorOr.Error</c> factory methods domain code must not call directly.</summary>
         private static readonly string[] _rawFactoryMethodNames =
             ["Validation", "Conflict", "Failure", "NotFound", "Forbidden", "Unexpected"];
 

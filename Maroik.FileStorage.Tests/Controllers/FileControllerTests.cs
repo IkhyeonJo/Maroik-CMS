@@ -70,6 +70,7 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
             });
         });
 
+    /// <summary>Removes the registration of <typeparamref name="T"/>, if any.</summary>
     private static void RemoveService<T>(IServiceCollection services)
     {
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(T));
@@ -200,7 +201,7 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
     {
         var client = FactoryWithCleanScan().CreateClient();
         using var content = new MultipartFormDataContent();
-        // PNG requires: 89 50 4E 47 0D 0A 1A 0A ?? use wrong bytes
+        // PNG requires: 89 50 4E 47 0D 0A 1A 0A — use wrong bytes
         var fileContent = new ByteArrayContent([0x89, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/png");
         content.Add(fileContent, "file", "fake.png");
@@ -217,7 +218,7 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
     {
         var client = FactoryWithCleanScan().CreateClient();
         using var content = new MultipartFormDataContent();
-        // ZIP requires: 50 4B 03 04 ?? use wrong bytes
+        // ZIP requires: 50 4B 03 04 — use wrong bytes
         var fileContent = new ByteArrayContent([0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08]);
         fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/zip");
         content.Add(fileContent, "file", "fake.zip");
@@ -539,6 +540,7 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         }
         return;
 
+        // True when the current user can actually read the file (root ignores the permission bits).
         static bool CanRead(string path)
         {
             try { _ = File.ReadAllBytes(path); return true; }

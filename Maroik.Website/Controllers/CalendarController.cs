@@ -104,7 +104,10 @@ public class CalendarController(
     #endregion
 
     #region Summernote Image File Upload
-    /// <summary>Uploads a Summernote inline image for use inside a calendar event description.</summary>
+    /// <summary>
+    /// Validates and stores a Summernote inline image for a calendar event description, returning its bytes
+    /// (base64) and content type for the editor preview plus its RSA-encrypted storage path (kept in the image's <c>alt</c>).
+    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -238,7 +241,7 @@ public class CalendarController(
         return View(vm);
     }
 
-    /// <summary>Checks whether a calendar with the given ID exists.</summary>
+    /// <summary>Checks whether the caller owns a calendar with the given ID, returning it when so.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -289,7 +292,7 @@ public class CalendarController(
         }
     }
 
-    /// <summary>Returns the list of shared/other calendars as JSON.</summary>
+    /// <summary>Returns, as JSON, the other accounts' calendars the caller can see (its subscriptions, or the anonymously shared ones).</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.User)]
@@ -298,9 +301,9 @@ public class CalendarController(
     {
         try
         {
-            // GetVisibleOtherCalendarsAsync treats a null account as anonymous (returns every
-            // calendar); ViewBag.LoggedInAccount is never null itself, so an actually-anonymous
-            // viewer is identified by Role instead and null is passed through explicitly.
+            // GetVisibleOtherCalendarsAsync treats a null account as anonymous (returns the calendars
+            // shared with anonymous visitors); ViewBag.LoggedInAccount is never null itself, so an
+            // actually-anonymous viewer is identified by Role instead and null is passed through explicitly.
             AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
             List<CalendarResponse> tempOtherCalendars = await calendarService.GetVisibleOtherCalendarsAsync(
                 loggedInAccount.Role == Role.Anonymous ? null : loggedInAccount, HttpContext.RequestAborted);
@@ -436,7 +439,7 @@ public class CalendarController(
         }
     }
 
-    /// <summary>Returns the list of calendar-sharing records as JSON.</summary>
+    /// <summary>Returns, as JSON, the sharing flags (user / guest) of each of the caller's own calendars, backfilling missing rows.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -456,7 +459,7 @@ public class CalendarController(
         }
     }
 
-    /// <summary>Returns the list of shared/public calendars the logged-in user may browse.</summary>
+    /// <summary>Returns, as JSON, every calendar shared with registered users, marking the ones the caller already subscribes to.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.User)]
@@ -548,7 +551,7 @@ public class CalendarController(
     #endregion
 
     #region Calendar Shared
-    /// <summary>Updates an existing CalendarShared record.</summary>
+    /// <summary>Saves the sharing flags of the posted calendars (all must be the caller's own); unsharing one drops its subscriptions.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -574,7 +577,7 @@ public class CalendarController(
     #endregion
 
     #region Other Calendar
-    /// <summary>Updates an existing OtherCalendar record.</summary>
+    /// <summary>Replaces the caller's whole set of subscriptions with the posted calendars (each must be shared with users).</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.User)]
@@ -610,7 +613,7 @@ public class CalendarController(
     #endregion
 
     #region Delete
-    /// <summary>Deletes an existing Calendar record.</summary>
+    /// <summary>Deletes one of the caller's calendars; its events, sharing row and subscriptions go with it (database cascade).</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -633,7 +636,7 @@ public class CalendarController(
         }
     }
 
-    /// <summary>Deletes an existing CalendarEvent record.</summary>
+    /// <summary>Deletes an event in one of the caller's calendars; its reminders and attachment go with it (database cascade).</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]

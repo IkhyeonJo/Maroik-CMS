@@ -10,7 +10,7 @@ public class AssetRequest
     /// <summary>Product name that identifies the asset (part of the composite primary key).</summary>
     public string? ProductName { get; set; }
 
-    /// <summary>Asset category (e.g. "Deposit", "Stock", "Cash").</summary>
+    /// <summary>Asset category — an <c>AssetItemType</c> member name (e.g. "FreeDepositAndWithdrawal", "CashAsset").</summary>
     public string? Item { get; set; }
 
     /// <summary>Current balance or value of the asset.</summary>

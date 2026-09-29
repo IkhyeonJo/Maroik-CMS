@@ -134,18 +134,22 @@ describe("Calendar/AnonymousIndex", () => {
 
 // ---- events, popup and the read-only modal ---------------------------------------------------------
 
+/** A one-hour server-rendered "Other" event in `calendarId`. */
 const seededEvent = (id: number, calendarId = 5) => ({
     Id: id, Title: `Event ${id}`, AllDay: false, StartDate: "2024-05-01T10:00:00", EndDate: "2024-05-01T11:00:00", HtmlColorCode: "#ff0000",
     CalendarId: calendarId, DisplayStartDate: "2024-05-01 10:00:00", DisplayEndDate: "2024-05-01 11:00:00",
     DisplayStartDateTimeZone: "UTC", DisplayEndDateTimeZone: "UTC", CalendarType: "Other",
 });
 
+/** The page fixture with `events` as the server-rendered event data, plus `extra`. */
 const fixtureWith = (events: unknown[] = [], extra = "") =>
     fixture().replace(hidden("otherCalendarEventOutputViewModels", "[]"),
         hidden("otherCalendarEventOutputViewModels", JSON.stringify(events).replace(/"/g, "&quot;"))) + extra;
 
+/** Loads the page over {@link fixtureWith}. */
 const load = (events: unknown[] = [], extra = "") => loadSite("anonymous", "Calendar", "AnonymousIndex", fixtureWith(events, extra));
 
+/** A FullCalendar event object of type "Other", as `eventClick` receives it, with `o` merged in. */
 const otherEvent = (o: Record<string, unknown> = {}) => ({
     id: "e1", title: "Sync", allDay: false,
     extendedProps: {
@@ -170,11 +174,13 @@ describe("Calendar/AnonymousIndex — seeded and refreshed events", () => {
         expect(cal.render).toHaveBeenCalled();
     });
 
+    /** Shared-calendar checkboxes 7 (checked), 8 and 9 (checked). */
     const checkboxes = `<div id="otherCalendars">
     <label id="lblOtherCalendar7"><input type="checkbox" class="chkOtherCalendar" checked /></label>
     <label id="lblOtherCalendar8"><input type="checkbox" class="chkOtherCalendar" /></label>
     <label id="lblOtherCalendar9"><input type="checkbox" class="chkOtherCalendar" checked /></label></div>`;
 
+    /** Loads the page with {@link checkboxes} in place of the empty list. */
     const withCheckboxes = () => loadSite("anonymous", "Calendar", "AnonymousIndex",
         fixtureWith([], "").replace("<div id=\"otherCalendars\"></div>", checkboxes));
 
@@ -218,11 +224,13 @@ describe("Calendar/AnonymousIndex — seeded and refreshed events", () => {
 });
 
 describe("Calendar/AnonymousIndex — the 'other event' popup", () => {
+    /** Clicks `event` through the calendar's `eventClick` callback, anchored on `el` (a new element when omitted). */
     const click = (h: ReturnType<typeof load>, event = otherEvent(), el?: HTMLElement) => {
         const anchor = el ?? h.win.document.createElement("div");
         if (!el) h.win.document.body.appendChild(anchor);
         return h.calendarOptions[0].eventClick({ el: anchor, event });
     };
+    /** The inline `display` style of the element matching `id` (jsdom does no layout). */
     const display = (h: ReturnType<typeof load>, id: string) => (h.$(id)[0] as HTMLElement).style.display;
 
     it("only 'Other' events open the popup", () => {
@@ -291,16 +299,19 @@ describe("Calendar/AnonymousIndex — the 'other event' popup", () => {
 });
 
 describe("Calendar/AnonymousIndex — the read-only view modal", () => {
+    /** Clicks "Other" event 77, then the popup's View button. */
     const open = (h: ReturnType<typeof load>) => {
         const el = h.win.document.createElement("div");
         h.win.document.body.appendChild(el);
         h.calendarOptions[0].eventClick({ el, event: otherEvent({ id: "77" }) });
         h.$("#viewOtherCalendarEventPopup").trigger("click");
     };
+    /** An accepted event reply for a timed UTC â†’ Asia/Seoul event, with `overrides` merged in. */
     const reply = (overrides: Record<string, unknown> = {}) => makeCalendarEventPayload({
         allDay: false, displayStartDate: "2024-05-01 10:30:00", displayEndDate: "2024-05-01 11:45:00",
         startDateTimeZoneIanaId: "UTC", endDateTimeZoneIanaId: "Asia/Seoul", location: "Room 1", ...overrides,
     });
+    /** Settles the follow-up calendar-list request (success, then complete). */
     const finish = (h: ReturnType<typeof load>) => {
         const inner = h.lastAjax();
         inner.success?.({ result: true, tempOtherCalendars: [{ id: 5, name: "Shared" }] });

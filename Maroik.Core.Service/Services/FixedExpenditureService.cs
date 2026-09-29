@@ -9,9 +9,10 @@ namespace Maroik.Core.Service.Services;
 
 /// <summary>
 /// Implementation of <see cref="IFixedExpenditureService"/> for managing recurring expenditure entries.
-/// Validates the expenditure class and deposit day before persisting.
-/// Computes <c>Noticed</c> and <c>Expired</c> flags based on the current date,
-/// and verifies asset ownership before write operations.
+/// Validates the expenditure class and deposit day before persisting, and verifies that the
+/// referenced asset(s) exist on the caller's account, are not deleted, differ from each other and
+/// share a currency before write operations. (The <c>Noticed</c> / <c>Expired</c> display flags are not
+/// computed here — see <see cref="FixedSchedulePolicy"/>.)
 /// A fixed-expenditure entry is a schedule, not a balance movement, so these operations are single
 /// non-transactional repository writes and read the referenced asset without a row lock.
 /// </summary>
@@ -144,15 +145,19 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
             fixedExpenditure.ClearUnpunctuality();
     }
 
+    /// <summary>Failure returned when a transfer's payment asset and deposit asset are the same asset.</summary>
     private static ServiceResult SameAssetResult => ServiceResult.Validation(
         "FixedExpenditure.SameAsset", "The PaymentMethod and MyDepositAsset value cannot be the same.");
 
+    /// <summary>Failure returned when a transfer's payment asset and deposit asset hold different currencies.</summary>
     private static ServiceResult CurrencyMismatchResult => ServiceResult.Validation(
         "FixedExpenditure.CurrencyMismatch", "PaymentMethod MonetaryUnit must be same as MyDepositAsset MonetaryUnit.");
 
+    /// <summary>Failure returned when a referenced asset does not exist on the caller's account.</summary>
     private static ServiceResult AssetNotFoundResult => ServiceResult.NotFound(
         "FixedExpenditure.AssetNotFound", "The selected asset could not be found.");
 
+    /// <summary>Failure returned when a referenced asset has been soft-deleted.</summary>
     private static ServiceResult DeletedAssetResult => ServiceResult.Conflict(
         "FixedExpenditure.AssetDeleted", "Actions cannot be executed with assets that have already been deleted.");
 

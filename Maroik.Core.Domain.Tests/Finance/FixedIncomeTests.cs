@@ -7,8 +7,10 @@ namespace Maroik.Core.Domain.Tests.Finance;
 /// </summary>
 public class FixedIncomeTests
 {
+    /// <summary>Maturity date one year from now.</summary>
     private static readonly DateTime _maturity = DateTime.UtcNow.AddYears(1);
 
+    /// <summary>A valid KRW salary deposited into "My Bank", scheduled for month 1, day 25.</summary>
     private static FixedIncome ValidFixedIncome() =>
         FixedIncome.Register("user@example.com", "RegularIncome", "LaborIncome", "Salary",
             3000000m, "KRW", "My Bank", 1, 25, _maturity).Value;

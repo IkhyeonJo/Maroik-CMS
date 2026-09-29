@@ -18,6 +18,7 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ExceptionControllerTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
     // -- Error ----------------------------------------------------------------

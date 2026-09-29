@@ -54,13 +54,17 @@ public abstract class GenericRepository<TDomain, TEntity>(ApplicationDbContext c
     /// <summary>
     /// Compiled getters for <typeparamref name="TEntity"/>'s primary-key properties, built once per
     /// closed generic type and reused for every <see cref="UpdateEntityAsync"/> /
-    /// <see cref="DeleteWhereAsync"/> call. This replaces a per-call
+    /// <see cref="DeleteWhereAsync"/> / <see cref="MergeWithPendingChanges"/> call. This replaces a per-call
     /// reflection walk; the key-property list still comes from the EF model (itself cached by EF Core),
     /// only the value extraction is compiled. Assigned via <c>??=</c> — a benign race just rebuilds an
     /// identical delegate array.
     /// </summary>
     private static Func<TEntity, object?>[]? _primaryKeyGetters;
 
+    /// <summary>
+    /// Compiles one <c>e =&gt; (object?)e.KeyProperty</c> getter per primary-key property of
+    /// <typeparamref name="TEntity"/>, in the EF model's key order.
+    /// </summary>
     private Func<TEntity, object?>[] BuildPrimaryKeyGetters()
     {
         var keyProperties = Context.Model.FindEntityType(typeof(TEntity))!.FindPrimaryKey()!.Properties;
@@ -125,9 +129,13 @@ public abstract class GenericRepository<TDomain, TEntity>(ApplicationDbContext c
         }
     }
 
-    /// <summary>Runs <paramref name="predicate"/> (with optional <paramref name="orderBy"/>) and maps every matching row to <typeparamref name="TDomain"/>.</summary>
-    /// <param name="predicate"></param>
-    /// <param name="orderBy"></param>
+    /// <summary>
+    /// Runs <paramref name="predicate"/> (with optional <paramref name="orderBy"/>) and maps every matching row to
+    /// <typeparamref name="TDomain"/>, including rows this context has added — and excluding rows it has deleted —
+    /// but not yet flushed (see <see cref="MergeWithPendingChanges"/>).
+    /// </summary>
+    /// <param name="predicate">Row filter, translated to SQL (and re-evaluated in memory against pending rows).</param>
+    /// <param name="orderBy">Optional ordering, applied in SQL and re-applied after pending rows are merged in.</param>
     /// <param name="noTracking">
     /// Pass <see langword="true"/> to run as <c>AsNoTracking()</c> for a pure-display read that is
     /// never saved back (e.g. a list rendered on a dashboard/grid). Leaves the pending-changes merge
@@ -135,7 +143,7 @@ public abstract class GenericRepository<TDomain, TEntity>(ApplicationDbContext c
     /// query's own tracking mode. Defaults to <see langword="false"/> so existing callers keep EF
     /// Core's normal identity-map behavior.
     /// </param>
-    /// <param name="ct"></param>
+    /// <param name="ct">Cancellation token.</param>
     protected async Task<List<TDomain>> QueryAsync(
         Expression<Func<TEntity, bool>> predicate,
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? orderBy = null,
@@ -152,10 +160,14 @@ public abstract class GenericRepository<TDomain, TEntity>(ApplicationDbContext c
         return [.. merged.Select(ToDomain)];
     }
 
-    /// <summary>Returns every row in <see cref="Set"/> (with optional <paramref name="orderBy"/>), mapped to <typeparamref name="TDomain"/>.</summary>
-    /// <param name="orderBy"></param>
+    /// <summary>
+    /// Returns every row in <see cref="Set"/> (with optional <paramref name="orderBy"/>), mapped to
+    /// <typeparamref name="TDomain"/>. Unlike <see cref="QueryAsync"/> this does not merge in pending,
+    /// not-yet-flushed changes — only what the database returns.
+    /// </summary>
+    /// <param name="orderBy">Optional ordering, applied in SQL.</param>
     /// <param name="noTracking">See the identically-named parameter on <see cref="QueryAsync"/>.</param>
-    /// <param name="ct"></param>
+    /// <param name="ct">Cancellation token.</param>
     protected async Task<List<TDomain>> QueryAllAsync(
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? orderBy = null,
         bool noTracking = false,
@@ -169,9 +181,10 @@ public abstract class GenericRepository<TDomain, TEntity>(ApplicationDbContext c
 
     /// <summary>
     /// Returns the first row matching <paramref name="predicate"/> (with optional <paramref name="orderBy"/>)
-    /// mapped to <typeparamref name="TDomain"/>, or <see langword="default"/> if none exists.
+    /// mapped to <typeparamref name="TDomain"/>, or <see langword="default"/> if none exists. Pending,
+    /// not-yet-flushed adds/deletes are merged in the same way as <see cref="QueryAsync"/>.
     /// </summary>
-    /// <param name="orderBy"></param>
+    /// <param name="orderBy">Optional ordering that decides which match is "first".</param>
     /// <param name="noTracking">
     /// Pass <see langword="true"/> to run as <c>AsNoTracking()</c>. Required for a read that must
     /// reflect the row's true current column values — e.g. re-reading a row right after taking a
@@ -179,8 +192,8 @@ public abstract class GenericRepository<TDomain, TEntity>(ApplicationDbContext c
     /// back an already-tracked instance from an earlier (pre-lock) read instead of the freshly
     /// queried values, silently defeating the lock's isolation guarantee.
     /// </param>
-    /// <param name="predicate"></param>
-    /// <param name="ct"></param>
+    /// <param name="predicate">Row filter, translated to SQL (and re-evaluated in memory against pending rows).</param>
+    /// <param name="ct">Cancellation token.</param>
     protected async Task<TDomain?> QueryFirstAsync(
         Expression<Func<TEntity, bool>> predicate,
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? orderBy = null,
@@ -213,7 +226,10 @@ public abstract class GenericRepository<TDomain, TEntity>(ApplicationDbContext c
     protected static string ToLikePattern(string search) =>
         $"%{search.Replace("\\", @"\\").Replace("%", "\\%").Replace("_", "\\_")}%";
 
-    /// <summary>Deletes every row matching <paramref name="predicate"/>.</summary>
+    /// <summary>
+    /// Deletes every row matching <paramref name="predicate"/>, including matching rows this context has
+    /// added or modified but not yet flushed. Flushed immediately unless a transaction is open.
+    /// </summary>
     protected async Task DeleteWhereAsync(
         Expression<Func<TEntity, bool>> predicate,
         CancellationToken ct = default)
@@ -245,6 +261,8 @@ public abstract class GenericRepository<TDomain, TEntity>(ApplicationDbContext c
             }
         }
         
+        // Pending rows the database query above cannot see: an Added (never-flushed) match simply
+        // stops being inserted, and a Modified match is turned into a delete.
         var predicateFunc = predicate.Compile();
         foreach (var entry in Context.ChangeTracker.Entries<TEntity>().Where(e => e.State == EntityState.Added).ToList().Where(entry => predicateFunc(entry.Entity)))
         {
@@ -297,6 +315,10 @@ public abstract class GenericRepository<TDomain, TEntity>(ApplicationDbContext c
         return merged;
     }
 
+    /// <summary>
+    /// Collapses primary-key values into one comparable string (each value URI-escaped, joined by
+    /// <c>|</c>, so a value containing <c>|</c> cannot make two different composite keys collide).
+    /// </summary>
     private static string KeyOf(object?[] keyValues) =>
         string.Join("|", keyValues.Select(v => Uri.EscapeDataString(v?.ToString() ?? "")));
 }

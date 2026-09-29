@@ -15,8 +15,11 @@ namespace Maroik.Core.Client.Tests.Architecture;
 /// </summary>
 public class ClientArchitectureTests
 {
+    /// <summary>The assembly containing <c>FileClient</c>, referenced by these architecture rules.</summary>
     private static readonly Assembly _clientAssembly = typeof(FileClient).Assembly;
+    /// <summary>The assembly containing <c>Entity&lt;TId&gt;</c> (Maroik.Core.Domain), referenced by these architecture rules.</summary>
     private static readonly Assembly _domainAssembly = typeof(Entity<>).Assembly;
+    /// <summary>The assembly containing <c>IAccountRepository</c>, referenced by these architecture rules.</summary>
     private static readonly Assembly _contractAssembly = typeof(IAccountRepository).Assembly;
 
     /// <summary>

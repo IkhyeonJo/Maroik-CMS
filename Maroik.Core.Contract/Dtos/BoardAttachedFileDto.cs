@@ -19,7 +19,7 @@ public class BoardAttachedFileDto
     /// <summary>Original file name.</summary>
     public string? Name { get; set; }
 
-    /// <summary>File extension (e.g. ".pdf").</summary>
+    /// <summary>File extension (e.g. ".zip").</summary>
     public string? Extension { get; set; }
 
     /// <summary>Server-side storage path of the file.</summary>

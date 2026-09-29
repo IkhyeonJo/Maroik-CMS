@@ -19,7 +19,12 @@ public interface IAccountService
     /// <summary>Validates credentials and returns a <see cref="LoginResult"/> indicating success or failure.</summary>
     Task<LoginResult> LoginAsync(string email, string password, CancellationToken ct = default);
 
-    /// <summary>Creates a new account and sends a confirmation email. Returns a <see cref="RegisterResult"/> with status details.</summary>
+    /// <summary>
+    /// Registers <paramref name="newAccount"/> and queues a confirmation email. A new address creates the
+    /// account; an existing unconfirmed one has its registration replaced by this submission (fresh token,
+    /// new mail); a confirmed one is reported as already existing. Returns a <see cref="RegisterResult"/>
+    /// with status details.
+    /// </summary>
     Task<RegisterResult> RegisterAsync(AccountRequest newAccount, EmailTemplate emailTemplate, CancellationToken ct = default);
 
     /// <summary>Re-sends the confirmation email to an unverified account.</summary>
@@ -35,12 +40,18 @@ public interface IAccountService
     /// </summary>
     Task<ConfirmEmailResult> ConfirmEmailAsync(string registrationToken, string password, CancellationToken ct = default);
 
-    /// <summary>Sends a password-reset email if the address belongs to a valid account.</summary>
+    /// <summary>
+    /// Queues a password-reset email if the address belongs to a confirmed, non-deleted account. Always
+    /// returns <see langword="true"/>, whatever the outcome, so the response cannot reveal which addresses exist.
+    /// </summary>
     Task<bool> ForgotPasswordAsync(string email, EmailTemplate emailTemplate, CancellationToken ct = default);
 
     /// <summary>Checks whether the password-reset token is still valid before showing the reset form.</summary>
     Task<ResetPasswordValidationResult> ValidateResetPasswordTokenAsync(string resetPasswordToken, CancellationToken ct = default);
 
-    /// <summary>Sets a new hashed password on the account identified by the reset token.</summary>
+    /// <summary>
+    /// Sets a new password (policy-checked, then hashed) on the account identified by the reset token,
+    /// consuming the token and unlocking the account.
+    /// </summary>
     Task<ServiceResult> ResetPasswordAsync(string resetPasswordToken, string newPassword, CancellationToken ct = default);
 }

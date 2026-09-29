@@ -438,6 +438,7 @@ public class AccountService(
         return new ConfirmEmailResult { InvalidToken = false, AccountCreated = false, RegistrationToken = encryptedToken };
     }
 
+    /// <inheritdoc />
     public async Task<ConfirmEmailResult> ConfirmEmailAsync(string encryptedToken, string password, CancellationToken ct = default)
     {
         string rawToken;
@@ -713,12 +714,15 @@ public class AccountService(
         }
     }
 
+    /// <summary>Unlocked lookup of an account by email.</summary>
     private Task<Account?> FindByEmailAsync(string email, CancellationToken ct = default)
         => accountRepository.FindByEmailAsync(email, ct);
 
+    /// <summary>Unlocked lookup of the account holding <paramref name="token"/> (raw, already decrypted) as its registration token.</summary>
     private Task<Account?> FindByRegistrationTokenAsync(string token, CancellationToken ct = default)
         => accountRepository.FindByRegistrationTokenAsync(token, ct);
 
+    /// <summary>Unlocked lookup of the account holding <paramref name="token"/> (raw, already decrypted) as its password-reset token.</summary>
     private Task<Account?> FindByResetPasswordTokenAsync(string token, CancellationToken ct = default)
         => accountRepository.FindByResetPasswordTokenAsync(token, ct);
 

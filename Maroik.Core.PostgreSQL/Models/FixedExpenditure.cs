@@ -83,7 +83,9 @@ public partial class FixedExpenditure
     /// </summary>
     public bool Unpunctuality { get; set; }
 
+    /// <summary>The transfer target asset (keyed by <see cref="MyDepositAsset"/>); null for a non-transfer charge.</summary>
     public virtual Asset? Asset { get; set; }
 
+    /// <summary>The asset the charge is paid from (keyed by <see cref="PaymentMethod"/>); carries the amount's currency.</summary>
     public virtual Asset AssetNavigation { get; set; } = null!;
 }

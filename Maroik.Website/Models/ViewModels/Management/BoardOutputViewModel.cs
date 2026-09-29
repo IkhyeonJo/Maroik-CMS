@@ -34,10 +34,10 @@ public class BoardOutputViewModel
     /// <summary>Base64-encoded bytes of the attached file, for inline preview or download link generation.</summary>
     public string? BoardAttachedFileBase64Data { get; set; }
 
-    /// <summary>MIME type of the attached file (e.g. "application/pdf").</summary>
+    /// <summary>MIME type of the attached file (e.g. "application/zip").</summary>
     public string? BoardAttachedFileContentType { get; set; }
 
-    /// <summary>File extension of the attached file (e.g. ".pdf"), used for icon selection in the view.</summary>
+    /// <summary>File extension of the attached file (e.g. ".zip"), used for icon selection in the view.</summary>
     public string? BoardAttachedFileExtension { get; set; }
 
     /// <summary>Size of the attached file in bytes, displayed in the attachment info row.</summary>
@@ -55,6 +55,6 @@ public class BoardOutputViewModel
     /// <summary>When <see langword="true"/> the current viewer wrote this post and may modify it.</summary>
     public bool CanModify { get; set; }
 
-    /// <summary>When <see langword="true"/> the current viewer wrote this post or is an Admin, and may delete it.</summary>
+    /// <summary>When <see langword="true"/> the current viewer wrote this note and may delete it (no admin bypass for a private note).</summary>
     public bool CanDelete { get; set; }
 }

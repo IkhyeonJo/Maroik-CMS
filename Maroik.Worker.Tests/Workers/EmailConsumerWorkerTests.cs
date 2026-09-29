@@ -22,8 +22,10 @@ namespace Maroik.Worker.Tests.Workers;
 /// </summary>
 public class EmailConsumerWorkerTests
 {
+    /// <summary>The message most tests deliver.</summary>
     private static readonly SendEmailMessage _message = new("to@test.com", "Subject", "Body", "corr-1");
 
+    /// <summary>A scope factory whose scopes resolve <paramref name="handler"/>.</summary>
     private static IServiceScopeFactory BuildScopeFactory(IEmailMessageHandler handler)
     {
         var services = new ServiceCollection();
@@ -31,6 +33,7 @@ public class EmailConsumerWorkerTests
         return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
     }
 
+    /// <summary>A worker resolving <paramref name="handler"/> with a mocked channel already attached (returned in <paramref name="channel"/>).</summary>
     private static EmailConsumerWorker CreateSut(IEmailMessageHandler handler, out Mock<IChannel> channel, ILogger<EmailConsumerWorker>? logger = null)
     {
         var factory = new Mock<IConnectionFactory>();
@@ -319,6 +322,7 @@ public class EmailConsumerWorkerTests
             await Task.Delay(5, timeout.Token);
     }
 
+    /// <summary>Mocked connection factory, connection and channel that record the worker's startup calls.</summary>
     private sealed class BrokerFixture
     {
         /// <summary>Connection factory handed to the worker; returns <see cref="Connection"/>.</summary>
@@ -336,12 +340,14 @@ public class EmailConsumerWorkerTests
         /// <summary>The queue and auto-ack flag of the last <c>BasicConsume</c>.</summary>
         public (string Queue, bool AutoAck)? Consume { get; private set; }
 
+        /// <summary>Wires the factory to return <see cref="Connection"/> and the connection to hand out <see cref="Channel"/>.</summary>
         public BrokerFixture()
         {
             Factory.Setup(f => f.CreateConnectionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Connection.Object);
             WireChannel(Connection, Channel);
         }
 
+        /// <summary>Makes <paramref name="connection"/> return <paramref name="channel"/> and records each declare / QoS / consume call on it.</summary>
         private void WireChannel(Mock<IConnection> connection, Mock<IChannel> channel)
         {
             connection.Setup(c => c.CreateChannelAsync(It.IsAny<CreateChannelOptions?>(), It.IsAny<CancellationToken>())).ReturnsAsync(channel.Object);
@@ -521,6 +527,7 @@ public class EmailConsumerWorkerTests
 
     // -- Retry-count header parsing ---------------------------------------------------------------
 
+    /// <summary>A delivery on the e-mail queue whose retry-count header holds <paramref name="headerValue"/> as-is.</summary>
     private static BasicDeliverEventArgs MakeDeliverArgsWithRawRetryHeader(byte[] body, object? headerValue, ulong deliveryTag) =>
         new("consumer-tag", deliveryTag, false, exchange: "", routingKey: QueueNames.Email,
             new BasicProperties { Headers = new Dictionary<string, object?> { [EmailConsumerWorker.RetryCountHeader] = headerValue } },

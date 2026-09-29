@@ -17,13 +17,17 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Board type of the free forum.</summary>
     private const string FreeForumType = "FreeForum";
 
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
+    /// <summary>Seeds (if missing) an account for <paramref name="email"/> with <paramref name="role"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsync(string email, string role = Role.User) =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", role, TestContext.Current.CancellationToken);
 
+    /// <summary>Inserts a free-forum post by <paramref name="writer"/> directly into the database and returns its id.</summary>
     private long SeedBoard(string writer, string title, string content = "Body", bool locked = false, bool noticed = false, bool deleted = false, DateTime? created = null)
     {
         using var scope = factory.Services.CreateScope();
@@ -39,6 +43,7 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         return board.Id;
     }
 
+    /// <summary>Inserts a comment by <paramref name="writer"/> on board <paramref name="boardId"/>.</summary>
     private void SeedComment(long boardId, string writer, string content, long order = 0)
     {
         using var scope = factory.Services.CreateScope();
@@ -51,6 +56,7 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         db.SaveChanges();
     }
 
+    /// <summary>The stored view count of board <paramref name="boardId"/>.</summary>
     private long ViewCount(long boardId)
     {
         using var scope = factory.Services.CreateScope();
@@ -58,6 +64,7 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         return db.Boards.AsNoTracking().Single(b => b.Id == boardId).View;
     }
 
+    /// <summary>Sends a GET to <paramref name="url"/>, with the session cookie when <paramref name="session"/> is given.</summary>
     private async Task<HttpResponseMessage> GetAsync(string url, AuthenticatedSession? session = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -65,9 +72,12 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         return await _client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
+    /// <summary>URL of the free-forum detail page for post <paramref name="id"/>.</summary>
     private static string Detail(long id) => $"/Forum/FreeForum?method=detail&boardId={id}";
+    /// <summary>URL of the free-forum edit page for post <paramref name="id"/>.</summary>
     private static string Edit(long id) => $"/Forum/FreeForum?method=edit&boardId={id}";
 
+    /// <summary>The response body as a string.</summary>
     private static async Task<string> BodyAsync(HttpResponseMessage response) =>
         await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
@@ -98,6 +108,7 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         return;
 
  #pragma warning disable SYSLIB1045
+        // Number of distinct comments the page offers a delete link for.
         static int DeletableComments(string html) => System.Text.RegularExpressions.Regex
  #pragma warning restore SYSLIB1045
             .Matches(html, "aFreeForumDeleteComment\" href=\"#\" data-commentId=\"(\\d+)\"").Select(m => m.Groups[1].Value).Distinct().Count();

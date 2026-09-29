@@ -17,14 +17,18 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
+    /// <summary>Seeds (if missing) a User account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsUserAsync(string email = "accountbook-user@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
 
+    /// <summary>Seeds (if missing) an Admin account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsAdminAsync(string email = "accountbook-admin@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "AdminPassword1!", Role.Admin, TestContext.Current.CancellationToken);
 
+    /// <summary>Inserts an asset for <paramref name="accountEmail"/> directly into the database, unless it already exists.</summary>
     private void SeedAsset(string accountEmail, string productName)
     {
         using var scope = factory.Services.CreateScope();
@@ -44,6 +48,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
         db.SaveChanges();
     }
 
+    /// <summary>A valid create/update-asset JSON body for <paramref name="productName"/>.</summary>
     private static object ValidAssetPayload(string productName) => new
     {
         ProductName = productName,

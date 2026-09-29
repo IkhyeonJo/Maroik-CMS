@@ -6,15 +6,21 @@
 import { describe, it, expect } from "vitest";
 import type { SiteHandle } from "@tests/_common/harness";
 
+/** What one page supplies to {@link describeAmountLabel}. */
 export interface AmountLabelConfig {
+    /** suite-name prefix, e.g. "user/Notice/FixedExpenditure" */
     label: string;
+    /** loads the page script with its fixture */
     load: () => SiteHandle;
     /** substring of the lookup URL, e.g. "GetFixedExpenditureAmountLabel" */
     url: string;
+    /** creation form: the select whose change triggers the lookup, and the span the label is drawn into */
     create: { trigger: string; span: string };
+    /** edit form: the select whose change triggers the lookup, and the span the label is drawn into */
     edit: { trigger: string; span: string };
 }
 
+/** Registers the amount-label lookup tests (create and edit form, accepted and refused reply) for one page. */
 export function describeAmountLabel(c: AmountLabelConfig): void {
     describe(`${c.label} — amount label lookup`, () => {
         it.each([["create", c.create], ["edit", c.edit]] as const)("%s form: the reply's label is drawn, whether the lookup was accepted or refused", (_side, side) => {

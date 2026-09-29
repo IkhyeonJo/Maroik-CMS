@@ -16,17 +16,24 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class AttachmentContentServiceTests
 {
+    /// <summary>Mock <c>IFileClient</c> injected into the system under test.</summary>
     private readonly Mock<IFileClient> _fileClient = new();
+    /// <summary>Mock <c>IRsaService</c> injected into the system under test.</summary>
     private readonly Mock<IRsaService> _rsa = new();
+    /// <summary>Mock <c>IImageValidatorService</c> injected into the system under test.</summary>
     private readonly Mock<IImageValidatorService> _imageValidator = new();
+    /// <summary>Mock <c>IHtmlContentSanitizerService</c> injected into the system under test.</summary>
     private readonly Mock<IHtmlContentSanitizerService> _htmlSanitizer = new();
+    /// <summary>Mock <c>IHtmlParserService</c> injected into the system under test.</summary>
     private readonly Mock<IHtmlParserService> _htmlParser = new();
+    /// <summary>Settings with a 1 KB attachment limit and a fake file-storage URL.</summary>
     private readonly IOptions<ServerSetting> _settings = Options.Create(new ServerSetting
     {
         MaxAttachedFileSizeBytes = 1024,
         FileStorageBaseUrl = "http://filestorage.local"
     });
 
+    /// <summary>The service under test over the mocked dependencies.</summary>
     private AttachmentContentService CreateSut() => new(
         _fileClient.Object,
         _rsa.Object,

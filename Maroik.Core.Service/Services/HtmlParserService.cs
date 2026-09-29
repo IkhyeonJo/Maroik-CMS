@@ -6,8 +6,8 @@ namespace Maroik.Core.Service.Services;
 /// <summary>HtmlAgilityPack-backed implementation of <see cref="IHtmlParserService"/>.</summary>
 public class HtmlParserService : IHtmlParserService
 {
-    // ReSharper disable once InvalidXmlDocComment
-    /// Upper bound on how many <paramref name="patchFactory"/> calls run at once in
+    /// <summary>
+    /// Upper bound on how many <c>patchFactory</c> calls run at once in
     /// <see cref="TransformImageAttributesAsync"/>. Each call is typically a request to the
     /// file-storage service, so a post with dozens of images must not fan out into dozens of
     /// simultaneous connections.
@@ -58,6 +58,8 @@ public class HtmlParserService : IHtmlParserService
 
         return (doc.DocumentNode.OuterHtml, imgTags.Count > 0);
 
+        // Runs patchFactory for one <img>'s alt value once a gate slot is free, releasing the slot
+        // afterwards, so no more than MaxConcurrentPatchFetches fetches are ever in flight.
         async Task<HtmlImgPatch?> FetchPatchAsync(HtmlNode imgTag)
         {
             // ReSharper disable once AccessToDisposedClosure

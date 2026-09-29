@@ -12,7 +12,7 @@ namespace Maroik.Core.Service.Tests.Services;
 /// Keys are generated in-test using <see cref="System.Security.Cryptography.RSA"/> .NET APIs:
 /// <list type="bullet">
 ///   <item><see cref="RSA.ExportRSAPrivateKey"/> → PKCS#1 DER → Base64 (matches <see cref="RSA.ImportRSAPrivateKey"/>)</item>
-///   <item><see cref="RSA.ExportSubjectPublicKeyInfo"/> → X.509 SubjectPublicKeyInfo DER → Base64 (matches <see cref="RSA.ImportSubjectPublicKeyInfo"/>)</item>
+///   <item><see cref="System.Security.Cryptography.AsymmetricAlgorithm.ExportSubjectPublicKeyInfo"/> → X.509 SubjectPublicKeyInfo DER → Base64 (matches <see cref="RSA.ImportSubjectPublicKeyInfo"/>)</item>
 /// </list>
 /// A 2048-bit key pair is generated once per test class (class-level static) to keep individual tests fast.
 /// </summary>
@@ -20,9 +20,12 @@ public class RsaServiceTests
 {
     // -- Shared 2048-bit key pair generated once per test class ---------------
 
+    /// <summary>Base64 PKCS#1 private key of the shared pair.</summary>
     private static readonly string _privateKeyBase64;
+    /// <summary>Base64 SubjectPublicKeyInfo public key of the shared pair.</summary>
     private static readonly string _publicKeyBase64;
 
+    /// <summary>Generates the shared key pair.</summary>
     static RsaServiceTests()
     {
         using var rsa = RSA.Create(2048);
@@ -32,6 +35,7 @@ public class RsaServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>The service under test configured with the shared key pair and <paramref name="algorithm"/>.</summary>
     private static RsaService CreateSut(RsaType algorithm = RsaType.Rsa2) =>
         new(Options.Create(new ServerSetting
         {
@@ -139,38 +143,12 @@ public class RsaServiceTests
         Assert.ThrowsAny<CryptographicException>(() => sut.Decrypt(legacyCipher));
     }
 
-    /// <summary>
-    /// Regression: the SHA-1 fallback has been retired, so a signature made with the legacy SHA-1
-    /// hash must no longer verify.
-    /// </summary>
-    [Fact]
-    public void Verify_RejectsSignature_MadeWithLegacySha1()
-    {
-        const string data = "legacy-sha1-signed";
-
-        using var rsa = RSA.Create(2048);
-        string privateKey = Convert.ToBase64String(rsa.ExportRSAPrivateKey());
-        string publicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo());
-
-        string legacySignature = Convert.ToBase64String(
-            rsa.SignData(System.Text.Encoding.UTF8.GetBytes(data), HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1));
-
-        var sut = new RsaService(Options.Create(new ServerSetting
-        {
-            RsaAlgorithm = RsaType.Rsa2,
-            RsaPrivateKey = privateKey,
-            RsaPublicKey = publicKey
-        }));
-
-        Assert.False(sut.Verify(data, legacySignature));
-    }
-
     /// <summary>Verifies that <c>Decrypt</c> throws when ciphertext is invalid.</summary>
     [Fact]
     public void Decrypt_Throws_WhenCiphertextIsInvalid()
     {
         var sut = CreateSut();
-        string badCipher = Convert.ToBase64String(new byte[256]); // zeros ?? not a valid RSA ciphertext
+        string badCipher = Convert.ToBase64String(new byte[256]); // zeros — not a valid RSA ciphertext
 
         Assert.ThrowsAny<CryptographicException>(() => sut.Decrypt(badCipher));
     }
@@ -185,122 +163,7 @@ public class RsaServiceTests
         Assert.ThrowsAny<CryptographicException>(() => sut.Decrypt("upload/Forum/not-a-token.png"));
     }
 
-    // -- Sign / Verify --------------------------------------------------------
-
-    /// <summary>Verifies that <c>Sign</c> then verify when returns true.</summary>
-    [Fact]
-    public void Sign_ThenVerify_ReturnsTrue()
-    {
-        var sut = CreateSut();
-        const string data = "data-to-sign";
-
-        string signature = sut.Sign(data);
-        bool valid = sut.Verify(data, signature);
-
-        Assert.True(valid);
-    }
-
-    /// <summary>Verifies that <c>Sign</c> then verify with sha1 algorithm returns true.</summary>
-    [Fact]
-    public void Sign_ThenVerify_WithSha1Algorithm_ReturnsTrue()
-    {
-        var sut = CreateSut(RsaType.Rsa);
-        const string data = "sha1-sign-verify";
-
-        string signature = sut.Sign(data);
-        bool valid = sut.Verify(data, signature);
-
-        Assert.True(valid);
-    }
-
-    /// <summary>Verifies that <c>Verify</c> returns false when data is tampered.</summary>
-    [Fact]
-    public void Verify_ReturnsFalse_WhenDataIsTampered()
-    {
-        var sut = CreateSut();
-        string signature = sut.Sign("original");
-
-        bool valid = sut.Verify("tampered", signature);
-
-        Assert.False(valid);
-    }
-
-    /// <summary>Verifies that <c>Verify</c> returns false when signature is corrupted.</summary>
-    [Fact]
-    public void Verify_ReturnsFalse_WhenSignatureIsCorrupted()
-    {
-        var sut = CreateSut();
-        string signature = sut.Sign("data");
-
-        // Flip the last byte of the Base64-decoded signature
-        byte[] sigBytes = Convert.FromBase64String(signature);
-        sigBytes[^1] ^= 0xFF;
-        string corruptedSignature = Convert.ToBase64String(sigBytes);
-
-        bool valid = sut.Verify("data", corruptedSignature);
-
-        Assert.False(valid);
-    }
-
-    /// <summary>Verifies that <c>Verify</c> returns false (does not throw) for a non-Base64 signature.</summary>
-    [Fact]
-    public void Verify_ReturnsFalse_WhenSignatureIsNotBase64()
-    {
-        var sut = CreateSut();
-
-        bool valid = sut.Verify("data", "not-valid-base64-!!!");
-
-        Assert.False(valid);
-    }
-
-    /// <summary>Verifies that <c>Sign</c> produces non-empty base64 string.</summary>
-    [Fact]
-    public void Sign_ProducesNonEmptyBase64String()
-    {
-        var sut = CreateSut();
-
-        string signature = sut.Sign("some data");
-
-        Assert.False(string.IsNullOrEmpty(signature));
-        var bytes = Convert.FromBase64String(signature); // must be valid Base64
-        Assert.NotEmpty(bytes);
-    }
-
     // -- No-key edge cases ----------------------------------------------------
-
-    /// <summary>Verifies that <c>Sign</c> returns empty when private key is not configured.</summary>
-    [Fact]
-    public void Sign_ReturnsEmpty_WhenPrivateKeyIsNotConfigured()
-    {
-        // RsaService with no private key → _rsa has null private key provider
-        var sut = new RsaService(Options.Create(new ServerSetting
-        {
-            RsaAlgorithm = RsaType.Rsa2,
-            RsaPrivateKey = "",
-            RsaPublicKey = _publicKeyBase64
-        }));
-
-        string result = sut.Sign("data");
-
-        Assert.Equal("", result);
-    }
-
-    /// <summary>Verifies that <c>Verify</c> returns false when public key is not configured.</summary>
-    [Fact]
-    public void Verify_ReturnsFalse_WhenPublicKeyIsNotConfigured()
-    {
-        var sut = new RsaService(Options.Create(new ServerSetting
-        {
-            RsaAlgorithm = RsaType.Rsa2,
-            RsaPrivateKey = _privateKeyBase64,
-            RsaPublicKey = null
-        }));
-
-        // No public key → Verify returns false (provider is null)
-        bool result = sut.Verify("data", Convert.ToBase64String(new byte[256]));
-
-        Assert.False(result);
-    }
 
     /// <summary>Decrypting without a configured private key fails loudly instead of returning garbage.</summary>
     [Fact]

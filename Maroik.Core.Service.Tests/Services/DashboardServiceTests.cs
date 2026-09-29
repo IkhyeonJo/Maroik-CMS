@@ -17,13 +17,20 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class DashboardServiceTests
 {
+    /// <summary>Mock <c>IAccountRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAccountRepository> _accountRepo = new();
+    /// <summary>Mock <c>IAssetRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAssetRepository> _assetRepo = new();
+    /// <summary>Mock <c>IIncomeRepository</c> injected into the system under test.</summary>
     private readonly Mock<IIncomeRepository> _incomeRepo = new();
+    /// <summary>Mock <c>IExpenditureRepository</c> injected into the system under test.</summary>
     private readonly Mock<IExpenditureRepository> _expenditureRepo = new();
+    /// <summary>Mock <c>IFixedIncomeRepository</c> injected into the system under test.</summary>
     private readonly Mock<IFixedIncomeRepository> _fixedIncomeRepo = new();
+    /// <summary>Mock <c>IFixedExpenditureRepository</c> injected into the system under test.</summary>
     private readonly Mock<IFixedExpenditureRepository> _fixedExpenditureRepo = new();
 
+    /// <summary>The service under test over the mocked dependencies, with <paramref name="settings"/> or defaults.</summary>
     private DashboardService CreateSut(ServerSetting? settings = null) => new(
         _accountRepo.Object,
         _assetRepo.Object,
@@ -35,6 +42,7 @@ public class DashboardServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A persisted asset named <paramref name="name"/> in <paramref name="unit"/>.</summary>
     private static Asset MakeAsset(string name, string unit = "KRW", bool deleted = false) =>
         Asset.Reconstitute(
             productName: name,
@@ -47,6 +55,7 @@ public class DashboardServiceTests
             created: DateTime.UtcNow,
             updated: DateTime.UtcNow);
 
+    /// <summary>An account whose default monetary unit is <paramref name="unit"/>.</summary>
     private static Account MakeAccount(string email = "user@example.com", string? unit = null) =>
         Account.Reconstitute(
             email: email,
@@ -69,6 +78,7 @@ public class DashboardServiceTests
             securityStamp: "stamp",
             mustChangePassword: false);
 
+    /// <summary>Arranges no incomes or expenditures, in range or ever.</summary>
     private void SetupEmptyFinancials()
     {
         _incomeRepo.Setup(r => r.GetByAccountEmailAndDateRangeAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
@@ -738,6 +748,7 @@ public class DashboardServiceTests
 
     // -- GetSummaryAsync: currency filter and start year ------------------------------
 
+    /// <summary>Arranges the account (default unit <paramref name="defaultUnit"/>), its assets, the in-range incomes/expenditures, and the first-ever income/expenditure.</summary>
     private void GivenSummaryInputs(IEnumerable<Asset> assets, List<Income> incomes, List<Expenditure> expenditures,
         Income? firstIncome = null, Expenditure? firstExpenditure = null, string? defaultUnit = "KRW")
     {
@@ -749,9 +760,11 @@ public class DashboardServiceTests
         _expenditureRepo.Setup(r => r.GetFirstByAccountEmailOrderedByCreatedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(firstExpenditure);
     }
 
+    /// <summary>A KRW income into <paramref name="asset"/> created at <paramref name="created"/>.</summary>
     private static Income IncomeAt(long id, string asset, decimal amount, DateTime created) =>
         Income.Reconstitute(id, "user@example.com", "RegularIncome", "LaborIncome", null, amount, "KRW", asset, null, created, created);
 
+    /// <summary>A KRW expenditure paid by <paramref name="paymentMethod"/> created at <paramref name="created"/>.</summary>
     private static Expenditure ExpenditureAt(long id, string paymentMethod, decimal amount, DateTime created) =>
         Expenditure.Reconstitute(id, "user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", null, amount, "KRW", paymentMethod, "", null, created, created);
 
@@ -829,6 +842,7 @@ public class DashboardServiceTests
 
     // -- GetNoticeCountsAsync: fixed expenditures ------------------------------------
 
+    /// <summary>A fixed expenditure maturing on <paramref name="maturity"/>, with the "always notify" flag set by <paramref name="unpunctual"/>.</summary>
     private static FixedExpenditure FixedExpenditureDue(DateTime maturity, bool unpunctual = false) =>
         FixedExpenditure.Reconstitute(1, "user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", null, 100m, "KRW",
             "Wallet", null, 1, 1, maturity, null, unpunctual, DateTime.UtcNow, DateTime.UtcNow);

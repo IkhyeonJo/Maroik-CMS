@@ -10,6 +10,7 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class HtmlContentSanitizerServiceTests
 {
+    /// <summary>The service under test.</summary>
     private readonly HtmlContentSanitizerService _sut = new();
 
     /// <summary>Verifies that script tags are stripped.</summary>

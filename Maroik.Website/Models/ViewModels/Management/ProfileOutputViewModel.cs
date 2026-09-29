@@ -6,9 +6,9 @@ using Maroik.Core.Domain.Account;
 namespace Maroik.Website.Models.ViewModels.Management;
 
 /// <summary>
-/// View model for the admin self-service profile page.
-/// Pre-populates the form with the current account values so the admin can
-/// review and selectively update their nickname, avatar, password, and time zone.
+/// View model for the self-service profile page (Admin and User).
+/// Pre-populates the form with the current account values so the user can
+/// review them and update their avatar, password and time zone (the nickname is shown read-only).
 /// </summary>
 public class ProfileOutputViewModel
 {
@@ -27,14 +27,15 @@ public class ProfileOutputViewModel
     [Display(Name = "Nickname")]
     public string? Nickname { get; set; }
 
-    /// <summary>UTC timestamp when the account was first created.</summary>
+    /// <summary>When the account was first created, converted to the account's own time zone.</summary>
     [Required(ErrorMessage = "Please enter Created")]
     [Display(Name = "Created")]
     public DateTime Created { get; set; }
 
     /// <summary>
-    /// Current (existing) password ?? required to authorize any profile changes.
-    /// Must satisfy the password complexity rule.
+    /// Current (existing) password — required to authorize a password change (the avatar and time-zone
+    /// updates do not ask for it). Carries the complexity rule only for the form's client-side hints; the
+    /// server checks the current password against the stored hash, not against the rule.
     /// </summary>
     [Required(ErrorMessage = "Password is required")]
     [StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 8)]
@@ -43,7 +44,7 @@ public class ProfileOutputViewModel
     public string? Password { get; set; }
 
     /// <summary>
-    /// New password the admin wishes to set.
+    /// New password the user wishes to set.
     /// Must satisfy the password complexity rule.
     /// </summary>
     [Required(ErrorMessage = "New password is required")]
@@ -54,7 +55,7 @@ public class ProfileOutputViewModel
 
 
     /// <summary>
-    /// Confirmation of the new password ?? must match <see cref="NewPassword"/> exactly.
+    /// Confirmation of the new password — must match <see cref="NewPassword"/> exactly.
     /// </summary>
     [Required(ErrorMessage = "Confirm new password is required")]
     [StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 8)]

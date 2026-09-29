@@ -48,5 +48,6 @@ public partial class CalendarEventReminder
     /// </summary>
     public TimeOnly? TimesBeforeEvent { get; set; }
 
+    /// <summary>The event this reminder belongs to.</summary>
     public virtual CalendarEvent CalendarEvent { get; set; } = null!;
 }

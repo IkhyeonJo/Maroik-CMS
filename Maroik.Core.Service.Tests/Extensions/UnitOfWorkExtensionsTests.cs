@@ -13,6 +13,7 @@ namespace Maroik.Core.Service.Tests.Extensions;
 /// </summary>
 public class UnitOfWorkExtensionsTests
 {
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     // -- FailAsync(ServiceResult) -----------------------------------------------

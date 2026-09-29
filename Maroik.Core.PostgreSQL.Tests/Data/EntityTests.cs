@@ -6,6 +6,7 @@ namespace Maroik.Core.PostgreSQL.Tests.Data;
 /// <summary>The entity classes are plain data holders: each can be created empty, and its collection navigations start as empty collections (never null).</summary>
 public class EntityTests
 {
+    /// <summary>Every concrete class in the <c>Maroik.Core.PostgreSQL.Models</c> namespace.</summary>
     private static IEnumerable<Type> EntityTypes() =>
         typeof(Account).Assembly.GetTypes().Where(t => t.Namespace == "Maroik.Core.PostgreSQL.Models" && t is { IsClass: true, IsAbstract: false });
 

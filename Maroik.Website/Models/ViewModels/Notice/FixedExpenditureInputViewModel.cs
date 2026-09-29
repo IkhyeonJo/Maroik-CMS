@@ -8,8 +8,8 @@ namespace Maroik.Website.Models.ViewModels.Notice;
 /// <summary>
 /// Form model for creating or editing a fixed (recurring) expenditure entry.
 /// Fixed expenditures repeat on a specific day of a specific month and have a maturity date
-/// after which they are treated as expired. An <see cref="Unpunctuality"/> flag tracks
-/// whether the payment was made on time.
+/// after which they are treated as expired. The <see cref="Unpunctuality"/> flag is the user's
+/// "always notify" choice for a charge whose timing is not punctual.
 /// </summary>
 public class FixedExpenditureInputViewModel : IValidatableObject
 {
@@ -63,7 +63,7 @@ public class FixedExpenditureInputViewModel : IValidatableObject
     public string? PaymentMethod { get; set; }
 
     /// <summary>
-    /// Name of the asset (product) that is debited for this recurring expenditure. Required only
+    /// Name of the asset (product) credited by this recurring expenditure — the transfer target. Required only
     /// when <see cref="SubClass"/> is one of
     /// <see cref="ExpenditureClassPolicy.DepositAssetSubClasses"/> (a transfer-type subclass) —
     /// the domain only needs a deposit asset then; see <see cref="Validate"/>.
@@ -72,8 +72,8 @@ public class FixedExpenditureInputViewModel : IValidatableObject
     public string? MyDepositAsset { get; set; }
 
     /// <summary>
-    /// When <see langword="true"/> the payment was not made on the scheduled date (late or missed).
-    /// Used in the Notice page to highlight overdue fixed expenditures.
+    /// User-chosen "always notify" flag: when <see langword="true"/> the schedule is always counted as
+    /// noticed (highlighted on the Notice page and in the header badge), regardless of its date.
     /// </summary>
     [Display(Name = "Unpunctuality")]
     public bool Unpunctuality { get; set; }

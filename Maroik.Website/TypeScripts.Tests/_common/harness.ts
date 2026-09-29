@@ -19,8 +19,10 @@ import { resolve } from "node:path";
 import { vi } from "vitest";
 import jqueryImport from "jquery";
 
+/** The website's wwwroot, where the compiled scripts live. */
 const WWWROOT = resolve(__dirname, "../../wwwroot");
 
+/** The options object a script passed to `$.ajax`. */
 export interface AjaxCall {
     url: string;
     type?: string;
@@ -33,26 +35,32 @@ export interface AjaxCall {
     async?: boolean;
 }
 
+/** What {@link loadSite} returns: the page's window and every stub/capture a test asserts on. */
 export interface SiteHandle {
+    /** the jQuery bound to the page window */
     $: JQueryStatic;
+    /** the jsdom window the script ran in */
     win: Window & typeof globalThis & Record<string, any>;
     /** every `{ ctx, cfg }` passed to `new Chart(...)` (Dashboard) */
     charts: unknown[];
-    /** every options object passed to `new FullCalendar.Calendar(el, opts)` — see the field's own doc comment above. */
+    /** every options object passed to `new FullCalendar.Calendar(el, opts)` — lets a test call a page's `select` / `eventClick` callback (see the comment on `calendarOptions` in loadSite). */
     calendarOptions: any[];
+    /** every `$.ajax` call, in order */
     ajaxCalls: AjaxCall[];
 
-    /** invoke the Nth captured ajax call's `success` with `data` */
+    /** invoke the `success` of the captured ajax call `indexFromEnd` places before the last (0 = the last) with `data` */
     respond(indexFromEnd: number, data: unknown): void;
 
     /** last captured ajax call */
     lastAjax(): AjaxCall;
 
+    /** the `toastr` spies */
     toastr: { success: any; error: any; info: any; warning: any };
     /** `<form>`s that site.js created + submitted via ExportExcel* */
     submittedForms: HTMLFormElement[];
     /** values passed to `window.location.href = …` */
     navigations: string[];
+    /** every `new MvcGrid(...)` stub the script constructed */
     MvcGridInstances: any[];
     /** every `{ el, options }` passed to `$(el).datepicker({...})` — lets a test call `options.onSelect` / `beforeShow` */
     datepickerInits: { el: Element | undefined; options: any }[];
@@ -64,12 +72,14 @@ export interface SiteHandle {
     summernoteCalls: { el: Element | undefined; args: unknown[] }[];
 }
 
+/** jQuery bound to `win` (the CommonJS build exports a factory when no global window exists). */
 function bindJquery(win: any): JQueryStatic {
     const mod: any = jqueryImport as any;
     const $ = typeof mod === "function" && !mod.fn ? mod(win) : mod;
     return $ as JQueryStatic;
 }
 
+/** Resets the document to `fixtureHtml`, installs the stubs, runs the compiled page script and returns a {@link SiteHandle}. */
 export function loadSite(
     area: "admin" | "anonymous" | "user",
     feature: string,
@@ -93,12 +103,14 @@ export function loadSite(
     for (const name of ["tabs", "modal", "tooltip"]) {
         ($.fn as any)[name] = chainable;
     }
+    // Captured for SiteHandle.datepickerInits; `$(el).datepicker("getDate")` answers null.
     const datepickerInits: SiteHandle["datepickerInits"] = [];
     ($.fn as any).datepicker = function(this: any, arg?: unknown) {
         if (arg && typeof arg === "object") datepickerInits.push({ el: this[0], options: arg });
         return arg === "getDate" ? null : this;
     };
     ($.fn as any).valid = () => true;
+    // Captured for SiteHandle.summernoteInits / summernoteCalls; `summernote("code")` returns opts.summernoteCode.
     const summernoteInits: SiteHandle["summernoteInits"] = [];
     const summernoteCalls: SiteHandle["summernoteCalls"] = [];
     ($.fn as any).summernote = function(this: any, ...args: unknown[]) {
@@ -149,6 +161,7 @@ export function loadSite(
         });
     };
 
+    // Stub MvcGrid: records each instance, with a fixed URL and a spy `reload`.
     const MvcGridInstances: any[] = [];
     win.MvcGrid = class {
         url = new URL("http://localhost/grid");
@@ -179,6 +192,7 @@ export function loadSite(
         },
     };
 
+    // Minimal moment stub: every date formats as "2024-01-01".
     const moment: any = (_d?: unknown) => ({
         format: () => "2024-01-01",
         add: () => moment(),
@@ -200,6 +214,7 @@ export function loadSite(
     if (!win.URL.createObjectURL) win.URL.createObjectURL = () => "blob:stub";
     if (!win.URL.revokeObjectURL) win.URL.revokeObjectURL = () => undefined;
 
+    // window.location stub: records every navigation (href set, assign, replace) instead of navigating.
     const navigations: string[] = [];
     let hrefValue = "http://localhost/";
     const locationMock = {

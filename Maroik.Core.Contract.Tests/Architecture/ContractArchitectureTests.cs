@@ -13,6 +13,7 @@ namespace Maroik.Core.Contract.Tests.Architecture;
 /// </summary>
 public class ContractArchitectureTests
 {
+    /// <summary>The assembly containing <c>IAccountRepository</c>, referenced by these architecture rules.</summary>
     private static readonly Assembly _contractAssembly = typeof(IAccountRepository).Assembly;
 
     /// <summary>Contract should not depend on any implementation layer.</summary>
@@ -155,6 +156,7 @@ public class ContractArchitectureTests
             "child Entity<TId>:\n" + string.Join("\n", violations));
     }
 
+    /// <summary>True when any base type of <paramref name="type"/> is <c>AggregateRoot&lt;TId&gt;</c>.</summary>
     private static bool DerivesFromAggregateRoot(Type type)
     {
         for (Type? t = type.BaseType; t is not null; t = t.BaseType)
@@ -163,6 +165,7 @@ public class ContractArchitectureTests
         return false;
     }
 
+    /// <summary>Explains, for a failure message, why <paramref name="type"/> is not an aggregate root.</summary>
     private static string DescribeBase(Type type)
     {
         for (Type? t = type.BaseType; t is not null; t = t.BaseType)

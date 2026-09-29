@@ -17,6 +17,7 @@ public sealed class CalendarSharedRepositoryTests(DatabaseFixture database) : Re
 {
     private CalendarSharedRepository Sut => new(Context);
 
+    /// <summary>An unsaved sharing row for calendar <paramref name="calendarId"/>.</summary>
     private static OrmCalendarShared MakeShared(long calendarId, bool user = false, bool anonymous = false) => new()
     {
         CalendarId = calendarId,
@@ -24,6 +25,7 @@ public sealed class CalendarSharedRepositoryTests(DatabaseFixture database) : Re
         Anonymous = anonymous
     };
 
+    /// <summary>Inserts <paramref name="entries"/>, saves, and clears the change tracker so later reads hit the database.</summary>
     private async Task SeedAsync(params OrmCalendarShared[] entries)
     {
         await Context.CalendarShareds.AddRangeAsync(entries);
@@ -152,6 +154,7 @@ public sealed class CalendarSharedRepositoryTests(DatabaseFixture database) : Re
             LockAndUpdateAsync(contexts[1], [high, low], user: false, anonymous: true));
         return;
 
+        // One contender: locks both rows (ids in the order given), waits so the other contender overlaps, then updates and commits.
  #pragma warning disable IDE0062
         async Task LockAndUpdateAsync(ApplicationDbContext context, long[] ids, bool user, bool anonymous)
  #pragma warning restore IDE0062

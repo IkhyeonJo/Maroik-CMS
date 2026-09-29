@@ -15,8 +15,11 @@ namespace Maroik.Core.Repository.Tests.Architecture;
 /// </summary>
 public class RepositoryArchitectureTests
 {
+    /// <summary>The assembly containing <c>AccountRepository</c>, referenced by these architecture rules.</summary>
     private static readonly Assembly _repositoryAssembly = typeof(AccountRepository).Assembly;
+    /// <summary>The assembly containing <c>Entity&lt;TId&gt;</c> (Maroik.Core.Domain), referenced by these architecture rules.</summary>
     private static readonly Assembly _domainAssembly = typeof(Entity<>).Assembly;
+    /// <summary>The assembly containing <c>IAccountRepository</c>, referenced by these architecture rules.</summary>
     private static readonly Assembly _contractAssembly = typeof(IAccountRepository).Assembly;
 
     /// <summary>

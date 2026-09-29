@@ -26,8 +26,10 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ViewRenderingTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
+    /// <summary>Runs <paramref name="seed"/> against a fresh context and saves.</summary>
     private void Seed(Action<ApplicationDbContext> seed)
     {
         using var scope = factory.Services.CreateScope();
@@ -36,12 +38,14 @@ public class ViewRenderingTests(MaroikWebApplicationFactory factory)
         db.SaveChanges();
     }
 
+    /// <summary>Inserts a 1000-unit asset of <paramref name="email"/> in <paramref name="unit"/>.</summary>
     private void SeedAsset(string email, string productName, string unit) => Seed(db => db.Assets.Add(new Asset
     {
         ProductName = productName, AccountEmail = email, Item = "FreeDepositAndWithdrawal", MonetaryUnit = unit,
         Amount = 1000m, Note = "", Deleted = false, Created = DateTime.UtcNow, Updated = DateTime.UtcNow,
     }));
 
+    /// <summary>GETs <paramref name="url"/> with the session cookie, asserts 200, and returns the HTML.</summary>
     private async Task<string> GetHtmlAsync(string url, AuthenticatedSession session)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -133,8 +137,10 @@ public class ViewRenderingTests(MaroikWebApplicationFactory factory)
 
     // -- the MVC Grid table template in the filter modes the site's own grids do not use ---------------------------
 
+    /// <summary>A grid row with two text columns.</summary>
     private sealed record Row(string Name, string Kind);
 
+    /// <summary>Renders the shared MvcGrid partial for a two-row grid (text and multi-select filters enabled) in filter mode <paramref name="mode"/>.</summary>
     private async Task<string> RenderGridAsync(GridFilterMode mode)
     {
         using var scope = factory.Services.CreateScope();

@@ -18,6 +18,7 @@ public sealed class IncomeRepositoryTests(DatabaseFixture database) : Repository
 {
     private IncomeRepository Sut => new(Context);
 
+    /// <summary>An unsaved income row owned by <paramref name="email"/>, deposited into <paramref name="assetName"/>.</summary>
     private static OrmIncome MakeIncome(string email, string assetName, string content = "Salary", decimal amount = 500m) => new()
     {
         AccountEmail = email,
@@ -31,6 +32,7 @@ public sealed class IncomeRepositoryTests(DatabaseFixture database) : Repository
         Updated = DateTime.UtcNow
     };
 
+    /// <summary>Ensures each owner account and every referenced asset exist, then inserts <paramref name="incomes"/>, saves, and clears the change tracker.</summary>
     private async Task SeedAsync(params OrmIncome[] incomes)
     {
         foreach (var group in incomes.GroupBy(i => i.AccountEmail!))
@@ -136,7 +138,7 @@ public sealed class IncomeRepositoryTests(DatabaseFixture database) : Repository
     /// <summary>
     /// Regression: the FOR UPDATE lookup re-reads through <c>FindByEmailAndIdAsync</c>-equivalent
     /// path, which must run <c>AsNoTracking()</c>. If this row is already tracked in the same
-    /// <see cref="Context"/> from an earlier plain read, a tracking re-read would perform EF's
+    /// <see cref="RepositoryTestBase.Context"/> from an earlier plain read, a tracking re-read would perform EF's
     /// identity resolution and hand back that pre-existing (stale) tracked instance instead of the
     /// row's just-locked, current committed values — silently defeating the FOR UPDATE lock.
     /// </summary>
@@ -184,6 +186,7 @@ public sealed class IncomeRepositoryTests(DatabaseFixture database) : Repository
         Assert.Equal(700m, result.Amount); // 500 + 100 + 100: no lost update
         return;
 
+        // One contender: locks the row on its own connection, waits so the other contender queues behind the lock, then adds 100 and commits.
         async Task BumpAsync()
         {
             await using var context = NewDbContext();

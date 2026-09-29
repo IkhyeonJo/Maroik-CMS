@@ -7,9 +7,12 @@
 import { describe, it, expect, vi } from "vitest";
 import { hidden, type SiteHandle } from "@tests/_common/harness";
 
+/** Short alias used by the calendar suites. */
 export type Handle = SiteHandle;
+/** Loads a calendar page with the given "my" / "other" event data, optionally rewriting its fixture HTML first. */
 export type Build = (opts?: { my?: unknown[]; other?: unknown[]; body?: (html: string) => string }) => Handle;
 
+/** A one-hour server-rendered event (the shape of the hidden event-data inputs) in `calendarId`. */
 export const evt = (id: number, calendarId: number, type = "My") => ({
     Id: id, Title: `Event ${id}`, AllDay: false, StartDate: "2024-05-01T10:00:00", EndDate: "2024-05-01T11:00:00", HtmlColorCode: "#123456",
     CalendarId: calendarId, DisplayStartDate: "2024-05-01 10:00:00", DisplayEndDate: "2024-05-01 11:00:00",
@@ -22,6 +25,7 @@ export const mine = `<div id="myCalendars">
   <label id="lblCalendar2"><input type="checkbox" class="chkCalendar" /><label>Alpha</label></label>
   <label id="lblCalendar3"><input type="checkbox" class="chkCalendar" checked /><label>Mid</label></label></div>`;
 
+/** Modal shells and form inputs the calendar scripts cache, shared by both page fixtures. */
 export const extras = `
   <div id="createCalendarEventTaskDialogModal"></div><div id="editCalendarEventTaskDialogModal"></div>
   <div id="createCalendarDialogModal"></div><div id="editCalendarDialogModal"></div><div id="confirmDeleteCalendarDialogModal"></div>
@@ -45,6 +49,7 @@ export const extras = `
 export const json = (value: unknown) => JSON.stringify(value).replace(/"/g, "&quot;");
 export { hidden };
 
+/** Replaces `$.fn.modal` with a chainable spy and returns it. */
 export const spyModal = (h: Handle) => {
     const modal = vi.fn(function(this: any) {
         return this;
@@ -52,15 +57,20 @@ export const spyModal = (h: Handle) => {
     (h.$.fn as any).modal = modal;
     return modal;
 };
+/** The captured `GetCalendarEvents` requests. */
 export const eventCalls = (h: Handle) => h.ajaxCalls.filter((c) => c.url === "/Calendar/GetCalendarEvents");
 
+/** What one calendar page supplies to {@link describeCalendarCommon}. */
 export interface CalendarCommon {
+    /** suite-name prefix */
     label: string;
+    /** loads the page */
     build: Build;
     /** calendar ids the page requests when its checked boxes are collected (mine 1 and 3, plus any "other" ones) */
     checkedIds: { Id: number }[];
 }
 
+/** Registers the shared calendar tests: reminder validation, the create-event form and the "my calendars" list. */
 export function describeCalendarCommon(c: CalendarCommon): void {
     const { build, label } = c;
     describe(`${label} — reminder validation`, () => {
@@ -464,6 +474,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const result = h.calendarOptions[0].eventClick({ el, event });
             return { event, result, el };
         };
+        /** The inline `display` style of the element matching `id` (jsdom does no layout). */
         const display = (h: Handle, id: string) => (h.$(id)[0] as HTMLElement).style.display;
 
         it("clicking my own timed event opens its popup with the local start/end and both zones", () => {
@@ -797,8 +808,10 @@ export function describeCalendarCommon(c: CalendarCommon): void {
     });
 }
 
+/** Registers the shared tests for the all-day layout, the event popup and the edit/delete event flows. */
 export function describeCalendarExtras(c: { label: string; build: Build }): void {
     const { label, build } = c;
+    /** The inline `display` style of the element matching `id` (jsdom does no layout). */
     const display = (h: Handle, id: string) => (h.$(id)[0] as HTMLElement).style.display;
 
     describe(`${label} — create/edit forms opened with the all-day box already checked`, () => {
@@ -1002,11 +1015,14 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
 export function describeEditFormDetail(c: { label: string; build: Build }): void {
     const { label, build } = c;
     const png = "iVBORw0KGgo="; // any base64 — only decoded into a Blob
+    /** Edit-form attachment and reminder containers, each reminder list pre-filled with a stale row. */
     const editDom = `
     <div id="divEditCalendarEventAttachedFile" style="display:none"></div><span id="spanEditCalendarEventAttachedFile"></span>
     <div id="divEditEventNotificationAllDayChecked"><div class="divEditEventNotificationAllDayCheckedRow">stale</div><div id="editCalendarEventNotificationAllDayChecked"></div></div>
     <div id="divEditEventNotificationAllDayUnchecked"><div class="divEditEventNotificationAllDayUncheckedRow">stale</div><div id="editCalendarEventNotificationAllDayUnchecked"></div></div>`;
+    /** The inline `display` style of the element matching `id` (jsdom does no layout). */
     const display = (h: Handle, id: string) => (h.$(id)[0] as HTMLElement).style.display;
+    /** Loads the page with {@link editDom}, stubbed object URLs and a modal spy. */
     const setup = () => {
         // the base fixture already has empty edit-reminder containers; swap them for ones with a stale row and an insertion anchor
         const h = build({
@@ -1018,12 +1034,15 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
         spyModal(h);
         return h;
     };
+    /** Clicks "my" event 55 through the calendar's `eventClick` callback. */
     const click = (h: Handle) => {
         const el = h.win.document.createElement("div");
         h.win.document.body.appendChild(el);
         return h.calendarOptions[0].eventClick({ el, event: { id: "55", title: "T", allDay: false, extendedProps: { calendarType: "My" } } });
     };
+    /** A stored attachment as the event reply describes it. */
     const attachment = { name: "spec", extension: ".pdf", size: 2_500_000 };
+    /** An accepted IsCalendarEventExists reply for event 55, with `over` merged into the event. */
     const payload = (over: Record<string, unknown> = {}) => ({
         result: true, calendarEvent: {
             id: 55, title: "Mine", allDay: false, displayStartDate: "2024-05-01 09:05:00", displayEndDate: "2024-05-02 10:10:00",
@@ -1031,6 +1050,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             calendarEventAttachedFile: null, calendarId: 1, status: "Busy", serializedCalendarReminders: "[]", ...over
         }
     });
+    /** A stored e-mail reminder (all offsets empty, 09:00) with `over` merged in. */
     const reminder = (over: Record<string, unknown>) => ({
         Method: "Email", MinutesBeforeEvent: null, HoursBeforeEvent: null,
         DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: "09:00:00", ...over

@@ -13,9 +13,12 @@ namespace Maroik.Core.Client.Tests.Clients;
 /// </summary>
 public class RabbitMqEmailPublisherTests
 {
+    /// <summary>Mock <c>IConnectionFactory</c> injected into the system under test.</summary>
     private readonly Mock<IConnectionFactory> _factory = new();
+    /// <summary>The message every test publishes.</summary>
     private static readonly SendEmailMessage _message = new("to@test.com", "Subject", "Body", "corr-1");
 
+    /// <summary>An open channel mock that accepts queue declarations and publishes.</summary>
     private static Mock<IChannel> MakeChannelMock()
     {
         var channel = new Mock<IChannel>();
@@ -27,9 +30,11 @@ public class RabbitMqEmailPublisherTests
         return channel;
     }
 
+    /// <summary>Overload of <see cref="MakeConnectionMock(IChannel, bool)"/> taking the channel mock.</summary>
     private static Mock<IConnection> MakeConnectionMock(Mock<IChannel> channel, bool isOpen) =>
         MakeConnectionMock(channel.Object, isOpen);
 
+    /// <summary>A connection mock reporting <paramref name="isOpen"/> that hands out <paramref name="channel"/>.</summary>
     private static Mock<IConnection> MakeConnectionMock(IChannel channel, bool isOpen)
     {
         var connection = new Mock<IConnection>();
@@ -44,6 +49,7 @@ public class RabbitMqEmailPublisherTests
     // is 5s — see RabbitMqEmailPublisher's constructor).
     private static readonly TimeSpan _testRecoveryGraceWindow = TimeSpan.FromMilliseconds(20);
 
+    /// <summary>Builds the publisher under test over the mocked factory with a short reconnect grace window.</summary>
     private RabbitMqEmailPublisher CreateSut() =>
         new(_factory.Object, NullLogger<RabbitMqEmailPublisher>.Instance, _testRecoveryGraceWindow);
 

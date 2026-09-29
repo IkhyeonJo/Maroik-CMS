@@ -13,6 +13,7 @@ namespace Maroik.Core.Repository.Tests.Infrastructure;
 /// </summary>
 public sealed class DatabaseFixture(PostgresContainerFixture container) : IAsyncLifetime
 {
+    /// <summary>Name of the per-class database cloned from the template; empty until initialized.</summary>
     private string _database = "";
 
     /// <summary>Connection string to this class's freshly cloned, seeded database.</summary>

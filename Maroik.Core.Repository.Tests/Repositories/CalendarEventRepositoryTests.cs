@@ -17,6 +17,7 @@ public sealed class CalendarEventRepositoryTests(DatabaseFixture database) : Rep
 {
     private CalendarEventRepository Sut => new(Context);
 
+    /// <summary>An unsaved event row in calendar <paramref name="calendarId"/>.</summary>
     private OrmCalendarEvent MakeEvent(long calendarId, string? title = null) => new()
     {
         CalendarId = calendarId,
@@ -29,6 +30,7 @@ public sealed class CalendarEventRepositoryTests(DatabaseFixture database) : Rep
         Updated = DateTime.UtcNow
     };
 
+    /// <summary>Inserts <paramref name="events"/>, saves, and clears the change tracker so later reads hit the database.</summary>
     private async Task SeedAsync(params OrmCalendarEvent[] events)
     {
         await Context.CalendarEvents.AddRangeAsync(events);

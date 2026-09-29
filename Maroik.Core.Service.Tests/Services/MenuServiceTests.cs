@@ -19,10 +19,14 @@ public class MenuServiceTests
     /// <summary>The signed-in administrator performing the change (recorded in the audit log).</summary>
     private const string Actor = "admin@example.com";
 
+    /// <summary>Mock <c>ICategoryRepository</c> injected into the system under test.</summary>
     private readonly Mock<ICategoryRepository> _categoryRepo = new();
+    /// <summary>Mock <c>ISubCategoryRepository</c> injected into the system under test.</summary>
     private readonly Mock<ISubCategoryRepository> _subCategoryRepo = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
+    /// <summary>The service under test over the mocked dependencies.</summary>
     private MenuService CreateSut() => new(
         _categoryRepo.Object,
         _subCategoryRepo.Object,
@@ -31,9 +35,11 @@ public class MenuServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A persisted category named <paramref name="name"/>.</summary>
     private static Category MakeCategory(long id = 1, string name = "Forum") =>
         Category.Reconstitute(id, name, name, "/icons/forum.png", "Board", "Index", Role.User, 0L);
 
+    /// <summary>A persisted sub-category named <paramref name="name"/> under <paramref name="categoryId"/>.</summary>
     private static SubCategory MakeSubCategory(long id = 1, string name = BoardTypes.FreeForum, long categoryId = 1) =>
         SubCategory.Reconstitute(id, categoryId, name, name, "/icons/forum.png", "Index", Role.User, 0L);
 

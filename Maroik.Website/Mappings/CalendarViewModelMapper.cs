@@ -19,15 +19,17 @@ public static class CalendarViewModelMapper
     {
         /// <summary>
         /// Maps a calendar event DTO to a <see cref="CalendarEventOutputViewModel"/>.
-        /// Converts UTC dates to the viewer's local timezone and populates all display strings.
+        /// A timed event's instants are converted to its own start / end time zone (falling back to the
+        /// viewer's); an all-day event's stored dates are used as-is (no conversion). Populates all display strings.
         /// </summary>
         /// <param name="userTimeZoneIanaId">Viewer's IANA timezone ID (used for all-day events and as fallback).</param>
         /// <param name="htmlColorCode">Parent calendar color code for chip/badge styling.</param>
         /// <param name="calendarType">Optional "My" / "Other" label; omit for single-owner views.</param>
         /// <param name="forGrid">
-        /// When <see langword="true"/> (default), sets <c>StartDate</c> / <c>EndDate</c> with the
-        /// FullCalendar-compatible exclusive-end convention (EndDate = midnight of the day after local end).
-        /// Pass <see langword="false"/> for detail / edit views that only need the display strings.
+        /// When <see langword="true"/> (default), also sets the grid's <c>StartDate</c> / <c>EndDate</c>: a
+        /// timed event's local start / end, or for an all-day event the FullCalendar-compatible exclusive
+        /// end (EndDate = midnight of the day after the stored end date). Pass <see langword="false"/> for
+        /// detail / edit views that only need the display strings.
         /// </param>
         public CalendarEventOutputViewModel ToDisplayViewModel(
             string userTimeZoneIanaId,
@@ -124,10 +126,9 @@ public static class CalendarViewModelMapper
     extension(CalendarOutputViewModel vm)
     {
         /// <summary>
-        /// Fills the time-grid fields on the view model for the viewer's current local time.
+        /// Fills the current-date/time fields and the time-of-day option list (<c>TimeIntervals</c>,
+        /// <c>CurrentInterval</c>) for the viewer's current local time.
         /// </summary>
-        /// <exception cref="FormatException"></exception>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
         public void PopulateTimeData(string timeZoneIanaId)
         {
             DateTime ct = DateTime.UtcNow.ConvertTimeByTimeZoneIanaId(timeZoneIanaId);
@@ -252,7 +253,10 @@ public static class CalendarViewModelMapper
         public string? TimesBeforeEvent { get; } = timesBeforeEvent;
     }
 
-    /// <summary>Parses a "yyyy-MM-dd HH:mm" string into an unspecified-kind local <see cref="DateTime"/>.</summary>
+    /// <summary>
+    /// Parses a "yyyy-M-d H:m" string (zero padding optional; the shape
+    /// <c>CalendarEventInputViewModel.Validate</c> already checked) into an unspecified-kind local <see cref="DateTime"/>.
+    /// </summary>
     private static DateTime ParseLocalDateTime(string dateTimeStr)
     {
         string[] parts = dateTimeStr.Split(' ');

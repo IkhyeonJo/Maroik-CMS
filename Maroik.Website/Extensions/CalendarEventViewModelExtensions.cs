@@ -13,8 +13,10 @@ namespace Maroik.Website.Extensions;
 /// </summary>
 public static class CalendarEventViewModelExtensions
 {
-    // Its constructor builds a ~400-entry default extension-to-MIME-type map; instantiating it
-    // per request is wasted work, and the type is documented as safe for concurrent reads.
+    /// <summary>
+    /// Shared extension-to-MIME-type lookup. Its constructor builds a ~400-entry default map;
+    /// instantiating it per request is wasted work, and the type is documented as safe for concurrent reads.
+    /// </summary>
     private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
 
     extension(ICalendarService calendarService)

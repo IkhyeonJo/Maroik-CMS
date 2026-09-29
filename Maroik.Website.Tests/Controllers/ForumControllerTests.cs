@@ -16,6 +16,7 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ForumControllerTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
     
     // -- FreeForum list -------------------------------------------------------
@@ -247,8 +248,10 @@ public class ForumControllerTests(MaroikWebApplicationFactory factory)
 
     // Matches Program.cs: const cookiePrefix = "__Secure-" + SessionDefaults.CookieName / AntiforgeryOptions.DefaultCookiePrefix.
     private const string SessionCookieName = "__Secure-.AspNetCore.Session";
+    /// <summary>Name prefix of the antiforgery cookie the site issues.</summary>
     private const string AntiForgeryCookieName = "__Secure-.AspNetCore.Antiforgery.";
 
+    /// <summary>An unsaved, confirmed User account row.</summary>
     private static Maroik.Core.PostgreSQL.Models.Account NewAccount(string email, string nickname, string hashedPassword) => new()
     {
         Email = email,

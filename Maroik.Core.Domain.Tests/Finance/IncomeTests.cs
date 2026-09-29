@@ -7,6 +7,7 @@ namespace Maroik.Core.Domain.Tests.Finance;
 /// </summary>
 public class IncomeTests
 {
+    /// <summary>A valid KRW salary income deposited into "My Bank".</summary>
     private static Income ValidIncome() =>
         Income.Record("user@example.com", "RegularIncome", "LaborIncome", "Salary", 3000000m, "KRW", "My Bank").Value;
 

@@ -18,11 +18,13 @@ namespace Maroik.Core.Service.Services;
 /// only <c>http</c>/<c>https</c> URL schemes are permitted, and arbitrary <c>data-*</c>
 /// attributes are rejected — the display pipeline
 /// (<c>AttachmentContentService.PrepareHtmlForDisplayAsync</c>) re-adds the specific
-/// <c>data-file</c>/<c>data-contenttype</c> attributes it needs after sanitization.
+/// <c>data-file</c>/<c>data-contenttype</c> attributes it needs after sanitization. The one widening
+/// is the <c>class</c> attribute, which the default list omits and Summernote output relies on.
 /// </para>
 /// </remarks>
 public class HtmlContentSanitizerService : IHtmlContentSanitizerService
 {
+    /// <summary>The one shared, pre-configured sanitizer used by every <see cref="Sanitize"/> call.</summary>
     private readonly HtmlSanitizer _sanitizer;
 
     /// <summary>Builds the shared, pre-configured <see cref="HtmlSanitizer"/>.</summary>

@@ -8,6 +8,7 @@ namespace Maroik.Core.Domain.Tests.Menu;
 /// </summary>
 public class MenuFieldPolicyTests
 {
+    /// <summary>A 256-character value, one over <c>ShortTextPolicy.MaxLength</c>.</summary>
     private static readonly string _tooLong = new('x', 256);
 
     // -- Validate ---------------------------------------------------------------

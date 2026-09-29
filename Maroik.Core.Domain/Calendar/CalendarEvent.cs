@@ -57,6 +57,9 @@ public sealed class CalendarEvent : AggregateRoot<long>
     /// <summary>UTC timestamp of the most recent update.</summary>
     public DateTime Updated { get; private set; }
 
+    /// <summary>Sets the event's fields (both instants pinned to UTC via <see cref="AsUtc"/>) and stamps
+    /// <see cref="Created"/>/<see cref="Updated"/> with the current UTC time (<see cref="Reconstitute"/>
+    /// overwrites both with the stored values).</summary>
     private CalendarEvent(
         long id,
         long calendarId,

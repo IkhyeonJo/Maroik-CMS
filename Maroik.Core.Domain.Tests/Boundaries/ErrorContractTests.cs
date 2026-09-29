@@ -17,6 +17,7 @@ namespace Maroik.Core.Domain.Tests.Boundaries;
 /// </summary>
 public class ErrorContractTests
 {
+    /// <summary>Owner e-mail used by every aggregate built in these tests.</summary>
     private const string Email = "user@example.com";
 
     // ---- Asset ----------------------------------------------------------------------------
@@ -60,9 +61,11 @@ public class ErrorContractTests
 
     // ---- Account --------------------------------------------------------------------------
 
+    /// <summary>Result of <c>Account.Create</c> with the given password hash and role.</summary>
     private static ErrorOr<DomainAccount> NewAccount(string hash = "$2a$hash", string role = Role.User) =>
         DomainAccount.Create(Email, hash, "Nick", role, "UTC", null, GuidToken.Generate(), true);
 
+    /// <summary>A persisted account whose confirmation, token and lockout state are set by the arguments.</summary>
     private static DomainAccount Reconstituted(bool emailConfirmed = true, string? resetToken = null, string? registrationToken = null,
         bool locked = false, long loginAttempt = 0) =>
         DomainAccount.Reconstitute(Email, "$2a$hash", "Nick", null, Role.User, "UTC", null, locked, loginAttempt, emailConfirmed, true,
@@ -126,6 +129,7 @@ public class ErrorContractTests
         ErrorAssert.Validation(NewBoardWithId(1).AddComment(foreign), "Board.CommentMismatch", "Comment does not belong to this post.");
     }
 
+    /// <summary>A persisted free-forum post with id <paramref name="id"/>.</summary>
     private static Domain.Board.Board NewBoardWithId(long id) =>
         Domain.Board.Board.Reconstitute(id, BoardTypes.FreeForum, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, false, false, false);
 

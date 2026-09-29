@@ -15,6 +15,7 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class AccountControllerTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
     // -- ConsentForm ----------------------------------------------------------
@@ -113,6 +114,7 @@ public class AccountControllerTests(MaroikWebApplicationFactory factory)
 
     // Matches Program.cs: const cookiePrefix = "__Secure-" + SessionDefaults.CookieName / AntiforgeryOptions.DefaultCookiePrefix.
     private const string SessionCookieName = "__Secure-.AspNetCore.Session";
+    /// <summary>Name prefix of the antiforgery cookie the site issues.</summary>
     private const string AntiForgeryCookieName = "__Secure-.AspNetCore.Antiforgery.";
 
     /// <summary>Extracts the value of a specific cookie from a response's Set-Cookie headers, or null if absent.</summary>

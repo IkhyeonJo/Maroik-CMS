@@ -15,6 +15,7 @@ namespace Maroik.Website.Middlewares;
 /// </summary>
 public sealed class AvatarCacheMiddleware(RequestDelegate next)
 {
+    /// <summary>Request-path prefix of avatar URLs (matched case-sensitively; see InvokeAsync).</summary>
     private const string UrlPrefix = "/upload/Management/Profile/Avatar/";
 
     /// <summary>Lazily populates this replica's local avatar cache from file storage, then forwards the request.</summary>

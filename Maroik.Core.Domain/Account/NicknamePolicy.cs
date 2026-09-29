@@ -11,8 +11,9 @@ namespace Maroik.Core.Domain.Account;
 /// which names are reserved. A post or comment is attributed to (and owned by) its author's nickname
 /// as a plain string, so a nickname that merely <em>looks</em> like someone else's — different case,
 /// stray or invisible characters, full-width letters, a Cyrillic "а" for a Latin "a" — would let a
-/// user pass as that person (or as the site's staff). The rules below close those gaps at the one
-/// place every new nickname passes through (<see cref="Account.Create"/>).
+/// user pass as that person (or as the site's staff). The rules below close those gaps at the two
+/// places a nickname is set (<see cref="Account.Create"/> and, before confirmation,
+/// <see cref="Account.ReplaceUnconfirmedRegistration"/>).
 /// <para>
 /// There is no client-side mirror of these rules; the server is the only place they are enforced.
 /// Accounts that already exist are not re-validated: this policy applies to newly created ones.
@@ -33,6 +34,7 @@ public static class NicknamePolicy
         "관리자", "운영자", "운영진", "어드민", "시스템", "익명", "게스트"
     ];
 
+    /// <summary><see cref="ReservedNicknames"/> reduced to their <see cref="CanonicalKey"/> forms, for O(1) lookup.</summary>
     private static readonly HashSet<string> _reservedCanonical =
         [.. ReservedNicknames.Select(CanonicalKey)];
 
@@ -84,6 +86,7 @@ public static class NicknamePolicy
 
         string composed;
         try { composed = nickname.Normalize(NormalizationForm.FormKC); }
+        // Not valid Unicode (a lone surrogate): no canonical form, so it can collide with nothing.
         catch (ArgumentException) { return ""; }
 
         return string.Concat(composed.ToLowerInvariant().Where(char.IsLetterOrDigit));

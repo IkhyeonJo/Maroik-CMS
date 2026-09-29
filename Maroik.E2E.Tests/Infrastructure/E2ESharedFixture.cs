@@ -14,9 +14,13 @@ namespace Maroik.E2E.Tests.Infrastructure;
 /// </summary>
 public sealed class E2ESharedFixture : IAsyncLifetime
 {
+    /// <summary>The database the website under test uses.</summary>
     private readonly E2EPostgresContainer _database = new();
+    /// <summary>The website under test; set in <c>InitializeAsync</c>.</summary>
     private PlaywrightWebApplicationFactory? _factory;
+    /// <summary>The Playwright driver; set in <c>InitializeAsync</c>.</summary>
     private IPlaywright? _playwright;
+    /// <summary>The shared headless browser; set in <c>InitializeAsync</c>.</summary>
     private IBrowser? _browser;
 
     /// <summary>The shared headless browser instance used by every test.</summary>
@@ -54,6 +58,7 @@ public sealed class E2ESharedFixture : IAsyncLifetime
             ? name.Trim().ToLowerInvariant()
             : "chrome";
 
+    /// <summary>Launches a headless browser for <paramref name="browserName"/> (chrome, chromium or firefox); any other name throws.</summary>
     private static Task<IBrowser> LaunchBrowserAsync(IPlaywright playwright, string browserName) => browserName switch
     {
         "chrome" => playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions

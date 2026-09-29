@@ -38,5 +38,6 @@ public partial class BoardAttachedFile
     /// </summary>
     public string Path { get; set; } = null!;
 
+    /// <summary>The post this file is attached to.</summary>
     public virtual Board Board { get; set; } = null!;
 }

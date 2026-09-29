@@ -7,6 +7,7 @@ namespace Maroik.Core.Domain.Tests.Finance;
 /// </summary>
 public class DefaultMonetaryUnitPolicyTests
 {
+    /// <summary>A persisted asset named <paramref name="productName"/> held in <paramref name="currency"/>.</summary>
     private static Asset MakeAsset(string productName, string currency) => Asset.Reconstitute(
         productName,
         "user@example.com",

@@ -5,10 +5,14 @@ import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
 import { loadSite, hidden, antiForgery, hiddenByStyle, fireNative } from "@tests/_common/harness";
 
 // wwwroot/user/custom/Notice/FixedExpenditure/js/site.js
+/** Main class â†’ sub-classes, as the page publishes it. */
 const subClassMap = { Living: ["Rent"], Transfer: ["ToSavings"] };
+/** Sub-classes that need a deposit (transfer target) asset. */
 const depositAssetSubClasses = ["ToSavings"];
+/** Last selectable deposit day per month (a month missing here gets no day options). */
 const maxDepositDayByMonth = { "2": "28" };
 
+/** The fixed-expenditure page DOM (server constants, create/edit forms). */
 function fixture(): string {
     return (
         antiForgery +
@@ -105,6 +109,7 @@ describeAmountLabel({
 });
 
 describe("Notice/FixedExpenditure — class and deposit-month changes, and filling the edit form", () => {
+    /** Values of the options of `sel` that are neither disabled nor hidden. */
     const enabled = (h: ReturnType<typeof loadSite>, sel: string) =>
         [...h.win.document.querySelectorAll<HTMLOptionElement>(`${sel} option`)].filter((o) => !o.disabled && !o.hidden).map((o) => o.value);
 
@@ -128,6 +133,7 @@ describe("Notice/FixedExpenditure — class and deposit-month changes, and filli
         expect(Math.max(...days)).toBe(28);
     });
 
+    /** Opens the edit form for row 1 and answers IsFixedExpenditureExists with a transfer record, `record` merged in. */
     const edit = (record: Record<string, unknown>) => {
         const h = loadSite("user", "Notice", "FixedExpenditure", fixture()
             + `<div class="mvc-grid"></div><table><tbody><tr class="clsGridRow" data-id="1"></tr></tbody></table>

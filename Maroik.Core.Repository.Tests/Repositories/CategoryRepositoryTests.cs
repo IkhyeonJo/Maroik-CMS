@@ -17,6 +17,7 @@ public sealed class CategoryRepositoryTests(DatabaseFixture database) : Reposito
 {
     private CategoryRepository Sut => new(Context);
 
+    /// <summary>An unsaved category row visible to <paramref name="role"/>.</summary>
     private static OrmCategory MakeCategory(string name, string role = Role.User, long order = 1) => new()
     {
         Name = name,
@@ -28,6 +29,7 @@ public sealed class CategoryRepositoryTests(DatabaseFixture database) : Reposito
         Order = order
     };
 
+    /// <summary>Inserts <paramref name="categories"/>, saves, and clears the change tracker so later reads hit the database.</summary>
     private async Task SeedAsync(params OrmCategory[] categories)
     {
         await Context.Categories.AddRangeAsync(categories);

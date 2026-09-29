@@ -18,15 +18,16 @@ public sealed class BoardAttachedFile : AggregateRoot<long>
     /// <summary>File size in bytes.</summary>
     public long Size { get; private set; }
 
-    /// <summary>Original file name (e.g. "report.pdf").</summary>
+    /// <summary>Original file name (e.g. "report.zip").</summary>
     public string Name { get; private set; }
 
-    /// <summary>File extension including the dot (e.g. ".pdf"). Null when there is no extension.</summary>
+    /// <summary>File extension including the dot (e.g. ".zip"). Null when there is no extension.</summary>
     public string? Extension { get; private set; }
 
     /// <summary>Server-side storage path where the file is saved.</summary>
     public string Path { get; private set; }
 
+    /// <summary>Sets every field; reached only through <see cref="Reconstitute"/> / <see cref="Create"/>.</summary>
     private BoardAttachedFile(
         long id,
         long boardId,

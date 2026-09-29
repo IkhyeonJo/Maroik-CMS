@@ -26,14 +26,16 @@ public interface IAttachmentContentService
     Task<byte[]?> DownloadFileAsync(string filePath, CancellationToken ct = default);
 
     /// <summary>
-    /// Downloads and embeds any RSA-encrypted inline images in <paramref name="html"/> as base64
-    /// data for display, re-encrypting each image's storage path in its <c>alt</c> attribute.
+    /// Downloads each inline image of <paramref name="html"/> (whose <c>alt</c> holds its plain storage
+    /// path) and embeds it as base64 in <c>data-file</c>/<c>data-contenttype</c> for display, replacing
+    /// the path in <c>alt</c> with its RSA-encrypted form. An image that cannot be downloaded is removed.
     /// </summary>
     Task<(string Html, bool HasImages)> PrepareHtmlForDisplayAsync(string html, CancellationToken ct = default);
 
     /// <summary>
     /// Sanitizes <paramref name="html"/> and decrypts the RSA-encrypted storage path in each
-    /// inline image's <c>alt</c> attribute, ready to persist.
+    /// inline image's <c>alt</c> attribute, ready to persist. An image whose <c>alt</c> does not decrypt
+    /// (one the editor never produced) is removed; an image with an empty <c>alt</c> is left as-is.
     /// </summary>
     string SanitizeAndDecryptContent(string html);
 

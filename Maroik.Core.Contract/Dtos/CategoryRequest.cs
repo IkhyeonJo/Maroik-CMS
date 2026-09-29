@@ -16,16 +16,16 @@ public class CategoryRequest
     /// <summary>Label displayed in the left sidebar navigation menu.</summary>
     public string? DisplayName { get; set; }
 
-    /// <summary>Path to the Font Awesome or custom icon shown next to the menu label.</summary>
+    /// <summary>CSS icon classes rendered next to the menu label (e.g. "nav-icon fas fa-bell").</summary>
     public string? IconPath { get; set; }
 
-    /// <summary>MVC controller name this category links to (used when no sub-categories exist).</summary>
+    /// <summary>MVC controller name this category links to; its sub-categories link to actions of the same controller.</summary>
     public string? Controller { get; set; }
 
-    /// <summary>MVC action name this category links to.</summary>
+    /// <summary>MVC action name this category links to (empty when the category only opens a sub-category dropdown).</summary>
     public string? Action { get; set; }
 
-    /// <summary>Minimum role required to see this menu item ("Admin" or "User").</summary>
+    /// <summary>The one role whose sidebar shows this menu item ("Admin", "User" or "Anonymous"; exact match, not a hierarchy).</summary>
     public string? Role { get; set; }
 
     /// <summary>Display order in the sidebar (lower number = shown higher).</summary>

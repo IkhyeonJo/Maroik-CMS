@@ -19,13 +19,17 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Board type of the private note.</summary>
     private const string PrivateNoteType = "PrivateNote";
 
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
     
+    /// <summary>Seeds (if missing) a User account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsUserAsync(string email = "management-privatenote-user@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
 
+    /// <summary>A write/edit-note form (the title is omitted when <see langword="null"/>).</summary>
     private static MultipartFormDataContent BoardForm(string? title, string content = "Body", bool noticed = false)
     {
         var form = new MultipartFormDataContent();
@@ -35,9 +39,11 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
         return form;
     }
 
+    /// <summary>A title unique to this call, prefixed with the calling test's name.</summary>
     private static string UniqueTitle([System.Runtime.CompilerServices.CallerMemberName] string testName = "") =>
         $"{testName}-{Guid.NewGuid():N}";
 
+    /// <summary>Inserts a private note by <paramref name="writer"/> directly into the database and returns its id.</summary>
     private long SeedBoard(string writer, bool locked = false, bool deleted = false)
     {
         using var scope = factory.Services.CreateScope();
@@ -248,6 +254,7 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
     }
     // -- PrivateNote detail page ------------------------------------------------------
 
+    /// <summary>Inserts a comment by <paramref name="writer"/> on board <paramref name="boardId"/>.</summary>
     private void SeedComment(long boardId, string writer, string content)
     {
         using var scope = factory.Services.CreateScope();

@@ -17,24 +17,35 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class ProfileServiceAuditLoggingTests
 {
+    /// <summary>E-mail of the account every test acts on; audit entries must name it.</summary>
     private const string Email = "user@example.com";
 
+    /// <summary>Mock <c>IAccountRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAccountRepository> _accountRepo = new();
+    /// <summary>Mock <c>IAssetRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAssetRepository> _assetRepo = new();
+    /// <summary>Mock <c>IPasswordService</c> injected into the system under test.</summary>
     private readonly Mock<IPasswordService> _passwordService = new();
+    /// <summary>Mock <c>IFileClient</c> injected into the system under test.</summary>
     private readonly Mock<IFileClient> _fileClient = new();
+    /// <summary>Mock <c>IImageValidatorService</c> injected into the system under test.</summary>
     private readonly Mock<IImageValidatorService> _imageValidator = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<ProfileService> _logger = new();
 
+    /// <summary>The service under test over the mocked dependencies and the capturing logger.</summary>
     private ProfileService CreateSut() => new(_accountRepo.Object, _assetRepo.Object, _passwordService.Object,
         _fileClient.Object, _imageValidator.Object,
         Options.Create(new ServerSetting { FileStorageBaseUrl = "http://localhost:5001" }), _unitOfWork.Object, _logger);
 
+    /// <summary>The persisted account for <see cref="Email"/>.</summary>
     private static Account Existing() =>
         Account.Reconstitute(Email, "$2a$13$placeholder", "TestUser", null, "User", "UTC", null, false, 0, true, true,
             null, null, DateTime.UtcNow, DateTime.UtcNow, null, false, "stamp", false);
 
+    /// <summary>Asserts exactly one entry at <paramref name="level"/> contains <paramref name="containing"/> and names <see cref="Email"/>, and returns it.</summary>
     private FakeLogRecord Only(LogLevel level, string containing)
     {
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(),
@@ -43,6 +54,7 @@ public class ProfileServiceAuditLoggingTests
         return record;
     }
 
+    /// <summary>Arranges a password change from "oldpass" to "NewPass1!"; the current-password check returns <paramref name="currentPasswordMatches"/>.</summary>
     private void SetupPasswordChange(bool currentPasswordMatches)
     {
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Existing());
@@ -78,6 +90,7 @@ public class ProfileServiceAuditLoggingTests
         Assert.DoesNotContain("oldpass", record.Message);
     }
 
+    /// <summary>Arranges the image validator verdicts and, when <paramref name="uploaded"/> is given, the upload result.</summary>
     private void SetupUpload(bool valid, bool svg, FileUploadResult? uploaded = null)
     {
         _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(valid);

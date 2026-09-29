@@ -184,6 +184,7 @@ public class AssetService(
         }
     }
 
+    /// <summary>Unlocked lookup of the account's asset by product name (soft-deleted assets included).</summary>
     private Task<Asset?> FindAssetAsync(string accountEmail, string productName, CancellationToken ct = default)
         => assetRepository.FindByEmailAndProductNameAsync(accountEmail, productName, ct);
 }

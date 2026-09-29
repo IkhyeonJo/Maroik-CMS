@@ -34,10 +34,13 @@ public class CalendarOutputViewModel
     /// <summary>Today's date string formatted for the calendar header, in the user's local time zone.</summary>
     public string CurrentDate { get; set; } = "";
 
-    /// <summary>List of half-hour interval labels (e.g. "00:00", "00:30") for the day-view time grid.</summary>
+    /// <summary>
+    /// Time-of-day labels every <c>CalendarReminderPolicy.ReminderTimeOfDayStepMinutes</c> (15) minutes
+    /// ("00:00", "00:15", … "23:45") for the time pickers, including the all-day reminder's "notify at" list.
+    /// </summary>
     public List<string> TimeIntervals { get; set; } = [];
 
-    /// <summary>The time-grid interval label that matches the user's current local time.</summary>
+    /// <summary>The <see cref="TimeIntervals"/> label nearest to the user's current local time (rounded to the step).</summary>
     public string CurrentInterval { get; set; } = "";
 
     /// <summary>Current hour component (0–23) in the user's local time zone, used to scroll the time grid.</summary>

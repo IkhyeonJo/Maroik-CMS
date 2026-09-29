@@ -17,13 +17,21 @@ namespace Maroik.Website.Controllers;
 /// <summary>Manages fixed-income and fixed-expenditure notice records (create, read, update, delete, export).</summary>
 public class NoticeController : Controller
 {
+    /// <summary>Localizer for this controller's user-facing messages.</summary>
     private readonly IHtmlLocalizer<NoticeController> _localizer;
+    /// <summary>Logger for unexpected failures in the Notice actions.</summary>
     private readonly ILogger<NoticeController> _logger;
+    /// <summary>Asset reads (asset dropdowns, currency labels).</summary>
     private readonly IAssetService _assetService;
+    /// <summary>Fixed-income use cases.</summary>
     private readonly IFixedIncomeService _fixedIncomeService;
+    /// <summary>Fixed-expenditure use cases.</summary>
     private readonly IFixedExpenditureService _fixedExpenditureService;
+    /// <summary>Server settings (notice window in days).</summary>
     private readonly IOptions<ServerSetting> _settings;
+    /// <summary>Builds the fixed-income / fixed-expenditure Excel exports.</summary>
     private readonly IExcelExportService _excelExportService;
+    /// <summary>Resource-key â†’ localized text delegate handed to the mappers and the Excel export.</summary>
     private readonly Func<string, string> _localize;
 
     /// <summary>Initializes a new instance of <see cref="NoticeController"/> with the supplied dependencies.</summary>

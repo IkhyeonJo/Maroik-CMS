@@ -9,9 +9,13 @@
 import { describe, it, expect, vi } from "vitest";
 import { loadSite, hidden, antiForgery, type SiteHandle } from "@tests/_common/harness";
 
+/** What one board page supplies to `describeBoardScript`. */
 export interface BoardScriptConfig {
+    /** area folder of the compiled script */
     area: "admin" | "user";
+    /** feature (controller) folder, e.g. "Forum" */
     feature: string;
+    /** page folder, e.g. "FreeForum" */
     page: string;
     /** e.g. "FreeForum" → ids `btnFreeForumWrite`, `formWriteFreeComment`, … ; "PrivateNote" likewise */
     idInfix: string;
@@ -19,8 +23,11 @@ export interface BoardScriptConfig {
     listUrl: string;
     /** e.g. "/Forum" — prefix of the UploadImageFile / IsBoardExists / DeleteBoard / DeleteComment endpoints */
     actionPrefix: string;
+    /** URL of the write-post endpoint */
     writeAction: string;
+    /** URL of the edit-post endpoint */
     editAction: string;
+    /** URL of the write-comment endpoint */
     commentAction: string;
     /** infix of the comment form / textarea ids: `formWrite${commentInfix}Comment` ("Free" for the forum, "PrivateNote") */
     commentInfix: string;
@@ -30,6 +37,7 @@ export interface BoardScriptConfig {
     hasNoticed: boolean;
 }
 
+/** The shared board-page DOM (list, write/edit forms, comment form, delete controls) with ids built from `c`, plus `extra`. */
 export function boardFixture(c: BoardScriptConfig, extra = ""): string {
     const i = c.idInfix;
     return (
@@ -67,8 +75,10 @@ function selectFile(h: SiteHandle, selector: string, size: number, name = "a.txt
     return file;
 }
 
+/** Registers the shared board-page tests for one page (exported as this module's default). */
 function describeBoardScript(c: BoardScriptConfig): void {
     const i = c.idInfix;
+    /** Loads the page script over {@link boardFixture} (+ `extra`). */
     const load = (extra = "", opts: Parameters<typeof loadSite>[4] = {}) =>
         loadSite(c.area, c.feature, c.page, boardFixture(c, extra), opts);
 

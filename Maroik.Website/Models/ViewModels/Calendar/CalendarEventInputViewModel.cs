@@ -8,9 +8,9 @@ namespace Maroik.Website.Models.ViewModels.Calendar;
 
 /// <summary>
 /// Form model bound from the calendar event create / edit POST requests.
-/// Date strings are received as ISO-8601 strings rather than <see cref="DateTime"/> values
-/// because the client submits them together with separate time-zone fields, and the
-/// service layer is responsible for the final conversion.
+/// Dates are received as strings rather than <see cref="DateTime"/> values because the client submits
+/// local wall-clock values together with separate time-zone fields; <c>CalendarViewModelMapper.ToCalendarEventRequest</c>
+/// converts them to UTC (after <see cref="Validate"/> has checked their shape).
 /// </summary>
 public class CalendarEventInputViewModel : IValidatableObject
 {
@@ -28,10 +28,10 @@ public class CalendarEventInputViewModel : IValidatableObject
     /// </summary>
     public bool AllDay { get; set; }
 
-    /// <summary>ISO-8601 date-time string for when the event starts (interpreted in <see cref="StartDateTimeZoneIanaId"/>).</summary>
+    /// <summary>Start as "yyyy-M-d H:m" wall-clock time in <see cref="StartDateTimeZoneIanaId"/>, or "yyyy-M-d" for an all-day event.</summary>
     public string? StartDate { get; set; }
 
-    /// <summary>ISO-8601 date-time string for when the event ends (interpreted in <see cref="EndDateTimeZoneIanaId"/>).</summary>
+    /// <summary>End as "yyyy-M-d H:m" wall-clock time in <see cref="EndDateTimeZoneIanaId"/>, or "yyyy-M-d" for an all-day event.</summary>
     public string? EndDate { get; set; }
 
     /// <summary>IANA time-zone ID that applies to <see cref="StartDate"/> (e.g. "Asia/Seoul").</summary>
@@ -50,18 +50,19 @@ public class CalendarEventInputViewModel : IValidatableObject
     public IFormFile? CalendarEventUploadedFile { get; set; }
 
     /// <summary>
-    /// Event status string (e.g. "Confirmed", "Tentative", "Canceled") shown on the event card.
+    /// Availability status shown to subscribers ("Busy" or "Free"; blank means the "Busy" default).
     /// </summary>
     public string? Status { get; set; }
 
     /// <summary>
     /// JSON-serialized list of <c>CalendarReminderDto</c> objects representing the reminders
-    /// configured for this event. Serialized on the client and deserialized in the service layer.
+    /// configured for this event. Serialized on the client and deserialized by the controller
+    /// (<c>ToReminderInfoList</c>) before it reaches the service layer.
     /// </summary>
     public string? SerializedCalendarReminders { get; set; }
 
     /// <summary>
-    /// Ensures the date/timezone fields <see cref="CalendarViewModelMapper.ToCalendarEventRequest"/>
+    /// Ensures the date/timezone fields <c>CalendarViewModelMapper.ToCalendarEventRequest</c>
     /// parses are present and well-formed before the mapper ever runs, so a missing or malformed
     /// value fails cleanly as a validation error instead of throwing
     /// (<see cref="IndexOutOfRangeException"/>/<see cref="FormatException"/>/

@@ -103,9 +103,12 @@ public partial class Account
     /// </summary>
     public bool MustChangePassword { get; set; }
 
+    /// <summary>Assets owned by this account (Asset.AccountEmail).</summary>
     public virtual ICollection<Asset> Assets { get; set; } = new List<Asset>();
 
+    /// <summary>Calendars owned by this account (Calendar.AccountEmail).</summary>
     public virtual ICollection<Calendar> Calendars { get; set; } = new List<Calendar>();
 
+    /// <summary>This account's subscriptions to other accounts' calendars (OtherCalendar.AccountEmail).</summary>
     public virtual ICollection<OtherCalendar> OtherCalendars { get; set; } = new List<OtherCalendar>();
 }

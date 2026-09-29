@@ -27,12 +27,14 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
     private static readonly byte[] _png = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
 
+    /// <summary>A derived test host whose file client is <see cref="Files"/>, with its HTTP client.</summary>
     private sealed record Host(WebApplicationFactory<Program> Factory, HttpClient Client, FakeFileClient Files) : IDisposable
     {
         /// <summary>Disposes the derived host (and with it the client it created).</summary>
         public void Dispose() => Factory.Dispose();
     }
 
+    /// <summary>A host whose <c>IFileClient</c> is a fresh in-memory fake.</summary>
     private Host CreateHost()
     {
         var files = new FakeFileClient();
@@ -48,9 +50,11 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         return new Host(factory1, client, files);
     }
 
+    /// <summary>Seeds (if missing) an account for <paramref name="email"/> with <paramref name="role"/> and signs in as it on <paramref name="host"/>.</summary>
     private static Task<AuthenticatedSession> LoginAsync(Host host, string email, string role = Role.User) =>
         AuthenticatedSessionHelper.LoginAsync(host.Factory, host.Client, email, "UserPassword1!", role, TestContext.Current.CancellationToken);
 
+    /// <summary>A multipart form with one file part (<paramref name="field"/>, typed <paramref name="contentType"/>) plus text fields.</summary>
     private static MultipartFormDataContent FileForm(string field, string fileName, byte[] bytes, string contentType, params (string Name, string Value)[] fields)
     {
         var form = new MultipartFormDataContent();
@@ -61,6 +65,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         return form;
     }
 
+    /// <summary>Sends <paramref name="request"/>, asserts 200, and parses the JSON body.</summary>
     private static async Task<JsonDocument> PostAsync(Host host, HttpRequestMessage request)
     {
         var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -68,6 +73,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 
+    /// <summary>The <c>errorMessage</c> of a JSON result.</summary>
     private static string Error(JsonDocument doc) => doc.RootElement.GetProperty("errorMessage").GetString()!;
 
     // -- avatar ---------------------------------------------------------------------------------------
@@ -115,6 +121,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         Assert.Empty(baseHost.Files.UploadedPaths);
         return;
 
+        // Posts the avatar form, asserts the result is a failure, and returns its error message.
         async Task<string> Send(MultipartFormDataContent form, Host host)
         {
             using var request = session.BuildFormPostRequest("/Management/UpdateProfileAvatar", form);

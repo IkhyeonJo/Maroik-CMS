@@ -28,14 +28,23 @@ namespace Maroik.Core.Contract.Tests.Architecture;
 public class SolutionLayeringArchitectureTests
 {
     // ── Layer names (project = assembly name, minus the .csproj) ──────────────────────────────
+    /// <summary>Project / assembly name of the Domain layer.</summary>
     private const string Domain = "Maroik.Core.Domain";
+    /// <summary>Project / assembly name of the Contract layer.</summary>
     private const string Contract = "Maroik.Core.Contract";
+    /// <summary>Project / assembly name of the EF Core persistence model.</summary>
     private const string PostgreSql = "Maroik.Core.PostgreSQL";
+    /// <summary>Project / assembly name of the external-system clients.</summary>
     private const string Client = "Maroik.Core.Client";
+    /// <summary>Project / assembly name of the Repository layer.</summary>
     private const string Repository = "Maroik.Core.Repository";
+    /// <summary>Project / assembly name of the Service layer.</summary>
     private const string Service = "Maroik.Core.Service";
+    /// <summary>Project / assembly name of the web host.</summary>
     private const string Website = "Maroik.Website";
+    /// <summary>Project / assembly name of the background worker host.</summary>
     private const string Worker = "Maroik.Worker";
+    /// <summary>Project / assembly name of the file-storage service host.</summary>
     private const string FileStorage = "Maroik.FileStorage";
 
     /// <summary>The six inner layers. None of them may depend on an application host project.</summary>
@@ -76,6 +85,7 @@ public class SolutionLayeringArchitectureTests
         ("RabbitMQ.Client", [Client, Worker], "RabbitMQ message broker"),
     ];
 
+    /// <summary>Every non-test project, parsed once on first use.</summary>
     private static readonly Lazy<IReadOnlyList<ProjectFile>> _productionProjects =
         new(LoadProductionProjects);
 
@@ -257,6 +267,7 @@ public class SolutionLayeringArchitectureTests
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────────────────────
 
+    /// <summary>Fails unless <paramref name="project"/>'s only NuGet reference (if any) is ErrorOr.</summary>
     private static void AssertOnlyErrorOrPackage(ProjectFile project)
     {
         string[] unexpected =
@@ -271,6 +282,7 @@ public class SolutionLayeringArchitectureTests
             "result/error object). Unexpected: " + string.Join(", ", unexpected));
     }
 
+    /// <summary>Fails unless <paramref name="projectName"/> project-references exactly <paramref name="expected"/>.</summary>
     private static void AssertReferencesAreExactly(string projectName, params string[] expected)
     {
         ProjectFile project = GetProject(projectName);
@@ -316,9 +328,12 @@ public class SolutionLayeringArchitectureTests
     /// <summary>The parts of <c>Maroik.sln</c> the rules above need: project names, and each project's solution folder.</summary>
     private sealed class SolutionFile
     {
+        /// <summary>Every <c>Project(...)</c> entry (projects and solution folders) keyed by its GUID.</summary>
         private readonly Dictionary<string, (string Name, string Path)> _byGuid;
+        /// <summary>The <c>NestedProjects</c> section: child GUID to parent (solution folder) GUID.</summary>
         private readonly Dictionary<string, string> _parentByGuid;
 
+        /// <summary>Wraps the parsed entries; created by <c>Load</c>.</summary>
         private SolutionFile(Dictionary<string, (string Name, string Path)> byGuid, Dictionary<string, string> parentByGuid)
         {
             _byGuid = byGuid;
@@ -360,12 +375,14 @@ public class SolutionLayeringArchitectureTests
         }
     }
 
+    /// <summary>The production project named <paramref name="name"/>; throws when it does not exist.</summary>
     private static ProjectFile GetProject(string name) =>
         _productionProjects.Value.SingleOrDefault(p => p.Name == name)
         ?? throw new InvalidOperationException(
             $"Production project '{name}' not found under the repository root. " +
             "Known: " + string.Join(", ", _productionProjects.Value.Select(p => p.Name)));
 
+    /// <summary>Every project under the repository root except the <c>*.Tests</c> ones.</summary>
     private static IReadOnlyList<ProjectFile> LoadProductionProjects() =>
     [
         .. LoadAllProjects()
@@ -373,6 +390,7 @@ public class SolutionLayeringArchitectureTests
             .Where(p => p.Name != "Maroik.E2E.Tests")
     ];
 
+    /// <summary>Every <c>Maroik.*.csproj</c> under the repository root (outside <c>bin</c>/<c>obj</c>), parsed and sorted by name.</summary>
     private static IReadOnlyList<ProjectFile> LoadAllProjects()
     {
         string root = FindRepositoryRoot();
@@ -387,10 +405,12 @@ public class SolutionLayeringArchitectureTests
         ];
     }
 
+    /// <summary>True when <paramref name="path"/> has a directory segment equal to <paramref name="segment"/> (case-insensitive).</summary>
     private static bool PathHasSegment(string path, string segment) =>
         path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             .Contains(segment, StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Walks up from the test binary's folder to the directory holding <c>Maroik.sln</c>.</summary>
     private static string FindRepositoryRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

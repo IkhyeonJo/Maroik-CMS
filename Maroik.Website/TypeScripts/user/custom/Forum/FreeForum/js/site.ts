@@ -309,7 +309,7 @@
 
     /**
      * Submits an edit to an existing post. Same multipart shape as `WriteBoard`
-     * plus the board `ID`; on success returns to that post's detail view.
+     * plus the board `Id`; on success returns to that post's detail view.
      *
      * @param editBoardId    id of the post being edited (from a `data-*` attribute).
      * @param editCurrentPage list page to return to.

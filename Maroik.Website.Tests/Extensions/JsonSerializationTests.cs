@@ -10,6 +10,7 @@ namespace Maroik.Website.Tests.Extensions;
 /// </summary>
 public class JsonSerializationTests
 {
+    /// <summary>A small object to serialize.</summary>
     private record Sample(string Title, int Count);
 
     /// <summary>Property names are serialized verbatim (PascalCase) -- no camelCase naming policy is applied.</summary>

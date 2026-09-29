@@ -12,8 +12,10 @@ namespace Maroik.Core.Domain.Tests.Boundaries;
 /// </summary>
 public class LengthBoundaryTests
 {
+    /// <summary>A string of exactly <paramref name="length"/> characters.</summary>
     private static string Text(int length) => new('x', length);
 
+    /// <summary>Writer nickname used for boards and comments.</summary>
     private const string Writer = "Alice";
 
     // ---- Board ----------------------------------------------------------------------------
@@ -72,8 +74,10 @@ public class LengthBoundaryTests
             "Calendar.NameInvalid", "Calendar name cannot contain angle brackets or control characters.");
     }
 
+    /// <summary>Start time of the calendar events built by <see cref="Event"/>.</summary>
     private static readonly DateTime _start = new(2026, 1, 1, 9, 0, 0);
 
+    /// <summary>Result of <c>CalendarEvent.Create</c> for a one-hour UTC event with the given text fields and status.</summary>
     private static ErrorOr.ErrorOr<CalendarEvent> Event(string title = "t", string? description = null, string? location = null, string? status = null) =>
         CalendarEvent.Create(1, title, description, false, _start, _start.AddHours(1), "UTC", "UTC", location, status);
 

@@ -29,14 +29,16 @@ public static partial class PasswordPolicy
     public const int MaxByteLength = 72;
 
     /// <summary>
-    /// Human-readable statement of the rule, for a validation error message. Single source of truth
-    /// so every service that rejects a weak password reports it identically. Kept prefixed with the
-    /// wording the existing resx / ViewModel messages use ("Password must be at least 8 characters").
+    /// Human-readable statement of the rule, for a validation error message. Single source of truth:
+    /// every service that rejects a weak password reports it, and the Website's view-model validation
+    /// (<c>ValidationMessages.PasswordComplexity</c>) reuses it, so it is also the resx lookup key —
+    /// changing the text means renaming that key in every resx pair that carries it.
     /// </summary>
     public const string ViolationMessage =
         "Password must be at least 8 characters (and at most 72) and contain at least 3 of 4 of the following: " +
         "upper case (A-Z), lower case (a-z), number (0-9) and special character (e.g. !@#$%^&*).";
 
+    /// <summary>Cached instance of the source-generated <see cref="Pattern"/> regex (<see cref="MyRegex"/>).</summary>
     private static readonly Regex _compiledRegex = MyRegex();
 
     /// <summary>

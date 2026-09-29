@@ -78,11 +78,15 @@ public partial class CalendarEvent
     /// </summary>
     public DateTime Updated { get; set; }
 
+    /// <summary>The calendar this event belongs to.</summary>
     public virtual Calendar Calendar { get; set; } = null!;
 
+    /// <summary>Files attached to this event.</summary>
     public virtual ICollection<CalendarEventAttachedFile> CalendarEventAttachedFiles { get; set; } = new List<CalendarEventAttachedFile>();
 
+    /// <summary>Reminders configured for this event.</summary>
     public virtual ICollection<CalendarEventReminder> CalendarEventReminders { get; set; } = new List<CalendarEventReminder>();
 
+    /// <summary>The recurrence rule referenced by <see cref="RecurrenceId"/>, if any.</summary>
     public virtual CalendarRecurrence? Recurrence { get; set; }
 }

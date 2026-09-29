@@ -22,6 +22,7 @@ public sealed class AssetRepositoryTests(DatabaseFixture database) : RepositoryT
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>An unsaved asset row owned by <paramref name="email"/>.</summary>
     private static OrmAsset MakeAsset(
         string productName, string email, string item = "FreeDepositAndWithdrawal",
         decimal amount = 1000m, string unit = "KRW", bool deleted = false) => new()
@@ -323,6 +324,7 @@ public sealed class AssetRepositoryTests(DatabaseFixture database) : RepositoryT
         Assert.Equal(800m, result.Amount); // 1000 - 100 - 100: no lost update
         return;
 
+        // One contender: locks the asset row, waits so the other contender queues behind the lock, then withdraws and commits.
         async Task WithdrawAsync(ApplicationDbContext context, decimal amount)
         {
             var repo = new AssetRepository(context);

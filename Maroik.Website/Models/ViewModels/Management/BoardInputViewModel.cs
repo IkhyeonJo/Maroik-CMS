@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Maroik.Website.Models.ViewModels.Management;
 
 /// <summary>
-/// Form model for admin/owner create-edit operations on a PrivateNote board post.
+/// Form model for creating or editing the caller's own PrivateNote post.
 /// A private note is single-owner content, so it has no pin/lock affordances
 /// (see <see cref="Maroik.Core.Domain.Board.Board.IsPrivateNote"/>).
 /// </summary>

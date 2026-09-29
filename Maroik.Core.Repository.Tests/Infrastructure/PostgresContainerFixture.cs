@@ -24,6 +24,7 @@ public sealed class PostgresContainerFixture : IAsyncLifetime
     private const string InitScriptRelativePath =
         "Maroik.DB/PostgreSQL/SQL_Init_Script/Debugging/Init.sql";
 
+    /// <summary>Throwaway PostgreSQL 17 container whose initial database is the template.</summary>
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17")
         .WithDatabase(TemplateDatabase)
         .Build();
@@ -97,6 +98,7 @@ public sealed class PostgresContainerFixture : IAsyncLifetime
         await cmd.ExecuteNonQueryAsync();
     }
 
+    /// <summary>Connection string for <paramref name="database"/> in the container, with pooling off so connections close for real.</summary>
     private string ConnectionStringFor(string database) =>
         new NpgsqlConnectionStringBuilder(_container.GetConnectionString())
         {
@@ -104,6 +106,7 @@ public sealed class PostgresContainerFixture : IAsyncLifetime
             Pooling = false,
         }.ConnectionString;
 
+    /// <summary>Absolute path of the seed script, found by walking up to the directory holding <c>Maroik.sln</c>.</summary>
     private static string ResolveInitScriptPath()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

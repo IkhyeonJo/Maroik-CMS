@@ -18,19 +18,27 @@ public class ManagementAccountServiceAuditLoggingTests
     /// <summary>The signed-in administrator performing the change (recorded in the audit log).</summary>
     private const string Actor = "admin@example.com";
 
+    /// <summary>E-mail of the account the admin acts on; audit entries must name it.</summary>
     private const string Email = "target@example.com";
 
+    /// <summary>Mock <c>IAccountRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAccountRepository> _accountRepo = new();
+    /// <summary>Mock <c>IPasswordService</c> injected into the system under test.</summary>
     private readonly Mock<IPasswordService> _passwordService = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<ManagementAccountService> _logger = new();
 
+    /// <summary>The service under test over the mocked dependencies and the capturing logger.</summary>
     private ManagementAccountService CreateSut() => new(_accountRepo.Object, _passwordService.Object, _unitOfWork.Object, _logger);
 
+    /// <summary>The persisted target account, with the given lockout state.</summary>
     private static Account Existing(bool locked = false, long loginAttempt = 0) =>
         Account.Reconstitute(Email, "$2a$13$placeholder", "Target", null, Role.User, "UTC", null, locked, loginAttempt,
             true, true, null, null, DateTime.UtcNow, DateTime.UtcNow, null, false, "stamp", false);
 
+    /// <summary>Asserts exactly one entry at <paramref name="level"/> contains <paramref name="containing"/>, names the target and the acting admin, and returns it.</summary>
     private FakeLogRecord Only(LogLevel level, string containing)
     {
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(),
@@ -40,6 +48,7 @@ public class ManagementAccountServiceAuditLoggingTests
         return record;
     }
 
+    /// <summary>Asserts no log message or exception text contains any of <paramref name="secrets"/>.</summary>
     private void AssertNoSecretLogged(params string[] secrets)
     {
         foreach (FakeLogRecord record in _logger.Collector.GetSnapshot())

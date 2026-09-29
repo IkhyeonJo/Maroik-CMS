@@ -43,7 +43,7 @@ public interface IMenuService
     /// <summary>Updates an existing navigation category.</summary>
     Task<ServiceResult> UpdateCategoryAsync(CategoryRequest request, string actorEmail, CancellationToken ct = default);
 
-    /// <summary>Deletes a navigation category and its sub-categories.</summary>
+    /// <summary>Deletes a navigation category; its sub-categories go with it through the <c>ON DELETE CASCADE</c> foreign key.</summary>
     Task<ServiceResult> DeleteCategoryAsync(CategoryRequest request, string actorEmail, CancellationToken ct = default);
 
     /// <summary>Creates a new sub-category under an existing category.</summary>

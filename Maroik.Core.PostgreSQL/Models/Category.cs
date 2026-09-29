@@ -48,5 +48,6 @@ public partial class Category
     /// </summary>
     public long Order { get; set; }
 
+    /// <summary>Dropdown items under this category.</summary>
     public virtual ICollection<SubCategory> SubCategories { get; set; } = new List<SubCategory>();
 }

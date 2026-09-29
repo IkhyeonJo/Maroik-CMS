@@ -14,6 +14,7 @@ namespace Maroik.Core.Client.Tests.Clients;
 /// </summary>
 public class FileClientTests
 {
+    /// <summary><see cref="IHttpClientFactory"/> whose clients go through a test-supplied handler.</summary>
     private sealed class FakeHttpClientFactory : IHttpClientFactory
     {
         /// <summary>The handler the created <see cref="HttpClient"/> should use, or null for a default client.</summary>
@@ -45,6 +46,7 @@ public class FileClientTests
     /// <summary>Returns a fixed status + plain-text body, like Maroik.FileStorage's <c>BadRequest(error)</c>.</summary>
     private sealed class RefusingHandler(HttpStatusCode status, string body) : HttpMessageHandler
     {
+        /// <inheritdoc />
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             => Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body) });
     }
@@ -52,6 +54,7 @@ public class FileClientTests
     /// <summary>A refusal whose body cannot be decoded (a charset .NET does not know) — reading the reason throws.</summary>
     private sealed class UnreadableBodyHandler : HttpMessageHandler
     {
+        /// <inheritdoc />
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var content = new StringContent("refused");
@@ -78,7 +81,9 @@ public class FileClientTests
             => Entries.Add((logLevel, formatter(state, exception)));
     }
 
+    /// <summary>Factory handed to the client under test; each test sets its handler.</summary>
     private readonly FakeHttpClientFactory _httpClientFactory = new();
+    /// <summary>Builds the client under test over <see cref="_httpClientFactory"/> (logging discarded).</summary>
     private FileClient CreateSut() => new(_httpClientFactory, NullLogger<FileClient>.Instance);
 
     // -- UploadAsync ----------------------------------------------------------

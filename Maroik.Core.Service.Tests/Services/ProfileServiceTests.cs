@@ -19,15 +19,23 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class ProfileServiceTests
 {
+    /// <summary>Mock <c>IAccountRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAccountRepository> _accountRepo = new();
+    /// <summary>Mock <c>IAssetRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAssetRepository> _assetRepo = new();
+    /// <summary>Mock <c>IPasswordService</c> injected into the system under test.</summary>
     private readonly Mock<IPasswordService> _passwordService = new();
+    /// <summary>Mock <c>IFileClient</c> injected into the system under test.</summary>
     private readonly Mock<IFileClient> _fileClient = new();
+    /// <summary>Mock <c>IImageValidatorService</c> injected into the system under test.</summary>
     private readonly Mock<IImageValidatorService> _imageValidator = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Settings with a local file-storage URL.</summary>
     private readonly IOptions<ServerSetting> _settings =
         Options.Create(new ServerSetting { FileStorageBaseUrl = "http://localhost:5001" });
 
+    /// <summary>The service under test over the mocked dependencies.</summary>
     private ProfileService CreateSut() => new(
         _accountRepo.Object,
         _assetRepo.Object,
@@ -40,6 +48,7 @@ public class ProfileServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A persisted asset named <paramref name="name"/> in <paramref name="unit"/>.</summary>
     private static Asset MakeAsset(string name, string unit = "KRW", bool deleted = false) =>
         Asset.Reconstitute(
             productName: name,
@@ -52,6 +61,7 @@ public class ProfileServiceTests
             created: DateTime.UtcNow,
             updated: DateTime.UtcNow);
 
+    /// <summary>A confirmed, unlocked account for <paramref name="email"/>.</summary>
     private static Account ActiveAccount(string email = "user@example.com") =>
         Account.Reconstitute(
             email: email,

@@ -15,7 +15,9 @@ public partial class OtherCalendar
     /// </summary>
     public long CalendarId { get; set; }
 
+    /// <summary>The subscribing account.</summary>
     public virtual Account? Account { get; set; }
 
+    /// <summary>The subscribed calendar.</summary>
     public virtual Calendar? Calendar { get; set; }
 }

@@ -12,8 +12,10 @@ namespace Maroik.E2E.Tests.Flows;
 [Collection("E2E")]
 public class AccountBookFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture)
 {
+    /// <summary>The toastr success notification.</summary>
     private static ILocator SuccessToast(IPage page) => page.Locator(".toast-success");
 
+    /// <summary>The toastr error notification.</summary>
     private static ILocator ErrorToast(IPage page) => page.Locator(".toast-error");
 
     // -- Asset ----------------------------------------------------------------------

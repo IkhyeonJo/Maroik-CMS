@@ -16,18 +16,19 @@ public sealed class SubCategory : AggregateRoot<long>
     /// <summary>Label displayed in the sidebar dropdown.</summary>
     public string? DisplayName { get; private set; }
 
-    /// <summary>Icon path displayed beside the label.</summary>
+    /// <summary>CSS icon classes rendered beside the label.</summary>
     public string? IconPath { get; private set; }
 
     /// <summary>Target MVC action name (shares the parent category's controller).</summary>
     public string? Action { get; private set; }
 
-    /// <summary>Minimum role to display this sub-menu item (e.g. "Admin", "User").</summary>
+    /// <summary>The one role whose sidebar shows this sub-menu item ("Admin", "User" or "Anonymous"; matched exactly, not as a hierarchy).</summary>
     public string? Role { get; private set; }
 
     /// <summary>Display order within the parent category (ascending).</summary>
     public long Order { get; private set; }
 
+    /// <summary>Sets every field; reached only through <see cref="Reconstitute"/> / <see cref="Create"/>.</summary>
     private SubCategory(
         long id,
         long categoryId,
@@ -70,7 +71,7 @@ public sealed class SubCategory : AggregateRoot<long>
         return new SubCategory(0, categoryId, name, displayName, iconPath, action, role, order);
     }
 
-    /// <summary>Updates this sub-category's fields after validating the new name.</summary>
+    /// <summary>Updates this sub-category's fields after validating the name and every field against <see cref="MenuFieldPolicy"/>.</summary>
     public ErrorOr<Success> Update(
         long categoryId, string? name, string? displayName,
         string? iconPath, string? action, string? role, long order)

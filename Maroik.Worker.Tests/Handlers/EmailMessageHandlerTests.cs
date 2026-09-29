@@ -16,8 +16,11 @@ namespace Maroik.Worker.Tests.Handlers;
 /// </summary>
 public class EmailMessageHandlerTests
 {
+    /// <summary>Mock <c>IMailClient</c> injected into the system under test.</summary>
     private readonly Mock<IMailClient> _mailClient = new();
+    /// <summary>Mock <c>IAccountMailStatusService</c> injected into the system under test.</summary>
     private readonly Mock<IAccountMailStatusService> _accountMailStatusService = new();
+    /// <summary>SMTP settings for the handler under test (the mail client is mocked, so nothing is contacted).</summary>
     private readonly IOptions<ServerSetting> _settings = Options.Create(new ServerSetting
     {
         SmtpHost = "smtp.example.com",
@@ -29,6 +32,7 @@ public class EmailMessageHandlerTests
         FromFullName = "Maroik"
     });
 
+    /// <summary>The handler under test over the mocked dependencies.</summary>
     private EmailMessageHandler CreateSut() => new(
         _mailClient.Object,
         _accountMailStatusService.Object,

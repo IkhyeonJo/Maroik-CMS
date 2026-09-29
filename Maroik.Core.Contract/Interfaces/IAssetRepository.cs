@@ -38,10 +38,10 @@ public interface IAssetRepository : IGenericRepository<Asset>
     /// <summary>
     /// Batched form of <see cref="FindByEmailAndProductNameForUpdateAsync"/>: row-locks (SELECT ...
     /// FOR UPDATE) every asset in <paramref name="productNames"/> for the given account in a single
-    /// round trip, instead of one query per name. Rows are locked in ascending ProductName order
-    /// (matching <see cref="StringComparer.Ordinal"/>) so callers that always request the same set
-    /// of assets in that order cannot deadlock against each other. Names with no matching row are
-    /// simply absent from the result.
+    /// round trip, instead of one query per name. The single statement locks rows in its
+    /// <c>ORDER BY "ProductName"</c> order, whatever order the names were passed in, so two callers
+    /// batch-locking overlapping sets of assets always acquire them in the same order and cannot
+    /// deadlock against each other. Names with no matching row are simply absent from the result.
     /// </summary>
     Task<List<Asset>> FindByEmailAndProductNamesForUpdateAsync(string accountEmail, IReadOnlyCollection<string> productNames, CancellationToken ct = default);
 }

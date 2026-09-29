@@ -29,32 +29,39 @@ public sealed class RabbitMqEmailPublisher(
     /// <summary>
     /// How long <see cref="GetChannelAsync"/> waits for a dropped connection to recover on its own
     /// (see the comment there) before giving up and opening a new one. Defaults to the factory's own
-    /// configured <see cref="ConnectionFactory.NetworkRecoveryInterval"/> when <paramref
-    /// name="factory"/> is a concrete <see cref="ConnectionFactory"/> (so this always matches
+    /// configured <see cref="ConnectionFactory.NetworkRecoveryInterval"/> when <c>factory</c> is a concrete <see cref="ConnectionFactory"/> (so this always matches
     /// whatever automatic-recovery timing is actually configured, 5s unless overridden), falling
     /// back to 5s — <see cref="ConnectionFactory"/>'s own default — for any other
     /// <see cref="IConnectionFactory"/> implementation. Overridable via
-    /// <paramref name="connectionRecoveryGraceWindow"/> (tests use a short window so they don't pay
+    /// the <c>connectionRecoveryGraceWindow</c> constructor parameter (tests use a short window so they don't pay
     /// a real multi-second sleep).
     /// </summary>
     private readonly TimeSpan _connectionRecoveryGraceWindow = connectionRecoveryGraceWindow
         ?? (factory as ConnectionFactory)?.NetworkRecoveryInterval
         ?? TimeSpan.FromSeconds(5);
 
-    // RabbitMQ.Client's own guidance is a "hard requirement for publishers": a channel must not
-    // be shared by threads that publish on it concurrently, or frames from separate publishes can
-    // interleave at the protocol level. This channel is cached and shared across every caller of
-    // PublishAsync (this class is registered as a singleton), so every publish -- including the
-    // channel (re)creation it may trigger -- is serialized through this lock.
+    /// <summary>
+    /// Serializes every publish. RabbitMQ.Client's own guidance is a "hard requirement for publishers":
+    /// a channel must not be shared by threads that publish on it concurrently, or frames from separate
+    /// publishes can interleave at the protocol level. This channel is cached and shared across every
+    /// caller of PublishAsync (this class is registered as a singleton), so every publish -- including
+    /// the channel (re)creation it may trigger -- goes through this lock.
+    /// </summary>
     private readonly SemaphoreSlim _publishLock = new(1, 1);
+
+    /// <summary>The cached AMQP connection, opened lazily by <see cref="GetChannelAsync"/>; null until the first publish.</summary>
     private IConnection? _connection;
+
+    /// <summary>The cached publisher-confirms channel on <see cref="_connection"/>; null until the first publish or after it dropped.</summary>
     private IChannel? _channel;
 
-    // Stopwatch timestamp of the last time (re)connecting failed, or null. While the broker is down every
-    // publish would otherwise queue behind _publishLock and each pay the recovery grace wait plus a full
-    // connect attempt in turn, so a burst of registrations / password resets stacks up multi-second
-    // latencies. After a failure, callers within one grace window fail fast instead (PublishAsync throws,
-    // which the callers already treat as "mail could not be queued").
+    /// <summary>
+    /// Stopwatch timestamp of the last time (re)connecting failed, or null. While the broker is down every
+    /// publish would otherwise queue behind _publishLock and each pay the recovery grace wait plus a full
+    /// connect attempt in turn, so a burst of registrations / password resets stacks up multi-second
+    /// latencies. After a failure, callers within one grace window fail fast instead (PublishAsync throws,
+    /// which the callers already treat as "mail could not be queued").
+    /// </summary>
     private long? _lastConnectFailureTimestamp;
 
     /// <inheritdoc />
@@ -170,7 +177,7 @@ public sealed class RabbitMqEmailPublisher(
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        // Waits (bounded -- see DisposeLockTimeout) for any in-flight PublishAsync to release the
+        // Waits (bounded -- see _disposeLockTimeout) for any in-flight PublishAsync to release the
         // lock first, so the channel/connection it's using is never disposed out from under it.
         bool acquired = await _publishLock.WaitAsync(_disposeLockTimeout);
         if (!acquired)

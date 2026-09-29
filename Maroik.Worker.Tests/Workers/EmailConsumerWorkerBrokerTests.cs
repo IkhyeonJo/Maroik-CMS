@@ -15,6 +15,7 @@ namespace Maroik.Worker.Tests.Workers;
 /// <summary>One throwaway RabbitMQ 4 container for the class (xUnit class fixture); each test resets the two queues first.</summary>
 public sealed class WorkerBrokerFixture : IAsyncLifetime
 {
+    /// <summary>The RabbitMQ 4 container.</summary>
     private readonly RabbitMqContainer _broker = new RabbitMqBuilder("rabbitmq:4-alpine").Build();
 
     /// <summary>The broker's AMQP connection string (guest login).</summary>
@@ -45,11 +46,15 @@ public sealed class WorkerBrokerFixture : IAsyncLifetime
 /// </summary>
 public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClassFixture<WorkerBrokerFixture>
 {
+    /// <summary>The message most tests publish.</summary>
     private static readonly SendEmailMessage _message = new("to@test.com", "Subject", "Body", "corr-7");
+    /// <summary>The current test's cancellation token.</summary>
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
+    /// <summary>A message handler whose behavior per call is scripted by the test.</summary>
     private sealed class ScriptedHandler(Func<SendEmailMessage, int, Task> onCall) : IEmailMessageHandler
     {
+        /// <summary>Number of calls so far; read and written atomically.</summary>
         private int _calls;
         /// <summary>How many times <see cref="HandleAsync"/> has been called.</summary>
         public int Calls => Volatile.Read(ref _calls);
@@ -65,6 +70,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         }
     }
 
+    /// <summary>A worker against the container, resolving <paramref name="handler"/>, with short retry and drain timings.</summary>
     private EmailConsumerWorker CreateWorker(ScriptedHandler handler)
     {
         var services = new ServiceCollection();
@@ -78,6 +84,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         return worker;
     }
 
+    /// <summary>Declares both queues exactly as the worker does, then publishes <paramref name="body"/> (persistent) to the e-mail queue.</summary>
     private async Task PublishRawAsync(byte[] body, IDictionary<string, object?>? headers = null)
     {
         await using IConnection connection = await broker.CreateFactory().CreateConnectionAsync(Ct);
@@ -88,8 +95,10 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         await channel.BasicPublishAsync("", QueueNames.Email, mandatory: false, new BasicProperties { Persistent = true, Headers = headers }, body, Ct);
     }
 
+    /// <summary>Publishes <paramref name="message"/> serialized as JSON.</summary>
     private Task PublishAsync(SendEmailMessage message) => PublishRawAsync(JsonSerializer.SerializeToUtf8Bytes(message));
 
+    /// <summary>The number of ready messages in <paramref name="queue"/>; throws if the queue does not exist.</summary>
     private async Task<uint> CountAsync(string queue)
     {
         await using IConnection connection = await broker.CreateFactory().CreateConnectionAsync(Ct);
@@ -97,6 +106,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         return (await channel.QueueDeclarePassiveAsync(queue, Ct)).MessageCount;
     }
 
+    /// <summary>Waits for and removes (auto-ack) one message from <paramref name="queue"/>, returning its body.</summary>
     private async Task<byte[]> TakeAsync(string queue)
     {
         await using IConnection connection = await broker.CreateFactory().CreateConnectionAsync(Ct);
@@ -105,6 +115,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         return got.Body.ToArray();
     }
 
+    /// <summary>Polls <paramref name="read"/> every 100 ms until <paramref name="done"/> holds or <paramref name="seconds"/> pass, returning the last value read.</summary>
     private static async Task<T?> Eventually<T>(Func<Task<T?>> read, Func<T?, bool> done, int seconds = 15)
     {
         T? value = default;
@@ -116,6 +127,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         return value;
     }
 
+    /// <summary>Polls <paramref name="condition"/> every 50 ms; throws <see cref="TimeoutException"/> if it is not met within <paramref name="seconds"/>.</summary>
     private static async Task WaitAsync(Func<bool> condition, int seconds = 15)
     {
         for (var deadline = DateTime.UtcNow.AddSeconds(seconds); DateTime.UtcNow < deadline; await Task.Delay(50, Ct))
@@ -145,6 +157,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         }
     }
 
+    /// <summary><see cref="CountAsync"/>, or <see langword="null"/> when the queue does not exist (yet).</summary>
     private async Task<uint?> CountSafeAsync(string queue)
     {
         try { return await CountAsync(queue); }

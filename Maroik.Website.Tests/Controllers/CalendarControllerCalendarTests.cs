@@ -16,11 +16,14 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class CalendarControllerCalendarTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
+    /// <summary>Seeds (if missing) a User account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsUserAsync(string email = "calendar-user@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
 
+    /// <summary>A create-calendar JSON body with one new UTC calendar named <paramref name="name"/>.</summary>
     private static object ValidCalendarPayload(string name) => new
     {
         Calendars = new[]

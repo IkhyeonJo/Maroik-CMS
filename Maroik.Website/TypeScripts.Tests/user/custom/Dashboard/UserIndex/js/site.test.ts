@@ -10,6 +10,7 @@ const CANVAS_IDS = [
     "nonConsumerSpendingYearMonth", "consumerSpendingYearMonth",
 ];
 
+/** The dashboard DOM: the chart canvases and the period / unit controls. */
 function fixture(): string {
     return (
         antiForgery +

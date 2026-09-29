@@ -1,8 +1,8 @@
 /**
  * Script for the **user** Calendar page (`Views/Calendar/UserIndex.cshtml`) —
  * the largest client script in the app. It is the admin Calendar page
- * (`admin/Calendar/AdminIndex`) plus a read-only path for **shared** ("Other")
- * calendars:
+ * (`admin/Calendar/AdminIndex`) minus the admin-only "shared calendars" dialog,
+ * plus a read-only path for **shared** ("Other") calendars:
  *
  *   • **My calendars** — create / edit / delete (color, timezone), and the
  *     colored checkboxes toggle which of them show on the grid.
@@ -19,8 +19,9 @@
  * Server contract: every bound / max (`maxMinutesBeforeEvent`,
  * `reminderTimeIntervals`, …) comes from a hidden input a Domain policy
  * (`CalendarReminderPolicy`) produced; the `Validate*` functions are UX mirrors
- * and the controller re-validates every write. Local date strings are converted
- * to UTC (`moment.utc(...)`) before sending.
+ * and the controller re-validates every write. Dates are sent as the local strings
+ * the user entered ("yyyy-M-d" / "yyyy-M-d H:m") together with their time-zone
+ * fields; the server converts them to UTC (CalendarViewModelMapper).
  *
  * Structure: a long `const $x = $('#x')` element cache, then helpers, then one
  * big `$(function)` that builds the date pickers, the FullCalendar instance and
@@ -1311,16 +1312,16 @@
 
         calendar.render();
 
+        // Guards against a stale GetCalendarEvents response (from a checkbox toggle just before
+        // this one) landing after a newer one and re-adding events the user already unchecked.
+        let calendarEventsRequestSeq = 0;
+
         /**
          * Reloads the visible events from the set of currently-checked calendar
          * checkboxes (each `<label id="lblCalendar123">` / `lblOtherCalendar123`
          * encodes the id): clears the grid, gathers the ids, POSTs
          * `GetCalendarEvents`, and re-adds whatever comes back.
          */
-            // Guards against a stale GetCalendarEvents response (from a checkbox toggle just before
-            // this one) landing after a newer one and re-adding events the user already unchecked.
-        let calendarEventsRequestSeq = 0;
-
         function RefreshCalendarEvents() {
             calendar.removeAllEvents();
 

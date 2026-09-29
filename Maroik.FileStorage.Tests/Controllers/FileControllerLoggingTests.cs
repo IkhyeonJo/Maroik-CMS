@@ -22,8 +22,10 @@ namespace Maroik.FileStorage.Tests.Controllers;
 [Collection("FileStorage host (Program builds a process-wide Serilog logger)")]
 public class FileControllerLoggingTests(WebApplicationFactory<Program> baseFactory) : IClassFixture<WebApplicationFactory<Program>>
 {
+    /// <summary>The leading bytes of a JPEG (JFIF) file.</summary>
     private static readonly byte[] _jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00];
 
+    /// <summary>A client for the host with storage under the temp folder, ClamAV mocked to return <paramref name="scan"/>, and the controller logger captured.</summary>
     private (HttpClient Client, FakeLogger<FileController> Logger) CreateClient(ClamavScanResult scan)
     {
         var logger = new FakeLogger<FileController>();
@@ -42,8 +44,10 @@ public class FileControllerLoggingTests(WebApplicationFactory<Program> baseFacto
         return (factory.CreateClient(), logger);
     }
 
+    /// <summary>A fresh, not-yet-existing path under the temp folder.</summary>
     private static string UniqueTarget() => Path.Combine(Path.GetTempPath(), $"maroik_log_{Guid.NewGuid():N}");
 
+    /// <summary>An upload form with a JPEG-typed file part plus the <c>filePath</c> and <c>correlationId</c> fields.</summary>
     private static MultipartFormDataContent Upload(string fileName, byte[] bytes, string filePath, string correlationId)
     {
         var content = new MultipartFormDataContent();

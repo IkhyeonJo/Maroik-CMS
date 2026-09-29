@@ -51,6 +51,7 @@ public class MaroikWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     /// </summary>
     private static readonly RSA _rsaKeyPair = RSA.Create(2048);
 
+    /// <summary>Throwaway PostgreSQL 17 container initialized from the production <c>Init.sql</c>.</summary>
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17")
         // Schema comes from the real init script (not EF's EnsureCreated, which
         // builds from the EF model's Fluent API config — a config that turned out to omit the
@@ -60,8 +61,10 @@ public class MaroikWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         // pg_dump's \restrict/\unrestrict meta-commands (a raw ADO.NET batch would not).
         .WithResourceMapping(new FileInfo(FindInitSqlPath()), new FileInfo("/docker-entrypoint-initdb.d/init.sql"))
         .Build();
+    /// <summary>Connection string of <see cref="_postgres"/>; set once it has started.</summary>
     private string _connectionString = "";
 
+    /// <summary>Absolute path of the production <c>Init.sql</c>, found by walking up to the directory holding <c>Maroik.sln</c>.</summary>
     private static string FindInitSqlPath()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
@@ -112,7 +115,7 @@ public class MaroikWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 ["ServerSetting:RsaAlgorithm"] = "Rsa2",
                 ["ServerSetting:FileStorageBaseUrl"] = "http://localhost:5001",
 
-                // SMTP ?? not used in route tests
+                // SMTP — not used in route tests
                 ["ServerSetting:SmtpOptions:smtpUserName"] = "test",
                 ["ServerSetting:SmtpOptions:smtpPassword"] = "test",
                 ["ServerSetting:SmtpOptions:smtpHost"] = "localhost",
@@ -122,14 +125,14 @@ public class MaroikWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 ["ServerSetting:SmtpOptions:fromFullName"] = "Test",
                 ["ServerSetting:SmtpOptions:IsDefault"] = "true",
 
-                // ClamAV ?? not used in route tests
+                // ClamAV — not used in route tests
                 ["Clamav:Host"] = "localhost",
                 ["Clamav:Port"] = "3310",
 
                 // FileStorage
                 ["FileStorage:BaseUrl"] = "http://localhost:5001",
 
-                // DB ?? overridden below with InMemory, but a value is required to avoid null errors
+                // DB — replaced below by the Testcontainers PostgreSQL connection, but a value is required to avoid null errors
                 ["ConnectionStrings:DefaultConnection"] = "Host=localhost;Database=test;Username=test;Password=test",
                 ["ConnectionStrings:Valkey"] = ""
             }!);

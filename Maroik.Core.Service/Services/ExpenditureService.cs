@@ -237,18 +237,23 @@ public class ExpenditureService(
         }
     }
 
+    /// <summary>Failure returned when a transfer's payment asset and deposit asset are the same asset.</summary>
     private static ServiceResult SameAssetResult => ServiceResult.Validation(
         "Expenditure.SameAsset", "The PaymentMethod and MyDepositAsset value cannot be the same.");
 
+    /// <summary>Failure returned when a transfer's payment asset and deposit asset hold different currencies.</summary>
     private static ServiceResult CurrencyMismatchResult => ServiceResult.Validation(
         "Expenditure.CurrencyMismatch", "PaymentMethod MonetaryUnit must be same as MyDepositAsset MonetaryUnit.");
 
+    /// <summary>Failure returned when a referenced asset does not exist on the caller's account.</summary>
     private static ServiceResult AssetNotFoundResult => ServiceResult.NotFound(
         "Expenditure.AssetNotFound", "The selected asset could not be found.");
 
+    /// <summary>Failure returned when a referenced asset has been soft-deleted.</summary>
     private static ServiceResult DeletedAssetResult => ServiceResult.Conflict(
         "Expenditure.AssetDeleted", "Actions cannot be executed with assets that have already been deleted.");
 
+    /// <summary>Generic failure returned (after logging) when a write throws unexpectedly.</summary>
     private static ServiceResult UnexpectedFailure => ServiceResult.Failure(
         "Expenditure.Unexpected", "The operation could not be completed. Please try again.");
 

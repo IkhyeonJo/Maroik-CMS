@@ -301,7 +301,7 @@
 
                                         $viewCalendarEventAllDay.prop("checked", false);
 
-                                        // `displayStartDate` is "YYYY-MM-DD HH:mm:ss" — split
+                                        // `displayStartDate` is "yyyy-MM-dd HH:mm" — split
                                         // into the date field and the HH:mm time field.
                                         $viewCalendarEventAllDayUncheckedStartDate.val(data.calendarEvent.displayStartDate.split(" ")[0]);
                                         $viewCalendarEventAllDayUncheckedStartTime.val(data.calendarEvent.displayStartDate.split(" ")[1].substring(0, 5));
@@ -551,15 +551,15 @@
 
         calendar.render();
 
+        // Guards against a stale GetCalendarEvents response (from a checkbox toggle just before
+        // this one) landing after a newer one and re-adding events the user already unchecked.
+        let calendarEventsRequestSeq = 0;
+
         /**
          * Reloads the visible events from the set of currently-checked "other
          * calendars": clears everything, gathers the checked calendar ids, POSTs
          * `GetCalendarEvents`, and re-adds whatever comes back.
          */
-            // Guards against a stale GetCalendarEvents response (from a checkbox toggle just before
-            // this one) landing after a newer one and re-adding events the user already unchecked.
-        let calendarEventsRequestSeq = 0;
-
         function RefreshCalendarEvents() {
 
             calendar.removeAllEvents();

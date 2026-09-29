@@ -17,6 +17,7 @@ public sealed class CalendarShared : AggregateRoot<long>
     /// <summary>When true, anonymous (unauthenticated) visitors can view this calendar.</summary>
     public bool Anonymous { get; private set; }
 
+    /// <summary>Sets both sharing flags; reached only through <see cref="Reconstitute"/> / <see cref="CreatePrivate"/>.</summary>
     private CalendarShared(long calendarId, bool user, bool anonymous) : base(calendarId)
     {
         User = user;

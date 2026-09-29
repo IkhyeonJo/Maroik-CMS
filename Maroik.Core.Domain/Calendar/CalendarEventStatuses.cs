@@ -18,6 +18,7 @@ public static class CalendarEventStatuses
     /// <summary>The subscriber appears available for the event's duration.</summary>
     public const string Free = "Free";
 
+    /// <summary>Membership set backing <see cref="All"/> / <see cref="IsKnown"/>.</summary>
     private static readonly StringTaxonomy _taxonomy = new(Busy, Free);
 
     /// <summary>Every recognized status value.</summary>

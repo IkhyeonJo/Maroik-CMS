@@ -2,15 +2,14 @@
 namespace Maroik.Website.Models.ViewModels.Dashboard;
 
 /// <summary>
-/// Slim input model for the Dashboard index page.
-/// Carries only the user's preferred currency so the controller can
-/// filter or label monetary values before building <see cref="UserIndexOutputViewModel"/>.
+/// JSON request body of <c>DashboardController.UserUpdateDefaultMonetary</c>: the currency the user picked
+/// in the dashboard's currency selector, to be saved as the account's default.
 /// </summary>
 public class UserIndexInputViewModel
 {
     /// <summary>
     /// The currency code the user has selected as their default display currency (e.g. "KRW", "USD").
-    /// Passed as a query parameter or form field when the user changes the currency selector.
+    /// Saved only when it is the currency of one of the account's non-deleted assets; otherwise the default is cleared.
     /// </summary>
     public string? DefaultMonetaryUnit { get; set; }
 }

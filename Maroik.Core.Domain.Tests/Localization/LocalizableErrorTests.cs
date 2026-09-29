@@ -45,7 +45,7 @@ public class LocalizableErrorTests
 
     /// <summary>
     /// <see cref="LocalizableError.Conflict"/> follows the same code/description/metadata/type
-    /// pattern as <see cref="Validation"/>, just with <see cref="ErrorType.Conflict"/>.
+    /// pattern as <see cref="LocalizableError.Validation"/>, just with <see cref="ErrorType.Conflict"/>.
     /// </summary>
     [Fact]
     public void Conflict_BuildsAConflictError_WithTemplateAndArgsInMetadata()
@@ -61,7 +61,7 @@ public class LocalizableErrorTests
 
     /// <summary>
     /// <see cref="LocalizableError.Failure"/> follows the same code/description/metadata/type
-    /// pattern as <see cref="Validation"/>, just with <see cref="ErrorType.Failure"/>.
+    /// pattern as <see cref="LocalizableError.Validation"/>, just with <see cref="ErrorType.Failure"/>.
     /// </summary>
     [Fact]
     public void Failure_BuildsAFailureError_WithTemplateAndArgsInMetadata()

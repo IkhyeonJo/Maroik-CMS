@@ -15,9 +15,9 @@ using Maroik.Website.Models.ViewModels.Notice;
 namespace Maroik.Website.Services;
 
 /// <summary>
-/// Builds OpenXML Excel workbooks for account-book data export.
-/// All localization and timezone conversion is delegated to the caller via <see cref="Func{T,TResult}"/>
-/// and a timezone ID string, keeping this class free of presentation-layer concerns.
+/// Builds OpenXML Excel workbooks for the grids' Excel export (account book, notices, accounts, menu).
+/// Localization comes from the caller's <see cref="Func{T,TResult}"/> and timestamps are converted to the
+/// caller-supplied time zone, so this class holds no localizer or session state of its own.
 /// </summary>
 public class ExcelExportService : IExcelExportService
 {
@@ -337,6 +337,10 @@ public class ExcelExportService : IExcelExportService
         return BuildExcel(headers, rows);
     }
 
+    /// <summary>
+    /// Writes a single-sheet ("Sheet1") workbook: one header row, then one row per entry of
+    /// <paramref name="rows"/>, every cell as a string. Returns the stream rewound to position 0.
+    /// </summary>
     private static MemoryStream BuildExcel(IEnumerable<string> headers, IEnumerable<IEnumerable<string>> rows)
     {
         var stream = new MemoryStream();
@@ -378,6 +382,7 @@ public class ExcelExportService : IExcelExportService
         return stream;
     }
 
+    /// <summary>A string-typed cell holding <paramref name="value"/> with XML-illegal characters removed.</summary>
     private static Cell StringCell(string value) => new()
     {
         CellValue = new CellValue(StripXmlInvalidChars(value)),
@@ -387,7 +392,7 @@ public class ExcelExportService : IExcelExportService
     /// <summary>
     /// Removes characters that are illegal in XML 1.0: C0 control characters other than tab/CR/LF,
     /// U+FFFE/U+FFFF, and <em>unpaired</em> UTF-16 surrogate code units (a lone high or low
-    /// surrogate \u2014 e.g. from a truncated emoji or bad clipboard data). User-entered fields such as
+    /// surrogate — e.g. from a truncated emoji or bad clipboard data). User-entered fields such as
     /// Note/Content/Nickname can carry any of these from pasted text; left in, the OpenXml
     /// <see cref="System.Xml.XmlWriter"/> throws during Workbook.Save, breaking the
     /// whole export over one row. Valid surrogate pairs (real astral-plane characters) are kept.
@@ -443,6 +448,7 @@ public class ExcelExportService : IExcelExportService
         return false;
     }
 
+    /// <summary>True for a C0 control character other than tab / CR / LF, or the non-characters U+FFFE / U+FFFF.</summary>
     private static bool IsXmlInvalid(char c) =>
         (c < 0x20 && c != '\t' && c != '\n' && c != '\r') || c == '\uFFFE' || c == '\uFFFF';
 }

@@ -7,6 +7,7 @@ namespace Maroik.Core.Service.Services;
 /// <summary>ImageMagick-backed implementation of <see cref="IImageValidatorService"/>.</summary>
 public class ImageValidatorService(ILogger<ImageValidatorService> logger) : IImageValidatorService
 {
+    /// <summary>Caps Magick.NET's process-wide decode limits once, before the first image is validated.</summary>
     static ImageValidatorService()
     {
         // These are process-global (Magick.NET has no per-instance limits), and this service is the
@@ -19,7 +20,9 @@ public class ImageValidatorService(ILogger<ImageValidatorService> logger) : IIma
         ResourceLimits.Memory = 256UL * 1024 * 1024; // 256 MiB
     }
 
+    /// <summary>The 8-byte signature every PNG file starts with.</summary>
     private static readonly byte[] _pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    /// <summary>The SOI marker plus the first byte of the next marker, which every JPEG file starts with.</summary>
     private static readonly byte[] _jpegSignature = [0xFF, 0xD8, 0xFF];
 
     // How much of the file is looked at to recognize an SVG document: its <svg> element sits at the top

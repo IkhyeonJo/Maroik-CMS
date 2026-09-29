@@ -2,8 +2,8 @@ namespace Maroik.FileStorage.Helpers;
 
 /// <summary>
 /// Confines a caller-supplied file path to the configured storage root. The callers
-/// (BoardService / CalendarService / AttachmentContentService in Maroik.Website) only ever send
-/// server-generated relative paths that begin with <c>upload/</c>; this is the backstop that keeps
+/// (BoardService / CalendarService / AttachmentContentService / ProfileService in Maroik.Core.Service,
+/// through <c>FileClient</c>) only ever send server-generated relative paths that begin with <c>upload/</c>; this is the backstop that keeps
 /// a malformed or hostile value from reading or writing anywhere else on the file system.
 /// </summary>
 internal static class StoragePath

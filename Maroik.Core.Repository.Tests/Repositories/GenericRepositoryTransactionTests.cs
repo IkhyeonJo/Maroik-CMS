@@ -17,9 +17,11 @@ namespace Maroik.Core.Repository.Tests.Repositories;
 /// </summary>
 public sealed class GenericRepositoryTransactionTests(DatabaseFixture database) : RepositoryTestBase(database)
 {
+    /// <summary>A new (id 0) category with a name unique to this test.</summary>
     private Category NewCategory() =>
         Category.Reconstitute(0, Unique("TxCat"), "Tx Category", "/icons/i.svg", "Tx", "Index", Role.User, 1);
 
+    /// <summary>True when a category named <paramref name="name"/> is visible from a fresh context, i.e. has been committed.</summary>
     private async Task<bool> ExistsInSeparateConnectionAsync(string name)
     {
         await using var probe = NewDbContext();
@@ -173,16 +175,20 @@ public sealed class GenericRepositoryTransactionTests(DatabaseFixture database) 
     /// exercised through the protected helpers.</summary>
     private sealed class PrefixCategoryRepository(ApplicationDbContext context) : CategoryRepository(context)
     {
+        /// <summary>Categories whose name starts with <paramref name="prefix"/>, ordered by name.</summary>
         public Task<List<Category>> ListOrderedAsync(string prefix, CancellationToken ct) =>
             QueryAsync(e => e.Name.StartsWith(prefix), q => q.OrderBy(e => e.Name), ct: ct);
 
+        /// <summary>The first category (by name) whose name starts with <paramref name="prefix"/>.</summary>
         public Task<Category?> FirstOrderedAsync(string prefix, CancellationToken ct) =>
             QueryFirstAsync(e => e.Name.StartsWith(prefix), q => q.OrderBy(e => e.Name), ct: ct);
 
+        /// <summary>Deletes every category whose name starts with <paramref name="prefix"/>.</summary>
         public Task DeleteByPrefixAsync(string prefix, CancellationToken ct) =>
             DeleteWhereAsync(e => e.Name.StartsWith(prefix), ct);
     }
 
+    /// <summary>A new (id 0) category named <paramref name="name"/>.</summary>
     private static Category CategoryNamed(string name) =>
         Category.Reconstitute(0, name, "Display", "/icons/i.svg", "Ctrl", "Index", Role.User, 1);
 

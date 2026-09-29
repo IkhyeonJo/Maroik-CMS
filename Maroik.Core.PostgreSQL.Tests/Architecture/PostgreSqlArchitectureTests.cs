@@ -10,8 +10,10 @@ namespace Maroik.Core.PostgreSQL.Tests.Architecture;
 /// </summary>
 public class PostgreSqlArchitectureTests
 {
+    /// <summary>The assembly containing <c>ApplicationDbContext</c>, referenced by these architecture rules.</summary>
     private static readonly Assembly _assembly = typeof(ApplicationDbContext).Assembly;
 
+    /// <summary>Every other Maroik project; the persistence model must depend on none of them.</summary>
     private static readonly string[] _otherProjects =
     [
         "Maroik.Core.Domain", "Maroik.Core.Contract", "Maroik.Core.Service", "Maroik.Core.Repository", "Maroik.Core.Client",

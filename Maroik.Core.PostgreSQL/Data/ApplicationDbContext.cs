@@ -5,49 +5,74 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Maroik.Core.PostgreSQL.Data;
 
+/// <summary>
+/// EF Core context over the Maroik PostgreSQL schema (scaffolded from the database). The schema itself
+/// is created by <c>Maroik.DB/PostgreSQL/SQL_Init_Script/*/Init.sql</c>, not by this model; the mapping
+/// below must match it (constraint / index names are relied on by the Service layer's error classification).
+/// </summary>
 public partial class ApplicationDbContext : DbContext
 {
+    /// <summary>Creates the context with the options configured at DI registration (Npgsql connection string).</summary>
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
     }
 
+    /// <summary>"Account" table.</summary>
     public virtual DbSet<Account> Accounts { get; set; }
 
+    /// <summary>"Asset" table.</summary>
     public virtual DbSet<Asset> Assets { get; set; }
 
+    /// <summary>"Board" table.</summary>
     public virtual DbSet<Board> Boards { get; set; }
 
+    /// <summary>"BoardAttachedFile" table.</summary>
     public virtual DbSet<BoardAttachedFile> BoardAttachedFiles { get; set; }
 
+    /// <summary>"BoardComment" table.</summary>
     public virtual DbSet<BoardComment> BoardComments { get; set; }
 
+    /// <summary>"Calendar" table.</summary>
     public virtual DbSet<Calendar> Calendars { get; set; }
 
+    /// <summary>"CalendarEvent" table.</summary>
     public virtual DbSet<CalendarEvent> CalendarEvents { get; set; }
 
+    /// <summary>"CalendarEventAttachedFile" table.</summary>
     public virtual DbSet<CalendarEventAttachedFile> CalendarEventAttachedFiles { get; set; }
 
+    /// <summary>"CalendarEventReminder" table.</summary>
     public virtual DbSet<CalendarEventReminder> CalendarEventReminders { get; set; }
 
+    /// <summary>"CalendarRecurrence" table.</summary>
     public virtual DbSet<CalendarRecurrence> CalendarRecurrences { get; set; }
 
+    /// <summary>"CalendarShared" table.</summary>
     public virtual DbSet<CalendarShared> CalendarShareds { get; set; }
 
+    /// <summary>"Category" table.</summary>
     public virtual DbSet<Category> Categories { get; set; }
 
+    /// <summary>"Expenditure" table.</summary>
     public virtual DbSet<Expenditure> Expenditures { get; set; }
 
+    /// <summary>"FixedExpenditure" table.</summary>
     public virtual DbSet<FixedExpenditure> FixedExpenditures { get; set; }
 
+    /// <summary>"FixedIncome" table.</summary>
     public virtual DbSet<FixedIncome> FixedIncomes { get; set; }
 
+    /// <summary>"Income" table.</summary>
     public virtual DbSet<Income> Incomes { get; set; }
 
+    /// <summary>"OtherCalendar" table.</summary>
     public virtual DbSet<OtherCalendar> OtherCalendars { get; set; }
 
+    /// <summary>"SubCategory" table.</summary>
     public virtual DbSet<SubCategory> SubCategories { get; set; }
 
+    /// <summary>Maps every entity to its table: keys, constraint / index names, column types, defaults, comments and relationships.</summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Account>(entity =>
@@ -743,5 +768,6 @@ public partial class ApplicationDbContext : DbContext
         OnModelCreatingPartial(modelBuilder);
     }
 
+    /// <summary>Extension point for mapping kept outside the scaffolded file (no implementation at present).</summary>
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }

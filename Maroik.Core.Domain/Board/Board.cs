@@ -13,6 +13,7 @@ namespace Maroik.Core.Domain.Board;
 /// </summary>
 public sealed class Board : AggregateRoot<long>
 {
+    /// <summary>Backing list for <see cref="Comments"/>: only the comments added in this call, never the stored ones.</summary>
     private readonly List<BoardComment> _comments = [];
 
     /// <summary>Board type identifier (e.g. "FreeForum", "PrivateNote").</summary>
@@ -39,7 +40,10 @@ public sealed class Board : AggregateRoot<long>
     /// <summary>Soft-delete flag.</summary>
     public bool Deleted { get; private set; }
 
-    /// <summary>When true, no new comments can be added.</summary>
+    /// <summary>
+    /// When true, only the author and admins may view the post or add comments to it
+    /// (see <see cref="CanBeViewedBy(string?, bool)"/> / <see cref="AddComment"/>).
+    /// </summary>
     public bool Locked { get; private set; }
 
     /// <summary>When true, the post is pinned at the top of the list as a notice.</summary>
@@ -124,8 +128,8 @@ public sealed class Board : AggregateRoot<long>
             return LocalizableError.Validation("Board.TypeEmpty", "Board type cannot be empty.");
 
         // Constrain to the known taxonomy here rather than trusting the caller: BuildAttachedFilePath
-        // in the service layer interpolates this value into a file-storage path, and the DB
-        // Board_Type_check constraint is currently the only thing rejecting anything else.
+        // in the service layer interpolates this value into a file-storage path, and otherwise the DB
+        // Board_Type_check constraint would be the only thing rejecting anything else.
         if (!BoardTypes.IsKnown(type))
             return LocalizableError.Validation("Board.TypeInvalid", "Board type is not a recognised value.");
 
@@ -196,14 +200,14 @@ public sealed class Board : AggregateRoot<long>
         return Result.Success;
     }
 
-    /// <summary>Locks the post, preventing new comments.</summary>
+    /// <summary>Locks the post: only its author and admins can still view or comment on it.</summary>
     public void Lock()
     {
         Locked = true;
         Updated = DateTime.UtcNow;
     }
 
-    /// <summary>Unlocks the post, re-enabling comments.</summary>
+    /// <summary>Unlocks the post, making it viewable and commentable by everyone again.</summary>
     public void Unlock()
     {
         Locked = false;

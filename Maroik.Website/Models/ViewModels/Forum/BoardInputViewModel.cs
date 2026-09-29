@@ -4,7 +4,8 @@ using System.ComponentModel.DataAnnotations;
 namespace Maroik.Website.Models.ViewModels.Forum;
 
 /// <summary>
-/// Form model for creating or editing a board post (FreeForum or PrivateNote).
+/// Form model for creating or editing a FreeForum post (PrivateNote posts use the Management-area
+/// <c>BoardInputViewModel</c>).
 /// Bound from the POST request when a user submits the post editor.
 /// </summary>
 public class BoardInputViewModel
@@ -20,10 +21,10 @@ public class BoardInputViewModel
     /// <summary>HTML body of the post produced by the Summernote WYSIWYG editor.</summary>
     public string? Content { get; set; }
 
-    /// <summary>When <see langword="true"/> the post is pinned to the top of the list as a notice.</summary>
+    /// <summary>When <see langword="true"/> the post is pinned to the top of the list as a notice (honored for admins only).</summary>
     public bool Noticed { get; set; }
 
-    /// <summary>When <see langword="true"/> the post is read-only and comments cannot be added.</summary>
+    /// <summary>When <see langword="true"/> the post is locked: only its author and admins may view or comment on it.</summary>
     public bool Locked { get; set; }
 
     /// <summary>Optional single file attachment uploaded with the post (max one file per post).</summary>

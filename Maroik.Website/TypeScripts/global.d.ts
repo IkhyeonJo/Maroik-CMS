@@ -11,12 +11,16 @@
 // Not published to npm (NuGet-ecosystem vendored JS). Typed loosely to the surface the
 // custom scripts actually touch: new MvcGrid(el), .url.searchParams, .reload().
 declare class MvcGrid {
+    /** Binds the grid behavior to its rendered `.mvc-grid` container. */
     constructor(container: Element | null);
 
+    /** The URL the grid reloads its rows from; the scripts edit its `searchParams` (e.g. the search box). */
     url: URL;
 
+    /** Re-fetches the grid's rows from `url`. */
     reload(): void;
 
+    /** Any other member of the untyped vendored library. */
     [key: string]: unknown;
 }
 
@@ -33,14 +37,21 @@ declare const moment: typeof import("moment");
 // typed here rather than via `@types/bootstrap`, which pulls in the deprecated
 // `popper.js@1` package for the rest of the Bootstrap 4 surface we never touch.
 interface BootstrapModalOptions {
+    /** Show a backdrop; "static" keeps the modal open when the backdrop is clicked. */
     backdrop?: boolean | "static";
+    /** Close the modal on the Escape key. */
     keyboard?: boolean;
+    /** Move focus into the modal when it opens. */
     focus?: boolean;
+    /** Show the modal immediately on initialization. */
     show?: boolean;
 }
 
+// Augments jQuery's own interface (merged with @types/jquery) with the Bootstrap 4 modal plugin.
 interface JQuery<TElement = HTMLElement> {
+    /** Runs a modal command (defaults to "toggle" when called with no argument). */
     modal(action?: "show" | "hide" | "toggle" | "handleUpdate" | "dispose"): this;
 
+    /** Initializes (and by default shows) the modal with the given options. */
     modal(options: BootstrapModalOptions): this;
 }

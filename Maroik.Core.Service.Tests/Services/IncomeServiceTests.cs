@@ -15,10 +15,14 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class IncomeServiceTests
 {
+    /// <summary>Mock <c>IIncomeRepository</c> injected into the system under test.</summary>
     private readonly Mock<IIncomeRepository> _incomeRepo = new();
+    /// <summary>Mock <c>IAssetBalanceDomainService</c> injected into the system under test.</summary>
     private readonly Mock<IAssetBalanceDomainService> _assetBalance = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
+    /// <summary>The service under test over the mocked dependencies.</summary>
     private IncomeService CreateSut() => new(
         _incomeRepo.Object,
         _assetBalance.Object,
@@ -61,6 +65,7 @@ public class IncomeServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A persisted asset named <paramref name="name"/>.</summary>
     private static Asset MakeAsset(string name, decimal amount = 1000m, bool deleted = false)
         => Asset.Reconstitute(
             productName: name,
@@ -73,6 +78,7 @@ public class IncomeServiceTests
             created: DateTime.UtcNow,
             updated: DateTime.UtcNow);
 
+    /// <summary>A valid income request deposited into <paramref name="asset"/>.</summary>
     private static IncomeRequest ValidRequest(string asset = "SavingsAccount") => new()
     {
         MainClass = "RegularIncome",
@@ -82,6 +88,7 @@ public class IncomeServiceTests
         Content = "Salary"
     };
 
+    /// <summary>A persisted income deposited into <paramref name="depositAsset"/>.</summary>
     private static Income MakeIncome(long id, string depositAsset = "SavingsAccount", decimal amount = 100m,
         string mainClass = "RegularIncome", string subClass = "LaborIncome")
         => Income.Reconstitute(
@@ -460,17 +467,21 @@ public class IncomeServiceTests
 
     // -- Money-affecting failure branches ------------------------------------------
 
+    /// <summary>Owner e-mail the asset lookups are keyed on.</summary>
     private const string Email = "user@example.com";
 
+    /// <summary>Makes the asset lookup return each of <paramref name="assets"/> by product name.</summary>
     private void GivenAssets(params Asset[] assets)
     {
         foreach (Asset a in assets)
             _assetBalance.Setup(r => r.GetAssetAsync(Email, a.ProductName, It.IsAny<CancellationToken>())).ReturnsAsync(a);
     }
 
+    /// <summary>Makes the owner's income list contain only <paramref name="previous"/>.</summary>
     private void GivenExistingIncome(Income previous) =>
         _incomeRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([previous]);
 
+    /// <summary>Sets <paramref name="r"/>'s id to 1 (an update request) and returns it.</summary>
     private static IncomeRequest WithId(IncomeRequest r) { r.Id = 1; return r; }
 
     /// <summary>A negative amount typed by the user is stored (and deposited) as its absolute value.</summary>

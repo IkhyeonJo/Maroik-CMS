@@ -17,6 +17,7 @@ public sealed class CalendarRepositoryTests(DatabaseFixture database) : Reposito
 {
     private CalendarRepository Sut => new(Context);
 
+    /// <summary>An unsaved calendar row owned by <paramref name="email"/>.</summary>
     private static OrmCalendar MakeCalendar(string email, string name, string color = "#FF5733") => new()
     {
         AccountEmail = email,
@@ -28,6 +29,7 @@ public sealed class CalendarRepositoryTests(DatabaseFixture database) : Reposito
         Updated = DateTime.UtcNow
     };
 
+    /// <summary>Ensures each owner account exists, then inserts <paramref name="calendars"/>, saves, and clears the change tracker.</summary>
     private async Task SeedAsync(params OrmCalendar[] calendars)
     {
         await EnsureAccountsAsync([.. calendars.Select(c => c.AccountEmail!)]);

@@ -30,6 +30,7 @@ public static class MenuFieldPolicy
         /// <summary>Visible to signed-out visitors.</summary>
         private const string Anonymous = "Anonymous";
 
+        /// <summary>Membership set backing <see cref="All"/> / <see cref="IsKnown"/>.</summary>
         private static readonly StringTaxonomy _taxonomy = new(Admin, User, Anonymous);
 
         /// <summary>Every role a menu item may carry.</summary>

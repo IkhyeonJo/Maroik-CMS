@@ -17,6 +17,7 @@ namespace Maroik.Core.Client.Tests.Clients;
 /// </summary>
 public class MailClientTests
 {
+    /// <summary>The client under test (logging discarded).</summary>
     private readonly MailClient _sut = new(NullLogger<MailClient>.Instance);
 
     // -- GetMailConfirmationBody ----------------------------------------------
@@ -248,6 +249,7 @@ public class MailClientTests
 
     // -- SendMailAsync (through the real MailKit client against an in-process SMTP server) --------
 
+    /// <summary>SMTP settings pointing at a local fake server on <paramref name="port"/> (no TLS required).</summary>
     private static ServerSetting SettingsFor(int port, string password = "s3cret") => new()
     {
         SmtpHost = "127.0.0.1",
@@ -377,6 +379,7 @@ public class MailClientTests
 
     // -- SmtpSsl off: opportunistic STARTTLS with a relaxed (chain-only) certificate check ---------------
 
+    /// <summary>A self-signed certificate whose subject-alternative names are set by <paramref name="san"/>.</summary>
     private static X509Certificate2 SelfSigned(Action<SubjectAlternativeNameBuilder> san)
     {
         using RSA rsa = RSA.Create(2048);
@@ -427,12 +430,15 @@ public class MailClientTests
 
     // -- closing the connection after the server accepted the mail ------------------------------------------------
 
+    /// <summary>An SMTP client whose closing step fails, to exercise the "sent, but close failed" path.</summary>
     private sealed class FailingCloseSmtpClient : MailKit.Net.Smtp.SmtpClient
     {
+        /// <summary>Always throws, as if the connection were reset while closing.</summary>
         public override Task DisconnectAsync(bool quit, CancellationToken cancellationToken = default) =>
             throw new IOException("connection reset while closing");
     }
 
+    /// <summary>Logger that keeps every entry for assertions.</summary>
     private sealed class RecordingLogger : Microsoft.Extensions.Logging.ILogger<MailClient>
     {
         /// <summary>Every logged entry: its level, formatted message and exception.</summary>

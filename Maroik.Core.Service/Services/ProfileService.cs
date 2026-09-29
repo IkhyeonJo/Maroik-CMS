@@ -40,7 +40,11 @@ public class ProfileService(
         return account == null ? null : AccountMapper.ToResponse(account);
     }
 
-    /// <inheritdoc cref="avatarPath" />
+    /// <summary>
+    /// Points the account's avatar at <paramref name="avatarPath"/> (a column-scoped write of
+    /// <c>AvatarImagePath</c>/<c>Updated</c>). Not part of <see cref="IProfileService"/>: it is the last
+    /// step of <see cref="UploadAndUpdateAvatarAsync"/>, after the image has been validated and stored.
+    /// </summary>
     public async Task<ServiceResult> UpdateAvatarAsync(string email, string avatarPath, CancellationToken ct = default)
     {
         try
@@ -214,6 +218,7 @@ public class ProfileService(
     private static string ContentTypeForExtension(string extension) =>
         extension.Equals(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
 
+    /// <summary>Unlocked lookup of an account by email.</summary>
     private Task<Account?> FindByEmailAsync(string email, CancellationToken ct = default)
         => accountRepository.FindByEmailAsync(email, ct);
 

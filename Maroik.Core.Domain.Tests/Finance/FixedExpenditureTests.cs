@@ -7,8 +7,10 @@ namespace Maroik.Core.Domain.Tests.Finance;
 /// </summary>
 public class FixedExpenditureTests
 {
+    /// <summary>Maturity date one year from now.</summary>
     private static readonly DateTime _maturity = DateTime.UtcNow.AddYears(1);
 
+    /// <summary>A valid KRW Netflix expenditure paid from "My Card", scheduled for month 1, day 1.</summary>
     private static FixedExpenditure ValidFixedExpenditure() =>
         FixedExpenditure.Register("user@example.com", "ConsumerSpending", "LeisureOrCulture", "Netflix",
             15000m, "KRW", "My Card", null, 1, 1, _maturity).Value;

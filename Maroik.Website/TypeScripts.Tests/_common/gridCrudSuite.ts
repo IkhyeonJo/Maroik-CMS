@@ -9,9 +9,13 @@
 import { describe, it, expect, vi } from "vitest";
 import { loadSite, fireNative, type SiteHandle } from "@tests/_common/harness";
 
+/** What one grid page supplies to {@link describeGridCrudScript}. */
 export interface GridCrudConfig {
+    /** area folder of the compiled script */
     area: "admin" | "user";
+    /** feature (controller) folder, e.g. "Notice" */
     feature: string;
+    /** page folder, e.g. "FixedIncome" */
     page: string;
     /** entity name used in element ids and endpoints, e.g. "FixedIncome" */
     entity: string;
@@ -19,7 +23,7 @@ export interface GridCrudConfig {
     controller: string;
     /** property of the IsXExists reply that carries the record, e.g. "fixedIncome" */
     existsKey: string;
-    /** what identifies a grid row: a numeric `ID` (`data-id`), the asset's `ProductName` (`data-productName`) or an account `Email` (`data-email`) */
+    /** what identifies a grid row: a numeric `Id` (`data-id`), the asset's `ProductName` (`data-productName`) or an account `Email` (`data-email`) */
     rowKey: "Id" | "ProductName" | "Email";
     /** the page's own fixture (element ids the script caches); the suite appends grid rows + modal shells */
     fixture: () => string;
@@ -31,24 +35,33 @@ export interface GridCrudConfig {
     noMaturityDate?: string;
 }
 
+/** Keys of the two grid rows the suite appends. */
 const KEYS = ["suite-row-a", "suite-row-b"] as const; // no characters that percent-encoding would change
 
+/** Registers the shared grid-CRUD tests (selection, search, create/edit/delete round trips) for one page. */
 export function describeGridCrudScript(c: GridCrudConfig): void {
     const N = c.entity;
+    /** The row attribute that carries the key. */
     const attr = { Id: "data-id", ProductName: "data-productName", Email: "data-email" }[c.rowKey];
+    /** Two grid rows plus the modal shells and search box the script expects. */
     const rows =
         `<div class="mvc-grid"></div><table><tbody>` +
         KEYS.map((k) => `<tr class="clsGridRow" ${attr}="${k}"></tr>`).join("") +
         `</tbody></table>` +
         `<div id="create${N}DialogModal"></div><div id="edit${N}DialogModal"></div><div id="confirmDelete${N}DialogModal"></div>` +
         `<input id="gridSearch" />`;
+    /** Loads the page script over its fixture plus {@link rows}. */
     const load = () => loadSite(c.area, c.feature, c.page, c.fixture() + rows);
 
+    /** Fires the grid's native `rowclick` for the row with `key`. */
     const selectRow = (h: SiteHandle, key: string) =>
         fireNative(h.win.document, "rowclick", { data: { [c.rowKey]: key } });
+    /** For each suite row, whether it is highlighted (`table-primary`). */
     const rowClasses = (h: SiteHandle) =>
         [...h.win.document.querySelectorAll<HTMLElement>(`.clsGridRow[${attr}^="suite-row"]`)].map((r) => r.classList.contains("table-primary"));
+    /** The most recently constructed MvcGrid stub. */
     const lastGrid = (h: SiteHandle) => h.MvcGridInstances.at(-1)!;
+    /** Replaces `$.fn.modal` with a chainable spy and returns it. */
     const spyModal = (h: SiteHandle) => {
         const modal = vi.fn(function(this: any) {
             return this;
@@ -56,9 +69,12 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
         (h.$.fn as any).modal = modal;
         return modal;
     };
+    /** The row key as a camelCase query-string name, e.g. "productName". */
     const recordKey = c.rowKey[0].toLowerCase() + c.rowKey.slice(1);
+    /** The IsXExists URL the script requests for `key` (non-numeric keys URL-encoded). */
     const existsUrl = (key: string) =>
         `/${c.controller}/Is${N}Exists?${recordKey}=${c.rowKey === "Id" ? key : encodeURIComponent(key)}`;
+    /** The body of the delete request for `id`. */
     const deleteBody = (id: unknown) => ({ [c.rowKey]: id });
 
     describe(`${c.area}/${c.feature}/${c.page} — shared grid CRUD behaviour`, () => {

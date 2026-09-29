@@ -15,9 +15,12 @@ namespace Maroik.Website.Tests.Services;
 /// </summary>
 public class ExcelExportServiceTests
 {
+    /// <summary>The service under test.</summary>
     private readonly ExcelExportService _sut = new();
 
+    /// <summary>A fake localizer that prefixes each key with <c>L:</c>.</summary>
     private static readonly Func<string, string> _localize = key => $"L:{key}";
+    /// <summary>A fake localizer that returns each key unchanged.</summary>
     private static readonly Func<string, string> _identity = key => key;
 
     /// <summary>Reads every row (header + data) of the first worksheet as raw cell text.</summary>

@@ -22,23 +22,36 @@ using Microsoft.Extensions.Options;
 namespace Maroik.Website.Controllers;
 
 /// <summary>
-/// Admin-only controller for managing user profiles, accounts, and the navigation menu
-/// (categories and sub-categories).
+/// The Management area: every signed-in account's own profile (avatar, time zone, password) and private
+/// notes, plus the admin-only account management and navigation-menu (categories and sub-categories) pages.
 /// </summary>
 public class ManagementController : Controller
 {
+    /// <summary>Encrypts the storage path returned for an uploaded Summernote image.</summary>
     private readonly IRsaService _rsa;
+    /// <summary>Localizer for this controller's user-facing messages.</summary>
     private readonly IHtmlLocalizer<ManagementController> _localizer;
+    /// <summary>Logger for unexpected failures in the Management actions.</summary>
     private readonly ILogger<ManagementController> _logger;
+    /// <summary>Self-service profile use cases (avatar, time zone, password).</summary>
     private readonly IProfileService _profileService;
+    /// <summary>Account reads (writer nicknames of the private-note pages).</summary>
     private readonly IAccountService _accountService;
+    /// <summary>Admin account-management use cases.</summary>
     private readonly IManagementAccountService _managementAccountService;
+    /// <summary>Admin navigation-menu use cases.</summary>
     private readonly IMenuService _menuService;
+    /// <summary>Private-note (PrivateNote board) use cases.</summary>
     private readonly IBoardService _boardService;
+    /// <summary>Reads / refreshes / clears the signed-in account stored in the session.</summary>
     private readonly ISessionService _sessionService;
+    /// <summary>Builds the account / menu Excel exports.</summary>
     private readonly IExcelExportService _excelExportService;
+    /// <summary>Distributed cache whose navigation-menu entries are invalidated after a menu change.</summary>
     private readonly IDistributedCache _cache;
+    /// <summary>Server settings (upload size cap).</summary>
     private readonly IOptions<ServerSetting> _serverSettings;
+    /// <summary>Resource-key â†’ localized text delegate handed to the mappers and the Excel export.</summary>
     private readonly Func<string, string> _localize;
 
     /// <summary>Initializes a new instance of <see cref="ManagementController"/> with the supplied dependencies.</summary>
@@ -374,7 +387,7 @@ public class ManagementController : Controller
             _ = ModelState.Remove(nameof(accountInputViewModel.RegistrationToken));
             _ = ModelState.Remove(nameof(accountInputViewModel.ResetPasswordToken));
             // Password/Message are optional on update — an empty Password means "leave the
-            // current password unchanged" (the service only calls ChangePassword when non-empty),
+            // current password unchanged" (the service only calls AdminResetPassword when non-empty),
             // and Message has no [Required]-worthy business meaning here.
             _ = ModelState.Remove(nameof(accountInputViewModel.Password));
             _ = ModelState.Remove(nameof(accountInputViewModel.Message));
@@ -840,7 +853,7 @@ public class ManagementController : Controller
 
     #region PrivateNoteBoard
 
-    /// <summary>Creates or updates a private note board post.</summary>
+    /// <summary>Creates a new private note (with optional file attachment) owned by the caller.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -888,7 +901,7 @@ public class ManagementController : Controller
 
     #region PrivateNoteComment
 
-    /// <summary>Submits a new PrivateNoteComment.</summary>
+    /// <summary>Submits a comment on one of the caller's own private notes.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -934,7 +947,10 @@ public class ManagementController : Controller
     #endregion
 
     #region Summernote Image File Upload
-    /// <summary>Uploads a ImageFile file.</summary>
+    /// <summary>
+    /// Validates and stores a Summernote inline image for a private note, returning its bytes (base64) and
+    /// content type for the editor preview plus its RSA-encrypted storage path (kept in the image's <c>alt</c>).
+    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -980,7 +996,7 @@ public class ManagementController : Controller
 
     #region Edit, List, Detail, Write
 
-    /// <summary>Displays the private note (PrivateNote board) page.</summary>
+    /// <summary>Displays the caller's private notes in the mode named by <paramref name="method"/>: "list" (default), "write", "detail" or "edit".</summary>
     public async Task<IActionResult> PrivateNote(string method = "list", int? boardId = null, int page = 1,
         string searchType = "", string searchText = "")
     {
@@ -1243,7 +1259,7 @@ public class ManagementController : Controller
 
     #region IsBoardExists
 
-    /// <summary>Checks whether a Board record exists.</summary>
+    /// <summary>Checks that a private note with the given ID exists and belongs to the caller, returning it when so.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -1274,7 +1290,7 @@ public class ManagementController : Controller
 
     #region Edit
 
-    /// <summary>Saves edits to an existing PrivateNoteBoard.</summary>
+    /// <summary>Saves edits to one of the caller's own private notes.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -1323,7 +1339,7 @@ public class ManagementController : Controller
 
     #region Board
 
-    /// <summary>Deletes an existing Board record.</summary>
+    /// <summary>Soft-deletes one of the caller's own private notes (no admin bypass).</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -1360,7 +1376,7 @@ public class ManagementController : Controller
 
     #region BoardComment
 
-    /// <summary>Deletes an existing Comment record.</summary>
+    /// <summary>Soft-deletes a comment on a private note; only the comment's author may (no admin bypass for private notes).</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]

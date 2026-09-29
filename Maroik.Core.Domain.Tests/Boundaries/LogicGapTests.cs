@@ -14,13 +14,16 @@ namespace Maroik.Core.Domain.Tests.Boundaries;
 /// <summary>Rules the mutation run showed no test noticed: boundaries, value equality, ownership branches, round trips.</summary>
 public class LogicGapTests
 {
+    /// <summary>Owner e-mail used by every aggregate built in these tests.</summary>
     private const string Email = "user@example.com";
 
     // ---- Fixed income / fixed expenditure: month & maturity boundaries ------------------------
 
+    /// <summary>Result of registering a fixed income on the given deposit month/day (no maturity unless given).</summary>
     private static ErrorOr<FixedIncome> Income(short month, short day = 1, DateTime? maturity = null) =>
         FixedIncome.Register(Email, "RegularIncome", "LaborIncome", "c", 1000m, "KRW", "asset", month, day, maturity ?? FixedSchedulePolicy.NoMaturityDate);
 
+    /// <summary>Result of registering a fixed expenditure on the given deposit month/day (no maturity unless given).</summary>
     private static ErrorOr<FixedExpenditure> Expense(short month, short day = 1, DateTime? maturity = null) =>
         FixedExpenditure.Register(Email, "ConsumerSpending", "MealOrEatOutExpenses", "c", 1000m, "KRW", "asset", null, month, day, maturity ?? FixedSchedulePolicy.NoMaturityDate);
 
@@ -139,6 +142,7 @@ public class LogicGapTests
 
     // ---- Account --------------------------------------------------------------------------------
 
+    /// <summary>A persisted, confirmed account with the given lockout state.</summary>
     private static DomainAccount Account(bool locked = false, long loginAttempt = 0) =>
         DomainAccount.Reconstitute(Email, "$2a$hash", "Nick", null, Role.User, "UTC", null, locked, loginAttempt, true, true,
             null, null, DateTime.UtcNow, DateTime.UtcNow, null, false, "stamp", false);

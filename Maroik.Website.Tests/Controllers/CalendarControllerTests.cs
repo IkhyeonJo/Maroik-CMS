@@ -11,6 +11,7 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class CalendarControllerTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
     /// <summary>Verifies that <c>AnonymousIndex</c> get when returns200.</summary>

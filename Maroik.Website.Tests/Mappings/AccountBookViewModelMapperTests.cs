@@ -8,6 +8,7 @@ namespace Maroik.Website.Tests.Mappings;
 public class AccountBookViewModelMapperTests
 {
     private static Func<string, string> Identity => key => key;
+    /// <summary>A fake localizer that prefixes each key with <paramref name="p"/>.</summary>
     private static Func<string, string> Prefix(string p) => key => $"{p}{key}";
 
     // ── Asset ─────────────────────────────────────────────────────────────────

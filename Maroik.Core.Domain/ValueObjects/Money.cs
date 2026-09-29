@@ -13,9 +13,10 @@ public sealed class Money : ValueObject
     /// <summary>Numeric amount (can be negative for debits).</summary>
     public decimal Amount { get; }
 
-    /// <summary>ISO 4217 currency code in upper-case (e.g. "KRW", "USD").</summary>
+    /// <summary>Currency code in upper-case (e.g. "KRW", "USD"); normally ISO 4217, but only its length is validated.</summary>
     public string Currency { get; }
 
+    /// <summary>Wraps an already-validated amount and upper-cased currency; reached only through the factories.</summary>
     private Money(decimal amount, string currency)
     {
         Amount = amount;

@@ -27,10 +27,15 @@ namespace Maroik.Website.Tests.Filters;
 /// </summary>
 public class AuthorizationFilterTests
 {
+    /// <summary>Mock <c>IMenuService</c> injected into the system under test.</summary>
     private readonly Mock<IMenuService> _menuService = new();
+    /// <summary>Mock <c>IDistributedCache</c> injected into the system under test.</summary>
     private readonly Mock<IDistributedCache> _cache = new();
+    /// <summary>Mock <c>ISessionService</c> injected into the system under test.</summary>
     private readonly Mock<ISessionService> _sessionService = new();
+    /// <summary>Mock <c>IAccountService</c> injected into the system under test.</summary>
     private readonly Mock<IAccountService> _accountService = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<AuthorizationFilter> _logger = new();
 
     /// <summary>Initializes a new instance of AuthorizationFilterTests.</summary>
@@ -40,9 +45,11 @@ public class AuthorizationFilterTests
             .ReturnsAsync((byte[]?)null);
     }
 
+    /// <summary>The filter under test over the mocked dependencies.</summary>
     private AuthorizationFilter CreateSut() =>
         new(_menuService.Object, _cache.Object, _sessionService.Object, _accountService.Object, _logger);
 
+    /// <summary>A category visible to <paramref name="role"/> for <paramref name="controller"/> (a parent when <paramref name="action"/> is <see langword="null"/>).</summary>
     private static CategoryResponse MakeCategory(long id, string role, string controller, string? action, long order = 0) => new()
     {
         Id = id,
@@ -53,6 +60,7 @@ public class AuthorizationFilterTests
         Order = order
     };
 
+    /// <summary>A sub-category of <paramref name="categoryId"/> visible to <paramref name="role"/> for <paramref name="action"/>.</summary>
     private static SubCategoryResponse MakeSubCategory(long id, long categoryId, string role, string action, long order = 0) => new()
     {
         Id = id,
@@ -63,12 +71,14 @@ public class AuthorizationFilterTests
         Order = order
     };
 
+    /// <summary>Makes the menu service return the given categories and sub-categories.</summary>
     private void SetupMenu(IEnumerable<CategoryResponse> categories, IEnumerable<SubCategoryResponse> subCategories)
     {
         _menuService.Setup(m => m.GetAllCategoriesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(categories);
         _menuService.Setup(m => m.GetAllSubCategoriesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(subCategories);
     }
 
+    /// <summary>An authorization context for <paramref name="controllerName"/>/<paramref name="actionName"/> with the given HTTP method.</summary>
     private static AuthorizationFilterContext BuildContext(
         string controllerName, string actionName, string httpMethod = "GET")
     {
@@ -516,6 +526,7 @@ public class AuthorizationFilterTests
         Assert.IsType<NavigationMenus>(context.HttpContext.Items[HttpContextItemKeys.NavigationMenus]);
     }
 
+    /// <summary>Makes both the session and the account lookup report an account with <paramref name="role"/>.</summary>
     private void SignIn(string role, string email = "gate@test.com")
     {
         var account = new AccountResponse { Email = email, Nickname = "Gate", Role = role };
@@ -614,6 +625,7 @@ public class AuthorizationFilterTests
 
     // -- Logging ------------------------------------------------------------------
 
+    /// <summary>Asserts exactly one Warning contains <paramref name="containing"/>, and returns it.</summary>
     private FakeLogRecord OnlyWarning(string containing) =>
         Assert.Single(_logger.Collector.GetSnapshot(),
             r => r.Level == LogLevel.Warning && r.Message.Contains(containing, StringComparison.Ordinal));

@@ -20,11 +20,16 @@ public class MenuServiceAuditLoggingTests
     /// <summary>The signed-in administrator performing the change (recorded in the audit log).</summary>
     private const string Actor = "admin@example.com";
 
+    /// <summary>Mock <c>ICategoryRepository</c> injected into the system under test.</summary>
     private readonly Mock<ICategoryRepository> _categoryRepo = new();
+    /// <summary>Mock <c>ISubCategoryRepository</c> injected into the system under test.</summary>
     private readonly Mock<ISubCategoryRepository> _subCategoryRepo = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<MenuService> _logger = new();
 
+    /// <summary>Arranges a unit of work that always succeeds.</summary>
     public MenuServiceAuditLoggingTests()
     {
         _unitOfWork.Setup(u => u.BeginAsync(It.IsAny<CancellationToken>(), It.IsAny<IsolationLevel?>())).Returns(Task.CompletedTask);
@@ -32,12 +37,16 @@ public class MenuServiceAuditLoggingTests
         _unitOfWork.Setup(u => u.RollbackAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
     }
 
+    /// <summary>The service under test over the mocked dependencies and the capturing logger.</summary>
     private MenuService CreateSut() => new(_categoryRepo.Object, _subCategoryRepo.Object, _unitOfWork.Object, _logger);
 
+    /// <summary>A persisted category (id 3).</summary>
     private static Category MakeCategory() => Category.Reconstitute(3, "Forum", "Forum", "/icons/forum.png", "Board", "Index", Role.User, 0L);
 
+    /// <summary>A persisted sub-category (id 4) under category 3.</summary>
     private static SubCategory MakeSubCategory() => SubCategory.Reconstitute(4, 3, BoardTypes.FreeForum, BoardTypes.FreeForum, "/icons/forum.png", "Index", Role.User, 0L);
 
+    /// <summary>Asserts exactly one Information entry was written, containing <paramref name="containing"/> and naming the acting admin.</summary>
     private void AssertOnlyInformation(string containing)
     {
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Information);

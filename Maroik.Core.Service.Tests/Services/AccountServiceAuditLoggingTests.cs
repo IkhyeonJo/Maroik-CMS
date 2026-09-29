@@ -18,19 +18,30 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class AccountServiceAuditLoggingTests
 {
+    /// <summary>E-mail of the account every test acts on; audit entries must name it.</summary>
     private const string Email = "user@example.com";
+    /// <summary>The password the user types; it must never appear in a log entry.</summary>
     private const string TypedPassword = "Typed-Secret-Pw1!";
 
+    /// <summary>Mock <c>IAccountRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAccountRepository> _accountRepo = new();
+    /// <summary>Mock <c>IPasswordService</c> injected into the system under test.</summary>
     private readonly Mock<IPasswordService> _passwordService = new();
+    /// <summary>Mock <c>IMailClient</c> injected into the system under test.</summary>
     private readonly Mock<IMailClient> _mailClient = new();
+    /// <summary>Mock <c>IEmailPublisher</c> injected into the system under test.</summary>
     private readonly Mock<IEmailPublisher> _emailPublisher = new();
+    /// <summary>Mock <c>IRsaService</c> injected into the system under test.</summary>
     private readonly Mock<IRsaService> _rsa = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<AccountService> _logger = new();
+    /// <summary>Settings with a 3-attempt lockout threshold.</summary>
     private readonly IOptions<ServerSetting> _settings =
         Options.Create(new ServerSetting { MaxLoginAttempt = 3, DomainName = "https://example.com" });
 
+    /// <summary>Minimal mail template passed to the mail-sending methods.</summary>
     private static readonly EmailTemplate _emailTemplate = new() { Subject = "s", Title = "t", Content0 = "c0", Content1 = "c1" };
 
     /// <summary>
@@ -44,15 +55,18 @@ public class AccountServiceAuditLoggingTests
     public AccountServiceAuditLoggingTests() =>
         _passwordService.Setup(p => p.VerifyPassword(ConfirmPassword, It.IsAny<string>())).Returns(true);
 
+    /// <summary>The service under test over the mocked dependencies and the capturing logger.</summary>
     private AccountService CreateSut() => new(_accountRepo.Object, _passwordService.Object, _mailClient.Object,
         _emailPublisher.Object, _settings, _rsa.Object, _logger, _unitOfWork.Object);
 
+    /// <summary>A persisted account for <see cref="Email"/> whose state is set by the arguments.</summary>
     private static Account ExistingAccount(bool deleted = false, bool locked = false, bool emailConfirmed = true,
         bool agreedServiceTerms = true, long loginAttempt = 0, string? registrationToken = null, string? resetPasswordToken = null) =>
         Account.Reconstitute(Email, "$2a$13$placeholder", "User", null, Role.User, "UTC", null, locked, loginAttempt,
             emailConfirmed, agreedServiceTerms, registrationToken, resetPasswordToken, DateTime.UtcNow, DateTime.UtcNow,
             null, deleted, "stamp", false);
 
+    /// <summary>Arranges a login: the locked read returns <paramref name="account"/> and the password check returns <paramref name="passwordMatches"/>.</summary>
     private void AccountForLogin(Account? account, bool passwordMatches)
     {
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
@@ -61,6 +75,7 @@ public class AccountServiceAuditLoggingTests
         _accountRepo.Setup(r => r.UpdateMessageAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(0);
     }
 
+    /// <summary>Asserts exactly one entry at <paramref name="level"/> contains <paramref name="containing"/> and names <see cref="Email"/>, and returns it.</summary>
     private FakeLogRecord Only(LogLevel level, string containing)
     {
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(),
@@ -69,6 +84,7 @@ public class AccountServiceAuditLoggingTests
         return record;
     }
 
+    /// <summary>Asserts no log message or exception text contains any of <paramref name="secrets"/>.</summary>
     private void AssertNoSecretLogged(params string[] secrets)
     {
         foreach (FakeLogRecord record in _logger.Collector.GetSnapshot())

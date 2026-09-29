@@ -48,5 +48,6 @@ public partial class BoardComment
     /// </summary>
     public bool Deleted { get; set; }
 
+    /// <summary>The post this comment belongs to.</summary>
     public virtual Board Board { get; set; } = null!;
 }

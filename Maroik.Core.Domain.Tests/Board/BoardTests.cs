@@ -7,9 +7,11 @@ namespace Maroik.Core.Domain.Tests.Board;
 /// </summary>
 public class BoardTests
 {
+    /// <summary>A persisted, unlocked, non-deleted free-forum post written by Alice.</summary>
     private static Domain.Board.Board ValidBoard(long id = 1) =>
         Domain.Board.Board.Reconstitute(id, "FreeForum", "Hello World", "content", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0, false, false, false);
 
+    /// <summary>A persisted, non-deleted top-level comment by Bob on board <paramref name="boardId"/>.</summary>
     private static BoardComment ValidComment(long boardId = 1) =>
         BoardComment.Reconstitute(1, boardId, 1, null, "Bob", "Nice post!", DateTime.UtcNow, false);
 
@@ -448,6 +450,7 @@ public class BoardTests
 
     // -- CanBeViewedBy ------------------------------------------------------------
 
+    /// <summary>A persisted post of board type <paramref name="type"/> for the view-permission tests.</summary>
     private static Domain.Board.Board ViewBoard(string type, string writer = "Alice", bool locked = false, bool deleted = false) =>
         Domain.Board.Board.Reconstitute(1, type, "Title", "body", writer, DateTime.UtcNow, DateTime.UtcNow, 0, deleted, locked, false);
 

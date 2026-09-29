@@ -33,7 +33,7 @@ public class RegisterResult
     /// <summary>Email address that the confirmation was sent to (used in the UI message).</summary>
     public string? EmailAddress { get; init; }
 
-    /// <summary>True when a duplicate resend was attempted (email was already sent again).</summary>
+    /// <summary>True when the confirmation email was re-sent (the resend flow) rather than sent for the first time.</summary>
     public bool RepeatEmailSend { get; init; }
 
     /// <summary>Creates a successful registration result.</summary>
@@ -50,7 +50,7 @@ public class RegisterResult
     /// <summary>
     /// Maps a domain <see cref="Error"/> to a failed <see cref="RegisterResult"/>. When
     /// <paramref name="error"/> was built via <c>LocalizableError</c>, <see cref="ErrorKey"/> /
-    /// <see cref="ErrorArgs"/> carry its resource template and arguments instead of the already-
+    /// <see cref="ErrorArgs"/> carry its resource template and arguments instead of the already-formatted
     /// <see cref="Error.Description"/>.
     /// </summary>
     public static RegisterResult FromError(Error error)

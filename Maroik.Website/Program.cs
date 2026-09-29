@@ -44,6 +44,8 @@ try
         .Enrich.FromLogContext()
         .WriteTo.Console(outputTemplate: LogTemplates.Console));
 
+    // "__Secure-" cookie-name prefix: browsers only accept such a cookie when it is set with Secure
+    // over HTTPS, so the session / antiforgery cookies below can never be planted over plain HTTP.
     const string cookiePrefix = "__Secure-";
 
     #region ServerSettings
@@ -327,7 +329,8 @@ try
 
     app.UseExceptionHandler("/Exception/Error");
 
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    // Emits the Strict-Transport-Security header configured by AddHsts above (2 years,
+    // includeSubDomains, preload) — over HTTPS only, and never for the localhost ExcludedHosts.
     app.UseHsts();
 
     // /health bypasses HTTPS redirect and www-redirect so it is reachable on HTTP port 80
@@ -343,14 +346,17 @@ try
         });
 
     app.UseSerilogRequestLogging(); // Log each HTTP request (method, path, status, duration) via Serilog
-    app.UseRouting(); // 5. Routing middleware for routing requests (UseRouting)
+    app.UseRouting(); // Routing middleware: selects the endpoint the rest of the pipeline acts on
     app.UseCors();
 
     #region Login
 
-    app.UseSession(); // 6. Session middleware (UseSession) establishes and maintains session state. If the app uses session state, call Session Middleware after Cookie Policy Middleware and before MVC Middleware.
-    app.UseAuthentication(); // 7. Authentication middleware (UseAuthentication) attempts to authenticate the user before they're allowed access to secure resources.
-    app.UseAuthorization(); // 8. Authorization middleware (UseAuthorization) authorizes a user to access secure resources.
+    app.UseSession(); // Session middleware establishes and maintains session state; it must run after Cookie Policy and before MVC.
+    // No ASP.NET Core authentication schemes or authorization policies are registered: sign-in state
+    // lives in the session and access control is enforced by the global AuthorizationFilter, so these
+    // two are pass-through today (kept in the conventional position should schemes/policies be added).
+    app.UseAuthentication();
+    app.UseAuthorization();
 
     #endregion
 
@@ -424,8 +430,8 @@ try
     app.MapControllerRoute(
         name: "default",
         pattern: "{controller=Dashboard}/{action=AnonymousIndex}/{id?}");
-    // Must run immediately before MapStaticAssets so it can 403 role-restricted /admin and /user
-    // static file paths before the static file middleware gets a chance to serve them.
+    // Must run before MapStaticAssets so it can 403 role-restricted /admin and /user static file
+    // paths before the static file middleware gets a chance to serve them.
     app.UseMiddleware<RoleBasedStaticFileMiddleware>();
     // Also before MapStaticAssets: lazily pull an uploaded avatar from the shared file-storage
     // service into this replica's wwwroot on first request, so the static-file middleware below can

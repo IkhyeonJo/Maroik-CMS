@@ -51,7 +51,8 @@ try
             cfg.StorageRootPath = Path.Combine(builder.Environment.ContentRootPath, "upload");
     });
 
-    // Register the ClamAV virus-scan client so FileController can inject it.
+    // Register the ClamAV virus-scan client (used by FileValidationService) and the validation service
+    // FileController delegates to.
     builder.Services.AddScoped<IClamavClient, ClamavClient>();
     builder.Services.AddScoped<IFileValidationService, FileValidationService>();
 

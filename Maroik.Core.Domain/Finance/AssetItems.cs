@@ -13,6 +13,7 @@ namespace Maroik.Core.Domain.Finance;
 /// </summary>
 public static class AssetItems
 {
+    /// <summary>Membership set backing <see cref="All"/> / <see cref="IsKnown"/>, built from the enum's member names.</summary>
     private static readonly StringTaxonomy _taxonomy = new(Enum.GetNames<AssetItemType>());
 
     /// <summary>Every defined <see cref="AssetItemType"/> member name.</summary>

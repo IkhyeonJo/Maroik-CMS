@@ -8,9 +8,12 @@ namespace Maroik.Core.Service.Tests.Services;
 /// <summary>Unit tests for <see cref="ImageValidatorService"/>.</summary>
 public class ImageValidatorServiceTests
 {
+    /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<ImageValidatorService> _logger = new();
+    /// <summary>The service under test.</summary>
     private readonly ImageValidatorService _sut;
 
+    /// <summary>Creates the service under test over the capturing logger.</summary>
     public ImageValidatorServiceTests() => _sut = new ImageValidatorService(_logger);
 
     // Minimal valid 1x1 transparent PNG — a well-known fixture byte sequence, not a mock.
@@ -61,6 +64,7 @@ public class ImageValidatorServiceTests
         Assert.False(_sut.IsSvg([0x00, 0x01, 0x02, 0x03]));
     }
 
+    /// <summary>A real 2x2 red image encoded as <paramref name="format"/>.</summary>
     private static byte[] Encode(MagickFormat format)
     {
         using var image = new MagickImage(MagickColors.Red, 2, 2);

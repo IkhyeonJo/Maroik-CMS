@@ -17,6 +17,7 @@ public static class ReminderMethods
     /// <summary>Deliver the reminder as an in-app/push notification.</summary>
     public const string Notification = "Notification";
 
+    /// <summary>Membership set backing <see cref="All"/> / <see cref="IsKnown"/>.</summary>
     private static readonly StringTaxonomy _taxonomy = new([Email, Notification]);
 
     /// <summary>Every recognized delivery method.</summary>

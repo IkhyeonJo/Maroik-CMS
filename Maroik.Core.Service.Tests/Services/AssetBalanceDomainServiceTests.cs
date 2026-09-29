@@ -13,10 +13,13 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class AssetBalanceDomainServiceTests
 {
+    /// <summary>Mock <c>IAssetRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAssetRepository> _assetRepo = new();
 
+    /// <summary>The service under test over the mocked repository.</summary>
     private AssetBalanceDomainService CreateSut() => new(_assetRepo.Object);
 
+    /// <summary>A persisted, active 1000 KRW asset named <paramref name="name"/>.</summary>
     private static Asset MakeAsset(string name = "Wallet") =>
         Asset.Reconstitute(name, "user@example.com", "FreeDepositAndWithdrawal", 1000m, "KRW", null, false, DateTime.UtcNow, DateTime.UtcNow);
 

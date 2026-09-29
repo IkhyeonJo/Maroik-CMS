@@ -10,6 +10,7 @@ namespace Maroik.Website.Tests.Mappings;
 /// </summary>
 public class MenuNavigationMapperTests
 {
+    /// <summary>A category that is itself a link (it has an action).</summary>
     private static CategoryResponse SingleCategory(long id, string controller, string action, long order = 0) => new()
     {
         Id = id,
@@ -19,6 +20,7 @@ public class MenuNavigationMapperTests
         Order = order
     };
 
+    /// <summary>A category that only groups sub-categories (no action).</summary>
     private static CategoryResponse ParentCategory(long id, string controller, long order = 0) => new()
     {
         Id = id,
@@ -28,6 +30,7 @@ public class MenuNavigationMapperTests
         Order = order
     };
 
+    /// <summary>A sub-category of <paramref name="categoryId"/> linking to <paramref name="action"/>.</summary>
     private static SubCategoryResponse SubCategory(long id, long categoryId, string action, long order = 0) => new()
     {
         Id = id,

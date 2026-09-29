@@ -26,6 +26,7 @@ public class WorkerHostLogTemplateTests
         Assert.Contains(@"a@b.com\n[00:00:00 INF] [x] Maroik: Email sent to admin@maroik.com\r", line);
     }
 
+    /// <summary>Renders one Warning event whose <c>To</c> is <paramref name="value"/> (with a fixed <c>CorrelationId</c>) through <paramref name="outputTemplate"/>.</summary>
     private static string Render(string outputTemplate, string messageTemplate, string value)
     {
         var logEvent = new LogEvent(DateTimeOffset.UnixEpoch, LogEventLevel.Warning, null,

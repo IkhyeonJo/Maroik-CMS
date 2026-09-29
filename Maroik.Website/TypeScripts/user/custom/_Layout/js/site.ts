@@ -6,8 +6,8 @@
  * re-implement:
  *
  *   1. Session-expiry recovery — any unhandled AJAX error redirects to the
- *      anonymous dashboard (the request most likely failed because the auth
- *      cookie expired).
+ *      anonymous dashboard (the request most likely failed because the session
+ *      expired and the server redirected it to an HTML page instead of answering JSON).
  *   2. Culture switching — the language links in the top navigation bar.
  *   3. Double-submit / navigation guard — submit buttons are disabled while a
  *      POST is in flight and re-enabled when the last one finishes, so a
@@ -49,7 +49,8 @@
     };
 
     // Global safety net: if any $.ajax call fails and nothing else handles it
-    // (typically the session expired and the server answered 401 / a redirect),
+    // (typically the session expired, so AuthorizationFilter redirected the call to
+    // an HTML page that does not parse as the expected JSON),
     // move the user to the public dashboard instead of leaving them on a page
     // whose data never loaded.
     $(document).off("ajaxError._Layout").on("ajaxError._Layout", function() {
@@ -60,8 +61,8 @@
      * Persists the user's UI-language choice on the server and reloads the page
      * in that language.
      *
-     * Posts the culture code to `CultureManagement`, which stores it (cookie /
-     * user claim) so every later request renders in that language. On success
+     * Posts the culture code to `CultureManagement`, which stores it in the
+     * request-culture cookie so every later request renders in that language. On success
      * the browser is sent to the URL held in the hidden `#returnUri` field —
      * the page the user was on before opening the culture menu — forcing a full
      * server re-render of all localized text.
@@ -136,7 +137,7 @@
         $(this).find("button[type=\"submit\"], input[type=\"submit\"]").prop("disabled", true);
     });
 
-    // Returning through the browser Back/Forward cache (cache) restores the
+    // Returning through the browser Back/Forward cache (bfcache) restores the
     // page exactly as it was left — possibly with buttons still disabled from the
     // navigation that took the user away, and the loading overlay still showing.
     // Reset all of that on `pageshow`.

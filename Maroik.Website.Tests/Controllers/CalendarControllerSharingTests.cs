@@ -17,11 +17,14 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class CalendarControllerSharingTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
+    /// <summary>Seeds (if missing) an Admin account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsAdminAsync(string email = "calendar-sharing-admin@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "AdminPassword1!", Role.Admin, TestContext.Current.CancellationToken);
 
+    /// <summary>A name unique to this call, prefixed with <paramref name="testName"/>.</summary>
     private static string UniqueName(string testName = "") =>
         $"{testName}-{Guid.NewGuid():N}";
 

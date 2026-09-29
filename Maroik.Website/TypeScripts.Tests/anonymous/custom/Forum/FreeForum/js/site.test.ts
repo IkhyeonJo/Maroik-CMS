@@ -64,6 +64,7 @@ describe("Forum/FreeForum (anonymous) — pages without the optional parts", () 
 });
 
 describe("Forum/FreeForum (anonymous) — navigation, images and attachments", () => {
+    /** Loads the anonymous forum script over `html`. */
     const load = (html = fixture()) => loadSite("anonymous", "Forum", "FreeForum", html);
 
     it("the write button opens the write view and the list button its data-link", () => {

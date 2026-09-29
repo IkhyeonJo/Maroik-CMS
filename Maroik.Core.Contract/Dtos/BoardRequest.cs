@@ -14,7 +14,7 @@ public class BoardRequest
     /// <summary>Board type identifier (e.g. "FreeForum", "PrivateNote").</summary>
     public string? Type { get; set; }
 
-    /// <summary>Post title (max 255 characters).</summary>
+    /// <summary>Post title (max <c>TitledContentPolicy.MaxTitleLength</c> = 100 characters).</summary>
     public string? Title { get; set; }
 
     /// <summary>Post body content in Summernote WYSIWYG HTML format.</summary>
@@ -23,7 +23,7 @@ public class BoardRequest
     /// <summary>Nickname of the author.</summary>
     public string? Writer { get; set; }
 
-    /// <summary>When true, the post is locked and no new comments can be added.</summary>
+    /// <summary>When true, the post is locked: only its author and admins may view or comment on it.</summary>
     public bool Locked { get; set; }
 
     /// <summary>When true, the post is pinned at the top of the list as a notice.</summary>

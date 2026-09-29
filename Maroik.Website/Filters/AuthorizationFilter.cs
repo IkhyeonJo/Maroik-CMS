@@ -40,13 +40,21 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
     ISessionService sessionService, IAccountService accountService,
     ILogger<AuthorizationFilter> logger) : IAsyncAuthorizationFilter
 {
+    // Local aliases of the NavigationCacheKeys entries, one per role x (categories | sub-categories).
+    /// <summary>Cache key of the Admin top-level categories.</summary>
     private const string AdminCategoriesCacheKey = NavigationCacheKeys.AdminCategories;
+    /// <summary>Cache key of the Admin sub-categories.</summary>
     private const string AdminSubCategoriesCacheKey = NavigationCacheKeys.AdminSubCategories;
+    /// <summary>Cache key of the User top-level categories.</summary>
     private const string UserCategoriesCacheKey = NavigationCacheKeys.UserCategories;
+    /// <summary>Cache key of the User sub-categories.</summary>
     private const string UserSubCategoriesCacheKey = NavigationCacheKeys.UserSubCategories;
+    /// <summary>Cache key of the Anonymous top-level categories.</summary>
     private const string AnonymousCategoriesCacheKey = NavigationCacheKeys.AnonymousCategories;
+    /// <summary>Cache key of the Anonymous sub-categories.</summary>
     private const string AnonymousSubCategoriesCacheKey = NavigationCacheKeys.AnonymousSubCategories;
 
+    /// <summary>Every MVC controller type in this assembly, reflected once for <see cref="BuildPostActionRoleMap"/>.</summary>
     private static readonly IReadOnlyList<Type> _cachedControllerTypes =
     [
         .. Assembly.GetExecutingAssembly().GetTypes()
@@ -86,17 +94,20 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
             ("Account", nameof(Controllers.AccountController.ResetPassword)),
         };
 
+    /// <summary>The routing name of <paramref name="controllerType"/> (its type name minus the "Controller" suffix).</summary>
     private static string ControllerName(Type controllerType) =>
         controllerType.Name.EndsWith("Controller", StringComparison.Ordinal)
             ? controllerType.Name[..^"Controller".Length]
             : controllerType.Name;
 
+    /// <summary>True when <paramref name="method"/> is a public action carrying both <c>[HttpPost]</c> and <c>[ValidateAntiForgeryToken]</c>.</summary>
     private static bool HasPostGuards(MethodInfo method) =>
         method.IsPublic
         && !method.IsDefined(typeof(NonActionAttribute))
         && method.IsDefined(typeof(HttpPostAttribute))
         && method.IsDefined(typeof(ValidateAntiForgeryTokenAttribute));
 
+    /// <summary>Builds <see cref="_postActionRoles"/> by reflecting over every controller's guarded POST actions once.</summary>
  #pragma warning disable CA1859
     private static IReadOnlyDictionary<(string, string), IReadOnlySet<string>> BuildPostActionRoleMap()
  #pragma warning restore CA1859
@@ -205,7 +216,7 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
 
         var currentControllerName = context.ActionDescriptor.RouteValues["controller"] ?? ""; // Controller name before execution
         var currentActionName = context.ActionDescriptor.RouteValues["action"] ?? ""; // Action name before execution
-        var currentRequestMethod = context.HttpContext.Request.Method; // GET HTTP METHOD
+        var currentRequestMethod = context.HttpContext.Request.Method; // HTTP method (GET, POST, ...)
         var sessionAccount = sessionService.GetAccount(); // Check if account session exists after login
 
         AccountResponse? loggedInAccount = null;
@@ -333,9 +344,8 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
                                 return;
                             }
                         // Role is a plain string, not an enum — an account somehow persisted with
-                        // neither Admin nor User must still get an explicit result instead of
-                        // falling through with next() never called and context.Result never set,
-                        // which would silently short-circuit the pipeline with an empty response.
+                        // neither Admin nor User must still get an explicit denial: an authorization
+                        // filter that returns without setting context.Result lets the request through.
                         default:
                             Deny();
                             return;
@@ -399,9 +409,8 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
                                 return;
                             }
                         // Role is a plain string, not an enum — an account somehow persisted with
-                        // neither Admin nor User must still get an explicit result instead of
-                        // falling through with next() never called and context.Result never set,
-                        // which would silently short-circuit the pipeline with an empty response.
+                        // neither Admin nor User must still get an explicit denial: an authorization
+                        // filter that returns without setting context.Result lets the request through.
                         default:
                             Deny();
                             return;

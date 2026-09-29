@@ -15,6 +15,7 @@ namespace Maroik.Core.Client.Tests.HealthChecks;
 /// </summary>
 public class RabbitMqHealthCheckTests : IAsyncLifetime
 {
+    /// <summary>A throwaway RabbitMQ broker container for this test class.</summary>
     private readonly RabbitMqContainer _broker = new RabbitMqBuilder("rabbitmq:4-alpine").Build();
 
     /// <summary>Starts the broker container.</summary>

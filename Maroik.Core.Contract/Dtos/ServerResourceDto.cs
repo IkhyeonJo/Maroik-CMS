@@ -13,13 +13,13 @@ public class ServerResourceDto
     /// <summary>Raw CPU information string extracted from the log file.</summary>
     public string HostCpuInfo { get; init; } = "";
 
-    /// <summary>Formatted memory usage/limit string (e.g. "16 GB / 8 GB").</summary>
+    /// <summary>Formatted memory usage/limit string (e.g. "8 GB / 16 GB").</summary>
     public string MemUsageLimit { get; init; } = "";
 
     /// <summary>Raw memory information string extracted from the log file.</summary>
     public string HostMemoryInfo { get; init; } = "";
 
-    /// <summary>Formatted disk usage/limit string (e.g. "500 GB / 120 GB").</summary>
+    /// <summary>Formatted disk usage/limit string (e.g. "120 GB / 500 GB").</summary>
     public string DiskUsageLimit { get; init; } = "";
 
     /// <summary>Raw disk information string extracted from the log file.</summary>
