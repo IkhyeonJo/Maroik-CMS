@@ -63,7 +63,9 @@ public partial class Expenditure
     /// </summary>
     public string Note { get; set; } = null!;
 
+    /// <summary>The transfer target asset (keyed by <see cref="MyDepositAsset"/>); null for a non-transfer expenditure.</summary>
     public virtual Asset? Asset { get; set; }
 
+    /// <summary>The asset the amount is paid from (keyed by <see cref="PaymentMethod"/>); carries the amount's currency.</summary>
     public virtual Asset AssetNavigation { get; set; } = null!;
 }

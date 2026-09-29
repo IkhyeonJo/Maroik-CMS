@@ -28,10 +28,10 @@ public class FixedIncomeResponse
     /// <summary>Target deposit asset product name.</summary>
     public string? DepositMyAssetProductName { get; set; }
 
-    /// <summary>Income cycle month (1–12).</summary>
+    /// <summary>Month (1–12) of the scheduled deposit date.</summary>
     public short DepositMonth { get; set; }
 
-    /// <summary>Income credit day of the month.</summary>
+    /// <summary>Day of <see cref="DepositMonth"/> the income is due.</summary>
     public short DepositDay { get; set; }
 
     /// <summary>Recurring income end date.</summary>
@@ -46,7 +46,7 @@ public class FixedIncomeResponse
     /// <summary>Optional free-text note.</summary>
     public string? Note { get; set; }
 
-    /// <summary>True when the income was not received on the scheduled day.</summary>
+    /// <summary>User-chosen "always notify" flag: when true the schedule is always noticed, regardless of its date.</summary>
     public bool Unpunctuality { get; set; }
 
     /// <summary>Currency code (e.g. "KRW", "USD"). Populated by the service from the deposit asset.</summary>

@@ -6,6 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { loadSite, antiForgery, hidden, hiddenByStyle, type SiteHandle } from "@tests/_common/harness";
 
+/** The layout DOM the scripts touch: culture links, loading overlay and two forms with submit buttons. */
 const fixture = () =>
     antiForgery +
     hidden("returnUri", "/back-to-here") +
@@ -14,10 +15,15 @@ const fixture = () =>
    <form id="f1"><button type="submit" id="s1">a</button><input type="submit" id="s1b" /></form>
    <form id="f2"><button type="submit" id="s2">b</button></form>`;
 
+/** Registers the shared `_Layout` tests for one area. */
 export function describeLayoutScript(area: "admin" | "user" | "anonymous"): void {
+    /** Loads the area's `_Layout` script over {@link fixture}. */
     const load = () => loadSite(area, "_Layout", "", fixture());
+    /** Whether the button with `id` is disabled. */
     const disabled = (h: SiteHandle, id: string) => (h.win.document.getElementById(id) as HTMLButtonElement).disabled;
+    /** Fires jQuery's global `ajaxSend` for a request of `type` (no type when omitted). */
     const send = (h: SiteHandle, type?: string) => h.$(h.win.document).trigger("ajaxSend", [{}, type === undefined ? {} : { type }]);
+    /** Fires jQuery's global `ajaxComplete` for a request of `type` (no type when omitted). */
     const complete = (h: SiteHandle, type?: string) => h.$(h.win.document).trigger("ajaxComplete", [{}, type === undefined ? {} : { type }]);
 
     describe(`${area}/_Layout — shared layout behaviour`, () => {

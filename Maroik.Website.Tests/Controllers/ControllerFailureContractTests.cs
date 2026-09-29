@@ -19,8 +19,10 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Message of every exception the broken services throw; it must never reach the response.</summary>
     private const string Secret = "boom-secret-detail-do-not-leak";
 
+    /// <summary>The services replaced by always-throwing proxies in <see cref="CreateBrokenHost"/>.</summary>
     private static readonly Type[] _brokenServices =
     [
         typeof(ICalendarService), typeof(IBoardService), typeof(IAssetService), typeof(IIncomeService),
@@ -35,6 +37,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         protected override object Invoke(MethodInfo? targetMethod, object?[]? args) => throw new InvalidOperationException(Secret);
     }
 
+    /// <summary>A host in which every service in <see cref="_brokenServices"/> throws on any call.</summary>
     private WebApplicationFactory<Program> CreateBrokenHost() =>
         factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
         {
@@ -45,6 +48,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             }
         }));
 
+    /// <summary>A JSON body listing one placeholder calendar.</summary>
     private static object CalendarsPayload() => new { Calendars = new[] { new { Id = 1, Name = "x", Description = "", TimeZoneIanaId = "UTC", HtmlColorCode = "#3788d8" } } };
 
     /// <summary>
@@ -77,6 +81,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         (Role.User, "/AccountBook/IsExpenditureExists?id=1", false),
     ];
 
+    /// <summary>The endpoints that return an amount label (currency) for the selected asset.</summary>
     private static readonly string[] _amountLabelEndpoints =
     [
         "/AccountBook/GetIncomeAmountLabel", "/AccountBook/GetExpenditureAmountLabel",
@@ -147,6 +152,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
 
     // -- endpoints with a request body, and page actions that must degrade to a redirect ----------------------
 
+    /// <summary>A multipart form with one text part per field.</summary>
     private static MultipartFormDataContent Form(params (string Name, string Value)[] fields)
     {
         var form = new MultipartFormDataContent();
@@ -154,18 +160,21 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         return form;
     }
 
+    /// <summary>A valid fixed-income JSON body with id <paramref name="id"/>.</summary>
     private static object FixedIncome(long id) => new
     {
         Id = id, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "Salary", Amount = 100, DepositMonth = 6, DepositDay = 25,
         MaturityDate = "2030-12-31", Note = "", DepositMyAssetProductName = "Bank", Unpunctuality = false,
     };
 
+    /// <summary>A valid fixed-expenditure JSON body with id <paramref name="id"/>.</summary>
     private static object FixedExpenditure(long id) => new
     {
         Id = id, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Rent", Amount = 100, DepositMonth = 6, DepositDay = 1,
         MaturityDate = "2030-12-31", Note = "", PaymentMethod = "Bank", MyDepositAsset = "N/A", Unpunctuality = false,
     };
 
+    /// <summary>A valid timed-event form with id <paramref name="id"/> in calendar 1.</summary>
     private static MultipartFormDataContent EventForm(long id) => Form(
         ("Id", id.ToString()), ("CalendarId", "1"), ("Title", "Lunch"), ("AllDay", "false"), ("StartDate", "2024-05-01 10:00"),
         ("EndDate", "2024-05-01 11:00"), ("StartDateTimeZoneIanaId", "UTC"), ("EndDateTimeZoneIanaId", "UTC"),

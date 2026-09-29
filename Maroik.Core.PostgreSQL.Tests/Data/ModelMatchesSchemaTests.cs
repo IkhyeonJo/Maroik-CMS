@@ -17,11 +17,14 @@ public abstract class ModelMatchesSchemaTests(SchemaDatabaseFixture database)
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
+    /// <summary>One column of the live schema as read from <c>information_schema.columns</c>.</summary>
     private sealed record Column(string Table, string Name, bool Nullable, bool HasDefault, string DataType);
 
+    /// <summary>A context over the fixture's database (only its model is inspected).</summary>
     private ApplicationDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql(database.ConnectionString).Options);
 
+    /// <summary>Reads every column of every base table in the <c>public</c> schema; identity and generated columns count as having a default.</summary>
     private async Task<List<Column>> ReadColumnsAsync()
     {
         await using NpgsqlConnection connection = await database.OpenAsync(Ct);
@@ -39,6 +42,7 @@ public abstract class ModelMatchesSchemaTests(SchemaDatabaseFixture database)
         return columns;
     }
 
+    /// <summary>Normalizes an EF Core column type to the <c>information_schema</c> <c>data_type</c> spelling (length/precision dropped, aliases expanded).</summary>
     private static string BaseType(string relationalType)
     {
         string type = relationalType.ToLowerInvariant();

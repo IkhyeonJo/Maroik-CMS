@@ -24,6 +24,8 @@ public sealed class RabbitMqHealthCheck(string connectionString) : IHealthCheck
         }
         catch (Exception ex)
         {
+            // Deliberately not logged: the failure is reported as this check's own result (with the
+            // exception attached), which the health-check middleware surfaces.
             return HealthCheckResult.Unhealthy("Failed to connect to RabbitMQ.", ex);
         }
     }

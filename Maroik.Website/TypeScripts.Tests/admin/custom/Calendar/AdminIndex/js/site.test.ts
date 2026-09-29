@@ -13,14 +13,16 @@ import {
     eventCalls
 } from "@tests/_common/calendarSuite";
 
-// wwwroot/admin/custom/Calendar/AdminIndex/js/site.js  (2,279 lines)
+// wwwroot/admin/custom/Calendar/AdminIndex/js/site.js
 
+/** Suffixes of the `localizer*` hidden inputs the page publishes. */
 const LOCALIZERS = [
     "Email", "Notification", "Minutes", "Hours", "Days", "Weeks", "BeforeAt", "IETFLanguageTag",
     "Today", "Month", "ConfirmDelete", "ThisFieldRequired", "ErrorInvalidNumber",
     "ErrorRangeMinute", "ErrorRangeHour", "ErrorRangeDay", "ErrorRangeWeek", "FailedToLoadCalendars",
 ];
 
+/** The admin calendar page DOM with empty calendar and event data. */
 function fixture(): string {
     return (
         antiForgery +
@@ -296,6 +298,7 @@ describe("admin/Calendar/AdminIndex", () => {
 
 // ==== extended coverage ===================================================================================
 
+/** Loads the admin calendar page with the "my calendars" list, `opts.my` as its events and the shared extras (the admin page has no "other" calendars). */
 function build(opts: { my?: unknown[]; other?: unknown[]; body?: (html: string) => string } = {}) {
     let html = fixture()
             .replace("<div id=\"myCalendars\"></div>", mine)
@@ -347,6 +350,7 @@ describe("admin/Calendar/AdminIndex — events on the grid", () => {
 });
 
 describe("admin/Calendar/AdminIndex — sharing settings", () => {
+    /** Opens the sharing dialog and answers it with two calendars (one with an HTML name). */
     const open = (h: ReturnType<typeof build>) => {
         h.$("#aUpdateCalendarShared").trigger("click");
         h.lastAjax().success!({

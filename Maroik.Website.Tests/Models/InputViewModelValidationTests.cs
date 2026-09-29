@@ -11,9 +11,12 @@ namespace Maroik.Website.Tests.Models;
 /// </summary>
 public class InputViewModelValidationTests
 {
+    /// <summary>A sub-class that requires a deposit asset.</summary>
     private static readonly string _transferSubClass = ExpenditureClassPolicy.DepositAssetSubClasses[0];
+    /// <summary>A well-formed <c>Created</c> value.</summary>
     private const string ValidCreated = "2024-05-01 09:30:00";
 
+    /// <summary>Runs <paramref name="model"/>'s own validation and returns the results.</summary>
     private static List<ValidationResult> Validate(IValidatableObject model) =>
         [.. model.Validate(new ValidationContext(model))];
 

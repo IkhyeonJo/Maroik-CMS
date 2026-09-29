@@ -198,7 +198,7 @@
 
                     $editAssetOriginalProductName.val(data.asset.productName);
                     $editAssetProductName.val(data.asset.productName);
-                    // `.change()` so any listener on the Item select re-syncs.
+                    // `.trigger("change")` so any listener on the Item select re-syncs.
                     $editAssetItem.val(data.asset.item).trigger("change");
                     $editAssetAmount.val(data.asset.amount);
                     $editAssetMonetaryUnit.val(data.asset.monetaryUnit);

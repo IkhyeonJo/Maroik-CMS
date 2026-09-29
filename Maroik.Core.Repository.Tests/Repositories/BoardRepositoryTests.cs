@@ -21,6 +21,7 @@ public sealed class BoardRepositoryTests(DatabaseFixture database) : RepositoryT
 {
     private BoardRepository Sut => new(Context);
 
+    /// <summary>An unsaved, unlocked post row of board type <paramref name="type"/>.</summary>
     private OrmBoard MakeBoard(string title, string? writer = null, string type = BoardTypes.FreeForum, bool deleted = false) => new()
     {
         Type = type,
@@ -35,6 +36,7 @@ public sealed class BoardRepositoryTests(DatabaseFixture database) : RepositoryT
         Noticed = false
     };
 
+    /// <summary>Inserts <paramref name="boards"/>, saves, clears the change tracker, and returns the rows with their generated ids.</summary>
     private async Task<OrmBoard[]> SeedAsync(params OrmBoard[] boards)
     {
         await Context.Boards.AddRangeAsync(boards);
@@ -294,6 +296,7 @@ public sealed class BoardRepositoryTests(DatabaseFixture database) : RepositoryT
 
     // -- QueryPageAsync (page bounds) -------------------------------------------
 
+    /// <summary>Anonymous free-forum "Writer" search for <paramref name="writer"/> at the given page and page size.</summary>
     private Task<(List<Board> Items, int TotalCount)> PageOf(string writer, int page, int pageSize) =>
         Sut.QueryPageAsync(
             new BoardPageQuery(
@@ -354,12 +357,14 @@ public sealed class BoardRepositoryTests(DatabaseFixture database) : RepositoryT
 
     // -- QueryPageAsync (locked-post visibility) --------------------------------
 
+    /// <summary>Sets the locked flag of <paramref name="board"/> and returns it, for inline use in seeding.</summary>
     private static OrmBoard Locked(OrmBoard board, bool locked)
     {
         board.Locked = locked;
         return board;
     }
 
+    /// <summary>First page (50 rows) of a free-forum "Writer" search for <paramref name="writer"/>, as seen by the given viewer.</summary>
     private Task<(List<Board> Items, int TotalCount)> WriterSearch(
         string writer, bool isLoggedIn, string? viewerRole, string? viewerNickname) =>
         Sut.QueryPageAsync(

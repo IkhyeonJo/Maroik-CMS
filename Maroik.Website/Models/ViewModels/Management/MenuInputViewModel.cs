@@ -4,16 +4,17 @@ using System.ComponentModel.DataAnnotations;
 namespace Maroik.Website.Models.ViewModels.Management;
 
 /// <summary>
-/// Form model for admin create / edit operations on navigation sub-menu items (SubCategory).
-/// Each item belongs to a top-level Category and is routed to a specific controller action.
+/// JSON request body of the admin menu endpoints, shared by top-level categories (Category) and their
+/// sub-menu items (SubCategory): a category uses <see cref="Controller"/>, a sub-category uses
+/// <see cref="CategoryId"/> and links to an action of its parent's controller.
 /// </summary>
 public class MenuInputViewModel
 {
-    /// <summary>Database row ID of the sub-menu item; 0 for a new item, positive for an edit.</summary>
+    /// <summary>Database row ID of the menu item; 0 for a new item, positive for an edit or delete.</summary>
     [Display(Name = "Id")]
     public int Id { get; set; }
 
-    /// <summary>ID of the parent Category this sub-menu item belongs to.</summary>
+    /// <summary>ID of the parent Category (sub-category requests only).</summary>
     [Display(Name = "CategoryId")]
     public int CategoryId { get; set; }
 
@@ -27,12 +28,12 @@ public class MenuInputViewModel
     [Display(Name = "DisplayName")]
     public string? DisplayName { get; set; }
 
-    /// <summary>Server-side path to the icon image displayed next to the menu label.</summary>
+    /// <summary>CSS icon classes rendered next to the menu label (e.g. "nav-icon fas fa-bell").</summary>
     [Required(ErrorMessage = "Please enter IconPath")]
     [Display(Name = "IconPath")]
     public string? IconPath { get; set; }
 
-    /// <summary>MVC controller name this menu item links to (without the "Controller" suffix).</summary>
+    /// <summary>MVC controller name this category links to (without the "Controller" suffix; category requests only).</summary>
     [Required(ErrorMessage = "Please enter Controller")]
     [Display(Name = "Controller")]
     public string? Controller { get; set; }
@@ -42,7 +43,7 @@ public class MenuInputViewModel
     [Display(Name = "Action")]
     public string? Action { get; set; }
 
-    /// <summary>Minimum role required to see this menu item (e.g. "Admin", "User", "Anonymous").</summary>
+    /// <summary>The one role whose sidebar shows this menu item ("Admin", "User" or "Anonymous"; exact match, not a hierarchy).</summary>
     [Required(ErrorMessage = "Please enter Role")]
     [Display(Name = "Role")]
     public string? Role { get; set; }

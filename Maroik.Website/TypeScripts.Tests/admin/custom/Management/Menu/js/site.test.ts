@@ -52,13 +52,19 @@ const menuFixture = () =>
      <tr class="clsGridRow" data-id="10" data-categoryid="-1"></tr>
      <tr class="clsGridRow" data-id="10" data-categoryid="4"></tr>
    </tbody></table>`;
+/** Selector of the category row with id 10 (no parent). */
 const categoryRow = `.clsGridRow[data-id="10"][data-categoryid="-1"]`;
+/** Selector of the sub-category row with the same id 10, under category 4. */
 const subRow = `.clsGridRow[data-id="10"][data-categoryid="4"]`;
+/** A category record as the IsCategoryExists endpoint returns it. */
 const category = { id: 10, name: "n", displayName: "d", iconPath: "i", controller: "c", action: "a", role: "Admin", order: 3 };
+/** A sub-category record as the IsSubCategoryExists endpoint returns it. */
 const subCategory = { id: 10, categoryId: 4, name: "n", displayName: "d", iconPath: "i", action: "a", role: "User", order: 1 };
 
 describe("Management/Menu (admin) — categories and sub-categories share one grid", () => {
+    /** Loads the menu page over its grid fixture. */
     const load = () => loadSite("admin", "Management", "Menu", menuFixture());
+    /** Replaces `$.fn.modal` with a chainable spy and returns it. */
     const spyModal = (h: ReturnType<typeof load>) => {
         const modal = vi.fn(function(this: any) {
             return this;
@@ -66,6 +72,7 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
         (h.$.fn as any).modal = modal;
         return modal;
     };
+    /** Whether the category row and the sub-category row are highlighted, in that order. */
     const selected = (h: ReturnType<typeof load>) =>
         [categoryRow, subRow].map((s) => h.win.document.querySelector(s)!.classList.contains("table-primary"));
 

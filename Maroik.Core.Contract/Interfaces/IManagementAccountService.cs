@@ -23,12 +23,16 @@ public interface IManagementAccountService
     /// </summary>
     Task<AccountResponse?> GetAccountByEmailAsync(string email, CancellationToken ct = default);
 
-    /// <summary>Admin-creates a new account (skips the normal email-confirmation flow).</summary>
+    /// <summary>
+    /// Admin-creates a new account. No confirmation mail is sent: the account is confirmed at once when
+    /// the request's <c>EmailConfirmed</c> is set, and a reserved nickname is allowed.
+    /// </summary>
     Task<ServiceResult> CreateAccountAsync(AccountRequest request, string actorEmail, CancellationToken ct = default);
 
     /// <summary>
-    /// Updates an account's details. If <paramref name="newPassword"/> is provided,
-    /// hashes and sets it as the account's password.
+    /// Updates an account's details. If <paramref name="newPassword"/> is provided (it must meet the
+    /// password policy), hashes and sets it as the account's password and forces the account to choose
+    /// its own new password at its next login.
     /// </summary>
     Task<ServiceResult> UpdateAccountAsync(AccountRequest request, string? newPassword, string actorEmail, CancellationToken ct = default);
 

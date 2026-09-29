@@ -17,6 +17,7 @@ public sealed class BoardCommentRepositoryTests(DatabaseFixture database) : Repo
 {
     private BoardCommentRepository Sut => new(Context);
 
+    /// <summary>An unsaved comment row on board <paramref name="boardId"/> at position <paramref name="order"/>.</summary>
     private OrmBoardComment MakeComment(long boardId, long order, string? writer = null, bool deleted = false) => new()
     {
         BoardId = boardId,
@@ -28,6 +29,7 @@ public sealed class BoardCommentRepositoryTests(DatabaseFixture database) : Repo
         Deleted = deleted
     };
 
+    /// <summary>Inserts a real parent free-forum post and returns its id.</summary>
     private async Task<long> SeedBoardAsync()
     {
         var board = new OrmBoard
@@ -49,6 +51,7 @@ public sealed class BoardCommentRepositoryTests(DatabaseFixture database) : Repo
         return board.Id;
     }
 
+    /// <summary>Inserts <paramref name="comments"/>, saves, and clears the change tracker so later reads hit the database.</summary>
     private async Task SeedAsync(params OrmBoardComment[] comments)
     {
         await Context.BoardComments.AddRangeAsync(comments);

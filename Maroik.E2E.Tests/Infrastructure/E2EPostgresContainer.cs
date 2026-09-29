@@ -24,6 +24,7 @@ public sealed class E2EPostgresContainer : IAsyncDisposable
     private const string InitScriptRelativePath =
         "Maroik.DB/PostgreSQL/SQL_Init_Script/Debugging/Init.sql";
 
+    /// <summary>Throwaway PostgreSQL 17 container holding the <c>maroik</c> database.</summary>
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17")
         .WithDatabase("maroik")
         .Build();
@@ -68,6 +69,7 @@ public sealed class E2EPostgresContainer : IAsyncDisposable
     /// <inheritdoc />
     public async ValueTask DisposeAsync() => await _container.DisposeAsync();
 
+    /// <summary>Absolute path of the seed script, found by walking up to the directory holding <c>Maroik.sln</c>.</summary>
     private static string ResolveInitScriptPath()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

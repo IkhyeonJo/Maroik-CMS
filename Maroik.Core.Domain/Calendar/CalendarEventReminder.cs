@@ -6,7 +6,7 @@ namespace Maroik.Core.Domain.Calendar;
 
 /// <summary>
 /// Aggregate root representing a reminder attached to a <see cref="CalendarEvent"/>.
-/// Exactly one "BeforeEvent" field should carry a non-null value to define the lead time.
+/// Exactly one "BeforeEvent" field must carry a non-null value to define the lead time.
 /// Persisted independently via its own <c>ICalendarEventReminderRepository</c> (not hydrated or
 /// cascaded through the <see cref="CalendarEvent"/> aggregate), which is why it is an aggregate
 /// root rather than a child entity; it references its event by <see cref="CalendarEventId"/> only.
@@ -34,6 +34,7 @@ public sealed class CalendarEventReminder : AggregateRoot<long>
     /// <summary>Time-of-day at which the reminder fires on the target day.</summary>
     public TimeOnly? TimesBeforeEvent { get; private set; }
 
+    /// <summary>Sets every field; reached only through <see cref="Reconstitute"/> / <see cref="Create"/>.</summary>
     private CalendarEventReminder(
         long id,
         long calendarEventId,
@@ -79,8 +80,8 @@ public sealed class CalendarEventReminder : AggregateRoot<long>
         if (string.IsNullOrWhiteSpace(method))
             return LocalizableError.Validation("Reminder.MethodEmpty", "Notification method cannot be empty.");
 
-        // Constrain to the known taxonomy here rather than trusting the caller: the DB
-        // CalendarEventReminder_Method_check constraint is currently the only thing rejecting
+        // Constrain to the known taxonomy here rather than trusting the caller: otherwise the DB
+        // CalendarEventReminder_Method_check constraint would be the only thing rejecting
         // anything else, which surfaces as a raw DB exception instead of this validation error.
         if (!ReminderMethods.IsKnown(method))
             return LocalizableError.Validation("Reminder.MethodInvalid", "Notification method is not a recognised value.");

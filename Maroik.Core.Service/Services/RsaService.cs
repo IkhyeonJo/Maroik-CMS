@@ -23,16 +23,16 @@ namespace Maroik.Core.Service.Services;
 /// </summary>
 public class RsaService : IRsaService
 {
+    /// <summary>DER bytes of the configured private key (PKCS#1), or null when none is configured.</summary>
     private readonly byte[]? _privateKeyDer;
+    /// <summary>DER bytes of the configured public key (SubjectPublicKeyInfo), or null when none is configured.</summary>
     private readonly byte[]? _publicKeyDer;
 
     /// <summary>
-    /// Hash used for OAEP padding and PKCS#1 signatures on everything this service produces
-    /// <b>and</b> accepts. Always SHA-256: SHA-1 is collision-broken (fatal for signatures) and
-    /// needlessly weak for OAEP. The legacy SHA-1 fallback this service used to retry
-    /// <see cref="Decrypt"/>/<see cref="Verify"/> under (for content produced by the old
-    /// <see cref="RsaType.Rsa"/> config) has been retired; SHA-1-produced ciphertext/signatures no
-    /// longer decrypt/verify.
+    /// Hash used for OAEP padding on everything this service encrypts <b>and</b> decrypts. Always
+    /// SHA-256: SHA-1 is collision-broken and needlessly weak for OAEP. The legacy SHA-1 fallback
+    /// this service used to retry <see cref="Decrypt"/> under (for content produced by the old
+    /// <see cref="RsaType.Rsa"/> config) has been retired; SHA-1-produced ciphertext no longer decrypts.
     /// </summary>
     private static readonly HashAlgorithmName _hashAlgorithmName = HashAlgorithmName.SHA256;
 
@@ -50,6 +50,7 @@ public class RsaService : IRsaService
             : Convert.FromBase64String(setting.RsaPublicKey);
     }
 
+    /// <summary>Imports the private key into a fresh, caller-owned <see cref="RSA"/>; null when no private key is configured.</summary>
     private RSA? CreatePrivateKeyRsa()
     {
         if (_privateKeyDer == null) return null;
@@ -58,44 +59,13 @@ public class RsaService : IRsaService
         return rsa;
     }
 
+    /// <summary>Imports the public key into a fresh, caller-owned <see cref="RSA"/>; null when no public key is configured.</summary>
     private RSA? CreatePublicKeyRsa()
     {
         if (_publicKeyDer == null) return null;
         var rsa = RSA.Create();
         rsa.ImportSubjectPublicKeyInfo(_publicKeyDer, out _);
         return rsa;
-    }
-
-    /// <inheritdoc cref="data" />
-    public string Sign(string data)
-    {
-        using RSA? rsa = CreatePrivateKeyRsa();
-        byte[]? signatureBytes = rsa?.SignData(Encoding.UTF8.GetBytes(data), _hashAlgorithmName, RSASignaturePadding.Pkcs1);
-        return signatureBytes != null ? Convert.ToBase64String(signatureBytes) : "";
-    }
-
-    /// <inheritdoc cref="data" />
-    public bool Verify(string data, string sign)
-    {
-        using RSA? rsa = CreatePublicKeyRsa();
-        if (rsa == null)
-            return false;
-
-        byte[] signBytes;
-        try
-        {
-            signBytes = Convert.FromBase64String(sign);
-        }
-        catch (FormatException)
-        {
-            // A malformed (non-Base64) signature is just an invalid signature, not an exception
-            // the caller must guard against — same guarded-parse shape Decrypt / GuidToken use.
-            return false;
-        }
-
-        byte[] dataBytes = Encoding.UTF8.GetBytes(data);
-
-        return rsa.VerifyData(dataBytes, signBytes, _hashAlgorithmName, RSASignaturePadding.Pkcs1);
     }
 
     /// <inheritdoc />

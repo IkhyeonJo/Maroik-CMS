@@ -15,10 +15,13 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>The generic message returned for input that fails validation.</summary>
     private const string Invalid = "Input is invalid";
 
+    /// <summary>A form with a single irrelevant empty field, so every required field is missing.</summary>
     private static MultipartFormDataContent EmptyForm() => new() { { new StringContent(""), "x" } };
 
+    /// <summary>Each row: the role that may call the endpoint, the endpoint, whether it takes a form, the body to send, and the expected message.</summary>
     private static readonly (string Role, string Url, bool Form, object? Body, string Message)[] _endpoints =
     [
         (Role.Admin, "/Management/CreateAccount", false, null, Invalid),
@@ -79,17 +82,20 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
         Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
     }
 
+    /// <summary>The id of the category named <paramref name="name"/>.</summary>
     private long CategoryIdByName(string name)
     {
         using var scope = factory.Services.CreateScope();
         return scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Categories.Single(c => c.Name == name).Id;
     }
 
+    /// <summary>A category JSON body (id 0 creates).</summary>
     private static object Category(string name, long id = 0) => new
     {
         Id = id, Name = name, DisplayName = name, IconPath = "/icons/test.png", Controller = "Notice", Action = "", Role = Role.User, Order = 500
     };
 
+    /// <summary>A sub-category JSON body under <paramref name="categoryId"/> (id 0 creates).</summary>
     private static object SubCategory(string name, long categoryId, long id = 0) => new
     {
         Id = id, CategoryId = categoryId, Name = name, DisplayName = name, IconPath = "/icons/test.png", Controller = "", Action = "Index", Role = Role.User, Order = 500
@@ -118,6 +124,7 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
         });
         return;
 
+        // Posts body as JSON as the admin, asserts 200, and returns the response body.
         async Task<string> Post(string url, object body)
         {
             using var request = admin.BuildJsonPostRequest(url, body);

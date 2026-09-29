@@ -16,6 +16,7 @@ public sealed class FixedIncomeRepositoryTests(DatabaseFixture database) : Repos
 {
     private FixedIncomeRepository Sut => new(Context);
 
+    /// <summary>An unsaved fixed-income row owned by <paramref name="email"/>, deposited into <paramref name="asset"/>.</summary>
     private static OrmFixedIncome MakeFixedIncome(string email, string content, string asset = "BankAccount", decimal amount = 3000m) => new()
     {
         AccountEmail = email,
@@ -33,6 +34,7 @@ public sealed class FixedIncomeRepositoryTests(DatabaseFixture database) : Repos
         Unpunctuality = false
     };
 
+    /// <summary>Ensures each owner account and every referenced asset exist, then inserts <paramref name="items"/>, saves, and clears the change tracker.</summary>
     private async Task SeedAsync(params OrmFixedIncome[] items)
     {
         foreach (var group in items.GroupBy(i => i.AccountEmail!))

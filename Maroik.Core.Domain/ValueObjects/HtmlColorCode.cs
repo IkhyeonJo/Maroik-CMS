@@ -14,11 +14,13 @@ namespace Maroik.Core.Domain.ValueObjects;
 /// </summary>
 public sealed partial class HtmlColorCode : ValueObject
 {
+    /// <summary>Cached instance of the source-generated 6-digit hex pattern (<see cref="MyRegex"/>).</summary>
     private static readonly Regex _colorRegex = MyRegex();
 
     /// <summary>The validated HTML hex color string (upper-case).</summary>
     public string Value { get; }
 
+    /// <summary>Wraps an already-validated, upper-cased color value; reached only through the factories.</summary>
     private HtmlColorCode(string value) => Value = value;
 
     /// <summary>

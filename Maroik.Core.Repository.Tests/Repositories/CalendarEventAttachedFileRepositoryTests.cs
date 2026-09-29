@@ -15,6 +15,7 @@ public sealed class CalendarEventAttachedFileRepositoryTests(DatabaseFixture dat
 {
     private CalendarEventAttachedFileRepository Sut => new(Context);
 
+    /// <summary>An unsaved attachment row for event <paramref name="calendarEventId"/>.</summary>
     private static OrmCalendarEventAttachedFile MakeFile(long calendarEventId, string name = "doc.pdf") => new()
     {
         CalendarEventId = calendarEventId,
@@ -24,6 +25,7 @@ public sealed class CalendarEventAttachedFileRepositoryTests(DatabaseFixture dat
         Size = 1024
     };
 
+    /// <summary>Inserts <paramref name="files"/>, saves, and clears the change tracker so later reads hit the database.</summary>
     private async Task SeedAsync(params OrmCalendarEventAttachedFile[] files)
     {
         await Context.CalendarEventAttachedFiles.AddRangeAsync(files);

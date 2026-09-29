@@ -11,6 +11,7 @@ namespace Maroik.FileStorage.Tests.Helpers;
 /// </summary>
 public class StoragePathTests
 {
+    /// <summary>The storage root the paths are resolved against (never created on disk).</summary>
     private readonly string _root = Path.Combine(Path.GetTempPath(), "MaroikStoragePathTests", "upload");
 
     // -- Null/empty inputs -------------------------------------------------------

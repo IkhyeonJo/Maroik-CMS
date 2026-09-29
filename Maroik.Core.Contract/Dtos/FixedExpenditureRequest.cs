@@ -4,7 +4,7 @@ namespace Maroik.Core.Contract.Dtos;
 
 /// <summary>
 /// Data transfer object used to create or update a fixed (recurring) expenditure record.
-/// Fixed expenditures are charged on a specific day each month (e.g. subscriptions, insurance premiums).
+/// A fixed expenditure is scheduled on a month/day (<see cref="DepositMonth"/>/<see cref="DepositDay"/>) until its maturity date (e.g. subscriptions, insurance premiums).
 /// </summary>
 public class FixedExpenditureRequest
 {
@@ -26,13 +26,13 @@ public class FixedExpenditureRequest
     /// <summary>Asset used as the payment method (foreign key to Asset.ProductName).</summary>
     public string? PaymentMethod { get; set; }
 
-    /// <summary>Debited asset product name.</summary>
+    /// <summary>Asset credited by a transfer-type charge (must differ from <see cref="PaymentMethod"/>); ignored otherwise.</summary>
     public string? MyDepositAsset { get; set; }
 
-    /// <summary>Month of the billing cycle (1–12).</summary>
+    /// <summary>Month (1–12) of the scheduled charge date.</summary>
     public short DepositMonth { get; set; }
 
-    /// <summary>Day of the month the charge is deducted.</summary>
+    /// <summary>Day of <see cref="DepositMonth"/> the charge is due.</summary>
     public short DepositDay { get; set; }
 
     /// <summary>Date when the recurring charge ends (contract or subscription expiry date).</summary>
@@ -41,6 +41,6 @@ public class FixedExpenditureRequest
     /// <summary>Optional free-text note.</summary>
     public string? Note { get; set; }
 
-    /// <summary>When true, the charge was not made on the scheduled day (payment was late or missed).</summary>
+    /// <summary>User-chosen "always notify" flag: when true the schedule is always noticed, regardless of its date.</summary>
     public bool Unpunctuality { get; set; }
 }

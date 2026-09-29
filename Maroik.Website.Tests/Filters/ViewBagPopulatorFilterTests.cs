@@ -22,10 +22,15 @@ namespace Maroik.Website.Tests.Filters;
 /// </summary>
 public class ViewBagPopulatorFilterTests
 {
+    /// <summary>Mock <c>IAccountService</c> injected into the system under test.</summary>
     private readonly Mock<IAccountService> _accountService = new();
+    /// <summary>Mock <c>IDashboardService</c> injected into the system under test.</summary>
     private readonly Mock<IDashboardService> _dashboardService = new();
+    /// <summary>Mock <c>ITimeZoneCatalogService</c> injected into the system under test.</summary>
     private readonly Mock<ITimeZoneCatalogService> _timeZoneCatalogService = new();
+    /// <summary>Mock <c>ISessionService</c> injected into the system under test.</summary>
     private readonly Mock<ISessionService> _sessionService = new();
+    /// <summary>Settings whose values the filter copies to the ViewBag.</summary>
     private readonly IOptions<ServerSetting> _serverSettings = Options.Create(new ServerSetting
     {
         DomainName = "https://test.maroik.com",
@@ -33,9 +38,11 @@ public class ViewBagPopulatorFilterTests
         NoticeMaturityDateDay = 7
     });
 
+    /// <summary>The filter under test over the mocked dependencies.</summary>
     private ViewBagPopulatorFilter CreateSut() =>
         new(_accountService.Object, _dashboardService.Object, _timeZoneCatalogService.Object, _serverSettings, _sessionService.Object);
 
+    /// <summary>An action context for a request to <paramref name="path"/>, optionally with a culture and route names.</summary>
     private static (ActionExecutingContext context, Controller controller) BuildContext(
         string path = "/Test/Index",
         string? cultureName = null,
@@ -87,6 +94,7 @@ public class ViewBagPopulatorFilterTests
         return (executingContext, controller);
     }
 
+    /// <summary>A next-delegate that does nothing.</summary>
     private static ActionExecutionDelegate EmptyNext() =>
         () => Task.FromResult(new ActionExecutedContext(
             new ActionContext(new DefaultHttpContext(), new RouteData(), new ControllerActionDescriptor()),

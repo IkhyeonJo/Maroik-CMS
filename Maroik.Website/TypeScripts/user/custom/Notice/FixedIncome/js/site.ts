@@ -36,6 +36,7 @@
     const $createFixedIncomeNote = $("#createFixedIncomeNote");
     const $createFixedIncomeDepositMyAssetProductName = $("#createFixedIncomeDepositMyAssetProductName");
     const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
+    // Localized toast shown when the amount-label request itself fails (transport error).
     const failedToLoadAmountLabelMessage = $("#localizerFailedToLoadAmountLabel").val() as string;
     const $createFixedIncomeDialogModal = $("#createFixedIncomeDialogModal");
     const $editFixedIncomeId = $("#editFixedIncomeId");
@@ -412,7 +413,7 @@
      * Opens the edit modal for the selected grid row. Fetches the record
      * (`IsFixedIncomeExists`), fills the form, re-filters the subclass and
      * deposit-day selects for the record's main class / deposit month, and
-     * checks the "unpunctuality" box.
+     * sets the "unpunctuality" (always notify) checkbox from the record.
      *
      * @param errorMessageSelectGridRow localized "pick a row first" text from a `data-*` attribute.
      */

@@ -6,6 +6,7 @@ namespace Maroik.Core.Service.Tests.Services;
 /// <summary>Unit tests for <see cref="HtmlParserService"/>.</summary>
 public class HtmlParserServiceTests
 {
+    /// <summary>The service under test.</summary>
     private readonly HtmlParserService _sut = new();
 
     // -- TransformImageAttributesAsync -------------------------------------------

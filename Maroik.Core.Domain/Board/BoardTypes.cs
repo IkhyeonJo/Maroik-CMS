@@ -17,6 +17,7 @@ public static class BoardTypes
     /// <summary>Private note. Visible only to its author — no admin bypass.</summary>
     public const string PrivateNote = "PrivateNote";
 
+    /// <summary>Membership set backing <see cref="All"/> / <see cref="IsKnown"/>.</summary>
     private static readonly StringTaxonomy _taxonomy = new(FreeForum, PrivateNote);
 
     /// <summary>Every board-type value a new post may be created with.</summary>

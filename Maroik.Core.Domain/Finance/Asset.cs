@@ -28,7 +28,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
     /// <summary>Email of the owning account.</summary>
     public Email AccountEmail { get; private set; }
 
-    /// <summary>Asset category (e.g. "Deposit", "Stock", "Cash").</summary>
+    /// <summary>Asset category — an <see cref="AssetItemType"/> member name (e.g. "FreeDepositAndWithdrawal", "CashAsset").</summary>
     public string Item { get; private set; }
 
     /// <summary>Current balance of the asset.</summary>
@@ -129,8 +129,8 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         if (string.IsNullOrWhiteSpace(item))
             return LocalizableError.Validation("Asset.ItemEmpty", "Asset category (item) cannot be empty.");
 
-        // Constrain to the known taxonomy here rather than trusting the caller: the DB
-        // Asset_Item_check constraint is currently the only thing rejecting anything else, which
+        // Constrain to the known taxonomy here rather than trusting the caller: otherwise the DB
+        // Asset_Item_check constraint would be the only thing rejecting anything else, which
         // surfaces as a raw DB exception instead of this validation error.
         if (!AssetItems.IsKnown(item))
             return LocalizableError.Validation("Asset.ItemInvalid", "Asset category (item) is not a recognised value.");

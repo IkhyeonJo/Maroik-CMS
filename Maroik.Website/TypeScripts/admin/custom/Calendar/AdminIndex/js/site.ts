@@ -16,8 +16,9 @@
  * Server contract: every bound / max value (`maxMinutesBeforeEvent`,
  * `reminderTimeIntervals`, …) comes from a hidden input a Domain policy
  * (`CalendarReminderPolicy`) produced; the `Validate*` functions here are UX
- * mirrors and the controller re-validates every write. Dates are entered as
- * local strings and converted to UTC (`moment.utc(...)`) before sending.
+ * mirrors and the controller re-validates every write. Dates are sent as the
+ * local strings the user entered ("yyyy-M-d" / "yyyy-M-d H:m") together with their
+ * time-zone fields; the server converts them to UTC (CalendarViewModelMapper).
  *
  * Structure: a long list of `const $x = $('#x')` element caches, then helpers,
  * then one big `$(function)` that builds the date pickers, the FullCalendar
@@ -969,16 +970,16 @@
 
         calendar.render();
 
+        // Guards against a stale GetCalendarEvents response (from a checkbox toggle just before
+        // this one) landing after a newer one and re-adding events the user already unchecked.
+        let calendarEventsRequestSeq = 0;
+
         /**
          * Reloads the visible events from the set of currently-checked calendar
          * checkboxes: clears the grid, gathers the checked calendar ids (each
          * `<label id="lblCalendar123">` encodes the id), POSTs `GetCalendarEvents`,
          * and re-adds whatever comes back.
          */
-            // Guards against a stale GetCalendarEvents response (from a checkbox toggle just before
-            // this one) landing after a newer one and re-adding events the user already unchecked.
-        let calendarEventsRequestSeq = 0;
-
         function RefreshCalendarEvents() {
             calendar.removeAllEvents();
 
@@ -2290,7 +2291,7 @@
     });
 
     // --- "Shared calendars" dialog ---
-    // Opening it fetches every calendar's current share state
+    // Opening it fetches the share state of each of the admin's own calendars
     // (`GetCalendarShareds`) and builds a row per calendar with "share to user"
     // / "share to guest" checkboxes.
     $aUpdateCalendarShared.off("click").on("click", function() {

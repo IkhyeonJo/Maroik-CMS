@@ -17,6 +17,7 @@ public sealed class FixedExpenditureRepositoryTests(DatabaseFixture database) : 
 {
     private FixedExpenditureRepository Sut => new(Context);
 
+    /// <summary>An unsaved fixed-expenditure row owned by <paramref name="email"/>.</summary>
     private static OrmFixedExpenditure MakeFixedExpenditure(
         string email, string content, string paymentMethod = "Wallet", string? myDepositAsset = "Wallet",
         decimal amount = 50m) => new()
@@ -37,6 +38,7 @@ public sealed class FixedExpenditureRepositoryTests(DatabaseFixture database) : 
         Unpunctuality = false
     };
 
+    /// <summary>Ensures each owner account and every referenced asset exist, then inserts <paramref name="items"/>, saves, and clears the change tracker.</summary>
     private async Task SeedAsync(params OrmFixedExpenditure[] items)
     {
         foreach (var group in items.GroupBy(e => e.AccountEmail!))

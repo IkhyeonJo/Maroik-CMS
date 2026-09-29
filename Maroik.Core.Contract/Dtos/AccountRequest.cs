@@ -4,7 +4,7 @@ namespace Maroik.Core.Contract.Dtos;
 
 /// <summary>
 /// Data transfer object used to create or update an account.
-/// Carries all account fields from the presentation/service layer to the repository layer.
+/// Carries the account fields from the presentation layer to the service layer, which maps them onto the <c>Account</c> aggregate.
 /// </summary>
 public class AccountRequest
 {

@@ -18,11 +18,14 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
+    /// <summary>Seeds (if missing) a User account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsUserAsync(string email = "calendar-event-user@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
 
+    /// <summary>Creates a calendar named <paramref name="name"/> through the endpoint and returns its id.</summary>
     private async Task<long> CreateOwnCalendarAsync(AuthenticatedSession session, string name)
     {
         var payload = new
@@ -44,6 +47,7 @@ public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
         throw new InvalidOperationException($"Calendar named '{name}' not found in GetCalendars response: {getJson}");
     }
 
+    /// <summary>A create/update-event form for an all-day event in <paramref name="calendarId"/> (id 0 creates).</summary>
     private static MultipartFormDataContent EventForm(long calendarId, string title, string startDate = "2030-06-01", string endDate = "2030-06-02", long id = 0)
     {
         var form = new MultipartFormDataContent
@@ -63,6 +67,7 @@ public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
         return form;
     }
 
+    /// <summary>A title unique to this call, prefixed with the calling test's name.</summary>
     private static string UniqueTitle([System.Runtime.CompilerServices.CallerMemberName] string testName = "") =>
         $"{testName}-{Guid.NewGuid():N}";
 

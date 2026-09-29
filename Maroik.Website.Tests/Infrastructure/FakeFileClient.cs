@@ -11,6 +11,7 @@ namespace Maroik.Website.Tests.Infrastructure;
 /// </summary>
 public sealed class FakeFileClient : IFileClient
 {
+    /// <summary>Stored files keyed by path (without a leading slash).</summary>
     private readonly ConcurrentDictionary<string, (byte[] Bytes, string ContentType)> _files = new();
 
     /// <summary>What every upload reports; defaults to <see cref="FileUploadResult.Stored"/>.</summary>
@@ -49,6 +50,7 @@ public sealed class FakeFileClient : IFileClient
         return Task.FromResult(Outcome);
     }
 
+    /// <summary>Stores the file under <paramref name="path"/> (leading slash removed) and records the upload.</summary>
     private void Store(byte[] bytes, string contentType, string path)
     {
         _files[path.TrimStart('/')] = (bytes, contentType);

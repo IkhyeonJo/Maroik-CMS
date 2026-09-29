@@ -33,6 +33,6 @@ public interface IAssetBalanceDomainService
     /// </summary>
     Task<Asset?> GetAssetForReadAsync(string accountEmail, string productName, CancellationToken ct = default);
 
-    /// <summary>Persists changes to the given asset (insert or update).</summary>
+    /// <summary>Persists changes to an existing asset (an update — this never inserts a new asset).</summary>
     Task SaveAsync(Asset asset, CancellationToken ct = default);
 }

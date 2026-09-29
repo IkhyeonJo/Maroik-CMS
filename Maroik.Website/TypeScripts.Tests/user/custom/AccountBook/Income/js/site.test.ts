@@ -9,8 +9,10 @@ import { loadSite, hidden, antiForgery } from "@tests/_common/harness";
 // Worth locking down: the income main→subclass UX mirror (ApplyAllowedOptions),
 // the Excel export form, and that an invalid create form makes no request.
 
+/** Main class â†’ sub-classes, as the page publishes it. */
 const subClassMap = { Labor: ["Salary", "Bonus"], Business: ["Sales"] };
 
+/** The income page DOM (server constants, create/edit forms), plus `extra`. */
 function fixture(extra = ""): string {
     return (
         antiForgery +

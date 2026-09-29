@@ -118,6 +118,7 @@ public class AccountFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture)
             .ToContainTextAsync("잠시 후에 다시 이메일을 요청해 주세요.");
         return;
 
+        // Opens the forgot-password page, submits the e-mail, and waits until the POST has been answered.
         async Task SubmitAsync()
         {
             await GotoAsync(page, "/Account/ForgotPassword");

@@ -13,10 +13,13 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class AccountMailStatusServiceTests
 {
+    /// <summary>Mock <c>IAccountRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAccountRepository> _accountRepo = new();
 
+    /// <summary>The service under test over the mocked repository.</summary>
     private AccountMailStatusService CreateSut() => new(_accountRepo.Object);
 
+    /// <summary>A confirmed, unlocked account whose stored mail-status message is <paramref name="message"/>.</summary>
     private static Account ActiveAccount(string email = "user@example.com", string? message = null) => Account.Reconstitute(
         email: email,
         hashedPassword: "$2a$13$placeholder",

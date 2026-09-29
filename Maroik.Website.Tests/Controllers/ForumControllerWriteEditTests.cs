@@ -17,11 +17,14 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ForumControllerWriteEditTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
     
+    /// <summary>Seeds (if missing) a User account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsUserAsync(string email = "forum-writeedit-user@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
 
+    /// <summary>A write/edit-post form (the title is omitted when <see langword="null"/>).</summary>
     private static MultipartFormDataContent BoardForm(string? title, string content = "Body", bool locked = false, bool noticed = false)
     {
         var form = new MultipartFormDataContent();
@@ -32,6 +35,7 @@ public class ForumControllerWriteEditTests(MaroikWebApplicationFactory factory)
         return form;
     }
 
+    /// <summary>A title unique to this call, prefixed with the calling test's name.</summary>
     private static string UniqueTitle([System.Runtime.CompilerServices.CallerMemberName] string testName = "") =>
         $"{testName}-{Guid.NewGuid():N}";
 

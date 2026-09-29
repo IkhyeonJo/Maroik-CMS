@@ -13,7 +13,7 @@ public class AssetResponse
     /// <summary>Owner's account email (composite primary key / foreign key).</summary>
     public string? AccountEmail { get; set; }
 
-    /// <summary>Asset category (e.g. "Deposit", "Stock", "Cash").</summary>
+    /// <summary>Asset category — an <c>AssetItemType</c> member name (e.g. "FreeDepositAndWithdrawal", "CashAsset").</summary>
     public string? Item { get; set; }
 
     /// <summary>Current balance or value.</summary>

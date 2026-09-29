@@ -88,9 +88,9 @@ public class ManagementAccountService(
             }
             catch (Exception e) when (e.IsPostgresUniqueViolation())
             {
-                // The FindByEmailAsync check above is a read-then-write race: two concurrent admin
-                // creates for the same not-yet-registered email can both pass it, and it never
-                // checked Nickname at all. Email is the actual primary key (Account_pk), while
+                // The FindByEmailAsync / NicknameExistsIgnoreCaseAsync checks above are read-then-write
+                // races: two concurrent admin creates for the same not-yet-registered email or
+                // nickname can both pass them. Email is the actual primary key (Account_pk), while
                 // Nickname has its own separate unique constraint (Account_Nickname_unique) — report
                 // whichever one actually collided, same classification RegisterAsync uses.
                 bool isNicknameConflict = e.IsAccountNicknameUniqueViolation();
@@ -182,6 +182,7 @@ public class ManagementAccountService(
         }
     }
 
+    /// <summary>Unlocked lookup of an account by email.</summary>
     private Task<Account?> FindByEmailAsync(string email, CancellationToken ct = default)
         => accountRepository.FindByEmailAsync(email, ct);
 

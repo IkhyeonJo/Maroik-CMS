@@ -34,6 +34,8 @@ public sealed class BoardComment : AggregateRoot<long>
     /// <summary>Soft-delete flag.</summary>
     public bool Deleted { get; private set; }
 
+    /// <summary>Sets the comment's fields and stamps <see cref="Created"/> with the current UTC time
+    /// (<see cref="Reconstitute"/> overwrites it with the stored value).</summary>
     private BoardComment(
         long id,
         long boardId,

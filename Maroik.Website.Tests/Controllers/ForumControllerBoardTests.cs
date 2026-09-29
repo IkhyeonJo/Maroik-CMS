@@ -25,16 +25,21 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Board type of the free forum.</summary>
     private const string FreeForumType = "FreeForum";
 
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
     
+    /// <summary>Seeds (if missing) a User account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsUserAsync(string email = "forum-user@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
 
+    /// <summary>Seeds (if missing) an Admin account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsAdminAsync(string email = "forum-admin@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "AdminPassword1!", Role.Admin, TestContext.Current.CancellationToken);
 
+    /// <summary>Inserts a free-forum post by <paramref name="writer"/> directly into the database and returns its id.</summary>
     private long SeedBoard(string writer, bool locked = false, bool deleted = false)
     {
         using var scope = factory.Services.CreateScope();
@@ -57,6 +62,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         return board.Id;
     }
 
+    /// <summary>Inserts a comment by <paramref name="writer"/> on board <paramref name="boardId"/> and returns its id.</summary>
     private long SeedComment(long boardId, string writer)
     {
         using var scope = factory.Services.CreateScope();

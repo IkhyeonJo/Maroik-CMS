@@ -28,6 +28,7 @@ public class ForumController(
     IRsaService rsa,
     IOptions<ServerSetting> serverSettings) : Controller
 {
+    /// <summary>Shared extension-to-MIME-type lookup for attachment downloads (safe for concurrent reads).</summary>
     private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
 
     #region FreeForum
@@ -131,7 +132,10 @@ public class ForumController(
     #endregion
 
     #region Summernote Image File Upload
-    /// <summary>Uploads a Summernote inline image and returns its URL.</summary>
+    /// <summary>
+    /// Validates and stores a Summernote inline image, returning its bytes (base64) and content type for
+    /// the editor preview plus its RSA-encrypted storage path, which the editor keeps in the image's <c>alt</c>.
+    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -176,7 +180,7 @@ public class ForumController(
     #region Read
 
     #region Edit, List, Detail, Write
-    /// <summary>Displays the free-forum list or a single post (list / write / view / edit).</summary>
+    /// <summary>Displays the free-forum page in the mode named by <paramref name="method"/>: "list" (default), "write", "detail" or "edit".</summary>
     public async Task<IActionResult> FreeForum(string method = "list", int? boardId = null, int page = 1, string searchType = "", string searchText = "", CancellationToken ct = default)
     {
         switch (method)
@@ -291,8 +295,8 @@ public class ForumController(
                         return RedirectToAction(BoardTypes.FreeForum, "Forum");
 
                     // ViewBag.LoggedInAccount is re-fetched from the database by ViewBagPopulatorFilter
-                    // on every request (not the session-cached snapshot), so a mid-session ownership
-                    // relevant change (e.g. nickname edit) is reflected immediately here.
+                    // on every request (not the session-cached snapshot), so ownership is always checked
+                    // against the account's current state. The edit page is owner-only (no admin bypass).
                     AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
                     if (!loggedInAccount.IsOwner(freeBoard.Writer))
                         return RedirectToAction(BoardTypes.FreeForum, "Forum");
@@ -417,7 +421,10 @@ public class ForumController(
     #endregion
 
     #region IsBoardExists
-    /// <summary>Checks whether a board post with the given ID exists (used for edit validation).</summary>
+    /// <summary>
+    /// Checks that a free-forum post still exists and is visible to the caller (a locked post only to its
+    /// author or an admin). Called by the client before confirming a delete.
+    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]

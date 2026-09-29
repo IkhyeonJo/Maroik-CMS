@@ -9,8 +9,8 @@ namespace Maroik.Website.Models.ViewModels.AccountBook;
 /// <summary>
 /// Form model for creating or editing a single expenditure transaction in the account book.
 /// The spending is classified by <see cref="MainClass"/> / <see cref="SubClass"/>
-/// (e.g. "ConsumerSpending" / "MealOrEatOutExpenses") and linked to the payment method
-/// and the asset account that was debited.
+/// (e.g. "ConsumerSpending" / "MealOrEatOutExpenses") and linked to the asset it is paid from
+/// (<see cref="PaymentMethod"/>) and, for a transfer, the asset it is credited to (<see cref="MyDepositAsset"/>).
 /// </summary>
 public class ExpenditureInputViewModel : IValidatableObject
 {
@@ -58,7 +58,7 @@ public class ExpenditureInputViewModel : IValidatableObject
     public string? Note { get; set; }
 
     /// <summary>
-    /// Name of the asset (product) that was debited for this expenditure. Required only when
+    /// Name of the asset (product) credited by this expenditure — the transfer target. Required only when
     /// <see cref="SubClass"/> is one of <see cref="ExpenditureClassPolicy.DepositAssetSubClasses"/>
     /// (a transfer-type subclass) — the domain only needs a deposit asset then; see
     /// <see cref="Validate"/>.

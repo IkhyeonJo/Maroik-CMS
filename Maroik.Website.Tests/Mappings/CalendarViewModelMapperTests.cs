@@ -12,6 +12,7 @@ namespace Maroik.Website.Tests.Mappings;
 /// </summary>
 public class CalendarViewModelMapperTests
 {
+    /// <summary>An all-day event from <paramref name="start"/> to <paramref name="end"/>.</summary>
     private static CalendarEventResponse AllDayEvent(DateTime start, DateTime end) => new()
     {
         Id = 1,
@@ -22,6 +23,7 @@ public class CalendarViewModelMapperTests
         EndDate = end
     };
 
+    /// <summary>A timed event from <paramref name="start"/> to <paramref name="end"/> with optional per-end time zones.</summary>
     private static CalendarEventResponse TimedEvent(DateTime start, DateTime end, string? startTz = null, string? endTz = null) => new()
     {
         Id = 1,

@@ -8,7 +8,7 @@ namespace Maroik.Core.Repository.Repositories;
 
 /// <summary>
 /// EF Core repository for <see cref="FixedIncome"/> domain objects,
-/// representing recurring monthly income entries with a scheduled deposit day.
+/// representing recurring income entries scheduled on a deposit month/day.
 /// Always eager-loads the linked <see cref="OrmFixedIncome.Asset"/> so that the monetary unit
 /// is available without a separate query.
 /// </summary>
@@ -18,7 +18,6 @@ public class FixedIncomeRepository(ApplicationDbContext context)
     /// <summary>The underlying <see cref="DbSet{TEntity}"/> for <see cref="OrmFixedIncome"/> rows.</summary>
     protected override DbSet<OrmFixedIncome> Set => Context.FixedIncomes;
 
-    /// <inheritdoc />
     /// <inheritdoc />
     // Always join the Asset navigation property so query results carry the monetary unit.
     protected override IQueryable<OrmFixedIncome> ApplyIncludes(IQueryable<OrmFixedIncome> query)

@@ -21,7 +21,7 @@ public static class AccountBookViewModelMapper
     /// True when <paramref name="value"/> parses as <see cref="LocalDateTimeFormat"/> — used by
     /// <see cref="ExpenditureInputViewModel.Validate"/> / <see cref="IncomeInputViewModel.Validate"/>
     /// so a malformed <c>Created</c> value fails cleanly as a validation error instead of throwing
-    /// out of <see cref="ExpenditureInputViewModel.ToCreatedUtc"/> / <see cref="IncomeInputViewModel.ToCreatedUtc"/>.
+    /// out of the <c>ToCreatedUtc</c> extensions below.
     /// </summary>
     public static bool IsValidLocalDateTime(string? value) =>
         DateTime.TryParseExact(value, LocalDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out _);

@@ -20,11 +20,15 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>The account every test in this class signs in as.</summary>
     private const string Email = "notice-user@test.com";
+    /// <summary>The asset the fixed incomes are deposited into.</summary>
     private const string AssetProductName = "notice-asset";
 
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
+    /// <summary>Signs in as <see cref="Email"/> and makes sure its asset <see cref="AssetProductName"/> exists.</summary>
     private async Task<AuthenticatedSession> LoginAsync()
     {
         var session = await AuthenticatedSessionHelper.LoginAsync(factory, _client, Email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
@@ -49,6 +53,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         return session;
     }
 
+    /// <summary>A valid fixed-income JSON body (id 0 creates).</summary>
     private static object ValidPayload(long id = 0, string content = "Salary") => new
     {
         Id = id,

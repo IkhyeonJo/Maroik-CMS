@@ -13,7 +13,7 @@ namespace Maroik.Website.Models.ViewModels.Account;
 /// </summary>
 public class LoginInputViewModel
 {
-    /// <summary>The user's email address ?? used as both the login identifier and the registration email.</summary>
+    /// <summary>The user's email address — used as both the login identifier and the registration email.</summary>
     [Required(ErrorMessage = "Email is required")]
     [DataType(DataType.EmailAddress)]
     [EmailAddress(ErrorMessage = "Invalid Email Address")]

@@ -251,8 +251,8 @@
     }
 
     /**
-     * Submits a new note as multipart `FormData` (title, body HTML, the locked
-     * flag, the stashed attachment). On success alerts and returns to the list;
+     * Submits a new note as multipart `FormData` (title, body HTML, an always-false
+     * `Locked` field the server ignores for private notes, the stashed attachment). On success alerts and returns to the list;
      * on failure toasts and hides the overlay. `as any` casts because
      * `FormData.append` wants `string | Blob`. Returns `false`.
      */
@@ -295,7 +295,8 @@
     }
 
     /**
-     * Submits an edit to an existing note (same multipart shape plus `ID`); on
+     * Submits an edit to an existing note (title, body HTML, the ignored `Locked`
+     * field, the stashed attachment, plus `Id`); on
      * success returns to that note's detail view at the caller's page.
      */
     function EditBoard(editBoardId?: string, editCurrentPage?: string) {
@@ -485,7 +486,7 @@
         DeleteBoard($(this).attr("data-boardId"));
     });
 
-    // Enter (keyCode 13) in the search box runs the search.
+    // Enter in the search box runs the search.
     $btnPrivateNoteSearchText.off("keydown").on("keydown", function(event) {
         if (event.key === "Enter") {
             SearchBoard();

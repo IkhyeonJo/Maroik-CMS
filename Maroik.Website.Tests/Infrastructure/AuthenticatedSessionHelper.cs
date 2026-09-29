@@ -132,11 +132,13 @@ public static class AuthenticatedSessionHelper
         return new AuthenticatedSession(sessionCookie, antiforgeryCookie, loginToken, nickname);
     }
 
+    /// <summary>The value of <paramref name="cookieName"/> from the response's <c>Set-Cookie</c> headers, or <see langword="null"/>.</summary>
     private static string? ExtractCookieValue(HttpResponseMessage response, string cookieName)
     {
         return !response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders) ? null : (from header in setCookieHeaders select header.Split(';', 2)[0] into namePart let eq = namePart.IndexOf('=') where eq > 0 where namePart[..eq] == cookieName select namePart[(eq + 1)..]).FirstOrDefault();
     }
 
+    /// <summary>The hidden <c>__RequestVerificationToken</c> value in <paramref name="html"/>; throws if there is none.</summary>
     private static string ExtractAntiForgeryToken(string html)
     {
  #pragma warning disable SYSLIB1045

@@ -16,6 +16,7 @@ namespace Maroik.Core.Client.Tests.Clients;
 /// </summary>
 public class ClamavClientTests
 {
+    /// <summary>The client under test (logging discarded).</summary>
     private readonly ClamavClient _sut = new(NullLogger<ClamavClient>.Instance);
 
     // -- ScanWithClamavAsync --------------------------------------------------
@@ -183,9 +184,12 @@ public class ClamavClientTests
     /// </summary>
     private sealed class FakeClamavServer : IAsyncDisposable
     {
+        /// <summary>Loopback listener the fake daemon accepts its single connection on.</summary>
         private readonly TcpListener _listener;
+        /// <summary>The background accept-and-respond task, awaited on dispose.</summary>
         private readonly Task _acceptTask;
 
+        /// <summary>Completed with the command line the client sent.</summary>
         private readonly TaskCompletionSource<string> _commandLine = new();
 
         /// <summary>Loopback port the fake daemon listens on.</summary>
@@ -194,7 +198,9 @@ public class ClamavClientTests
         /// <summary>The raw command line (including its terminator) the client sent before the chunks.</summary>
         public Task<string> CommandLine => _commandLine.Task;
 
+        /// <summary>Completed with every chunk's length prefix once the zero terminator arrives.</summary>
         private readonly TaskCompletionSource<List<int>> _chunkLengths = new();
+        /// <summary>Completed with all chunk payloads concatenated once the zero terminator arrives.</summary>
         private readonly TaskCompletionSource<byte[]> _payload = new();
 
         /// <summary>The length prefix of every chunk received, in order (excluding the zero terminator).</summary>
@@ -203,6 +209,7 @@ public class ClamavClientTests
         /// <summary>All chunk payloads concatenated in arrival order.</summary>
         public Task<byte[]> Payload => _payload.Task;
 
+        /// <summary>Starts accepting on <paramref name="listener"/>, answering the single scan with <paramref name="response"/>.</summary>
         private FakeClamavServer(TcpListener listener, string response)
         {
             _listener = listener;
@@ -218,6 +225,7 @@ public class ClamavClientTests
             return new FakeClamavServer(listener, response);
         }
 
+        /// <summary>Accepts one client, records its command line and INSTREAM chunks, then writes <paramref name="response"/>.</summary>
         private async Task AcceptAndRespondAsync(string response)
         {
             using TcpClient client = await _listener.AcceptTcpClientAsync();
@@ -245,6 +253,7 @@ public class ClamavClientTests
             await stream.WriteAsync(Encoding.ASCII.GetBytes(response));
         }
 
+        /// <summary>Reads exactly <paramref name="count"/> bytes from <paramref name="stream"/> (fewer only if it ends first).</summary>
         private static async Task<byte[]> ReadExactlyAsync(Stream stream, int count)
         {
             byte[] buffer = new byte[count];
@@ -258,6 +267,7 @@ public class ClamavClientTests
             return buffer;
         }
 
+        /// <summary>Reads one byte at a time up to and including the first <c>'\n'</c>.</summary>
         private static async Task<string> ReadLineAsync(Stream stream)
         {
             var line = new StringBuilder();

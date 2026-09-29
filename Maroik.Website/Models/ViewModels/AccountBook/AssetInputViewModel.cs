@@ -6,17 +6,17 @@ namespace Maroik.Website.Models.ViewModels.AccountBook;
 /// <summary>
 /// Form model for creating or editing a personal asset (bank account / investment product).
 /// The asset is identified by the combination of <see cref="ProductName"/> and the
-/// logged-in account's email, so renaming requires the original name to be stored in
-/// <see cref="OriginalProductName"/> for the cascade-update to work correctly.
+/// logged-in account's email, so a rename needs the original name in
+/// <see cref="OriginalProductName"/> to find the row being renamed.
 /// </summary>
 public class AssetInputViewModel
 {
-    /// <summary>Name of the financial product (e.g. "My Savings Account") ?? part of the composite PK.</summary>
+    /// <summary>Name of the financial product (e.g. "My Savings Account") — part of the composite PK.</summary>
     [Required(ErrorMessage = "Please enter ProductName")]
     [Display(Name = "ProductName")]
     public string? ProductName { get; set; }
 
-    /// <summary>Asset category / type (e.g. "Deposit", "Stock").</summary>
+    /// <summary>Asset category — an <c>AssetItemType</c> member name (e.g. "FreeDepositAndWithdrawal", "CashAsset").</summary>
     [Required(ErrorMessage = "Please enter Item")]
     [Display(Name = "Item")]
     public string? Item { get; set; }
@@ -40,8 +40,9 @@ public class AssetInputViewModel
     public bool Deleted { get; set; }
 
     /// <summary>
-    /// Captures the asset's name before an edit so the service layer can cascade-rename
-    /// all income and expenditure records that reference this product name.
+    /// Captures the asset's name before an edit so the update can locate the existing row; the
+    /// database's ON UPDATE CASCADE foreign keys then carry a rename to every referencing
+    /// income / expenditure / fixed-income / fixed-expenditure record.
     /// </summary>
     public string? OriginalProductName { get; set; }
 }

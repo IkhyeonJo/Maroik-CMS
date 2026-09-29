@@ -187,7 +187,7 @@
 
                     $editAccountEmail.val(data.account.email);
                     $editAccountNickname.val(data.account.nickname);
-                    // `.change()` so select-dependent UI (role / timezone) re-syncs.
+                    // `.trigger("change")` so select-dependent UI (role / timezone) re-syncs.
                     $editAccountRole.val(data.account.role).trigger("change");
                     $editAccountTimeZone.val(data.account.timeZoneIanaId).trigger("change");
                     $editAccountLocked.prop("checked", data.account.locked);

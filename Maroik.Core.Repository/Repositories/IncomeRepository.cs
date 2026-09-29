@@ -18,7 +18,6 @@ public class IncomeRepository(ApplicationDbContext context)
     protected override DbSet<OrmIncome> Set => Context.Incomes;
 
     /// <inheritdoc />
-    /// <inheritdoc />
     // Always join the Asset navigation property so query results carry the monetary unit.
     protected override IQueryable<OrmIncome> ApplyIncludes(IQueryable<OrmIncome> query)
         => query.Include(x => x.Asset);

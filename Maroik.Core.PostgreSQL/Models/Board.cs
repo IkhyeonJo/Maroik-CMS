@@ -63,7 +63,9 @@ public partial class Board
     /// </summary>
     public bool Noticed { get; set; }
 
+    /// <summary>Files attached to this post.</summary>
     public virtual ICollection<BoardAttachedFile> BoardAttachedFiles { get; set; } = new List<BoardAttachedFile>();
 
+    /// <summary>Comments on this post (soft-deleted ones included).</summary>
     public virtual ICollection<BoardComment> BoardComments { get; set; } = new List<BoardComment>();
 }

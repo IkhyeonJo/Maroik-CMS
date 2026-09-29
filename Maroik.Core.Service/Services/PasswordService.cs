@@ -10,7 +10,8 @@ namespace Maroik.Core.Service.Services;
 /// </summary>
 public class PasswordService(ILogger<PasswordService> logger) : IPasswordService
 {
-    private const int WorkFactor = 13; // BCrypt work factor
+    /// <summary>BCrypt work factor (log2 of the key-expansion rounds) used for every new hash.</summary>
+    private const int WorkFactor = 13;
 
     /// <summary>
     /// A valid BCrypt hash of an unguessable random value, computed once per process. Used only by

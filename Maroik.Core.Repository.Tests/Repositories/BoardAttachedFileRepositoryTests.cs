@@ -17,6 +17,7 @@ public sealed class BoardAttachedFileRepositoryTests(DatabaseFixture database) :
 {
     private BoardAttachedFileRepository Sut => new(Context);
 
+    /// <summary>An unsaved attachment row for board <paramref name="boardId"/>.</summary>
     private static OrmBoardAttachedFile MakeFile(long boardId, string name = "file.pdf", long size = 1024) => new()
     {
         BoardId = boardId,
@@ -48,6 +49,7 @@ public sealed class BoardAttachedFileRepositoryTests(DatabaseFixture database) :
         return [.. boards.Select(b => b.Id)];
     }
 
+    /// <summary>Inserts <paramref name="files"/>, saves, and clears the change tracker so later reads hit the database.</summary>
     private async Task SeedAsync(params OrmBoardAttachedFile[] files)
     {
         await Context.BoardAttachedFiles.AddRangeAsync(files);

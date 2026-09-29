@@ -25,10 +25,10 @@ public class ExpenditureResponse
     /// <summary>Amount spent.</summary>
     public decimal Amount { get; set; }
 
-    /// <summary>Asset used as the payment method.</summary>
+    /// <summary>Asset the amount is debited from.</summary>
     public string? PaymentMethod { get; set; }
 
-    /// <summary>Debited asset product name.</summary>
+    /// <summary>Asset credited by a transfer-type expenditure; null for every other expenditure.</summary>
     public string? MyDepositAsset { get; set; }
 
     /// <summary>UTC timestamp when the expenditure was recorded.</summary>

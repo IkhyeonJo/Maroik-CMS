@@ -19,13 +19,13 @@ public class SubCategoryRequest
     /// <summary>Label displayed in the sidebar dropdown.</summary>
     public string? DisplayName { get; set; }
 
-    /// <summary>Icon path shown beside the sub-menu label.</summary>
+    /// <summary>CSS icon classes rendered beside the sub-menu label.</summary>
     public string? IconPath { get; set; }
 
     /// <summary>MVC action name this sub-menu item links to (shares the parent category's controller).</summary>
     public string? Action { get; set; }
 
-    /// <summary>Minimum role required to see this sub-menu item ("Admin" or "User").</summary>
+    /// <summary>The one role whose sidebar shows this sub-menu item ("Admin", "User" or "Anonymous"; exact match, not a hierarchy).</summary>
     public string? Role { get; set; }
 
     /// <summary>Display order within the parent category (ascending).</summary>

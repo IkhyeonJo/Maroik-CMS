@@ -13,8 +13,10 @@ namespace Maroik.Website.Tests.Extensions;
 /// </summary>
 public class CalendarEventViewModelExtensionsTests
 {
+    /// <summary>Mock <c>ICalendarService</c> injected into the system under test.</summary>
     private readonly Mock<ICalendarService> _calendarService = new();
 
+    /// <summary>A calendar with id <paramref name="id"/> and the given color.</summary>
     private static CalendarResponse MakeCalendar(long id, string? htmlColorCode = "#3788d8") => new()
     {
         Id = id,
@@ -22,6 +24,7 @@ public class CalendarEventViewModelExtensionsTests
         HtmlColorCode = htmlColorCode
     };
 
+    /// <summary>An all-day event titled <paramref name="title"/> in calendar <paramref name="calendarId"/>.</summary>
     private static CalendarEventResponse MakeEvent(long id, long calendarId, string title) => new()
     {
         Id = id,
@@ -32,6 +35,7 @@ public class CalendarEventViewModelExtensionsTests
         EndDate = new DateTime(2025, 6, 10, 0, 0, 0, DateTimeKind.Utc)
     };
 
+    /// <summary>Makes the calendar service return <paramref name="events"/>, grouped by calendar id.</summary>
     private void SetUpEvents(params CalendarEventResponse[] events) =>
         _calendarService
             .Setup(s => s.GetCalendarEventsAsync(It.IsAny<IEnumerable<long>>(), It.IsAny<CancellationToken>()))
@@ -168,6 +172,7 @@ public class CalendarEventViewModelExtensionsTests
 
     // -- GetCalendarEventDetailViewModelAsync ----------------------------------
 
+    /// <summary>Makes the single-event lookup return <paramref name="evt"/> and the HTML preparation pass content through.</summary>
     private void SetUpDetailEvent(CalendarEventResponse? evt)
     {
         _calendarService

@@ -10,6 +10,7 @@ namespace Maroik.Core.Client.Tests.Infrastructure;
 // ReSharper disable once ClassNeverInstantiated.Global
 public sealed class RabbitMqBrokerFixture : IAsyncLifetime
 {
+    /// <summary>The throwaway RabbitMQ broker container shared by the assembly's tests.</summary>
     private readonly RabbitMqContainer _broker = new RabbitMqBuilder("rabbitmq:4-alpine").Build();
 
     /// <summary>The broker's AMQP connection string (guest login).</summary>

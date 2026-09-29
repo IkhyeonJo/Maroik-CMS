@@ -56,6 +56,7 @@
     // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
     // missing or unparseable.
     const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || (window as any).MaroikDefaultMaxAttachedFileSizeBytes;
+    // Editor height (px) of both summernote instances.
     const boardHeight = 300;
 
     /** base64 -> Blob, for turning server-embedded image/attachment payloads into object URLs. */
@@ -316,8 +317,8 @@
 
     /**
      * Submits an edit to an existing post. Same multipart shape as `WriteBoard`
-     * plus the board `ID`; on success returns to that post's detail view at the
-     * caller's page.
+     * minus the notice flag (pinning is decided at write time only), plus the
+     * board `Id`; on success returns to that post's detail view at the caller's page.
      *
      * @param editBoardId    id of the post being edited (from a `data-*` attribute).
      * @param editCurrentPage list page to return to.

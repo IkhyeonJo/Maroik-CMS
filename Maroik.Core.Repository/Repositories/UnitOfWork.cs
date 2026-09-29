@@ -26,6 +26,7 @@ namespace Maroik.Core.Repository.Repositories;
 /// </remarks>
 public class UnitOfWork(ApplicationDbContext context) : IUnitOfWork
 {
+    /// <summary>The one live transaction, or null when none has been begun (or it has already ended).</summary>
     private IDbContextTransaction? _transaction;
 
     /// <inheritdoc />

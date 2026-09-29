@@ -56,6 +56,7 @@ public static class LocalizableError
     public static Error Failure(string code, string resourceTemplate, params object[] args) =>
         Error.Failure(code, string.Format(resourceTemplate, args), Metadata(resourceTemplate, args));
 
+    /// <summary>Builds the <see cref="Error.Metadata"/> dictionary carrying the unformatted template and its arguments.</summary>
     private static Dictionary<string, object> Metadata(string resourceTemplate, object[] args) => new()
     {
         [ResourceKeyMetadataKey] = resourceTemplate,

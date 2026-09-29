@@ -50,7 +50,7 @@ public class CalendarFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture)
         var page = await NewPageAsync();
         await GotoAsync(page, "/Calendar/AnonymousIndex");
 
-        // The page must render at least one <div> ?? confirming the layout loaded
+        // The page must render at least one <div> — confirming the layout loaded
         int divCount = await page.Locator("div").CountAsync();
         Assert.True(divCount > 0);
     }

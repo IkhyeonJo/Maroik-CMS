@@ -50,6 +50,7 @@ public static class DashboardViewModelMapper
 
     // ── Mapping helpers ──────────────────────────────────────────────────────
 
+    /// <summary>Maps income DTOs to the dashboard's income rows: currency looked up by deposit asset, timestamps converted to <paramref name="timeZoneId"/>.</summary>
     private static List<IncomeOutputViewModel> MapIncomes(
         IEnumerable<IncomeResponse> items,
         IReadOnlyDictionary<string, string?> currencyByProduct,
@@ -71,6 +72,7 @@ public static class DashboardViewModelMapper
             })
         ];
 
+    /// <summary>Maps expenditure DTOs to the dashboard's expenditure rows: currency looked up by payment asset, timestamps converted to <paramref name="timeZoneId"/>.</summary>
     private static List<ExpenditureOutputViewModel> MapExpenditures(
         IEnumerable<ExpenditureResponse> items,
         IReadOnlyDictionary<string, string?> currencyByProduct,
@@ -95,9 +97,11 @@ public static class DashboardViewModelMapper
 
     // ── Breakdown assignment (lookups only — DashboardService already computed every number) ────
 
+    /// <summary>The pre-computed amount of <paramref name="subClass"/> under <paramref name="mainClass"/>, or 0 when absent.</summary>
     private static decimal Amount(IReadOnlyDictionary<string, FinanceBreakdownDto> breakdown, string mainClass, string subClass) =>
         breakdown.TryGetValue(mainClass, out var b) ? b.AmountBySubClass.GetValueOrDefault(subClass) : 0m;
 
+    /// <summary>The pre-computed percentage share of <paramref name="subClass"/> under <paramref name="mainClass"/>, or 0 when absent.</summary>
     private static double Pct(IReadOnlyDictionary<string, FinanceBreakdownDto> breakdown, string mainClass, string subClass) =>
         breakdown.TryGetValue(mainClass, out var b) ? b.PercentageBySubClass.GetValueOrDefault(subClass) : 0.0;
 

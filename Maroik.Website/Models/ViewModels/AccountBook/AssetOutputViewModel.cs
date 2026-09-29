@@ -9,12 +9,12 @@ namespace Maroik.Website.Models.ViewModels.AccountBook;
 /// </summary>
 public class AssetOutputViewModel
 {
-    /// <summary>Name of the financial product ?? forms part of the composite primary key.</summary>
+    /// <summary>Name of the financial product — forms part of the composite primary key.</summary>
     [Required(ErrorMessage = "Please enter ProductName")]
     [Display(Name = "ProductName")]
     public string? ProductName { get; set; }
 
-    /// <summary>Asset category / type (e.g. "Deposit", "Stock").</summary>
+    /// <summary>Asset category — an <c>AssetItemType</c> member name (e.g. "FreeDepositAndWithdrawal", "CashAsset").</summary>
     [Required(ErrorMessage = "Please enter Item")]
     [Display(Name = "Item")]
     public string? Item { get; set; }
@@ -29,12 +29,12 @@ public class AssetOutputViewModel
     [Display(Name = "MonetaryUnit")]
     public string? MonetaryUnit { get; set; }
 
-    /// <summary>UTC timestamp when the asset record was first created.</summary>
+    /// <summary>When the asset record was first created, converted to the viewer's time zone.</summary>
     [Required(ErrorMessage = "Please enter Created")]
     [Display(Name = "Created")]
     public DateTime Created { get; set; }
 
-    /// <summary>UTC timestamp of the most recent update to this asset record.</summary>
+    /// <summary>When this asset record was last updated, converted to the viewer's time zone.</summary>
     [Required(ErrorMessage = "Please enter Updated")]
     [Display(Name = "Updated")]
     public DateTime Updated { get; set; }

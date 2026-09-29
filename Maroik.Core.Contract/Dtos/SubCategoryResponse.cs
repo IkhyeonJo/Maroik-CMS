@@ -19,13 +19,13 @@ public class SubCategoryResponse
     /// <summary>Label displayed in the sidebar dropdown.</summary>
     public string? DisplayName { get; set; }
 
-    /// <summary>Icon path displayed beside the label.</summary>
+    /// <summary>CSS icon classes rendered beside the label.</summary>
     public string? IconPath { get; set; }
 
     /// <summary>Target MVC action name.</summary>
     public string? Action { get; set; }
 
-    /// <summary>Minimum role to display this sub-menu item.</summary>
+    /// <summary>The one role whose sidebar shows this sub-menu item ("Admin", "User" or "Anonymous"; exact match, not a hierarchy).</summary>
     public string? Role { get; set; }
 
     /// <summary>Display order within the parent category (ascending).</summary>

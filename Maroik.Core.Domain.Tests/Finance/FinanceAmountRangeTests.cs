@@ -9,7 +9,9 @@ namespace Maroik.Core.Domain.Tests.Finance;
 /// </summary>
 public class FinanceAmountRangeTests
 {
+    /// <summary>The largest amount (in absolute value) the policy accepts.</summary>
     private const decimal Max = FinanceAmountPolicy.MaxAbsoluteAmount;
+    /// <summary>The smallest two-decimal amount above <see cref="Max"/> (<see cref="Max"/> + 0.01).</summary>
     private const decimal OverMax = 10_000_000_000_000_000m;
 
     // -- FinanceAmountPolicy ---------------------------------------------------

@@ -6,7 +6,7 @@ namespace Maroik.Website.Models.ViewModels.Dashboard;
 /// Aggregates per-category income and expenditure totals for both the selected year
 /// and the selected year-month, together with percentage breakdowns for chart rendering.
 /// Property names follow the pattern: {MainClass}{SubClass}{Year|YearMonth}
-/// and Percentage{MainClass}{SubClass}{Year|YearMonth}.
+/// and PercentageOf{MainClass}{SubClass}{Year|YearMonth}.
 /// </summary>
 public class UserIndexOutputViewModel
 {

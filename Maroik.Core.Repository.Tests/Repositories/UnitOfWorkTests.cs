@@ -14,6 +14,7 @@ namespace Maroik.Core.Repository.Tests.Repositories;
 /// </summary>
 public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBase(database)
 {
+    /// <summary>A unit of work over a fresh context.</summary>
     private UnitOfWork NewUnitOfWork() => new(NewDbContext());
 
     // -- Null-guard paths (no BeginAsync) -------------------------------------

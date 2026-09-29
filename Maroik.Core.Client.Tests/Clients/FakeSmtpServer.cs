@@ -16,9 +16,13 @@ namespace Maroik.Core.Client.Tests.Clients;
 /// </summary>
 internal sealed class FakeSmtpServer : IAsyncDisposable
 {
+    /// <summary>Loopback listener on an OS-assigned port.</summary>
     private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
+    /// <summary>Signalled on dispose to stop the accept loop.</summary>
     private readonly CancellationTokenSource _stop = new();
+    /// <summary>The running accept loop.</summary>
     private readonly Task _acceptLoop;
+    /// <summary>One task per accepted connection, awaited on dispose.</summary>
     private readonly List<Task> _sessions = [];
 
     /// <summary>How the server reacts to <c>AUTH</c>.</summary>
@@ -52,6 +56,7 @@ internal sealed class FakeSmtpServer : IAsyncDisposable
         _acceptLoop = Task.Run(AcceptLoopAsync);
     }
 
+    /// <summary>Accepts connections until stopped, handling each in its own session task.</summary>
     private async Task AcceptLoopAsync()
     {
         try
@@ -66,6 +71,7 @@ internal sealed class FakeSmtpServer : IAsyncDisposable
         catch (ObjectDisposedException) { /* shutting down */ }
     }
 
+    /// <summary>Speaks a minimal SMTP dialogue on one connection (greeting, EHLO, STARTTLS when a certificate is set, AUTH, MAIL/RCPT/DATA, QUIT), recording what it receives.</summary>
     private async Task HandleSessionAsync(TcpClient client)
     {
         using (client)
@@ -133,6 +139,7 @@ internal sealed class FakeSmtpServer : IAsyncDisposable
         }
     }
 
+    /// <summary>Handles an <c>AUTH</c> command (with or without an initial payload), accepting or rejecting per <see cref="RejectAuthentication"/>.</summary>
     private async Task HandleAuthAsync(string line, StreamReader reader, StreamWriter writer)
     {
         string[] parts = line.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);

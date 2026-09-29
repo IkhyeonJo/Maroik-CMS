@@ -28,11 +28,14 @@ public class AccountController(
     #endregion
 
     #region Login
-    /// <summary>Displays the login form (GET) or processes login credentials (POST).</summary>
+    /// <summary>Displays the login form.</summary>
     [HttpGet]
     public IActionResult Login() => View();
 
-    /// <summary>Displays the login form (GET) or processes login credentials (POST).</summary>
+    /// <summary>
+    /// Processes login credentials: on success regenerates the session id, stores the account in it and
+    /// redirects (to the profile page when a password change is forced); otherwise re-renders the form with the error.
+    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginInputViewModel loginInputViewModel, CancellationToken ct)
@@ -89,7 +92,7 @@ public class AccountController(
     #endregion
 
     #region Register
-    /// <summary>Displays the registration form (GET) or processes new-account / resend-email requests (POST).</summary>
+    /// <summary>Displays the registration form, pre-selecting the time zone implied by the request culture.</summary>
     [HttpGet]
     public IActionResult Register()
     {
@@ -104,7 +107,10 @@ public class AccountController(
         });
     }
 
-    /// <summary>Displays the registration form (GET) or processes new-account / resend-email requests (POST).</summary>
+    /// <summary>
+    /// Processes a registration (when a password is posted) or a resend-confirmation-email request (when
+    /// only the email is posted). Throttled per target address by <see cref="ThrottleEmailSendAttribute"/>.
+    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [ThrottleEmailSend]
@@ -176,8 +182,8 @@ public class AccountController(
 
             if (!result.Success)
             {
-                // Rejected before / instead of a mail send (nickname taken, weak password, account
-                // already confirmed, ...): the caller may fix the form and retry immediately.
+                // Rejected before / instead of a mail send (unknown address, account already
+                // confirmed, mail could not be queued, ...): the caller may retry immediately.
                 ThrottleEmailSendAttribute.ReleaseCooldownClaim(HttpContext);
                 TempData["Error"] = localizer.ToRawText(result.ErrorKey, result.ErrorArgs);
                 ViewBag.ResendEmail = result.ShowResendEmail;
@@ -243,11 +249,14 @@ public class AccountController(
     #endregion
 
     #region ForgotPassword
-    /// <summary>Displays the forgot-password form (GET) or sends a reset-password email (POST).</summary>
+    /// <summary>Displays the forgot-password form.</summary>
     [HttpGet]
     public IActionResult ForgotPassword() => View();
 
-    /// <summary>Displays the forgot-password form (GET) or sends a reset-password email (POST).</summary>
+    /// <summary>
+    /// Queues a reset-password email when the address belongs to a confirmed account, and always shows the
+    /// same "mail sent" page (no email enumeration). Throttled per target address by <see cref="ThrottleEmailSendAttribute"/>.
+    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [ThrottleEmailSend]
@@ -266,7 +275,7 @@ public class AccountController(
         return View();
     }
 
-    /// <summary>Validates the reset token (GET) or applies the new password (POST).</summary>
+    /// <summary>Opens the mailed reset link: validates the token and shows the new-password form, or the invalid-link message.</summary>
     [HttpGet]
     public async Task<IActionResult> ResetPassword(string resetPasswordToken, CancellationToken ct)
     {
@@ -276,7 +285,7 @@ public class AccountController(
         return View();
     }
 
-    /// <summary>Validates the reset token (GET) or applies the new password (POST).</summary>
+    /// <summary>Applies the new password for the posted reset token; an invalid token shows the invalid-link message.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResetPassword(LoginInputViewModel loginInputViewModel, CancellationToken ct)

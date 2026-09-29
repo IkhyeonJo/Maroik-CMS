@@ -16,7 +16,7 @@ public class CategoryResponse
     /// <summary>Label shown in the sidebar navigation.</summary>
     public string? DisplayName { get; set; }
 
-    /// <summary>Icon path displayed beside the label.</summary>
+    /// <summary>CSS icon classes rendered beside the label (e.g. "nav-icon fas fa-bell").</summary>
     public string? IconPath { get; set; }
 
     /// <summary>Target MVC controller name.</summary>
@@ -25,7 +25,7 @@ public class CategoryResponse
     /// <summary>Target MVC action name.</summary>
     public string? Action { get; set; }
 
-    /// <summary>Minimum role to display this menu item ("Admin" or "User").</summary>
+    /// <summary>The one role whose sidebar shows this menu item ("Admin", "User" or "Anonymous"; exact match, not a hierarchy).</summary>
     public string? Role { get; set; }
 
     /// <summary>Sidebar display order (ascending).</summary>

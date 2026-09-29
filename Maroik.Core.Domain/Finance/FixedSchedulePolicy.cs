@@ -62,6 +62,8 @@ public static class FixedSchedulePolicy
         }
         catch
         {
+            // ArgumentOutOfRangeException from the DateTime constructor: the (month, day) pair does
+            // not exist this year (e.g. Feb 29 in a non-leap year) — an expected, documented "not noticed".
             return false;
         }
     }

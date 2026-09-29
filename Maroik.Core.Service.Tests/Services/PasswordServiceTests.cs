@@ -11,9 +11,12 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class PasswordServiceTests
 {
+    /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<PasswordService> _logger = new();
+    /// <summary>The service under test.</summary>
     private readonly PasswordService _sut;
 
+    /// <summary>Creates the service under test over the capturing logger.</summary>
     public PasswordServiceTests() => _sut = new PasswordService(_logger);
 
     // -- HashPassword --------------------------------------------------------

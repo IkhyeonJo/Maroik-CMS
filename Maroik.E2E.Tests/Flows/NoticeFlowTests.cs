@@ -11,6 +11,7 @@ namespace Maroik.E2E.Tests.Flows;
 [Collection("E2E")]
 public class NoticeFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture)
 {
+    /// <summary>Selects the grid row containing <paramref name="rowText"/> and waits until it is highlighted.</summary>
     private static async Task SelectGridRowAsync(IPage page, string rowText)
     {
         // The grid loads over AJAX; a click on a row's cell selects it (the row gets "table-primary").

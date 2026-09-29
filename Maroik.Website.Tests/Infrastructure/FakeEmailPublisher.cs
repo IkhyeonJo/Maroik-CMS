@@ -15,12 +15,13 @@ namespace Maroik.Website.Tests.Infrastructure;
 /// </summary>
 public sealed class FakeEmailPublisher : IEmailPublisher
 {
+    /// <summary>Every message published so far.</summary>
     private readonly ConcurrentBag<SendEmailMessage> _published = [];
 
     /// <summary>All messages published so far, across every test that shares this factory instance.</summary>
     public IReadOnlyCollection<SendEmailMessage> PublishedMessages => _published;
 
-    /// <summary>Publish async.</summary>
+    /// <summary>Records <paramref name="message"/> instead of queuing it.</summary>
     public Task PublishAsync(SendEmailMessage message, CancellationToken ct = default)
     {
         _published.Add(message);

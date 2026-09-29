@@ -17,11 +17,14 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
     
+    /// <summary>Seeds (if missing) a User account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsync(string email) =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
 
+    /// <summary>Runs <paramref name="seed"/> against a fresh context and saves.</summary>
     private void Seed(Action<ApplicationDbContext> seed)
     {
         using var scope = factory.Services.CreateScope();
@@ -30,12 +33,14 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
         db.SaveChanges();
     }
 
+    /// <summary>Inserts a 1000-unit asset of <paramref name="email"/> in <paramref name="unit"/>.</summary>
     private void SeedAsset(string email, string productName, string unit = "KRW") => Seed(db => db.Assets.Add(new Asset
     {
         ProductName = productName, AccountEmail = email, Item = "FreeDepositAndWithdrawal", MonetaryUnit = unit,
         Amount = 1000m, Note = "", Deleted = false, Created = DateTime.UtcNow, Updated = DateTime.UtcNow
     }));
 
+    /// <summary>Inserts an income of <paramref name="email"/> into <paramref name="asset"/> and returns its id.</summary>
     private long SeedIncome(string email, string asset, string content, decimal amount = 100m)
     {
         long id = 0;
@@ -53,12 +58,14 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
         return id;
     }
 
+    /// <summary>Inserts a 50-unit consumer-spending expenditure of <paramref name="email"/> paid from <paramref name="asset"/>.</summary>
     private void SeedExpenditure(string email, string asset, string content) => Seed(db => db.Expenditures.Add(new Expenditure
     {
         AccountEmail = email, PaymentMethod = asset, MyDepositAsset = null, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses",
         Content = content, Amount = 50m, Note = "", Created = DateTime.UtcNow, Updated = DateTime.UtcNow
     }));
 
+    /// <summary>Inserts a fixed income of <paramref name="email"/> into <paramref name="asset"/> and returns its id.</summary>
     private long SeedFixedIncome(string email, string asset, string content)
     {
         long id = 0;
@@ -77,6 +84,7 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
         return id;
     }
 
+    /// <summary>Inserts a 70-unit fixed expenditure of <paramref name="email"/> paid from <paramref name="asset"/>, maturing in a year.</summary>
     private void SeedFixedExpenditure(string email, string asset, string content) => Seed(db => db.FixedExpenditures.Add(new FixedExpenditure
     {
         AccountEmail = email, PaymentMethod = asset, MyDepositAsset = null, MainClass = "ConsumerSpending", SubClass = "Tax",
@@ -84,6 +92,7 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
         Note = "", Unpunctuality = false, Created = DateTime.UtcNow, Updated = DateTime.UtcNow
     }));
 
+    /// <summary>Sends a GET to <paramref name="url"/> with the session cookie, marked as an AJAX request when <paramref name="ajax"/> is set.</summary>
     private async Task<HttpResponseMessage> GetAsync(string url, AuthenticatedSession session, bool ajax = false)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -92,6 +101,7 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
         return await _client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
+    /// <summary>Posts an empty JSON request to <paramref name="url"/>, asserts 200, and returns the response body.</summary>
     private async Task<string> PostJsonAsync(AuthenticatedSession session, string url)
     {
         using var request = session.BuildJsonPostRequest(url);

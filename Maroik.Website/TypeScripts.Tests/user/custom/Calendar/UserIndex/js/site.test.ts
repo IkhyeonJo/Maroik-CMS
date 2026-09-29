@@ -14,14 +14,16 @@ import {
     type Handle
 } from "@tests/_common/calendarSuite";
 
-// wwwroot/user/custom/Calendar/UserIndex/js/site.js  (2,775 lines)
+// wwwroot/user/custom/Calendar/UserIndex/js/site.js
 
+/** Suffixes of the `localizer*` hidden inputs the page publishes. */
 const LOCALIZERS = [
     "Email", "Notification", "Minutes", "Hours", "Days", "Weeks", "BeforeAt", "IETFLanguageTag",
     "Today", "Month", "ConfirmDelete", "ThisFieldRequired", "ErrorInvalidNumber",
     "ErrorRangeMinute", "ErrorRangeHour", "ErrorRangeDay", "ErrorRangeWeek", "FailedToLoadCalendars",
 ];
 
+/** The user calendar page DOM with empty calendar and event data. */
 function fixture(): string {
     return (
         antiForgery +
@@ -335,10 +337,12 @@ describe("user/Calendar/UserIndex", () => {
 
 // ==== extended coverage: events, calendars of interest and the shared calendar behaviour ===============================
 
+/** "Other calendars" checkboxes 9 (checked) and 8. */
 const others = `<div id="otherCalendars">
   <label id="lblOtherCalendar9"><input type="checkbox" class="chkOtherCalendar" checked /></label>
   <label id="lblOtherCalendar8"><input type="checkbox" class="chkOtherCalendar" /></label></div>`;
 
+/** Loads the user calendar page with both calendar lists, `opts.my` / `opts.other` as the event data and the shared extras. */
 function build(opts: { my?: unknown[]; other?: unknown[]; body?: (html: string) => string } = {}) {
     let html = fixture()
             .replace("<div id=\"myCalendars\"></div>", mine)
@@ -396,6 +400,7 @@ describe("user/Calendar/UserIndex — a refused events reply", () => {
 });
 
 describe("user/Calendar/UserIndex — calendars of interest", () => {
+    /** Opens the "calendars of interest" dialog and answers it with calendars 11 (checked) and 12. */
     const openDialog = (h: Handle) => {
         h.$("#aBrowseCalendarsOfInterest").trigger("click");
         h.lastAjax().success!({
@@ -528,6 +533,7 @@ describe("user/Calendar/UserIndex — calendars of interest", () => {
 
 describe("user/Calendar/UserIndex — edit form and shared-event view in detail", () => {
     const png = "iVBORw0KGgo="; // any base64 — only decoded into a Blob
+    /** The "other event" popup and the read-only view modal. */
     const detailDom = `
     <div id="otherCalendarEventPopup"></div><div id="otherCalendarEventPopupTitle"></div>
     <div id="divOtherCalendarEventPopupAllDayChecked"></div><div id="divOtherCalendarEventPopupAllDayUnchecked"></div>
@@ -545,6 +551,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
     <div id="divViewEventNotificationAllDayChecked"><div id="viewCalendarEventNotificationAllDayChecked"></div></div>
     <div id="divViewEventNotificationAllDayUnchecked"><div id="viewCalendarEventNotificationAllDayUnchecked"></div></div>
 `;
+    /** Loads the page with {@link detailDom}, stubbed object URLs and a modal spy. */
     const setup = () => {
         const h = build({ body: (html) => html + detailDom });
         (h.win as any).URL.createObjectURL = vi.fn(() => "blob:fake");
@@ -552,13 +559,16 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
         spyModal(h);
         return h;
     };
+    /** Clicks event 55 (type "My" unless `over` says otherwise) through the calendar's `eventClick` callback. */
     const click = (h: Handle, over: Record<string, unknown>) => {
         const el = h.win.document.createElement("div");
         h.win.document.body.appendChild(el);
         const event = { id: "55", title: "T", allDay: false, extendedProps: { calendarType: "My" }, ...over };
         return h.calendarOptions[0].eventClick({ el, event });
     };
+    /** A stored attachment as the event reply describes it. */
     const attachment = { name: "spec", extension: ".pdf", size: 2_500_000 };
+    /** An accepted event reply for event 55, with `over` merged into the event. */
     const payload = (over: Record<string, unknown> = {}) => ({
         result: true, calendarEvent: {
             id: 55, title: "Mine", allDay: false, displayStartDate: "2024-05-01 09:05:00", displayEndDate: "2024-05-02 10:10:00",
@@ -566,6 +576,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
             calendarEventAttachedFile: null, calendarId: 1, status: "Busy", serializedCalendarReminders: "[]", ...over
         }
     });
+    /** A stored e-mail reminder (all offsets empty, 09:00) with `over` merged in. */
     const reminder = (over: Record<string, unknown>) => ({
         Method: "Email", MinutesBeforeEvent: null, HoursBeforeEvent: null,
         DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: "09:00:00", ...over
@@ -581,6 +592,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
         inner.complete!();
     };
 
+    /** The inline `display` style of the element matching `id` (jsdom does no layout). */
     const display = (h: Handle, id: string) => (h.$(id)[0] as HTMLElement).style.display;
 
     describe("shared-event view", () => {

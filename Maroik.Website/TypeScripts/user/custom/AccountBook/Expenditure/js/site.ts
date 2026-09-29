@@ -42,6 +42,7 @@
     const $createExpenditureNote = $("#createExpenditureNote");
     const $createExpenditureMyDepositAsset = $("#createExpenditureMyDepositAsset");
     const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
+    // Localized toast shown when the amount-label request itself fails (transport error).
     const failedToLoadAmountLabelMessage = $("#localizerFailedToLoadAmountLabel").val() as string;
     const $createExpenditureDialogModal = $("#createExpenditureDialogModal");
     const $editExpenditureId = $("#editExpenditureId");
@@ -268,9 +269,9 @@
 
     /**
      * Create-expenditure modal submit: validate, assemble the `Created`
-     * timestamp from the separate date / time fields (`month - 1` for 0-indexed
-     * JS months, `.toISOString()` local -> UTC), POST as JSON, then close /
-     * reload / toast.
+     * timestamp from the separate date / time fields as the account's local
+     * "yyyy-MM-dd HH:mm:ss" wall-clock string (the server converts it to UTC),
+     * POST as JSON, then close / reload / toast.
      */
     function CreateExpenditure() {
 

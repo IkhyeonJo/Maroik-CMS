@@ -3,7 +3,7 @@
 namespace Maroik.Core.Contract.Dtos;
 
 /// <summary>
-/// Data transfer object used to create or soft-delete a comment on a board post.
+/// Data transfer object used to create a comment on a board post (deletion takes only the comment ID).
 /// </summary>
 public class BoardCommentRequest
 {

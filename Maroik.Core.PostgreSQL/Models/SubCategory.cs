@@ -48,5 +48,6 @@ public partial class SubCategory
     /// </summary>
     public long Order { get; set; }
 
+    /// <summary>The category this item belongs to.</summary>
     public virtual Category Category { get; set; } = null!;
 }

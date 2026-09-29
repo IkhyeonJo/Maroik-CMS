@@ -14,8 +14,10 @@ namespace Maroik.Website.Tests.Mappings;
 /// </summary>
 public class DashboardViewModelMapperTests
 {
+    /// <summary>The viewer time zone used by the mapping tests.</summary>
     private const string Utc = "UTC";
 
+    /// <summary>An income of <paramref name="amount"/> in the given classes, deposited into <paramref name="asset"/>.</summary>
     private static IncomeResponse Income(string mainClass, string subClass, decimal amount, string? asset = "Bank") => new()
     {
         Id = 1,
@@ -27,6 +29,7 @@ public class DashboardViewModelMapperTests
         Updated = new DateTime(2025, 1, 2, 0, 0, 0, DateTimeKind.Utc)
     };
 
+    /// <summary>An expenditure of <paramref name="amount"/> in the given classes, paid by <paramref name="paymentMethod"/>.</summary>
     private static ExpenditureResponse Expenditure(string mainClass, string subClass, decimal amount, string? paymentMethod = "Card") => new()
     {
         Id = 1,
@@ -38,6 +41,7 @@ public class DashboardViewModelMapperTests
         Updated = new DateTime(2025, 1, 2, 0, 0, 0, DateTimeKind.Utc)
     };
 
+    /// <summary>A breakdown with the given total and per-sub-class amounts and percentages.</summary>
     private static FinanceBreakdownDto Breakdown(decimal total, params (string SubClass, decimal Amount, double Percentage)[] entries) => new()
     {
         Total = total,
@@ -45,6 +49,7 @@ public class DashboardViewModelMapperTests
         PercentageBySubClass = entries.ToDictionary(e => e.SubClass, e => e.Percentage)
     };
 
+    /// <summary>A dashboard DTO with empty collections and fixed years, to be adjusted per test.</summary>
     private static DashboardDto BaseDto() => new()
     {
         DefaultMonetaryUnit = "KRW",

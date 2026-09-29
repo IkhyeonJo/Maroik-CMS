@@ -20,12 +20,19 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class BoardServiceTests
 {
+    /// <summary>Mock <c>IBoardRepository</c> injected into the system under test.</summary>
     private readonly Mock<IBoardRepository> _boardRepo = new();
+    /// <summary>Mock <c>IBoardAttachedFileRepository</c> injected into the system under test.</summary>
     private readonly Mock<IBoardAttachedFileRepository> _attachedFileRepo = new();
+    /// <summary>Mock <c>IBoardCommentRepository</c> injected into the system under test.</summary>
     private readonly Mock<IBoardCommentRepository> _commentRepo = new();
+    /// <summary>Mock <c>IFileClient</c> injected into the system under test.</summary>
     private readonly Mock<IFileClient> _fileClient = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Mock <c>IAttachmentContentService</c> injected into the system under test.</summary>
     private readonly Mock<IAttachmentContentService> _attachmentContent = new();
+    /// <summary>Settings with a fake file-storage URL.</summary>
     private readonly IOptions<ServerSetting> _settings =
         Options.Create(new ServerSetting { FileStorageBaseUrl = "https://files.example.com" });
 
@@ -40,6 +47,7 @@ public class BoardServiceTests
         _attachmentContent.Setup(s => s.SanitizeContent(It.IsAny<string>())).Returns<string>(html => html);
     }
 
+    /// <summary>The service under test over the mocked dependencies.</summary>
     private BoardService CreateSut() => new(
         _boardRepo.Object,
         _attachedFileRepo.Object,
@@ -52,10 +60,12 @@ public class BoardServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A persisted free-forum post whose id, writer and flags are set by the arguments.</summary>
     private static Board MakeBoard(long id = 1, string writer = "Alice", bool deleted = false, bool locked = false) =>
         Board.Reconstitute(id, BoardTypes.FreeForum, "Test Title", "Test Content", writer,
             DateTime.UtcNow, DateTime.UtcNow, 0L, deleted, locked, false);
 
+    /// <summary>A persisted top-level comment on board 1.</summary>
     private static BoardComment MakeComment(long id = 1, string writer = "Alice", long order = 0L) =>
         BoardComment.Reconstitute(id, 1L, order, null, writer, "Comment", DateTime.UtcNow, false);
 
@@ -76,7 +86,7 @@ public class BoardServiceTests
 
     /// <summary>
     /// Verifies that <c>GetBoardByIdAsync</c> returns null when the post's type doesn't match
-    /// <paramref name="requiredType"/> — e.g. a caller scoped to PrivateNote must not be able to
+    /// the required board type — e.g. a caller scoped to PrivateNote must not be able to
     /// read a FreeForum post (or vice versa) just by supplying its ID.
     /// </summary>
     [Fact]
@@ -93,6 +103,7 @@ public class BoardServiceTests
 
     // -- GetBoardPageAsync ------------------------------------------------------
 
+    /// <summary>An unfiltered first-page free-forum query.</summary>
     private static BoardPageQuery MakeQuery() => new(
         BoardTypes.FreeForum, OwnerNickname: null, SearchType: null, SearchText: null,
         IsLoggedIn: false, ViewerRole: null, ViewerNickname: null, Page: 1, PageSize: 10);
@@ -135,9 +146,11 @@ public class BoardServiceTests
 
     // -- CanView ----------------------------------------------------------------
 
+    /// <summary>A board response carrying only the fields the view-permission check reads.</summary>
     private static BoardResponse MakeBoardResponse(string type, string writer = "Alice", bool locked = false) =>
         new() { Type = type, Writer = writer, Locked = locked };
 
+    /// <summary>A viewer with the given nickname and role.</summary>
     private static AccountResponse MakeAccount(string nickname, string role = Role.User) =>
         new() { Nickname = nickname, Role = role };
 
@@ -916,9 +929,11 @@ public class BoardServiceTests
 
     // -- EditBoardAsync: the four attachment states ------------------------------
 
+    /// <summary>A tiny zip attachment named <paramref name="name"/>.</summary>
     private static AttachedFileDto Zip(string name = "new.zip") =>
         new() { FileName = name, ContentType = "application/zip", Bytes = [1, 2], Size = 2 };
 
+    /// <summary>Arranges an editable post by Alice whose current attachment is <paramref name="previous"/>, with uploads succeeding.</summary>
     private void SetupEditableBoardWithAttachment(BoardAttachedFile? previous)
     {
         _boardRepo.Setup(r => r.FindActiveByIdForUpdateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).ReturnsAsync(MakeBoard(writer: "Alice"));
@@ -928,6 +943,7 @@ public class BoardServiceTests
             .ReturnsAsync(true);
     }
 
+    /// <summary>An edit request for post 1 with a new title and content.</summary>
     private static BoardRequest EditRequest() =>
         new() { Id = 1, Type = BoardTypes.FreeForum, Title = "New Title", Content = "New Content" };
 

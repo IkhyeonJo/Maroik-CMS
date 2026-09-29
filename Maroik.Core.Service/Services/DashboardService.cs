@@ -297,6 +297,7 @@ public class DashboardService(
             mainClass => ToDto(FinanceBreakdownPolicy.Compute(byMainClass[mainClass].Select(i => (i.SubClass, i.Amount)))));
     }
 
+    /// <summary>Copies a domain <see cref="FinanceBreakdownPolicy.SubClassBreakdown"/> into its DTO (fresh, mutable dictionaries).</summary>
     private static FinanceBreakdownDto ToDto(FinanceBreakdownPolicy.SubClassBreakdown breakdown) => new()
     {
         Total = breakdown.Total,

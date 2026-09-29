@@ -16,17 +16,21 @@ namespace Maroik.Core.Client.Tests.Clients;
 /// </summary>
 public class RabbitMqEmailPublisherBrokerTests(RabbitMqBrokerFixture broker) : IClassFixture<RabbitMqBrokerFixture>
 {
+    /// <summary>The message every test publishes.</summary>
     private static readonly SendEmailMessage _message = new("to@test.com", "Subject", "<p>Body</p>", "corr-42");
 
+    /// <summary>A publisher against the shared broker, with a short reconnect grace window unless one is given.</summary>
     private RabbitMqEmailPublisher CreatePublisher(TimeSpan? grace = null) =>
         new(broker.CreateFactory(), Mock.Of<ILogger<RabbitMqEmailPublisher>>(), grace ?? TimeSpan.FromMilliseconds(300));
 
+    /// <summary>Opens a separate connection + channel to the broker for inspecting queues.</summary>
     private async Task<(IConnection Connection, IChannel Channel)> OpenAsync()
     {
         IConnection connection = await broker.CreateFactory().CreateConnectionAsync(TestContext.Current.CancellationToken);
         return (connection, await connection.CreateChannelAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 
+    /// <summary>Polls <paramref name="queue"/> (up to ~5 s) until a message arrives and returns it unacked.</summary>
     private static async Task<BasicGetResult> GetAsync(IChannel channel, string queue)
     {
         for (int i = 0; i < 50; i++)

@@ -32,7 +32,7 @@ public class LoginOutputViewModel
 
 
     /// <summary>
-    /// Password confirmation field ?? must match <see cref="Password"/> exactly.
+    /// Password confirmation field — must match <see cref="Password"/> exactly.
     /// Validated with a <see cref="CompareAttribute"/> against <see cref="Password"/>.
     /// </summary>
     [Required(ErrorMessage = "Confirm Password is required")]
@@ -46,7 +46,7 @@ public class LoginOutputViewModel
     [StringLength(255, ErrorMessage = "Must be between 1 and 255 characters", MinimumLength = 1)]
     public string? Nickname { get; set; }
 
-    /// <summary>Whether the user agreed to the service terms of use ?? must be <see langword="true"/> for registration to succeed.</summary>
+    /// <summary>Whether the user agreed to the service terms of use — must be <see langword="true"/> for registration to succeed.</summary>
     public bool AgreedServiceTerms { get; set; }
 
     /// <summary>IANA time-zone ID (e.g. "Asia/Seoul") selected during registration; stored on the new account.</summary>

@@ -20,17 +20,21 @@ public sealed class EmailConsumerWorker(
     IServiceScopeFactory scopeFactory,
     ILogger<EmailConsumerWorker> logger) : BackgroundService
 {
+    /// <summary>The AMQP connection opened in <see cref="ConnectAndConsumeAsync"/>; <see langword="null"/> until connected.</summary>
     private IConnection? _connection;
     /// <summary>The RabbitMQ channel opened in <c>ExecuteAsync</c>; <see langword="null"/> until connected. Internal so tests can inject a mock channel.</summary>
     internal IChannel? Channel;
+    /// <summary>Tag of the registered consumer, used by <see cref="StopAsync"/> to cancel it; <see langword="null"/> until consuming.</summary>
     private string? _consumerTag;
 
-    // Passed to every IEmailMessageHandler.HandleAsync call. Never canceled during normal
-    // operation; StopAsync cancels it only once its drain deadline is reached with a send still
-    // running, so that in-progress SendMailAsync call aborts cleanly (triggering the normal
-    // nack/dead-letter path in OnMessageReceivedAsync's catch) instead of the channel being
-    // disposed out from under it, which would throw from ack/nack and force a redelivery/resend
-    // of a send that may already have completed.
+    /// <summary>
+    /// Passed to every IEmailMessageHandler.HandleAsync call. Never canceled during normal
+    /// operation; StopAsync cancels it only once its drain deadline is reached with a send still
+    /// running, so that in-progress SendMailAsync call aborts cleanly (triggering the normal
+    /// nack/dead-letter path in OnMessageReceivedAsync's catch) instead of the channel being
+    /// disposed out from under it, which would throw from ack/nack and force a redelivery/resend
+    /// of a send that may already have completed.
+    /// </summary>
     private readonly CancellationTokenSource _sendCts = new();
 
     /// <summary>Overridable in tests so the drain/unwind waits below don't need to run for real seconds.</summary>
@@ -42,11 +46,13 @@ public sealed class EmailConsumerWorker(
     /// <summary>First wait between failed initial connection attempts (doubled up to a 30s cap). Overridable in tests — see <see cref="DrainTimeout"/>.</summary>
     internal TimeSpan ConnectRetryInitialDelay { get; set; } = TimeSpan.FromSeconds(2);
 
-    // The consumer dispatches one message at a time (RabbitMQ.Client's default
-    // ConsumerDispatchConcurrency is 1); prefetch just lets the broker keep the next few buffered
-    // at the client so there is no round-trip stall between messages. This still tracks the
-    // delivery tag(s) in OnMessageReceivedAsync so StopAsync can wait for the current one to
-    // finish ack/nack before the channel is disposed out from under it.
+    /// <summary>
+    /// Delivery tags currently being handled (the value is unused). The consumer dispatches one message
+    /// at a time (RabbitMQ.Client's default ConsumerDispatchConcurrency is 1); prefetch just lets the
+    /// broker keep the next few buffered at the client so there is no round-trip stall between messages.
+    /// OnMessageReceivedAsync still tracks the delivery tag(s) here so StopAsync can wait for the current
+    /// one to finish ack/nack before the channel is disposed out from under it.
+    /// </summary>
     private readonly ConcurrentDictionary<ulong, byte> _inFlight = new();
 
     /// <summary>
@@ -338,7 +344,7 @@ public sealed class EmailConsumerWorker(
         }
         catch (OperationCanceledException)
         {
-            // Either the host's own shutdown deadline or the 25s drain deadline was reached. If a
+            // Either the host's own shutdown deadline or the DrainTimeout deadline was reached. If a
             // send is still running at this point, cancel it via _sendCts (every HandleAsync call
             // is given its token) instead of disposing the channel straight out from under it below
             // -- that would throw from the handler's own ack/nack and force a redelivery/resend of

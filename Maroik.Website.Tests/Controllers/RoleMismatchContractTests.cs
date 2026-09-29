@@ -19,6 +19,7 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class RoleMismatchContractTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Test-only action filter that swaps the signed-in account for one with an unknown role on request.</summary>
     private sealed class GhostRoleFilter : IAsyncActionFilter
     {
         /// <summary>Replaces the logged-in account on the ViewBag with an unknown-role copy when the request carries <c>X-Test-Ghost</c>; otherwise just continues.</summary>
@@ -38,6 +39,7 @@ public class RoleMismatchContractTests(MaroikWebApplicationFactory factory)
         }
     }
 
+    /// <summary>The write endpoints that check the caller's role before acting.</summary>
     private static readonly string[] _writeEndpoints =
     [
         "/Forum/WriteFreeBoard", "/Forum/EditFreeBoard", "/Forum/WriteFreeComment",

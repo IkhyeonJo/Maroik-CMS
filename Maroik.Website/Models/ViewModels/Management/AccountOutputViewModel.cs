@@ -9,7 +9,7 @@ namespace Maroik.Website.Models.ViewModels.Management;
 /// </summary>
 public class AccountOutputViewModel
 {
-    /// <summary>Account email address ?? the primary key in the database.</summary>
+    /// <summary>Account email address — the primary key in the database.</summary>
     [Required(ErrorMessage = "Please enter Email")]
     [Display(Name = "Email")]
     public string? Email { get; set; }
@@ -39,7 +39,7 @@ public class AccountOutputViewModel
     [Display(Name = "Time zone")]
     public string? TimeZoneIanaId { get; set; }
 
-    /// <summary>When <see langword="true"/> the account cannot log in until manually unlocked by an admin.</summary>
+    /// <summary>When <see langword="true"/> the account cannot log in until an admin unlocks it or its owner resets the password.</summary>
     [Display(Name = "Locked")]
     public bool Locked { get; set; }
 
@@ -56,22 +56,22 @@ public class AccountOutputViewModel
     [Display(Name = "AgreedServiceTerms")]
     public bool AgreedServiceTerms { get; set; }
 
-    /// <summary>One-time registration confirmation token (empty string once confirmed).</summary>
+    /// <summary>One-time registration confirmation token (null once confirmed).</summary>
     [Required(ErrorMessage = "Please enter RegistrationToken")]
     [Display(Name = "RegistrationToken")]
     public string? RegistrationToken { get; set; }
 
-    /// <summary>One-time password-reset token (empty string when no reset is pending).</summary>
+    /// <summary>One-time password-reset token (null when no reset is pending).</summary>
     [Required(ErrorMessage = "Please enter ResetPasswordToken")]
     [Display(Name = "ResetPasswordToken")]
     public string? ResetPasswordToken { get; set; }
 
-    /// <summary>UTC timestamp when the account was first created.</summary>
+    /// <summary>When the account was first created, converted to the viewing admin's time zone.</summary>
     [Required(ErrorMessage = "Please enter Created")]
     [Display(Name = "Created")]
     public DateTime Created { get; set; }
 
-    /// <summary>UTC timestamp of the most recent update to this account record.</summary>
+    /// <summary>When this account record was last updated, converted to the viewing admin's time zone.</summary>
     [Required(ErrorMessage = "Please enter Updated")]
     [Display(Name = "Updated")]
     public DateTime Updated { get; set; }

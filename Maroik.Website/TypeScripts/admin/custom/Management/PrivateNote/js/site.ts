@@ -1,9 +1,10 @@
 /**
- * Script for the admin **Private Note** page (`Views/Management/PrivateNote.cshtml`).
- * A staff-only notice board — same shape as the Free Forum script (list / write /
- * edit / detail sub-views chosen by a `method` query-string param), just pointed
- * at the `/Management/PrivateNote*` endpoints and carrying the admin-only
- * "notice" flag.
+ * Script for the admin **Private Note** page (`Views/Management/PrivateNote.cshtml`
+ * rendered for a signed-in admin — their own personal notes, visible to them only).
+ * Same shape as the Free Forum script (list / write / edit / detail sub-views chosen
+ * by a `method` query-string param), pointed at the `/Management/PrivateNote*`
+ * endpoints. It still posts `Noticed` / `Locked` fields, but the page renders no such
+ * checkboxes (so they are always false) and the server ignores them for private notes.
  *
  * Features: summernote rich-text body with image upload (each image POSTed,
  * returned as base64, re-inserted as an object URL); attachment upload with a
@@ -49,6 +50,7 @@
     // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
     // missing or unparseable.
     const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || (window as any).MaroikDefaultMaxAttachedFileSizeBytes;
+    // Editor height (px) of both summernote instances.
     const boardHeight = 300;
 
     /** base64 -> Blob, for turning server-embedded image/attachment payloads into object URLs. */
@@ -253,8 +255,8 @@
     }
 
     /**
-     * Submits a new note as multipart `FormData` (title, body HTML, the two
-     * flags, the stashed attachment). On success alerts and returns to the list;
+     * Submits a new note as multipart `FormData` (title, body HTML, the always-false
+     * `Noticed` / `Locked` fields the server ignores, the stashed attachment). On success alerts and returns to the list;
      * on failure toasts and hides the overlay. `as any` casts because
      * `FormData.append` wants `string | Blob`. Returns `false`.
      */
@@ -299,7 +301,8 @@
     }
 
     /**
-     * Submits an edit to an existing note (same multipart shape plus `ID`); on
+     * Submits an edit to an existing note (title, body HTML, the ignored `Locked`
+     * field, the stashed attachment, plus `Id`); on
      * success returns to that note's detail view at the caller's page.
      */
     function EditBoard(editBoardId?: string, editCurrentPage?: string) {

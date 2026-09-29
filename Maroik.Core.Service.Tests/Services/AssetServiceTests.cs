@@ -15,9 +15,12 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class AssetServiceTests
 {
+    /// <summary>Mock <c>IAssetRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAssetRepository> _assetRepo = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
+    /// <summary>The service under test over the mocked dependencies.</summary>
     private AssetService CreateSut() => new(_assetRepo.Object, _unitOfWork.Object, NullLogger<AssetService>.Instance);
 
     /// <summary>Initializes the test fixture, setting up all required test doubles and the system under test.</summary>
@@ -31,9 +34,11 @@ public class AssetServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A persisted asset named <paramref name="name"/>.</summary>
     private static Asset MakeAsset(string name, decimal amount = 1000m, string currency = "KRW", bool deleted = false) =>
         Asset.Reconstitute(name, "user@example.com", "FreeDepositAndWithdrawal", amount, currency, null, deleted, DateTime.UtcNow, DateTime.UtcNow);
 
+    /// <summary>Makes both the plain and the row-locking lookup return <paramref name="asset"/>.</summary>
     private void SetupFindAsset(Asset? asset)
     {
         _assetRepo.Setup(r => r.FindByEmailAndProductNameAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -44,6 +49,7 @@ public class AssetServiceTests
             .ReturnsAsync(asset);
     }
 
+    /// <summary>A valid asset request for product <paramref name="name"/>.</summary>
     private static AssetRequest ValidRequest(string name = "MyBank") => new()
     {
         ProductName = name,

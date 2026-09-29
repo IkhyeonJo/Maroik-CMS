@@ -36,6 +36,8 @@ public sealed class Calendar : AggregateRoot<long>
     /// <summary>UTC timestamp of the most recent update.</summary>
     public DateTime Updated { get; private set; }
 
+    /// <summary>Sets the calendar's fields and stamps <see cref="Created"/>/<see cref="Updated"/> with the
+    /// current UTC time (<see cref="Reconstitute"/> overwrites both with the stored values).</summary>
     private Calendar(
         long id,
         Email accountEmail,

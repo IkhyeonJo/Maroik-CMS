@@ -39,6 +39,7 @@
     const $formEditFixedExpenditure = $("#formEditFixedExpenditure");
     const $confirmDeleteFixedExpenditureDialogModal = $("#confirmDeleteFixedExpenditureDialogModal");
     const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
+    // Localized toast shown when the amount-label request itself fails (transport error).
     const failedToLoadAmountLabelMessage = $("#localizerFailedToLoadAmountLabel").val() as string;
     const $createFixedExpenditureDialogModal = $("#createFixedExpenditureDialogModal");
     const $createFixedExpenditurePaymentMethod = $("#createFixedExpenditurePaymentMethod");

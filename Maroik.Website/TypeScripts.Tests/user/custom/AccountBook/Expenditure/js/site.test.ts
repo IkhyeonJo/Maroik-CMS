@@ -5,9 +5,12 @@ import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
 import { loadSite, hidden, antiForgery, hiddenByStyle, fireNative } from "@tests/_common/harness";
 
 // wwwroot/user/custom/AccountBook/Expenditure/js/site.js
+/** Main class â†’ sub-classes, as the page publishes it. */
 const subClassMap = { Living: ["Food", "Rent"], Transfer: ["ToSavings"] };
+/** Sub-classes that need a deposit (transfer target) asset. */
 const depositAssetSubClasses = ["ToSavings"];
 
+/** The expenditure page DOM (server constants, create/edit forms). */
 function fixture(): string {
     return (
         antiForgery +
@@ -121,6 +124,7 @@ describe("AccountBook/Expenditure — date pickers and filling the edit form", (
         }
     });
 
+    /** Opens the edit form for row 1 and answers IsExpenditureExists with a transfer record, `record` merged in. */
     const edit = (record: Record<string, unknown>) => {
         const h = loadSite("user", "AccountBook", "Expenditure", fixture()
             + `<div class="mvc-grid"></div><table><tbody><tr class="clsGridRow" data-id="1"></tr></tbody></table>

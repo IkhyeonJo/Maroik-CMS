@@ -5,6 +5,7 @@
 import { describe, it, expect } from "vitest";
 import { loadSite, hidden, antiForgery, type SiteHandle } from "@tests/_common/harness";
 
+/** The profile page DOM: size limit and allowed types, the avatar and password forms. */
 const fixture =
     antiForgery +
     hidden("maxAttachedFileSizeBytes", "1048576") +
@@ -16,8 +17,11 @@ const fixture =
    <form id="formUpdateProfilePassword"></form>
    <input id="Password" /><input id="NewPassword" />`;
 
+/** Registers the shared profile-page tests for one area. */
 export function describeProfileScript(area: "admin" | "user"): void {
+    /** Loads the area's profile script over {@link fixture}. */
     const load = () => loadSite(area, "Management", "Profile", fixture);
+    /** Selects a `size`-byte file of MIME `type` in the avatar input and fires `change`. */
     const choose = (h: SiteHandle, size: number, type: string) => {
         const file = new h.win.File([new Uint8Array(size)], "a.bin", { type });
         Object.defineProperty(h.$("#ProfileAvatarFiles")[0], "files", { configurable: true, value: [file] });

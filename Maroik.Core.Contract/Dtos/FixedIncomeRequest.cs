@@ -4,7 +4,7 @@ namespace Maroik.Core.Contract.Dtos;
 
 /// <summary>
 /// Data transfer object used to create or update a fixed (recurring) income record.
-/// Fixed income items are credited on a specific day each month (e.g. salary, pension).
+/// A fixed income is scheduled on a month/day (<see cref="DepositMonth"/>/<see cref="DepositDay"/>) until its maturity date (e.g. salary, pension).
 /// </summary>
 public class FixedIncomeRequest
 {
@@ -26,10 +26,10 @@ public class FixedIncomeRequest
     /// <summary>Asset where the income will be deposited (foreign key to Asset.ProductName).</summary>
     public string? DepositMyAssetProductName { get; set; }
 
-    /// <summary>Month of the income cycle (1–12).</summary>
+    /// <summary>Month (1–12) of the scheduled deposit date.</summary>
     public short DepositMonth { get; set; }
 
-    /// <summary>Day of the month the income is credited.</summary>
+    /// <summary>Day of <see cref="DepositMonth"/> the income is due.</summary>
     public short DepositDay { get; set; }
 
     /// <summary>Date when the recurring income ends (e.g. contract end date).</summary>
@@ -38,6 +38,6 @@ public class FixedIncomeRequest
     /// <summary>Optional free-text note.</summary>
     public string? Note { get; set; }
 
-    /// <summary>When true, the income was not received on the scheduled day.</summary>
+    /// <summary>User-chosen "always notify" flag: when true the schedule is always noticed, regardless of its date.</summary>
     public bool Unpunctuality { get; set; }
 }

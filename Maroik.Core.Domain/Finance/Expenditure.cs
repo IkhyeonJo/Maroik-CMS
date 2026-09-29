@@ -27,10 +27,15 @@ public sealed class Expenditure : AggregateRoot<long>
     /// <summary>Amount spent.</summary>
     public Money Amount { get; private set; }
 
-    /// <summary>Asset product name used as the payment source (reference by identity, not object).</summary>
+    /// <summary>Asset product name the amount is debited from (reference by identity, not object).</summary>
     public string PaymentMethod { get; private set; }
 
-    /// <summary>Asset product name that was debited (usually same as PaymentMethod).</summary>
+    /// <summary>
+    /// Asset product name credited by a transfer-type expenditure (a subClass in
+    /// <see cref="ExpenditureClassPolicy.DepositAssetSubClasses"/>, e.g. savings or debt repayment) —
+    /// the money leaves <see cref="PaymentMethod"/> and arrives here. Must differ from
+    /// <see cref="PaymentMethod"/>; null for every other expenditure.
+    /// </summary>
     public string? MyDepositAsset { get; private set; }
 
     /// <summary>UTC timestamp when the expenditure occurred.</summary>

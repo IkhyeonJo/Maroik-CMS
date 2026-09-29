@@ -28,7 +28,7 @@ public class ServerSetting
     /// <summary>Whether the SMTP connection requires SSL/TLS.</summary>
     public bool SmtpSsl { get; set; }
 
-    /// <summary>Email address shown in the form header of outgoing emails.</summary>
+    /// <summary>Email address shown in the From header of outgoing emails.</summary>
     public string? FromEmail { get; set; }
 
     /// <summary>Display name shown next to the From address in outgoing emails.</summary>
@@ -41,7 +41,8 @@ public class ServerSetting
     public int SessionExpireMinutes { get; set; }
 
     /// <summary>
-    /// How many days before a fixed income/expenditure maturity date to start showing the notice badge.
+    /// How many days before a fixed income/expenditure's scheduled deposit date (month/day) to start
+    /// counting it as noticed (see <c>FixedSchedulePolicy.IsNoticed</c>) — not its maturity date.
     /// </summary>
     public int NoticeMaturityDateDay { get; set; }
 
@@ -51,10 +52,10 @@ public class ServerSetting
     /// <summary>File system path to the TLS private key used by the Docker/Kestrel host.</summary>
     public string? DockerKeyPath { get; set; }
 
-    /// <summary>PEM-encoded RSA private key used for signing and decryption.</summary>
+    /// <summary>Base64-encoded DER (PKCS#1) RSA private key used to decrypt mailed tokens and stored image paths.</summary>
     public string? RsaPrivateKey { get; set; }
 
-    /// <summary>PEM-encoded RSA public key used for verification and encryption.</summary>
+    /// <summary>Base64-encoded DER (X.509 SubjectPublicKeyInfo) RSA public key used to encrypt mailed tokens and stored image paths.</summary>
     public string? RsaPublicKey { get; set; }
 
     /// <summary>
@@ -66,7 +67,7 @@ public class ServerSetting
     /// <summary>Host name or IP address of the ClamAV antivirus daemon.</summary>
     public string? ClamavHost { get; set; }
 
-    /// <summary>TCP port of the ClamAV daemon (default: 3310).</summary>
+    /// <summary>TCP port of the ClamAV daemon (clamd's standard port is 3310; no default is applied here).</summary>
     public int ClamavPort { get; set; }
 
     /// <summary>Base URL of the Maroik.FileStorage microservice used for file upload/download.</summary>
@@ -74,7 +75,7 @@ public class ServerSetting
 
     /// <summary>
     /// Maximum allowed upload file size in bytes. Defaults to 10 MB when not configured.
-    /// Applies to attached files in Calendar events, Board posts, and Summernote image uploads.
+    /// Applies to attached files in Calendar events and Board posts, and to Summernote image uploads.
     /// </summary>
     public long MaxAttachedFileSizeBytes { get; set; } = 10L * 1024 * 1024;
 

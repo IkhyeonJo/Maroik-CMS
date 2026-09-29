@@ -28,13 +28,13 @@ public class FixedExpenditureResponse
     /// <summary>Payment method asset product name.</summary>
     public string? PaymentMethod { get; set; }
 
-    /// <summary>Debited asset product name.</summary>
+    /// <summary>Asset credited by a transfer-type charge; null for every other charge.</summary>
     public string? MyDepositAsset { get; set; }
 
-    /// <summary>Billing month (1–12).</summary>
+    /// <summary>Month (1–12) of the scheduled charge date.</summary>
     public short DepositMonth { get; set; }
 
-    /// <summary>Billing day of the month.</summary>
+    /// <summary>Day of <see cref="DepositMonth"/> the charge is due.</summary>
     public short DepositDay { get; set; }
 
     /// <summary>Contract/subscription expiry date.</summary>
@@ -49,7 +49,7 @@ public class FixedExpenditureResponse
     /// <summary>Optional free-text note.</summary>
     public string? Note { get; set; }
 
-    /// <summary>True when the scheduled payment was late or missed.</summary>
+    /// <summary>User-chosen "always notify" flag: when true the schedule is always noticed, regardless of its date.</summary>
     public bool Unpunctuality { get; set; }
 
     /// <summary>Currency code (e.g. "KRW", "USD"). Populated by the service from the payment-method asset.</summary>

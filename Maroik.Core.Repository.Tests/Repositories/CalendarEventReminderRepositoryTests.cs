@@ -17,6 +17,7 @@ public sealed class CalendarEventReminderRepositoryTests(DatabaseFixture databas
 {
     private CalendarEventReminderRepository Sut => new(Context);
 
+    /// <summary>An unsaved reminder row for event <paramref name="calendarEventId"/>.</summary>
     private static OrmCalendarEventReminder MakeReminder(long calendarEventId, string method = "Email", long minutesBefore = 30) => new()
     {
         CalendarEventId = calendarEventId,
@@ -24,6 +25,7 @@ public sealed class CalendarEventReminderRepositoryTests(DatabaseFixture databas
         MinutesBeforeEvent = minutesBefore
     };
 
+    /// <summary>Inserts <paramref name="reminders"/>, saves, and clears the change tracker so later reads hit the database.</summary>
     private async Task SeedAsync(params OrmCalendarEventReminder[] reminders)
     {
         await Context.CalendarEventReminders.AddRangeAsync(reminders);

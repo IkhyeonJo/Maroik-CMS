@@ -10,6 +10,7 @@ namespace Maroik.Website.Tests.Extensions;
 [Collection("Website Integration")]
 public class StaticAssetExtensionsTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
     /// <summary>Static file JavaScript has explicit application JavaScript content type.</summary>

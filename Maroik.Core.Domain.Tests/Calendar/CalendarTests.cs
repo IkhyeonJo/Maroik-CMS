@@ -6,6 +6,7 @@ namespace Maroik.Core.Domain.Tests.Calendar;
 /// </summary>
 public class CalendarTests
 {
+    /// <summary>A persisted UTC calendar named "Work".</summary>
     private static Domain.Calendar.Calendar ValidCalendar(long id = 1) =>
         Domain.Calendar.Calendar.Reconstitute(id, "user@example.com", "Work", "My work calendar", "UTC", "#3498DB", DateTime.UtcNow, DateTime.UtcNow);
 

@@ -13,6 +13,7 @@ namespace Maroik.Core.Service.Tests.Architecture;
 /// </summary>
 public class ServiceArchitectureTests
 {
+    /// <summary>The assembly containing <c>AccountService</c>, referenced by these architecture rules.</summary>
     private static readonly Assembly _serviceAssembly = typeof(AccountService).Assembly;
 
     /// <summary>Service should not depend on any infrastructure layer or outer application.</summary>

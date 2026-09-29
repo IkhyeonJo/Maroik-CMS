@@ -8,7 +8,7 @@ namespace Maroik.Core.Repository.Repositories;
 
 /// <summary>
 /// EF Core repository for <see cref="FixedExpenditure"/> domain objects,
-/// representing recurring monthly expenditures with a scheduled deposit day.
+/// representing recurring expenditures scheduled on a deposit month/day.
 /// Always eager-loads the linked <see cref="OrmFixedExpenditure.AssetNavigation"/> (the
 /// PaymentMethod asset, not the MyDepositAsset transfer target) so the amount's monetary unit
 /// is available without a separate query.

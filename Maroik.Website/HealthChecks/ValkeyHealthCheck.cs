@@ -22,6 +22,8 @@ public sealed class ValkeyHealthCheck(IConnectionMultiplexer connectionMultiplex
         }
         catch (Exception ex)
         {
+            // Deliberately not logged: the failure is reported as this check's own result (with the
+            // exception attached), which the health-check middleware surfaces.
             return HealthCheckResult.Unhealthy("Failed to PING Valkey.", ex);
         }
     }

@@ -7,6 +7,7 @@ namespace Maroik.Website.Tests.Extensions;
 /// <summary>Unit tests for <see cref="FormFileExtensions"/>.</summary>
 public class FormFileExtensionsTests
 {
+    /// <summary>A form file named <paramref name="fileName"/> with UTF-8 <paramref name="content"/> and <paramref name="contentType"/>.</summary>
     private static FormFile MakeFormFile(string content, string fileName, string contentType)
     {
         byte[] bytes = Encoding.UTF8.GetBytes(content);
@@ -14,6 +15,7 @@ public class FormFileExtensionsTests
         return new FormFile(stream, 0, bytes.Length, "file", fileName) { Headers = new HeaderDictionary(), ContentType = contentType };
     }
 
+    /// <summary>Size limit (10 MiB) passed to the conversion.</summary>
     private const long TenMb = 10L * 1024 * 1024;
 
     /// <summary>To attached file info async null file returns null.</summary>

@@ -12,9 +12,12 @@ namespace Maroik.Website.Tests.HealthChecks;
 /// </summary>
 public class ValkeyHealthCheckTests
 {
+    /// <summary>Mock <c>IConnectionMultiplexer</c> injected into the system under test.</summary>
     private readonly Mock<IConnectionMultiplexer> _connectionMultiplexer = new();
+    /// <summary>Mock <c>IDatabase</c> injected into the system under test.</summary>
     private readonly Mock<IDatabase> _database = new();
 
+    /// <summary>The health check under test over the mocked connection.</summary>
     private ValkeyHealthCheck CreateSut() => new(_connectionMultiplexer.Object);
 
     /// <summary>Verifies a successful PING is reported as healthy.</summary>

@@ -12,9 +12,10 @@ namespace Maroik.Core.Client.Clients;
 /// </summary>
 public class ClamavClient(ILogger<ClamavClient> logger) : IClamavClient
 {
-    // Bounds the whole scan (connect + stream + result) so a stalled or overloaded ClamAV daemon
-    // can't pin the calling request thread forever — callers such as FileValidationService don't
-    // thread their own CancellationToken into this call, so this is the only backstop.
+    /// <summary>
+    /// Bounds the whole scan (connect + stream + result) so a stalled or overloaded ClamAV daemon
+    /// can't pin the calling request forever, even for a caller whose own CancellationToken never fires.
+    /// </summary>
     private static readonly TimeSpan _scanTimeout = TimeSpan.FromSeconds(30);
 
     /// <summary>Size in bytes of the big-endian length prefix that precedes every INSTREAM chunk.</summary>

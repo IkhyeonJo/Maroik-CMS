@@ -15,10 +15,14 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class ExpenditureServiceTests
 {
+    /// <summary>Mock <c>IExpenditureRepository</c> injected into the system under test.</summary>
     private readonly Mock<IExpenditureRepository> _expenditureRepo = new();
+    /// <summary>Mock <c>IAssetBalanceDomainService</c> injected into the system under test.</summary>
     private readonly Mock<IAssetBalanceDomainService> _assetBalance = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
+    /// <summary>The service under test over the mocked dependencies.</summary>
     private ExpenditureService CreateSut() => new(
         _expenditureRepo.Object,
         _assetBalance.Object,
@@ -61,9 +65,11 @@ public class ExpenditureServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A persisted asset named <paramref name="name"/>.</summary>
     private static Asset MakeAsset(string name, decimal amount = 1000m, string currency = "KRW", bool deleted = false) =>
         Asset.Reconstitute(name, "user@example.com", "FreeDepositAndWithdrawal", amount, currency, null, deleted, DateTime.UtcNow, DateTime.UtcNow);
 
+    /// <summary>A consumer-spending request paid from <paramref name="paymentMethod"/> (no deposit target).</summary>
     private static ExpenditureRequest ConsumerRequest(string paymentMethod = "Wallet", decimal amount = 100m) => new()
     {
         MainClass = "ConsumerSpending",
@@ -73,6 +79,7 @@ public class ExpenditureServiceTests
         Content = "Lunch"
     };
 
+    /// <summary>A regular-savings transfer from <paramref name="paymentMethod"/> into <paramref name="depositAsset"/>.</summary>
     private static ExpenditureRequest SavingsTransferRequest(
         string paymentMethod = "Checking",
         string depositAsset = "Savings",
@@ -490,20 +497,25 @@ public class ExpenditureServiceTests
 
     // -- CreateAsync: money-affecting failure branches -------------------------------
 
+    /// <summary>Owner e-mail the asset lookups are keyed on.</summary>
     private const string Email = "user@example.com";
 
+    /// <summary>Makes the asset lookup return each of <paramref name="assets"/> by product name.</summary>
     private void GivenAssets(params Asset[] assets)
     {
         foreach (Asset a in assets)
             _assetBalance.Setup(r => r.GetAssetAsync(Email, a.ProductName, It.IsAny<CancellationToken>())).ReturnsAsync(a);
     }
 
+    /// <summary>Makes the owner's expenditure list contain only <paramref name="previous"/>.</summary>
     private void GivenExistingExpenditure(Expenditure previous) =>
         _expenditureRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([previous]);
 
+    /// <summary>A persisted consumer-spending expenditure (id 1) paid from <paramref name="payment"/>.</summary>
     private static Expenditure ExistingConsumer(decimal amount = 50m, string payment = "Wallet") =>
         Expenditure.Reconstitute(1, Email, "ConsumerSpending", "MealOrEatOutExpenses", null, amount, "KRW", payment, "", null, DateTime.UtcNow, DateTime.UtcNow);
 
+    /// <summary>A persisted regular-savings transfer (id 1) from <paramref name="payment"/> into <paramref name="deposit"/>.</summary>
     private static Expenditure ExistingTransfer(decimal amount = 50m, string payment = "Checking", string deposit = "Savings") =>
         Expenditure.Reconstitute(1, Email, "RegularSavings", "Deposit", null, amount, "KRW", payment, deposit, null, DateTime.UtcNow, DateTime.UtcNow);
 
@@ -588,6 +600,7 @@ public class ExpenditureServiceTests
 
     // -- UpdateAsync: money-affecting failure branches --------------------------------
 
+    /// <summary>Sets <paramref name="r"/>'s id to 1 (an update request) and returns it.</summary>
     private static ExpenditureRequest WithId(ExpenditureRequest r) { r.Id = 1; return r; }
 
     /// <summary>A transfer edited so that both sides name the same asset is refused before any lookup or lock.</summary>

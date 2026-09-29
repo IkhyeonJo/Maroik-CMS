@@ -97,7 +97,10 @@ public interface ICalendarService
     /// <summary>Creates a new calendar event with optional reminders and an optional file attachment.</summary>
     Task<ServiceResult> CreateCalendarEventAsync(CalendarEventRequest request, string email, string roleIndex, List<CalendarReminderDto> reminders, AttachedFileDto? attachedFile, CancellationToken ct = default);
 
-    /// <summary>Updates an existing calendar event, replacing reminders and the attachment if provided.</summary>
+    /// <summary>
+    /// Updates an existing calendar event, replacing its reminders with <paramref name="reminders"/> and its
+    /// attachment with <paramref name="attachedFile"/> (the existing attachment is removed when none is provided).
+    /// </summary>
     Task<ServiceResult> UpdateCalendarEventAsync(CalendarEventRequest request, string email, string roleIndex, List<CalendarReminderDto> reminders, AttachedFileDto? attachedFile, CancellationToken ct = default);
 
     /// <summary>Deletes a calendar event and its associated reminders and attachment.</summary>
@@ -111,9 +114,10 @@ public interface ICalendarService
 
     /// <summary>
     /// Prepares HTML content for display by downloading each inline Summernote image,
-    /// embedding it as Base64 in <c>data-file</c> / <c>data-contentType</c> attributes,
-    /// and replacing the stored file path in <c>alt</c> with its RSA-encrypted form.
-    /// Returns the transformed HTML and a flag indicating whether any images were present.
+    /// embedding it as Base64 in <c>data-file</c> / <c>data-contenttype</c> attributes,
+    /// and replacing the stored file path in <c>alt</c> with its RSA-encrypted form (an image that
+    /// cannot be downloaded is removed). Returns the transformed HTML and a flag indicating whether
+    /// any images were present.
     /// </summary>
     Task<(string Html, bool HasImages)> PrepareHtmlForDisplayAsync(string html, CancellationToken ct = default);
 }

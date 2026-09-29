@@ -14,6 +14,7 @@ export function withoutServerConstants(html: string): string {
     return html.replace(/<input type="hidden" id="(?!localizer|noMaturityDate|calendarEventOutputViewModels|otherCalendarEventOutputViewModels)[^"]*"[^>]*\/?>/g, "");
 }
 
+/** Registers a test that the page script still initializes with its server-published constants removed. */
 export function describeMissingServerConstants(area: "admin" | "anonymous" | "user", feature: string, page: string, fixture: () => string): void {
     describe(`${area}/${feature}/${page} — without the server-published constants`, () => {
         it("still initialises, falling back to its built-in defaults", () => {

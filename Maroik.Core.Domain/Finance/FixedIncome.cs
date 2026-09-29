@@ -7,7 +7,8 @@ namespace Maroik.Core.Domain.Finance;
 
 /// <summary>
 /// Aggregate root for a recurring fixed income (e.g. monthly salary, pension).
-/// Credited to an asset on a specific month/day each cycle until the <see cref="MaturityDate"/>.
+/// Scheduled on a month/day (<see cref="DepositMonth"/>/<see cref="DepositDay"/>) until the
+/// <see cref="MaturityDate"/>; <see cref="FixedSchedulePolicy"/> decides when it is due for notice.
 /// </summary>
 public sealed class FixedIncome : AggregateRoot<long>
 {
@@ -29,10 +30,10 @@ public sealed class FixedIncome : AggregateRoot<long>
     /// <summary>Asset product name where the income is deposited (reference by identity).</summary>
     public string DepositMyAssetProductName { get; private set; }
 
-    /// <summary>Month of the income cycle (1–12).</summary>
+    /// <summary>Month (1–12) of the scheduled deposit date.</summary>
     public short DepositMonth { get; private set; }
 
-    /// <summary>Day of the month the income is credited.</summary>
+    /// <summary>Day of <see cref="DepositMonth"/> the income is due (validated by <see cref="FixedSchedulePolicy.IsValidDepositDate"/>).</summary>
     public short DepositDay { get; private set; }
 
     /// <summary>Date when the recurring income ends (e.g. contract end date).</summary>
@@ -47,7 +48,10 @@ public sealed class FixedIncome : AggregateRoot<long>
     /// <summary>Optional free-text note.</summary>
     public string? Note { get; private set; }
 
-    /// <summary>True when the income was not received on the scheduled day.</summary>
+    /// <summary>
+    /// User-chosen "always notify" flag for income whose timing is not punctual: when true the
+    /// schedule is always noticed, regardless of its date (see <see cref="FixedSchedulePolicy.IsNoticed"/>).
+    /// </summary>
     public bool Unpunctuality { get; private set; }
 
     /// <summary>"New record" constructor: stamps <see cref="Created"/>/<see cref="Updated"/>. Used by <see cref="Register"/> only.</summary>
@@ -218,14 +222,14 @@ public sealed class FixedIncome : AggregateRoot<long>
     // Domain behaviours
     // ------------------------------------------------------------------------
 
-    /// <summary>Marks this income as not received on the scheduled day.</summary>
+    /// <summary>Sets the "always notify" (<see cref="Unpunctuality"/>) flag.</summary>
     public void MarkUnpunctual()
     {
         Unpunctuality = true;
         Updated = DateTime.UtcNow;
     }
 
-    /// <summary>Clears the unpunctuality flag when the income is eventually received.</summary>
+    /// <summary>Clears the "always notify" (<see cref="Unpunctuality"/>) flag, returning to date-based notice.</summary>
     public void ClearUnpunctuality()
     {
         Unpunctuality = false;

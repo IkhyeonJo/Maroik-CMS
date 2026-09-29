@@ -27,6 +27,7 @@ public class LogTemplatesTests
         Assert.Contains(@"upload/a.png\n[00:00:00 INF] Maroik: File uploaded: upload/b.png\r", line);
     }
 
+    /// <summary>Renders one Warning event whose <c>FilePath</c> is <paramref name="value"/> through <paramref name="outputTemplate"/>.</summary>
     private static string Render(string outputTemplate, string messageTemplate, string value)
     {
         var logEvent = new LogEvent(DateTimeOffset.UnixEpoch, LogEventLevel.Warning, null,

@@ -23,5 +23,6 @@ public partial class CalendarShared
     /// </summary>
     public bool Anonymous { get; set; }
 
+    /// <summary>The calendar these sharing flags belong to.</summary>
     public virtual Calendar Calendar { get; set; } = null!;
 }

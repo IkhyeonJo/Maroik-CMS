@@ -3,7 +3,7 @@ using Maroik.Core.Contract.Dtos;
 namespace Maroik.Website.Contracts;
 
 /// <summary>
-/// Builds in-memory Excel workbooks for account-book data export.
+/// Builds in-memory Excel workbooks for the grids' Excel export (account book, notices, accounts, menu).
 /// Accepts raw service response objects and a localization delegate so that
 /// column headers and enumeration values are rendered in the user's language.
 /// </summary>

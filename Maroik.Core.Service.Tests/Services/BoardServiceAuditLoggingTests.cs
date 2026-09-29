@@ -17,13 +17,20 @@ namespace Maroik.Core.Service.Tests.Services;
 /// </summary>
 public class BoardServiceAuditLoggingTests
 {
+    /// <summary>Mock <c>IBoardRepository</c> injected into the system under test.</summary>
     private readonly Mock<IBoardRepository> _boardRepo = new();
+    /// <summary>Mock <c>IBoardAttachedFileRepository</c> injected into the system under test.</summary>
     private readonly Mock<IBoardAttachedFileRepository> _attachedFileRepo = new();
+    /// <summary>Mock <c>IBoardCommentRepository</c> injected into the system under test.</summary>
     private readonly Mock<IBoardCommentRepository> _commentRepo = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Mock <c>IAttachmentContentService</c> injected into the system under test.</summary>
     private readonly Mock<IAttachmentContentService> _attachmentContent = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<BoardService> _logger = new();
 
+    /// <summary>Arranges a unit of work that always succeeds, pass-through content decryption, successful updates, and no existing attachment.</summary>
     public BoardServiceAuditLoggingTests()
     {
         _unitOfWork.Setup(u => u.BeginAsync(It.IsAny<CancellationToken>(), It.IsAny<IsolationLevel?>())).Returns(Task.CompletedTask);
@@ -35,14 +42,17 @@ public class BoardServiceAuditLoggingTests
         _attachedFileRepo.Setup(r => r.FindByBoardIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).ReturnsAsync((BoardAttachedFile?)null);
     }
 
+    /// <summary>The service under test over the mocked dependencies and the capturing logger.</summary>
     private BoardService CreateSut() => new(_boardRepo.Object, _attachedFileRepo.Object, _commentRepo.Object,
         Mock.Of<IFileClient>(), _unitOfWork.Object, _attachmentContent.Object,
         Options.Create(new ServerSetting { FileStorageBaseUrl = "https://files.example.com" }), _logger);
 
+    /// <summary>A free-forum post whose title and content are secrets that must never be logged.</summary>
     private static Board MakeBoard(string writer = "Alice", bool locked = false) =>
         Board.Reconstitute(1, BoardTypes.FreeForum, "SECRET TITLE", "SECRET CONTENT", writer,
             DateTime.UtcNow, DateTime.UtcNow, 0L, false, locked, false);
 
+    /// <summary>Asserts exactly one entry at <paramref name="level"/> contains <paramref name="containing"/>, and returns it.</summary>
     private FakeLogRecord Only(LogLevel level, string containing)
     {
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(),

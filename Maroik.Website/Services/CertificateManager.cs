@@ -13,12 +13,14 @@ namespace Maroik.Website.Services;
 /// </summary>
 public sealed class CertificateManager(string certPath, string keyPath, ILogger logger, bool? isWindows = null) : ICertificateManager
 {
+    /// <summary>Guards every read and swap of <see cref="_currentCert"/> / <see cref="_retiredCert"/> and the stored hashes.</summary>
     private readonly Lock _certLock = new();
 
     // Where the certificate files are read from differs per OS (see LoadCertificate). Production leaves this to be
     // detected; the optional constructor argument lets tests exercise the Windows layout on any OS.
     private readonly bool _windows = DetectWindows(isWindows);
 
+    /// <summary>The certificate (with private key) Kestrel is currently handed by <see cref="SelectCertificate"/>.</summary>
     private X509Certificate2 _currentCert = LoadCertificate(certPath, keyPath, logger, DetectWindows(isWindows));
     // The cert displaced by the most recent reload. It is not disposed at swap time because Kestrel's
     // ServerCertificateSelector may still be mid-handshake with the reference it just took from
@@ -26,8 +28,11 @@ public sealed class CertificateManager(string certPath, string keyPath, ILogger 
     // hold it. Disposing the just-displaced cert immediately would surface as ObjectDisposedException
     // on any TLS handshake in flight at the exact moment of a cert renewal.
     private X509Certificate2? _retiredCert;
+    /// <summary>SHA-256 of the certificate file as last loaded; <see cref="TryReload"/> reloads when it changes.</summary>
     private string _previousCertHash = ComputeFileHash(certPath);
+    /// <summary>SHA-256 of the private-key file as last loaded; <see cref="TryReload"/> reloads when it changes.</summary>
     private string _previousCertKeyHash = ComputeFileHash(keyPath);
+    /// <summary>True while a <see cref="TryReload"/> is running, so an overlapping timer tick returns at once.</summary>
     private volatile bool _isReloading;
 
     /// <inheritdoc />
@@ -85,6 +90,7 @@ public sealed class CertificateManager(string certPath, string keyPath, ILogger 
         }
     }
 
+    /// <summary>Hex SHA-256 of <paramref name="filePath"/>'s contents, read with sharing so a writer (the renewal job) is not blocked.</summary>
     private static string ComputeFileHash(string filePath)
     {
         using var sha256 = SHA256.Create();
@@ -100,8 +106,15 @@ public sealed class CertificateManager(string certPath, string keyPath, ILogger 
         return Convert.ToHexString(hashBytes);
     }
 
+    /// <summary>The caller's forced value when given (tests), otherwise whether the process runs on Windows.</summary>
     private static bool DetectWindows(bool? forced) => forced ?? RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
+    /// <summary>
+    /// Reads the PEM certificate and ECDSA private key and combines them into one certificate. On Linux /
+    /// macOS the given paths are read directly. On Windows the Let's Encrypt <c>live/</c> files are
+    /// read as plain text holding the target file name (a symlink copied without link support), and the
+    /// real PEM files are then read from the matching <c>archive/</c> directory. Failures are logged and rethrown.
+    /// </summary>
     private static X509Certificate2 LoadCertificate(string certPath, string keyPath, ILogger logger, bool windows)
     {
         try

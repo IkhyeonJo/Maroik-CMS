@@ -21,6 +21,7 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>An unsaved, confirmed account row with a unique e-mail and nickname unless given.</summary>
     private OrmAccount NewAccount(
         string? email = null,
         string? nickname = null,
@@ -50,6 +51,7 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
         SecurityStamp = "stamp"
     };
 
+    /// <summary>A confirmed, unlocked domain account as if loaded from the database.</summary>
     private static Account NewDomainAccount(string email, string nickname, string role = Role.User, string timeZone = "UTC") =>
         Account.Reconstitute(
             email: email, hashedPassword: "$2a$13$hash", nickname: nickname, avatarImagePath: null,
@@ -58,6 +60,7 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
             created: DateTime.UtcNow, updated: DateTime.UtcNow, message: null, deleted: false,
             securityStamp: "stamp", mustChangePassword: false);
 
+    /// <summary>Inserts <paramref name="accounts"/>, saves, and clears the change tracker so later reads hit the database.</summary>
     private async Task SeedAsync(params OrmAccount[] accounts)
     {
         await Context.Accounts.AddRangeAsync(accounts);

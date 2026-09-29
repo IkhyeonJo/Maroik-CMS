@@ -49,17 +49,17 @@ public class ExpenditureOutputViewModel
     [Display(Name = "Note")]
     public string? Note { get; set; }
 
-    /// <summary>Name of the asset (product) that was debited for this expenditure.</summary>
+    /// <summary>Name of the asset (product) credited by a transfer-type expenditure; null for any other expenditure.</summary>
     [Required(ErrorMessage = "Please enter MyDepositAsset")]
     [Display(Name = "MyDepositAsset")]
     public string? MyDepositAsset { get; set; }
 
-    /// <summary>UTC timestamp when the expenditure was recorded.</summary>
+    /// <summary>When the expenditure was recorded, converted to the viewer's time zone.</summary>
     [Required(ErrorMessage = "Please enter Created")]
     [Display(Name = "Created")]
     public DateTime Created { get; set; }
 
-    /// <summary>UTC timestamp of the most recent update to this expenditure record.</summary>
+    /// <summary>When this expenditure record was last updated, converted to the viewer's time zone.</summary>
     [Required(ErrorMessage = "Please enter Updated")]
     [Display(Name = "Updated")]
     public DateTime Updated { get; set; }

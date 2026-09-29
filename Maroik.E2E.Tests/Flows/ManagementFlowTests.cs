@@ -44,6 +44,7 @@ public class ManagementFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture
         await Assertions.Expect(page.Locator(".mvc-grid")).ToContainTextAsync(user.Email);
     }
 
+    /// <summary>Fills and submits the admin "create account" dialog for a User in Asia/Seoul.</summary>
     private static async Task CreateAccountThroughTheUiAsync(IPage page, string email, string nickname)
     {
         await GotoAsync(page, "/Management/Account");

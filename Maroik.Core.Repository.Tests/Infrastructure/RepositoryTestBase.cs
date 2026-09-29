@@ -19,7 +19,9 @@ namespace Maroik.Core.Repository.Tests.Infrastructure;
 /// </summary>
 public abstract class RepositoryTestBase : IClassFixture<DatabaseFixture>, IAsyncDisposable
 {
+    /// <summary>The class's seeded database.</summary>
     private readonly DatabaseFixture _database;
+    /// <summary>Every context this test opened, disposed with the test.</summary>
     private readonly List<ApplicationDbContext> _contexts = [];
 
     /// <summary>Short token unique to this test instance (xUnit constructs one instance per test method).</summary>

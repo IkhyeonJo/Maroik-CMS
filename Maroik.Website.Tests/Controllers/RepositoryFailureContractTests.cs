@@ -20,6 +20,7 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Message of every exception the failing repository methods throw; it must never reach the response.</summary>
     private const string DatabaseSecret = "db-secret-do-not-leak";
 
     /// <summary>Forwards every call to the real repository, except the named methods, which throw.</summary>
@@ -40,6 +41,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         }
     }
 
+    /// <summary>A host whose <typeparamref name="TRepository"/> forwards to the real repository except for <paramref name="failingMethods"/>, which throw.</summary>
     private WebApplicationFactory<Program> HostWithFailing<TRepository>(params string[] failingMethods) where TRepository : class =>
         factory.WithWebHostBuilder(b => b.ConfigureTestServices(services =>
         {
@@ -58,6 +60,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
             });
         }));
 
+    /// <summary>GETs <paramref name="url"/> and returns its antiforgery cookie (<c>name=value</c>) and form token.</summary>
     private static async Task<(string Cookie, string Token)> AntiForgeryAsync(HttpClient client, string url)
     {
         var response = await client.GetAsync(url, TestContext.Current.CancellationToken);
@@ -71,6 +74,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         return (cookie, token.Groups[1].Value);
     }
 
+    /// <summary>Inserts a User account for <paramref name="email"/> (password "OldPassword1!") directly into the database with the given tokens and confirmation state.</summary>
     private async Task SeedAccountAsync(string email, string? registrationToken = null, string? resetPasswordToken = null, bool emailConfirmed = true)
     {
         using var scope = factory.Services.CreateScope();
@@ -143,7 +147,9 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         Assert.Equal(rawToken, scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Accounts.Single(a => a.Email == email).ResetPasswordToken);
     }
 
+    /// <summary>A category JSON body with id <paramref name="id"/>.</summary>
     private static object Category(string name, long id) => new { Id = id, Name = name, DisplayName = name, IconPath = "/i.png", Controller = "Notice", Action = "", Role = Role.User, Order = 500 };
+    /// <summary>A sub-category JSON body with id <paramref name="id"/> under <paramref name="categoryId"/>.</summary>
     private static object SubCategory(string name, long categoryId, long id) => new { Id = id, CategoryId = categoryId, Name = name, DisplayName = name, IconPath = "/i.png", Controller = "", Action = "Index", Role = Role.User, Order = 500 };
 
     /// <summary>A menu delete whose database write fails answers with the generic message and leaks nothing.</summary>

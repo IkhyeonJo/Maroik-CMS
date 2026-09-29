@@ -19,6 +19,7 @@ namespace Maroik.FileStorage.Tests.Services;
 /// </summary>
 public class FileValidationServiceTests
 {
+    /// <summary>A ClamAV client whose every scan comes back clean.</summary>
     private static Mock<IClamavClient> CleanScanMock()
     {
         var mock = new Mock<IClamavClient>();
@@ -27,10 +28,13 @@ public class FileValidationServiceTests
         return mock;
     }
 
+    /// <summary>A ClamAV client whose every scan finds a virus.</summary>
     private static Mock<IClamavClient> InfectedScanMock() => ScanMock(ClamavScanResult.Infected);
 
+    /// <summary>A ClamAV client whose every scan reports the daemon unavailable.</summary>
     private static Mock<IClamavClient> UnavailableScanMock() => ScanMock(ClamavScanResult.Unavailable);
 
+    /// <summary>A ClamAV client whose every scan returns <paramref name="result"/>.</summary>
     private static Mock<IClamavClient> ScanMock(ClamavScanResult result)
     {
         var mock = new Mock<IClamavClient>();
@@ -47,12 +51,14 @@ public class FileValidationServiceTests
     private static IOptions<FileStorageSetting> DefaultSettings() =>
         Options.Create(new FileStorageSetting { StorageRootPath = Path.GetTempPath() });
 
+    /// <summary>A form file named <paramref name="fileName"/> holding <paramref name="bytes"/>.</summary>
     private static FormFile MakeFormFile(byte[] bytes, string fileName)
     {
         var stream = new MemoryStream(bytes);
         return new FormFile(stream, 0, bytes.Length, "file", fileName);
     }
 
+    /// <summary>A unique path under the temp folder; the directory itself is not created.</summary>
     private static string CreateTempDir()
     {
         var dir = Path.Combine(Path.GetTempPath(), $"maroik_fvs_test_{Guid.NewGuid()}");

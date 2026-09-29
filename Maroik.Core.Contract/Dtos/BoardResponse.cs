@@ -34,7 +34,7 @@ public class BoardResponse
     /// <summary>Soft-delete flag.</summary>
     public bool Deleted { get; set; }
 
-    /// <summary>When true, new comments cannot be added.</summary>
+    /// <summary>When true, only the author and admins may view or comment on the post.</summary>
     public bool Locked { get; set; }
 
     /// <summary>When true, the post is pinned at the top as a notice.</summary>

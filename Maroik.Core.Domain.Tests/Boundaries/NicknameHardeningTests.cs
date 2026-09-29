@@ -35,7 +35,9 @@ public class NicknameHardeningTests
 
     // ---- range edges of the homoglyph rule ---------------------------------------------------------
 
+    /// <summary>A Cyrillic letter, mixed with Latin letters to form a homoglyph nickname.</summary>
     private const string Cyrillic = "д";      // U+0434
+    /// <summary>A plain Latin letter.</summary>
     private const string LatinLetter = "a";
 
     /// <summary>Verifies that Latin letters at both edges and the middle of each Latin range are refused next to a Cyrillic letter.</summary>

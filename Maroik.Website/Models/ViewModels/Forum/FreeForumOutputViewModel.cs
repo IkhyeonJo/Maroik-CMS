@@ -12,7 +12,7 @@ namespace Maroik.Website.Models.ViewModels.Forum;
 public class FreeForumOutputViewModel
 {
     /// <summary>
-    /// The current view mode / action being rendered (e.g. "Index", "Detail", "Edit").
+    /// The current view mode being rendered — the page's <c>method</c> query value ("list", "write", "detail" or "edit").
     /// Drives which partial view is shown inside the forum layout.
     /// </summary>
     public string? Method { get; set; }
@@ -64,7 +64,7 @@ public class FreeForumOutputViewModel
     /// <summary>Comments on the currently open detail post, rendered in the detail panel.</summary>
     public List<BoardCommentResponse> DetailBoardComments { get; set; } = [];
 
-    /// <summary>The search field selected by the user (e.g. "Title", "Content", "Writer").</summary>
+    /// <summary>The search field selected by the user ("Title" or "Writer"; empty for no search).</summary>
     public string SelectedSearchType { get; set; } = "";
 
     /// <summary>The search term entered by the user, preserved across pagination.</summary>

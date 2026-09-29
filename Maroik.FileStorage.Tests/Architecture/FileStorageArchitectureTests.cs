@@ -13,6 +13,7 @@ namespace Maroik.FileStorage.Tests.Architecture;
 /// </summary>
 public class FileStorageArchitectureTests
 {
+    /// <summary>The assembly containing <c>FileController</c>, referenced by these architecture rules.</summary>
     private static readonly Assembly _fileStorageAssembly = typeof(FileController).Assembly;
 
     /// <summary>FileStorage should not depend on the monolith's internal layers.</summary>

@@ -23,10 +23,17 @@ public class CalendarEventOutputViewModel
     /// <summary>When <see langword="true"/> the event spans full days and has no specific start/end time.</summary>
     public bool AllDay { get; set; }
 
-    /// <summary>UTC start date-time of the event (converted from the stored IANA-zone value).</summary>
+    /// <summary>
+    /// Grid start: for a timed event, its start converted to <see cref="StartDateTimeZoneIanaId"/> (local
+    /// wall-clock); for an all-day event, the stored start date. Left unset for detail / edit views.
+    /// </summary>
     public DateTime StartDate { get; set; }
 
-    /// <summary>UTC end date-time of the event.</summary>
+    /// <summary>
+    /// Grid end: for a timed event, its end converted to <see cref="EndDateTimeZoneIanaId"/>; for an
+    /// all-day event, midnight after the stored (inclusive) end date (FullCalendar's exclusive end).
+    /// Left unset for detail / edit views.
+    /// </summary>
     public DateTime EndDate { get; set; }
 
     /// <summary>IANA time-zone ID used when the start date was entered (e.g. "Asia/Seoul").</summary>
@@ -47,13 +54,13 @@ public class CalendarEventOutputViewModel
     /// <summary>Base64-encoded bytes of the attached file, used for inline preview or download link generation.</summary>
     public string? CalendarEventAttachedFileBase64Data { get; set; }
 
-    /// <summary>MIME type of the attached file (e.g. "image/png"), used for data-URI embedding.</summary>
+    /// <summary>MIME type of the attached file (e.g. "application/zip"), used for data-URI embedding.</summary>
     public string? CalendarEventAttachedFileContentType { get; set; }
 
     /// <summary>All calendars available to the user, used to populate the calendar selector when editing this event.</summary>
     public List<CalendarResponse> Calendars { get; set; } = [];
 
-    /// <summary>Event status string (e.g. "Confirmed", "Tentative", "Canceled").</summary>
+    /// <summary>Availability status shown to subscribers ("Busy" or "Free" — see <c>CalendarEventStatuses</c>).</summary>
     public string? Status { get; set; }
 
     /// <summary>
@@ -77,6 +84,6 @@ public class CalendarEventOutputViewModel
     /// <summary>Display-friendly name of the end time zone (derived from <see cref="EndDateTimeZoneIanaId"/>).</summary>
     public string? DisplayEndDateTimeZone { get; set; }
 
-    /// <summary>String representation of the <c>CalendarType</c> enum (e.g. "My", "Other") for this event's calendar.</summary>
+    /// <summary>Ownership label of this event's calendar — a <c>CalendarTypes</c> constant ("My" or "Other").</summary>
     public string? CalendarType { get; set; }
 }

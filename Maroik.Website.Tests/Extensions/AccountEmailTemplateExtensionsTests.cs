@@ -14,6 +14,7 @@ namespace Maroik.Website.Tests.Extensions;
 /// </summary>
 public class AccountEmailTemplateExtensionsTests
 {
+    /// <summary>A localizer that returns each key as its own value.</summary>
     private static IHtmlLocalizer<AccountController> MakeEchoLocalizer()
     {
         var mock = new Mock<IHtmlLocalizer<AccountController>>();

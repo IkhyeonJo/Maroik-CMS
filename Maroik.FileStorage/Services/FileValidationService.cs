@@ -16,6 +16,7 @@ namespace Maroik.FileStorage.Services;
 /// </summary>
 public class FileValidationService(IClamavClient clamavClient, IOptions<FileStorageSetting> settings) : IFileValidationService
 {
+    /// <summary>Accepted extensions (lower-case): zip attachments plus the JPEG / PNG images (avatars, Summernote).</summary>
     private static readonly string[] _allowedExtensions = [".zip", ".jpg", ".jpeg", ".png"];
 
     /// <inheritdoc />

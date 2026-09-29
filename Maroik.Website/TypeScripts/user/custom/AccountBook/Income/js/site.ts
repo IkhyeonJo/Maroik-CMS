@@ -62,6 +62,7 @@
     // serialized into the page by Income.cshtml. Mirrored here for form UX only; the server
     // re-validates every combination on save.
     const incomeSubClassMap = JSON.parse(($("#incomeSubClassMap").val() as string) || "{}");
+    // Localized toast shown when the amount-label request itself fails (transport error).
     const failedToLoadAmountLabelMessage = $("#localizerFailedToLoadAmountLabel").val() as string;
 
     // Enables/shows only the options in allowedValues (disabling+hiding the rest) and selects
@@ -356,7 +357,7 @@
                     $editIncomeContent.val(data.income.content);
                     $editIncomeAmount.val(data.income.amount);
                     // `created` is `YYYY-MM-DDTHH:mm:ss`; split into the date field
-                    // and the hour / minute / second selects (`.change()` so any
+                    // and the hour / minute / second selects (`.trigger("change")` so any
                     // listener fires).
                     $editIncomeDate.val(data.income.created.split("T")[0]);
                     $editIncomeHour.val(parseInt(data.income.created.split("T")[1].substring(0, 2))).trigger("change");
@@ -547,9 +548,10 @@
 
     /**
      * Updates the create-form's amount label to match the chosen deposit asset
-     * (e.g. its currency name). The server returns the label in `data.label`;
-     * both `if` branches set the same thing, so a failure just shows whatever
-     * fallback label the server sent.
+     * (e.g. its currency name). The server returns the label in `data.label` —
+     * the plain "Amount" label when the asset has no currency or its lookup failed
+     * server-side — so it is applied as-is; a transport failure toasts
+     * `failedToLoadAmountLabelMessage` instead.
      */
     function ChangeCreateIncomeAmountLabel(productName: string) {
         $.ajax({

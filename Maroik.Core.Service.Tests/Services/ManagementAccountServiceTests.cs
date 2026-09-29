@@ -18,10 +18,14 @@ public class ManagementAccountServiceTests
     /// <summary>The signed-in administrator performing the change (recorded in the audit log).</summary>
     private const string Actor = "admin@example.com";
 
+    /// <summary>Mock <c>IAccountRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAccountRepository> _accountRepo = new();
+    /// <summary>Mock <c>IPasswordService</c> injected into the system under test.</summary>
     private readonly Mock<IPasswordService> _passwordService = new();
+    /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
+    /// <summary>The service under test over the mocked dependencies.</summary>
     private ManagementAccountService CreateSut() => new(
         _accountRepo.Object,
         _passwordService.Object,
@@ -30,6 +34,7 @@ public class ManagementAccountServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A persisted account whose state is set by the arguments.</summary>
     private static Account ActiveAccount(
         string email = "user@example.com",
         bool locked = false,
@@ -421,6 +426,7 @@ public class ManagementAccountServiceTests
 
     // -- CreateAccountAsync: validation and failures ---------------------------------
 
+    /// <summary>An admin create-account request with the given e-mail, password and nickname.</summary>
     private static AccountRequest NewAccountRequest(string email = "new@example.com", string password = "Plain1234!", string nickname = "NewUser") => new()
     {
         Email = email, PlainPassword = password, Nickname = nickname, EmailConfirmed = true

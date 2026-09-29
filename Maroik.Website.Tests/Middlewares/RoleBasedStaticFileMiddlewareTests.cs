@@ -14,11 +14,14 @@ namespace Maroik.Website.Tests.Middlewares;
 /// </summary>
 public class RoleBasedStaticFileMiddlewareTests
 {
+    /// <summary>Mock <c>ISessionService</c> injected into the system under test.</summary>
     private readonly Mock<ISessionService> _sessionService = new();
 
+    /// <summary>A request context for <paramref name="path"/>.</summary>
     private static DefaultHttpContext BuildContext(string path) =>
         new() { Request = { Path = path } };
 
+    /// <summary>Makes the session hold an account with <paramref name="role"/>, or none when it is <see langword="null"/>.</summary>
     private void SetupAccount(string? role)
     {
         _sessionService

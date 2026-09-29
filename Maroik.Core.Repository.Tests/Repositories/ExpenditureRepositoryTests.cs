@@ -17,6 +17,7 @@ public sealed class ExpenditureRepositoryTests(DatabaseFixture database) : Repos
 {
     private ExpenditureRepository Sut => new(Context);
 
+    /// <summary>An unsaved expenditure row owned by <paramref name="email"/>.</summary>
     private static OrmExpenditure MakeExpenditure(
         string email, string content, string paymentMethod = "Wallet", string? myDepositAsset = "Wallet",
         decimal amount = 100m) => new()
@@ -33,6 +34,7 @@ public sealed class ExpenditureRepositoryTests(DatabaseFixture database) : Repos
         Updated = DateTime.UtcNow
     };
 
+    /// <summary>Ensures each owner account and every referenced asset exist, then inserts <paramref name="expenditures"/>, saves, and clears the change tracker.</summary>
     private async Task SeedAsync(params OrmExpenditure[] expenditures)
     {
         foreach (var group in expenditures.GroupBy(e => e.AccountEmail!))
@@ -173,6 +175,7 @@ public sealed class ExpenditureRepositoryTests(DatabaseFixture database) : Repos
         Assert.Equal(500m, result.Amount); // 300 + 100 + 100: no lost update
         return;
 
+        // One contender: locks the row on its own connection, waits so the other contender queues behind the lock, then adds 100 and commits.
         async Task BumpAsync()
         {
             await using var context = NewDbContext();

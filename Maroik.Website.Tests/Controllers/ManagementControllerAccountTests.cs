@@ -19,14 +19,18 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ManagementControllerAccountTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
     
+    /// <summary>Seeds (if missing) an Admin account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsAdminAsync(string email = "mgmt-admin@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "AdminPassword1!", Role.Admin, TestContext.Current.CancellationToken);
 
+    /// <summary>Seeds (if missing) a User account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsUserAsync(string email = "mgmt-user@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
 
+    /// <summary>Inserts a User account for <paramref name="email"/> directly into the database, unless it already exists.</summary>
     private void SeedAccount(string email)
     {
         using var scope = factory.Services.CreateScope();

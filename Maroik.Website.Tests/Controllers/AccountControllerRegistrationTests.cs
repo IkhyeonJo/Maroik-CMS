@@ -28,8 +28,10 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class AccountControllerRegistrationTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
 
+    /// <summary>An e-mail unique to this call, prefixed with the calling test's name.</summary>
     private static string UniqueEmail([System.Runtime.CompilerServices.CallerMemberName] string testName = "") =>
         $"{testName.ToLowerInvariant()}-{Guid.NewGuid():N}@test.com";
 
@@ -44,6 +46,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         return (cookie, token);
     }
 
+    /// <summary>Posts <paramref name="fields"/> as a form to <paramref name="url"/> with a fresh antiforgery cookie and token taken from that page.</summary>
     private async Task<HttpResponseMessage> PostFormAsync(string url, Dictionary<string, string> fields)
     {
         var (cookie, token) = await GetAntiForgeryAsync(url);
@@ -54,13 +57,16 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         return await _client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
+    /// <summary>Name prefix of the antiforgery cookie the site issues.</summary>
     private const string AntiForgeryCookieName = "__Secure-.AspNetCore.Antiforgery.";
 
+    /// <summary>The value of <paramref name="cookieName"/> from the response's <c>Set-Cookie</c> headers, or <see langword="null"/>.</summary>
     private static string? ExtractCookieValue(HttpResponseMessage response, string cookieName)
     {
         return !response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders) ? null : (from header in setCookieHeaders select header.Split(';', 2)[0] into namePart let eq = namePart.IndexOf('=') where eq > 0 where namePart[..eq] == cookieName select namePart[(eq + 1)..]).FirstOrDefault();
     }
 
+    /// <summary>The hidden <c>__RequestVerificationToken</c> value in <paramref name="html"/>; fails the test if there is none.</summary>
     private static string ExtractAntiForgeryToken(string html)
     {
  #pragma warning disable SYSLIB1045
@@ -70,6 +76,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         return match.Groups[1].Value;
     }
 
+    /// <summary>Inserts a User account for <paramref name="email"/> directly into the database with the given confirmation state and tokens.</summary>
     private async Task SeedAccountAsync(string email, bool emailConfirmed, string? registrationToken = null, string? resetPasswordToken = null, string? nickname = null)
     {
         using var scope = factory.Services.CreateScope();
@@ -312,12 +319,14 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
     // -- ConfirmEmail -----------------------------------------------------------------
 
+    /// <summary>Encrypts <paramref name="rawToken"/> with the host's RSA service, as the mailed link carries it.</summary>
     private string EncryptToken(string rawToken)
     {
         using var scope = factory.Services.CreateScope();
         return scope.ServiceProvider.GetRequiredService<IRsaService>().Encrypt(rawToken);
     }
 
+    /// <summary>The stored <c>EmailConfirmed</c> flag of <paramref name="email"/>.</summary>
     private bool IsEmailConfirmed(string email)
     {
         using var scope = factory.Services.CreateScope();
@@ -618,6 +627,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
     // -- Refusals that re-render the form ---------------------------------------------------------
 
+    /// <summary>Posts <paramref name="fields"/> to <c>/Account/Login</c> with a fresh antiforgery token, optionally as <paramref name="userAgent"/>.</summary>
     private async Task<HttpResponseMessage> PostLoginAsync(Dictionary<string, string> fields, string? userAgent = null)
     {
         var (cookie, token) = await GetAntiForgeryAsync("/Account/Login");

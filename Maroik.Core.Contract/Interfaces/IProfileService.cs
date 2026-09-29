@@ -33,8 +33,8 @@ public interface IProfileService
 
     /// <summary>
     /// Persists the user's preferred default currency unit.
-    /// Sets the unit only when it matches one of the account's existing asset currencies;
-    /// otherwise clears the preference to null.
+    /// Sets the unit only when it matches the currency of one of the account's non-deleted assets;
+    /// otherwise clears the preference to null. Does not bump the account's <c>Updated</c> timestamp.
     /// </summary>
     Task UpdateDefaultMonetaryUnitAsync(string accountEmail, string? monetaryUnit, CancellationToken ct = default);
 }

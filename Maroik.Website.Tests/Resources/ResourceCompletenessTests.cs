@@ -12,12 +12,15 @@ namespace Maroik.Website.Tests.Resources;
 /// </summary>
 public class ResourceCompletenessTests
 {
+    /// <summary>The Maroik.Website project folder.</summary>
     private static readonly string _websiteDir = FindWebsiteDirectory();
+    /// <summary>The website's <c>Resources</c> folder.</summary>
     private static readonly string _resourcesDir = Path.Combine(_websiteDir, "Resources");
 
     /// <summary>Values that are legitimately empty in one culture (English has no year suffix in a date picker).</summary>
     private static readonly HashSet<(string Culture, string Key)> _allowedEmpty = [("en-US", "YearSuffix")];
 
+    /// <summary>Walks up to the directory holding <c>Maroik.sln</c> and returns its <c>Maroik.Website</c> subfolder.</summary>
     private static string FindWebsiteDirectory()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
@@ -25,13 +28,16 @@ public class ResourceCompletenessTests
         return Path.Combine(dir?.FullName ?? throw new InvalidOperationException("Could not locate Maroik.sln"), "Maroik.Website");
     }
 
+    /// <summary>Every <c>data</c> entry of the resx file at <paramref name="path"/>, name to value (missing values as empty).</summary>
     private static Dictionary<string, string> ReadResx(string path) =>
         XDocument.Load(path).Root!.Elements("data")
             .ToDictionary(d => (string)d.Attribute("name")!, d => (string?)d.Element("value") ?? "");
 
+    /// <summary>Every resx file under <see cref="_resourcesDir"/>, sorted.</summary>
     private static IEnumerable<string> ResxFiles() =>
         Directory.EnumerateFiles(_resourcesDir, "*.resx", SearchOption.AllDirectories).Order();
 
+    /// <summary>The path of <paramref name="resxPath"/> relative to <see cref="_resourcesDir"/>, without its culture suffix and extension.</summary>
     [SuppressMessage("Performance", "SYSLIB1045:\'GeneratedRegexAttribute\'로 변환합니다.")]
     private static string Stem(string resxPath)
     {
@@ -99,9 +105,11 @@ public class ResourceCompletenessTests
                                                     """, RegexOptions.Compiled);
  #pragma warning restore SYSLIB1045
 
+    /// <summary>The distinct literal localizer keys in the file at <paramref name="path"/>, unescaped.</summary>
     private static IEnumerable<string> LiteralKeys(string path) =>
         _literalKey.Matches(File.ReadAllText(path)).Select(m => m.Groups[1].Value.Replace("\\\"", "\"").Replace(@"\\", "\\")).Distinct();
 
+    /// <summary>The literal keys in <paramref name="sourceFiles"/> absent from their resx pair (located by <paramref name="resxStemFor"/>), as readable failure lines.</summary>
     private static List<string> MissingKeys(IEnumerable<string> sourceFiles, Func<string, string> resxStemFor)
     {
         var missing = new List<string>();

@@ -7,7 +7,8 @@ namespace Maroik.Core.Domain.Finance;
 
 /// <summary>
 /// Aggregate root for a recurring fixed expenditure (e.g. subscription, insurance premium).
-/// Charged on a specific month/day each cycle until the <see cref="MaturityDate"/>.
+/// Scheduled on a month/day (<see cref="DepositMonth"/>/<see cref="DepositDay"/>) until the
+/// <see cref="MaturityDate"/>; <see cref="FixedSchedulePolicy"/> decides when it is due for notice.
 /// </summary>
 public sealed class FixedExpenditure : AggregateRoot<long>
 {
@@ -26,16 +27,20 @@ public sealed class FixedExpenditure : AggregateRoot<long>
     /// <summary>Recurring charge amount.</summary>
     public Money Amount { get; private set; }
 
-    /// <summary>Asset product name used as the payment source.</summary>
+    /// <summary>Asset product name the charge is paid from (reference by identity).</summary>
     public string PaymentMethod { get; private set; }
 
-    /// <summary>Asset product name that is debited.</summary>
+    /// <summary>
+    /// Asset product name credited by a transfer-type charge (a subClass in
+    /// <see cref="ExpenditureClassPolicy.DepositAssetSubClasses"/>); must differ from
+    /// <see cref="PaymentMethod"/>. Null for every other charge.
+    /// </summary>
     public string? MyDepositAsset { get; private set; }
 
-    /// <summary>Month of the billing cycle (1–12).</summary>
+    /// <summary>Month (1–12) of the scheduled charge date.</summary>
     public short DepositMonth { get; private set; }
 
-    /// <summary>Day of the month the charge is deducted.</summary>
+    /// <summary>Day of <see cref="DepositMonth"/> the charge is due (validated by <see cref="FixedSchedulePolicy.IsValidDepositDate"/>).</summary>
     public short DepositDay { get; private set; }
 
     /// <summary>Date when the recurring charge ends (contract / subscription expiry).</summary>
@@ -50,7 +55,10 @@ public sealed class FixedExpenditure : AggregateRoot<long>
     /// <summary>Optional free-text note.</summary>
     public string? Note { get; private set; }
 
-    /// <summary>True when the charge was not collected on the scheduled day.</summary>
+    /// <summary>
+    /// User-chosen "always notify" flag for a charge whose timing is not punctual: when true the
+    /// schedule is always noticed, regardless of its date (see <see cref="FixedSchedulePolicy.IsNoticed"/>).
+    /// </summary>
     public bool Unpunctuality { get; private set; }
 
     /// <summary>"New record" constructor: stamps <see cref="Created"/>/<see cref="Updated"/>. Used by <see cref="Register"/> only.</summary>
@@ -227,14 +235,14 @@ public sealed class FixedExpenditure : AggregateRoot<long>
     // Domain behaviours
     // ------------------------------------------------------------------------
 
-    /// <summary>Marks this charge as not collected on the scheduled day.</summary>
+    /// <summary>Sets the "always notify" (<see cref="Unpunctuality"/>) flag.</summary>
     public void MarkUnpunctual()
     {
         Unpunctuality = true;
         Updated = DateTime.UtcNow;
     }
 
-    /// <summary>Clears the unpunctuality flag when the charge is eventually collected.</summary>
+    /// <summary>Clears the "always notify" (<see cref="Unpunctuality"/>) flag, returning to date-based notice.</summary>
     public void ClearUnpunctuality()
     {
         Unpunctuality = false;

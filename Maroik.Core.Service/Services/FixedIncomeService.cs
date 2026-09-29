@@ -9,9 +9,10 @@ namespace Maroik.Core.Service.Services;
 
 /// <summary>
 /// Implementation of <see cref="IFixedIncomeService"/> for managing recurring income entries.
-/// Validates the income class and the deposit day against the deposit month's actual maximum
-/// (28–31, per calendar month) before persisting. Computes <c>Noticed</c> and <c>Expired</c>
-/// flags based on the current date relative to the recurrence schedule and maturity date.
+/// Validates the income class and the deposit day against the deposit month's maximum
+/// (<see cref="FixedSchedulePolicy.MaxDepositDay"/>: 29–31, February always 29) and requires the
+/// deposit asset to exist and not be deleted before persisting. (The <c>Noticed</c> / <c>Expired</c>
+/// display flags are not computed here — see <see cref="FixedSchedulePolicy"/>.)
 /// A fixed-income entry is a schedule, not a balance movement, so these operations are single
 /// non-transactional repository writes and read the referenced asset without a row lock.
 /// </summary>
@@ -119,6 +120,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
             fixedIncome.ClearUnpunctuality();
     }
 
+    /// <summary>Failure returned when the chosen deposit asset has been soft-deleted.</summary>
     private static ServiceResult DeletedAssetResult => ServiceResult.Conflict(
         "FixedIncome.AssetDeleted", "Actions cannot be executed with assets that have already been deleted.");
 

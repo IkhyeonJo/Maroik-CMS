@@ -18,7 +18,7 @@ public class BoardOutputViewModel
     /// <summary>HTML body of the post as saved from the Summernote editor.</summary>
     public string? Content { get; set; }
 
-    /// <summary>When <see langword="true"/> the post is locked and comments are disabled.</summary>
+    /// <summary>When <see langword="true"/> the post is locked: only its author and admins may view or comment on it.</summary>
     public bool Locked { get; set; }
 
     /// <summary>Nickname of the account that created the post.</summary>
@@ -36,10 +36,10 @@ public class BoardOutputViewModel
     /// <summary>Base64-encoded bytes of the attached file, used for inline preview or download link generation.</summary>
     public string? BoardAttachedFileBase64Data { get; set; }
 
-    /// <summary>MIME type of the attached file (e.g. "application/pdf"), used for data-URI or content-type headers.</summary>
+    /// <summary>MIME type of the attached file (e.g. "application/zip"), used for data-URI or content-type headers.</summary>
     public string? BoardAttachedFileContentType { get; set; }
 
-    /// <summary>File extension of the attached file (e.g. ".pdf"), used for icon selection in the view.</summary>
+    /// <summary>File extension of the attached file (e.g. ".zip"), used for icon selection in the view.</summary>
     public string? BoardAttachedFileExtension { get; set; }
 
     /// <summary>Size of the attached file in bytes, displayed in the attachment info row.</summary>

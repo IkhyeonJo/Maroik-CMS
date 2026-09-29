@@ -174,9 +174,11 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
         }
     }
 
+    /// <summary>Failure returned when the income's deposit asset has been soft-deleted.</summary>
     private static ServiceResult DeletedAssetResult => ServiceResult.Conflict(
         "Income.AssetDeleted", "Actions cannot be executed with assets that have already been deleted.");
 
+    /// <summary>Generic failure returned (after logging) when a write throws unexpectedly.</summary>
     private static ServiceResult UnexpectedFailure => ServiceResult.Failure(
         "Income.Unexpected", "The operation could not be completed. Please try again.");
 

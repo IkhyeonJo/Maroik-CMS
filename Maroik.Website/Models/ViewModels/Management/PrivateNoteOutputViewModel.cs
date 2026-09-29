@@ -4,9 +4,9 @@ using Maroik.Core.Contract.Dtos;
 namespace Maroik.Website.Models.ViewModels.Management;
 
 /// <summary>
-/// Aggregated output model for the PrivateNote (admin-only private board) page in the management area.
-/// Mirrors <c>Forum.FreeForumOutputViewModel</c> in structure but is scoped to the Management area
-/// so admin-only routing and authorization filters apply.
+/// Aggregated output model for the PrivateNote page in the Management area — each signed-in account's
+/// (Admin or User) own private notes, visible to their author only. Mirrors
+/// <c>Forum.FreeForumOutputViewModel</c> in structure, minus the pinned-notice list.
 /// Contains the paginated post list, the currently viewed post's detail, search state,
 /// and all auxiliary data (accounts, comment counts, attachments) needed to render
 /// the list and detail panel in a single request.
@@ -14,7 +14,7 @@ namespace Maroik.Website.Models.ViewModels.Management;
 public class PrivateNoteOutputViewModel
 {
     /// <summary>
-    /// The current view mode / action being rendered (e.g. "Index", "Detail", "Edit").
+    /// The current view mode being rendered — the page's <c>method</c> query value ("list", "write", "detail" or "edit").
     /// Drives which partial view is shown inside the board layout.
     /// </summary>
     public string? Method { get; set; }
@@ -42,10 +42,10 @@ public class PrivateNoteOutputViewModel
 
     // Populated by controller - consumed by view
 
-    /// <summary>Full account record of the currently logged-in admin.</summary>
+    /// <summary>Full account record of the currently logged-in account.</summary>
     public AccountResponse LoggedInAccount { get; set; } = new();
 
-    /// <summary>IANA time-zone ID of the logged-in admin, used to display post timestamps in local time.</summary>
+    /// <summary>IANA time-zone ID of the logged-in account, used to display post timestamps in local time.</summary>
     public string LoggedInAccountTimeZoneIanaId { get; set; } = "";
 
     /// <summary>All registered accounts; used to look up writer nicknames when rendering the post list.</summary>
@@ -63,7 +63,7 @@ public class PrivateNoteOutputViewModel
     /// <summary>Comments on the currently open detail post, rendered in the detail panel.</summary>
     public List<BoardCommentResponse> DetailBoardComments { get; set; } = [];
 
-    /// <summary>The search field selected by the user (e.g. "Title", "Content", "Writer").</summary>
+    /// <summary>The search field selected by the user ("Title" or "Writer"; empty for no search).</summary>
     public string SelectedSearchType { get; set; } = "";
 
     /// <summary>The search term entered by the user, preserved across pagination.</summary>

@@ -64,12 +64,12 @@ public class FixedIncomeOutputViewModel
     [Display(Name = "DepositMyAssetProductName")]
     public string? DepositMyAssetProductName { get; set; }
 
-    /// <summary>UTC timestamp when the record was first created.</summary>
+    /// <summary>When the record was first created, converted to the viewer's time zone.</summary>
     [Required(ErrorMessage = "Please enter Created")]
     [Display(Name = "Created")]
     public DateTime Created { get; set; }
 
-    /// <summary>UTC timestamp of the most recent update to this record.</summary>
+    /// <summary>When this record was last updated, converted to the viewer's time zone.</summary>
     [Required(ErrorMessage = "Please enter Updated")]
     [Display(Name = "Updated")]
     public DateTime Updated { get; set; }
@@ -86,11 +86,11 @@ public class FixedIncomeOutputViewModel
     public bool Expired { get; set; }
 
     /// <summary>
-    /// When <see langword="true"/> the expected deposit did not arrive on the scheduled date.
+    /// User-chosen "always notify" flag: when <see langword="true"/> the schedule is always noticed, regardless of its date.
     /// </summary>
     [Display(Name = "Unpunctuality")]
     public bool Unpunctuality { get; set; }
 
-    /// <summary>CSS row class for the grid, prioritizing Expired over Noticed the default state.</summary>
+    /// <summary>CSS row class for the grid, prioritizing Expired over Noticed over the default state.</summary>
     public string RowCssClass => FixedSchedulePolicy.GetRowStatus(Expired, Noticed).ToRowCssClass();
 }

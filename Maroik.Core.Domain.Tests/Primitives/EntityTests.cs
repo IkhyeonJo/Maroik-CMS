@@ -8,8 +8,10 @@ namespace Maroik.Core.Domain.Tests.Primitives;
 /// </summary>
 public class EntityTests
 {
+    /// <summary>Minimal entity for the equality tests.</summary>
     private sealed class SampleEntity(int id) : Entity<int>(id);
 
+    /// <summary>A second entity type, to check that different types with the same id are not equal.</summary>
     private sealed class OtherEntity(int id) : Entity<int>(id);
 
     /// <summary>Equals same type and same id are equal.</summary>

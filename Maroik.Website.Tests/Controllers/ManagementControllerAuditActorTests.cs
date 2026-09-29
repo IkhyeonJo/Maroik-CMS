@@ -19,8 +19,10 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ManagementControllerAuditActorTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>The admin who performs every write; the services must receive this e-mail as the actor.</summary>
     private const string AdminEmail = "audit-actor-admin@test.com";
 
+    /// <summary>A valid admin create/update-account JSON body.</summary>
     private static object AccountPayload() => new
     {
         Email = "audit-actor-target@test.com",
@@ -39,6 +41,7 @@ public class ManagementControllerAuditActorTests(MaroikWebApplicationFactory fac
         Deleted = false
     };
 
+    /// <summary>A valid menu JSON body, usable for both category and sub-category writes.</summary>
     private static object MenuPayload() => new
     {
         Id = 1,

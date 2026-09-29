@@ -14,6 +14,7 @@ public sealed class TimeZoneId : ValueObject
     /// <summary>The validated IANA time-zone ID string.</summary>
     public string Value { get; }
 
+    /// <summary>Wraps an already-validated (or trusted) zone ID; reached only through the factories.</summary>
     private TimeZoneId(string value) => Value = value;
 
     /// <summary>

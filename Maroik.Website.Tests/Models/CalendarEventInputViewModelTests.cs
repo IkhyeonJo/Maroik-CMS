@@ -10,9 +10,11 @@ namespace Maroik.Website.Tests.Models;
 /// </summary>
 public class CalendarEventInputViewModelTests
 {
+    /// <summary>The member names of every validation error of <paramref name="vm"/>.</summary>
     private static List<string> Errors(CalendarEventInputViewModel vm) =>
         [.. vm.Validate(new ValidationContext(vm)).SelectMany(r => r.MemberNames)];
 
+    /// <summary>A well-formed timed event (start without zero padding) spanning two time zones.</summary>
     private static CalendarEventInputViewModel Timed() => new()
     {
         AllDay = false, StartDate = "2024-5-1 9:5", EndDate = "2024-05-01 10:30",

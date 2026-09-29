@@ -38,5 +38,6 @@ public partial class CalendarEventAttachedFile
     /// </summary>
     public string Path { get; set; } = null!;
 
+    /// <summary>The event this file is attached to.</summary>
     public virtual CalendarEvent CalendarEvent { get; set; } = null!;
 }

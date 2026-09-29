@@ -11,6 +11,7 @@ namespace Maroik.E2E.Tests.Flows;
 [Collection("E2E")]
 public class RegistrationFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture)
 {
+    /// <summary>Fills and submits the registration form (a random e-mail unless given), waits for the POST, and returns the e-mail used.</summary>
     private static async Task<string> SubmitRegistrationAsync(IPage page, string nickname, string? email = null)
     {
         email ??= $"reg-{Guid.NewGuid():N}"[..16] + "@test.com";
@@ -35,6 +36,7 @@ public class RegistrationFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixtu
         return email;
     }
 
+    /// <summary>Asserts the registration form is still shown and no account exists for <paramref name="email"/>.</summary>
     private async Task AssertRefusedAsync(IPage page, string email)
     {
         // Still on the registration form, with an error shown, and nothing was created.

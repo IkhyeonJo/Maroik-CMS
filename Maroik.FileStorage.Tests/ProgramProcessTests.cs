@@ -10,8 +10,10 @@ namespace Maroik.FileStorage.Tests;
 /// </summary>
 public class ProgramProcessTests
 {
+    /// <summary>Client for probing the started process, with a short timeout.</summary>
     private static readonly HttpClient _http = new()
         { Timeout = TimeSpan.FromSeconds(5) };
+    /// <summary>Starts the built FileStorage host as a separate Production process listening on <paramref name="port"/>.</summary>
     private static Process Start(int port)
     {
         string dll = Path.Combine(AppContext.BaseDirectory, "Maroik.FileStorage.dll");
@@ -30,6 +32,7 @@ public class ProgramProcessTests
         return process;
     }
 
+    /// <summary>A loopback port that was free a moment ago.</summary>
     private static int FreePort()
     {
         var listener = new TcpListener(IPAddress.Loopback, 0);

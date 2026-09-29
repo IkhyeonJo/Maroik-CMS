@@ -10,7 +10,7 @@ public class AttachedFileDto
     /// <summary>Raw file bytes read from the uploaded stream.</summary>
     public byte[] Bytes { get; init; } = [];
 
-    /// <summary>MIME content type detected from the upload (e.g. "image/png", "application/pdf").</summary>
+    /// <summary>MIME content type detected from the upload (e.g. "image/png", "application/zip").</summary>
     public string ContentType { get; init; } = "";
 
     /// <summary>Sanitised original file name provided by the client.</summary>

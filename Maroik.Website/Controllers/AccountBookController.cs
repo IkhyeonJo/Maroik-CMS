@@ -18,12 +18,19 @@ namespace Maroik.Website.Controllers;
 /// </summary>
 public class AccountBookController : Controller
 {
+    /// <summary>Localizer for this controller's user-facing messages.</summary>
     private readonly IHtmlLocalizer<AccountBookController> _localizer;
+    /// <summary>Logger for unexpected failures in the account-book actions.</summary>
     private readonly ILogger<AccountBookController> _logger;
+    /// <summary>Asset use cases.</summary>
     private readonly IAssetService _assetService;
+    /// <summary>Income use cases.</summary>
     private readonly IIncomeService _incomeService;
+    /// <summary>Expenditure use cases.</summary>
     private readonly IExpenditureService _expenditureService;
+    /// <summary>Builds the asset / income / expenditure Excel exports.</summary>
     private readonly IExcelExportService _excelExportService;
+    /// <summary>Resource-key â†’ localized text delegate handed to the mappers and the Excel export.</summary>
     private readonly Func<string, string> _localize;
 
     /// <summary>Initializes a new instance of <see cref="AccountBookController"/> with the supplied dependencies.</summary>
@@ -170,7 +177,7 @@ public class AccountBookController : Controller
 
     #region Delete
 
-    /// <summary>Soft-deletes an existing asset record.</summary>
+    /// <summary>Soft-deletes an asset (the row and its history are kept; it disappears from the asset dropdowns).</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.User)]
@@ -362,7 +369,7 @@ public class AccountBookController : Controller
 
     #region Delete
 
-    /// <summary>Deletes an existing income record.</summary>
+    /// <summary>Deletes an income record, reversing its deposit on the linked asset's balance.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.User)]
@@ -559,7 +566,7 @@ public class AccountBookController : Controller
 
     #region Delete
 
-    /// <summary>Deletes an existing expenditure record.</summary>
+    /// <summary>Deletes an expenditure record, reversing its effect on the linked asset balance(s).</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.User)]

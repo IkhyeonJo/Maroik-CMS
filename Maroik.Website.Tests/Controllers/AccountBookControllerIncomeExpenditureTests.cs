@@ -17,14 +17,19 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>The account every test in this class signs in as.</summary>
     private const string Email = "accountbook-incexp-user@test.com";
+    /// <summary>Default asset the seeded incomes/expenditures use.</summary>
     private const string AssetProductName = "some-asset";
 
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
     
+    /// <summary>Seeds (if missing) the User account <see cref="Email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsync() =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, Email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
 
+    /// <summary>Adds (without saving) an asset of <see cref="Email"/> named <paramref name="productName"/>, unless it already exists.</summary>
     private static void SeedAssetIfMissing(ApplicationDbContext db, string productName = AssetProductName)
     {
         if (db.Assets.Any(a => a.AccountEmail == Email && a.ProductName == productName)) return;
@@ -42,6 +47,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         db.SaveChanges();
     }
 
+    /// <summary>The stored balance of the asset named <paramref name="productName"/>.</summary>
     private decimal GetAssetBalance(string productName = AssetProductName)
     {
         using var scope = factory.Services.CreateScope();
@@ -54,6 +60,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
     private static string UniqueAssetName([System.Runtime.CompilerServices.CallerMemberName] string testName = "") =>
         $"{testName}-{Guid.NewGuid():N}";
 
+    /// <summary>Inserts an income into <paramref name="productName"/> directly into the database (the asset balance is not touched) and returns its id.</summary>
     private long SeedIncome(decimal amount = 1000, string productName = AssetProductName)
     {
         using var scope = factory.Services.CreateScope();
@@ -75,6 +82,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         return income.Id;
     }
 
+    /// <summary>Inserts an expenditure paid from <paramref name="productName"/> directly into the database (the asset balance is not touched) and returns its id.</summary>
     private long SeedExpenditure(decimal amount = 50, string productName = AssetProductName)
     {
         using var scope = factory.Services.CreateScope();

@@ -16,12 +16,17 @@ namespace Maroik.Website.Tests.Middlewares;
 /// </summary>
 public sealed class AvatarCacheMiddlewareTests : IDisposable
 {
+    /// <summary>A request path under the avatar prefix.</summary>
     private const string AvatarUrl = "/upload/Management/Profile/Avatar/avatar.png";
+    /// <summary>A fresh temporary web root for this test.</summary>
     private readonly string _webRoot = Directory.CreateTempSubdirectory("MaroikAvatarCacheTests_").FullName;
+    /// <summary>Mock <c>IProfileService</c> injected into the system under test.</summary>
     private readonly Mock<IProfileService> _profileService = new();
 
+    /// <summary>The local avatar cache folder under <see cref="_webRoot"/>.</summary>
     private string LocalAvatarDir => Path.Combine(_webRoot, "upload", "Management", "Profile", "Avatar");
 
+    /// <summary>A host environment whose web root is <paramref name="webRootPath"/>.</summary>
     private static IWebHostEnvironment MakeEnv(string? webRootPath)
     {
         var env = new Mock<IWebHostEnvironment>();
@@ -29,6 +34,7 @@ public sealed class AvatarCacheMiddlewareTests : IDisposable
         return env.Object;
     }
 
+    /// <summary>A request context for <paramref name="method"/> <paramref name="path"/>.</summary>
     private static DefaultHttpContext BuildContext(string path, string method = "GET") => new()
     {
         Request = { Path = path, Method = method },

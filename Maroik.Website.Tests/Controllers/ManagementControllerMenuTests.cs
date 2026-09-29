@@ -21,17 +21,22 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Client for the shared test host; redirects are not followed so they can be asserted.</summary>
     private readonly HttpClient _client = factory.CreateTestClient(followRedirects: false);
     
+    /// <summary>Seeds (if missing) an Admin account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsAdminAsync(string email = "management-menu-admin@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "AdminPassword1!", Role.Admin, TestContext.Current.CancellationToken);
 
+    /// <summary>Seeds (if missing) a User account for <paramref name="email"/> and signs in as it.</summary>
     private Task<AuthenticatedSession> LoginAsUserAsync(string email = "management-menu-user@test.com") =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
 
+    /// <summary>A name unique to this call, prefixed with <paramref name="testName"/>.</summary>
     private static string UniqueName(string testName = "") =>
         $"{testName}-{Guid.NewGuid():N}";
 
+    /// <summary>A valid category JSON body (id 0 creates).</summary>
     private static object ValidCategoryPayload(string name, int id = 0) => new
     {
         Id = id,
@@ -44,6 +49,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         Order = 500
     };
 
+    /// <summary>A valid sub-category JSON body under <paramref name="categoryId"/> (id 0 creates).</summary>
     private static object ValidSubCategoryPayload(string name, long categoryId, int id = 0) => new
     {
         Id = id,
@@ -273,6 +279,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
 
     // -- Cache invalidation --------------------------------------------------------
 
+    /// <summary>Every navigation-menu cache key; a menu write must evict all of them.</summary>
     private static readonly string[] _navigationCacheKeyList =
     [
         NavigationCacheKeys.AdminCategories,

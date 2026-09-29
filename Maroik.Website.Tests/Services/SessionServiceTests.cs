@@ -16,13 +16,18 @@ namespace Maroik.Website.Tests.Services;
 /// </summary>
 public class SessionServiceTests
 {
+    /// <summary>Mock <c>IHttpContextAccessor</c> injected into the system under test.</summary>
     private readonly Mock<IHttpContextAccessor> _httpContextAccessor = new();
+    /// <summary>Mock <c>ISession</c> injected into the system under test.</summary>
     private readonly Mock<ISession> _session = new();
 
+    /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<SessionService> _logger = new();
 
+    /// <summary>The service under test over the mocked accessor and the capturing logger.</summary>
     private SessionService CreateSut() => new(_httpContextAccessor.Object, _logger);
 
+    /// <summary>Makes the accessor return an HTTP context whose session is the mocked session.</summary>
     private void SetupContext()
     {
         var httpContext = new Mock<HttpContext>();
@@ -32,6 +37,7 @@ public class SessionServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>A User account to store in the session.</summary>
     private static AccountResponse SampleAccount() => new()
     {
         Email = "user@example.com",

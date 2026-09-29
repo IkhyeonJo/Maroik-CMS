@@ -23,6 +23,7 @@ namespace Maroik.Website.Tests.Controllers;
 [Collection("Website Integration")]
 public class ProgramStartupTests(MaroikWebApplicationFactory factory)
 {
+    /// <summary>Runs <paramref name="start"/> and returns the exception start-up failed with (unwrapped from reflection), or <see langword="null"/>.</summary>
     private static Exception? StartupFailure(Func<HttpClient> start)
     {
         try { start().Dispose(); return null; }
