@@ -7,6 +7,9 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 
 This repository is the open-source portfolio edition of Maroik: the full application source and test suites, a local Docker Compose stack, and a seed database that contains only the default admin and demo accounts. Production deployment scripts, CI/CD pipelines, and production data are not included.
 
+### About the commit history
+This repository is a portfolio snapshot of Maroik. The original Maroik repository is private, and its full development history (nearly 4,000 commits) lives there — so the short history on this repository's `main` branch does not reflect how the project was actually built. To see that ongoing activity, check the contribution graph on [IkhyeonJo's GitHub profile](https://github.com/IkhyeonJo).
+
 ## Key Features
 
 ### 1. Personal Finance Management
