@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Settings;
@@ -70,7 +71,7 @@ public class AttachmentContentService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to download file {FilePath} immediately after upload", filePath);
+            logger.LogError(ex, "Failed to download file {FilePath} immediately after upload. CorrelationId={CorrelationId}", filePath, Activity.Current?.Id);
             return SummernoteUploadResult.Fail("Input is invalid");
         }
     }
@@ -84,7 +85,7 @@ public class AttachmentContentService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to download file {FilePath}", filePath);
+            logger.LogError(ex, "Failed to download file {FilePath}. CorrelationId={CorrelationId}", filePath, Activity.Current?.Id);
             return null;
         }
     }
@@ -98,7 +99,7 @@ public class AttachmentContentService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to open file {FilePath}", filePath);
+            logger.LogError(ex, "Failed to open file {FilePath}. CorrelationId={CorrelationId}", filePath, Activity.Current?.Id);
             return null;
         }
     }
@@ -123,7 +124,7 @@ public class AttachmentContentService(
                 // the plaintext storage path sitting in `alt` (it's only ever re-encrypted by the
                 // NewAlt patch above), exposing internal storage layout to the client. Remove: true
                 // is the same graceful-degradation contract as DownloadFileAsync, minus the leak.
-                logger.LogError(ex, "Failed to download image {FilePath} while preparing HTML for display", alt);
+                logger.LogError(ex, "Failed to download image {FilePath} while preparing HTML for display. CorrelationId={CorrelationId}", alt, Activity.Current?.Id);
                 return new HtmlImgPatch(Remove: true);
             }
         }, ct);

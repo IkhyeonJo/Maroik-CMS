@@ -36,20 +36,11 @@ public class FileClient(IHttpClientFactory httpClientFactory, ILogger<FileClient
     /// <inheritdoc />
     public async Task<byte[]> DownloadAsync(string filePath, string fileStorageBaseUrl, CancellationToken ct = default)
     {
-        string correlationId = Activity.Current?.Id ?? "";
-        try
-        {
-            using HttpResponseMessage response = await SendDownloadRequestAsync(
-                filePath, fileStorageBaseUrl, correlationId, HttpCompletionOption.ResponseContentRead, ct);
-            return await response.Content.ReadAsByteArrayAsync(ct); // Return raw file bytes
-        }
-        catch (Exception ex) when (ex is not ArgumentException)
-        {
-            // Parity with UploadAsync: log with the correlation id, then rethrow (callers of the
-            // download path already handle the exception and this method has no "false" to return).
-            logger.LogError(ex, "File download request failed for {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
-            throw;
-        }
+        // A failure is not logged here: it is thrown (naming the path) to the caller that handles
+        // it, which logs it once with the path and the correlation id.
+        using HttpResponseMessage response = await SendDownloadRequestAsync(
+            filePath, fileStorageBaseUrl, Activity.Current?.Id ?? "", HttpCompletionOption.ResponseContentRead, ct);
+        return await response.Content.ReadAsByteArrayAsync(ct); // Return raw file bytes
     }
 
     /// <inheritdoc />

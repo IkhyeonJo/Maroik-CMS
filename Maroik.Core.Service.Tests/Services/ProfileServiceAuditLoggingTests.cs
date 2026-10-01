@@ -205,4 +205,21 @@ public class ProfileServiceAuditLoggingTests
 
         Only(LogLevel.Information, "Avatar updated");
     }
+
+    /// <summary>An avatar file storage cannot hand out is logged once, as a Warning naming the file and the correlation id.</summary>
+    [Fact]
+    public async Task DownloadAvatar_LogsAWarningWithTheCorrelationId_WhenStorageFails()
+    {
+        using var activity = new System.Diagnostics.Activity("request").Start();
+        var failure = new HttpRequestException("404");
+        _fileClient.Setup(f => f.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(failure);
+
+        Assert.Null(await CreateSut().DownloadAvatarAsync("me.png", TestContext.Current.CancellationToken));
+
+        FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot());
+        Assert.Equal(LogLevel.Warning, record.Level);
+        Assert.Same(failure, record.Exception);
+        Assert.Contains("me.png", record.Message);
+        Assert.Contains($"CorrelationId={activity.Id}", record.Message);
+    }
 }
