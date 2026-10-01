@@ -53,6 +53,13 @@ public sealed class Email : ValueObject
     }
 
     /// <summary>
+    /// The form an address typed for a lookup (login, password reset, resend) is matched in: the
+    /// same trimming and lower-casing <see cref="Create"/> applies before storing, without
+    /// validating it — an address that is not stored simply matches nothing.
+    /// </summary>
+    public static string NormalizeForLookup(string? value) => (value ?? "").Trim().ToLowerInvariant();
+
+    /// <summary>
     /// Validates <paramref name="input"/> as a bare email address and, on success, emits its
     /// normalized (lower-case) form in <paramref name="normalized"/>. Rejects the display-name form
     /// (<c>MailAddress</c> parses "Jane &lt;jane@x.com&gt;" happily) by requiring the parsed address

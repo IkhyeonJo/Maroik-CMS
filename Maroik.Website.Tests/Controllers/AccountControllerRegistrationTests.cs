@@ -655,6 +655,25 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         Assert.Contains("does not support Internet Explorer", html);
     }
 
+    /// <summary>
+    /// Regression test: a mobile keyboard's autocomplete adds a space after the address (and some add
+    /// one before). The address is matched the way registration stored it — trimmed and lower-cased —
+    /// so the owner is signed in instead of being told the email or password is wrong.
+    /// </summary>
+    [Theory]
+    [InlineData("{0} ")]
+    [InlineData("  {0}")]
+    [InlineData(" {0}\t")]
+    public async Task Login_Post_SignsIn_WhenTheEmailHasSurroundingWhitespace(string format)
+    {
+        string email = UniqueEmail();
+        await SeedAccountAsync(email, emailConfirmed: true);
+
+        var response = await PostLoginAsync(new Dictionary<string, string> { ["Email"] = string.Format(format, email.ToUpperInvariant()), ["Password"] = "OldPassword1!" });
+
+        Assert.Equal(System.Net.HttpStatusCode.Redirect, response.StatusCode); // a successful login redirects
+    }
+
     /// <summary>A login the service refuses (wrong password) re-renders the form with a message instead of redirecting.</summary>
     [Fact]
     public async Task Login_Post_WithAWrongPassword_ReShowsTheFormWithAnError()
