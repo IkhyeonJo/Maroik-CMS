@@ -1755,6 +1755,29 @@ public class AccountServiceTests
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // -- Email lookups ignore surrounding whitespace and letter case ------------------------
+
+    /// <summary>
+    /// The address typed for a login, password reset or confirmation resend is looked up in the
+    /// stored (trimmed, lower-case) form, so a mobile autocomplete's trailing space still finds the account.
+    /// </summary>
+    [Fact]
+    public async Task EmailLookups_UseTheTrimmedLowerCaseAddress()
+    {
+        const string typed = " User@Example.com\t";
+        var sut = CreateSut();
+
+        await sut.LoginAsync(typed, "pw", TestContext.Current.CancellationToken);
+        await sut.ForgotPasswordAsync(typed, _emailTemplate, TestContext.Current.CancellationToken);
+        await sut.ResendConfirmationEmailAsync(typed, _emailTemplate, TestContext.Current.CancellationToken);
+        await sut.RegisterAsync(new RegisterAccountRequest { Email = typed, PlainPassword = "weak" }, _emailTemplate, TestContext.Current.CancellationToken);
+
+        _accountRepo.Verify(r => r.FindByEmailForUpdateAsync("user@example.com", It.IsAny<CancellationToken>()), Times.Once);
+        _accountRepo.Verify(r => r.FindByEmailAsync("user@example.com", It.IsAny<CancellationToken>()), Times.Exactly(3));
+        _accountRepo.Verify(r => r.FindByEmailAsync(It.Is<string>(e => e != "user@example.com"), It.IsAny<CancellationToken>()), Times.Never);
+        _accountRepo.Verify(r => r.FindByEmailForUpdateAsync(It.Is<string>(e => e != "user@example.com"), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // -- Private helpers ------------------------------------------------------
 
     /// <summary>A token minted 25 hours before <see cref="Now"/>, past its 24h validity window.</summary>

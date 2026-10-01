@@ -5,6 +5,7 @@ using Maroik.Core.Contract.Misc.Helpers;
 using Maroik.Core.Contract.Misc.Messaging;
 using Maroik.Core.Contract.Misc.Settings;
 using Maroik.Core.Domain.Account;
+using Maroik.Core.Domain.ValueObjects;
 using Maroik.Core.Service.Extensions;
 using Maroik.Core.Service.Mappers;
 using Microsoft.Extensions.Logging;
@@ -53,6 +54,8 @@ public class AccountService(
     public async Task<LoginResult> LoginAsync(string email, string password, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
+        // Matched in the stored form: a mobile autocomplete's trailing space must not fail the login.
+        email = Email.NormalizeForLookup(email);
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -147,7 +150,8 @@ public class AccountService(
     public async Task<RegisterResult> RegisterAsync(RegisterAccountRequest newAccount, EmailTemplate emailTemplate, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
-        Account? existing = await FindByEmailAsync(newAccount.Email ?? "", ct);
+        // The existence check uses the form Account.Create stores (trimmed, lower-case).
+        Account? existing = await FindByEmailAsync(Email.NormalizeForLookup(newAccount.Email), ct);
 
         if (existing == null)
         {
@@ -362,6 +366,7 @@ public class AccountService(
     public async Task<RegisterResult> ResendConfirmationEmailAsync(string email, EmailTemplate emailTemplate, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
+        email = Email.NormalizeForLookup(email);
         Account? account = await FindByEmailAsync(email, ct);
         if (account == null)
             return RegisterResult.Fail("Failed to resend email", showResendEmail: true);
@@ -575,6 +580,7 @@ public class AccountService(
     public async Task<bool> ForgotPasswordAsync(string email, EmailTemplate emailTemplate, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
+        email = Email.NormalizeForLookup(email);
         Account? account = await FindByEmailAsync(email, ct);
 
         // Silently succeed even when the email is unknown / unconfirmed to avoid user enumeration.

@@ -149,4 +149,21 @@ public class EmailTests
     {
         Assert.Equal("user@example.com", Email.Create("USER@Example.com").Value.ToString());
     }
+
+    /// <summary>
+    /// A typed address is looked up in the form <see cref="Email.Create"/> stores: surrounding
+    /// whitespace (a mobile autocomplete's trailing space, a tab) removed and lower-cased.
+    /// </summary>
+    [Theory]
+    [InlineData("User@Example.com ", "user@example.com")]
+    [InlineData("  user@example.com", "user@example.com")]
+    [InlineData("\tUSER@EXAMPLE.COM\n", "user@example.com")]
+    [InlineData(null, "")]
+    public void NormalizeForLookup_TrimsAndLowerCases(string? input, string expected)
+        => Assert.Equal(expected, Email.NormalizeForLookup(input));
+
+    /// <summary>The lookup form of a valid address is exactly the value <see cref="Email.Create"/> stores.</summary>
+    [Fact]
+    public void NormalizeForLookup_MatchesTheStoredValue()
+        => Assert.Equal(Email.Create(" Mixed.Case@Example.COM ").Value.Value, Email.NormalizeForLookup(" Mixed.Case@Example.COM "));
 }
