@@ -119,17 +119,17 @@ public class ErrorContractTests
     public void Board_Conflicts()
     {
         Domain.Board.Board board = Domain.Board.Board.Reconstitute(1, BoardTypes.FreeForum, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, deleted: true, locked: false, noticed: false);
-        BoardComment comment = BoardComment.Create(1, 0, null, "Bob", "hi").Value;
+        BoardComment comment = BoardComment.Create(1, 0, null, "Bob", "hi", Now).Value;
 
-        ErrorAssert.Is(board.Update("t", "c"), "Board.Deleted", ErrorType.Conflict, "Cannot update a deleted post.");
-        ErrorAssert.Is(board.AddComment(comment), "Board.Deleted", ErrorType.Conflict, "Cannot add a comment to a deleted post.");
-        ErrorAssert.Is(board.SoftDelete(), "Board.AlreadyDeleted", ErrorType.Conflict, "Post is already deleted.");
+        ErrorAssert.Is(board.Update("t", "c", Now), "Board.Deleted", ErrorType.Conflict, "Cannot update a deleted post.");
+        ErrorAssert.Is(board.AddComment(comment, Now), "Board.Deleted", ErrorType.Conflict, "Cannot add a comment to a deleted post.");
+        ErrorAssert.Is(board.SoftDelete(Now), "Board.AlreadyDeleted", ErrorType.Conflict, "Post is already deleted.");
 
         Domain.Board.Board locked = Domain.Board.Board.Reconstitute(1, BoardTypes.FreeForum, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, deleted: false, locked: true, noticed: false);
-        ErrorAssert.Is(locked.AddComment(comment, "Bob"), "Board.Locked", ErrorType.Conflict, "Cannot add a comment to a locked post.");
+        ErrorAssert.Is(locked.AddComment(comment, Now, "Bob"), "Board.Locked", ErrorType.Conflict, "Cannot add a comment to a locked post.");
 
-        BoardComment foreign = BoardComment.Create(999, 0, null, "Bob", "hi").Value;
-        ErrorAssert.Validation(NewBoardWithId(1).AddComment(foreign), "Board.CommentMismatch", "Comment does not belong to this post.");
+        BoardComment foreign = BoardComment.Create(999, 0, null, "Bob", "hi", Now).Value;
+        ErrorAssert.Validation(NewBoardWithId(1).AddComment(foreign, Now), "Board.CommentMismatch", "Comment does not belong to this post.");
     }
 
     /// <summary>A persisted free-forum post with id <paramref name="id"/>.</summary>
@@ -140,11 +140,11 @@ public class ErrorContractTests
     [Fact]
     public void BoardComment_Errors()
     {
-        ErrorAssert.Validation(BoardComment.Create(1, 0, null, " ", "hi"), "BoardComment.WriterEmpty", "Comment author (writer) cannot be empty.");
-        ErrorAssert.Validation(BoardComment.Create(1, 0, null, "Bob", " "), "BoardComment.ContentEmpty", "Comment content cannot be empty.");
-        ErrorAssert.Validation(BoardComment.Create(1, 0, null, "Bob", new string('x', DomainTitledContentPolicy.MaxBodyLength + 1)),
+        ErrorAssert.Validation(BoardComment.Create(1, 0, null, " ", "hi", Now), "BoardComment.WriterEmpty", "Comment author (writer) cannot be empty.");
+        ErrorAssert.Validation(BoardComment.Create(1, 0, null, "Bob", " ", Now), "BoardComment.ContentEmpty", "Comment content cannot be empty.");
+        ErrorAssert.Validation(BoardComment.Create(1, 0, null, "Bob", new string('x', DomainTitledContentPolicy.MaxBodyLength + 1), Now),
             "BoardComment.ContentTooLong", "Comment must be {0} characters or fewer.", DomainTitledContentPolicy.MaxBodyLength);
-        Assert.False(BoardComment.Create(1, 0, null, "Bob", new string('x', DomainTitledContentPolicy.MaxBodyLength)).IsError);
+        Assert.False(BoardComment.Create(1, 0, null, "Bob", new string('x', DomainTitledContentPolicy.MaxBodyLength), Now).IsError);
 
         BoardComment deleted = BoardComment.Reconstitute(1, 1, 0, null, "Bob", "hi", DateTime.UtcNow, deleted: true);
         ErrorAssert.Is(deleted.SoftDelete(), "BoardComment.AlreadyDeleted", ErrorType.Conflict, "Comment is already deleted.");

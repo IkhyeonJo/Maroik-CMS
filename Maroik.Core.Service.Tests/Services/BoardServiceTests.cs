@@ -7,6 +7,7 @@ using Maroik.Core.Domain.Board;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 // ReSharper disable InvalidXmlDocComment
 
@@ -47,6 +48,11 @@ public class BoardServiceTests
         _attachmentContent.Setup(s => s.SanitizeContent(It.IsAny<string>())).Returns<string>(html => html);
     }
 
+    /// <summary>The fixed "current time" of these tests.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+    /// <summary>The clock the service under test reads, stopped at <see cref="Now"/>.</summary>
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(Now));
+
     /// <summary>The service under test over the mocked dependencies.</summary>
     private BoardService CreateSut() => new(
         _boardRepo.Object,
@@ -56,7 +62,8 @@ public class BoardServiceTests
         _unitOfWork.Object,
         _attachmentContent.Object,
         _settings,
-        NullLogger<BoardService>.Instance);
+        NullLogger<BoardService>.Instance,
+        _time);
 
     // -- Helpers --------------------------------------------------------------
 
@@ -248,6 +255,22 @@ public class BoardServiceTests
 
         Assert.True(result.Success);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>A new post is stamped with the injected clock's time (read once: Created equals Updated).</summary>
+    [Fact]
+    public async Task WriteBoardAsync_StampsThePost_WithTheInjectedClock()
+    {
+        Board? written = null;
+        _boardRepo.Setup(r => r.WriteBoardAsync(It.IsAny<Board>(), It.IsAny<CancellationToken>()))
+            .Callback<Board, CancellationToken>((b, _) => written = b).ReturnsAsync(1L);
+
+        await CreateSut().WriteBoardAsync(
+            new BoardRequest { Type = BoardTypes.FreeForum, Title = "Test Title", Writer = "Alice", Locked = true }, false, null, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(written);
+        Assert.Equal(Now, written.Created);
+        Assert.Equal(Now, written.Updated);
     }
 
     /// <summary>Verifies that <c>WriteBoardAsync</c> returns success with attachment.</summary>

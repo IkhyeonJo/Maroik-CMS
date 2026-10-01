@@ -281,7 +281,7 @@ public sealed class BoardRepositoryTests(DatabaseFixture database) : RepositoryT
             await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
             _ = (await boardRepo.FindActiveByIdForUpdateAsync(boardId, TestContext.Current.CancellationToken))!;
             List<BoardComment> existing = await commentRepo.GetByBoardIdOrderedAsync(boardId, TestContext.Current.CancellationToken);
-            BoardComment comment = BoardComment.Create(boardId, existing.Count, "/upload/avatar.jpg", $"Writer{i}", "Hi").Value;
+            BoardComment comment = BoardComment.Create(boardId, existing.Count, "/upload/avatar.jpg", $"Writer{i}", "Hi", DateTime.UtcNow).Value;
             await commentRepo.CreateAsync(comment, TestContext.Current.CancellationToken);
             await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
         }));

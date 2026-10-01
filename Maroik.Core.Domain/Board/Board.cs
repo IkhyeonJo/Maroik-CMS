@@ -63,17 +63,18 @@ public sealed class Board : AggregateRoot<long>
         string type,
         string title,
         string? content,
-        string writer) : base(id)
+        string writer,
+        DateTime utcNow) : base(id)
     {
         Type = type;
         Title = title;
         Content = content;
         Writer = writer;
-        Created = DateTime.UtcNow;
-        Updated = DateTime.UtcNow;
+        Created = utcNow;
+        Updated = utcNow;
     }
 
-    /// <summary>Reconstitution constructor: assigns every field verbatim from trusted storage with no <see cref="DateTime.UtcNow"/> side effect.</summary>
+    /// <summary>Reconstitution constructor: assigns every field verbatim from trusted storage with no new timestamps.</summary>
     private Board(
         long id, string type, string title, string? content, string writer,
         DateTime created, DateTime updated, long view, bool deleted, bool locked, bool noticed) : base(id)
@@ -122,7 +123,8 @@ public sealed class Board : AggregateRoot<long>
         string? type,
         string? title,
         string? content,
-        string? writer)
+        string? writer,
+        DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(type))
             return LocalizableError.Validation("Board.TypeEmpty", "Board type cannot be empty.");
@@ -145,7 +147,7 @@ public sealed class Board : AggregateRoot<long>
         if (string.IsNullOrWhiteSpace(writer))
             return LocalizableError.Validation("Board.WriterEmpty", "Post author (writer) cannot be empty.");
 
-        var board = new Board(0, type, title, content, writer);
+        var board = new Board(0, type, title, content, writer, utcNow);
         return board;
     }
 
@@ -154,7 +156,7 @@ public sealed class Board : AggregateRoot<long>
     // ------------------------------------------------------------------------
 
     /// <summary>Updates the post title and content.</summary>
-    public ErrorOr<Success> Update(string? title, string? content)
+    public ErrorOr<Success> Update(string? title, string? content, DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(title))
             return LocalizableError.Validation("Board.TitleEmpty", "Post title cannot be empty.");
@@ -170,7 +172,7 @@ public sealed class Board : AggregateRoot<long>
 
         Title = title;
         Content = content;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
@@ -184,7 +186,7 @@ public sealed class Board : AggregateRoot<long>
     /// Adds a comment to this post. A locked post rejects new comments from anyone except its
     /// owner or an admin, mirroring who is still allowed to view a locked post at all.
     /// </summary>
-    public ErrorOr<Success> AddComment(BoardComment comment, string? commenterNickname = null, bool isAdmin = false)
+    public ErrorOr<Success> AddComment(BoardComment comment, DateTime utcNow, string? commenterNickname = null, bool isAdmin = false)
     {
         if (Locked && !((commenterNickname != null && IsOwnedBy(commenterNickname)) || isAdmin))
             return LocalizableError.Conflict("Board.Locked", "Cannot add a comment to a locked post.");
@@ -196,46 +198,46 @@ public sealed class Board : AggregateRoot<long>
             return LocalizableError.Validation("Board.CommentMismatch", "Comment does not belong to this post.");
 
         _comments.Add(comment);
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
     /// <summary>Locks the post: only its author and admins can still view or comment on it.</summary>
-    public void Lock()
+    public void Lock(DateTime utcNow)
     {
         Locked = true;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Unlocks the post, making it viewable and commentable by everyone again.</summary>
-    public void Unlock()
+    public void Unlock(DateTime utcNow)
     {
         Locked = false;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Pins the post at the top of the list as a notice.</summary>
-    public void Pin()
+    public void Pin(DateTime utcNow)
     {
         Noticed = true;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Unpins the post from the notice position.</summary>
-    public void Unpin()
+    public void Unpin(DateTime utcNow)
     {
         Noticed = false;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Marks the post as soft-deleted.</summary>
-    public ErrorOr<Success> SoftDelete()
+    public ErrorOr<Success> SoftDelete(DateTime utcNow)
     {
         if (Deleted)
             return LocalizableError.Conflict("Board.AlreadyDeleted", "Post is already deleted.");
 
         Deleted = true;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
