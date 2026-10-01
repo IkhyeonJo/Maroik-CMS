@@ -1,10 +1,12 @@
+using Maroik.Core.Domain.ValueObjects;
+
 namespace Maroik.Core.Domain.Finance;
 
 /// <summary>
 /// Resolves which monetary unit an account's dashboard should treat as its effective default,
 /// self-correcting when the stored value is missing or no longer backed by any asset. Takes the
-/// account's currently stored unit as a plain string rather than an Account reference, since
-/// Finance must stay independent of the Account bounded context.
+/// account's currently stored unit as a <see cref="CurrencyCode"/> rather than an Account reference,
+/// since Finance must stay independent of the Account bounded context.
 /// </summary>
 public static class DefaultMonetaryUnitPolicy
 {
@@ -16,9 +18,9 @@ public static class DefaultMonetaryUnitPolicy
     /// asset list (deleted included), to match main's <c>AssetRepository.GetAssetsAsync</c>, which
     /// never filters on Deleted.
     /// </summary>
-    public static string? Resolve(string? currentUnit, IReadOnlyCollection<Asset> allAssets)
+    public static CurrencyCode? Resolve(CurrencyCode? currentUnit, IReadOnlyCollection<Asset> allAssets)
     {
-        HashSet<string> availableUnits = [.. allAssets.Select(a => a.Balance.Currency)];
+        HashSet<CurrencyCode> availableUnits = [.. allAssets.Select(a => a.Balance.Currency)];
         if (availableUnits.Count == 0) return null;
 
         if (currentUnit != null && availableUnits.Contains(currentUnit)) return currentUnit;

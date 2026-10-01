@@ -166,8 +166,8 @@ public class LogicGapTests
     [Fact]
     public void NewAccounts_GetADistinctHyphenlessSecurityStamp()
     {
-        string stamp1 = DomainAccount.Create(Email, "$2a$h", "Nick", Role.User, "UTC", null, GuidToken.Generate(Now), true, Now).Value.SecurityStamp;
-        string stamp2 = DomainAccount.Create(Email, "$2a$h", "Nick", Role.User, "UTC", null, GuidToken.Generate(Now), true, Now).Value.SecurityStamp;
+        string stamp1 = DomainAccount.Create(Email, "$2a$h", "Nick", AccountRole.User, "UTC", null, GuidToken.Generate(Now), true, Now).Value.SecurityStamp;
+        string stamp2 = DomainAccount.Create(Email, "$2a$h", "Nick", AccountRole.User, "UTC", null, GuidToken.Generate(Now), true, Now).Value.SecurityStamp;
 
  #pragma warning disable SYSLIB1045
         Assert.Matches(new Regex("^[0-9a-f]{32}$"), stamp1);
@@ -189,9 +189,9 @@ public class LogicGapTests
         Assert.Equal("$2a$hash", account.HashedPassword);
         Assert.Equal("Nick", account.Nickname);
         Assert.Equal("/a.png", account.AvatarImagePath);
-        Assert.Equal(Role.Admin, account.Role);
+        Assert.Equal(Role.Admin, account.Role.Value);
         Assert.Equal("Asia/Seoul", account.TimeZone.Value);
-        Assert.Equal("KRW", account.DefaultMonetaryUnit);
+        Assert.Equal("KRW", account.DefaultMonetaryUnit?.Value);
         Assert.True(account.Locked);
         Assert.Equal(4, account.LoginAttempt);
         Assert.True(account.EmailConfirmed);
@@ -280,9 +280,9 @@ public class LogicGapTests
     {
         IReadOnlyCollection<Asset> assets = [A("a", "USD"), A("b", "KRW"), A("c", "KRW")];
 
-        Assert.Equal("KRW", DefaultMonetaryUnitPolicy.Resolve("EUR", assets));
-        Assert.Equal("USD", DefaultMonetaryUnitPolicy.Resolve("USD", assets)); // a still-valid current unit wins over popularity
-        Assert.Null(DefaultMonetaryUnitPolicy.Resolve("KRW", []));
+        Assert.Equal("KRW", DefaultMonetaryUnitPolicy.Resolve(CurrencyCode.Create("EUR").Value, assets)?.Value);
+        Assert.Equal("USD", DefaultMonetaryUnitPolicy.Resolve(CurrencyCode.Create("USD").Value, assets)?.Value); // a still-valid current unit wins over popularity
+        Assert.Null(DefaultMonetaryUnitPolicy.Resolve(CurrencyCode.Create("KRW").Value, []));
         return;
  #pragma warning disable IDE0062
         Asset A(string name, string unit) => Asset.Create(name, Email, "FreeDepositAndWithdrawal", 1m, unit, Now).Value;

@@ -35,14 +35,14 @@ public sealed class Account : AggregateRoot<string>
     /// <summary>Relative path to the user's avatar image.</summary>
     public string? AvatarImagePath { get; private set; }
 
-    /// <summary>Account role: "Admin" or "User".</summary>
-    public string Role { get; private set; }
+    /// <summary>Account role: Admin or User.</summary>
+    public AccountRole Role { get; private set; }
 
     /// <summary>IANA time-zone used for date/time display.</summary>
     public TimeZoneId TimeZone { get; private set; }
 
     /// <summary>Default currency code for the personal account-book (e.g. "KRW", "USD"). Null when no currency has been configured.</summary>
-    public string? DefaultMonetaryUnit { get; private set; }
+    public CurrencyCode? DefaultMonetaryUnit { get; private set; }
 
     /// <summary>When true the account cannot log in.</summary>
     public bool Locked { get; private set; }
@@ -112,9 +112,9 @@ public sealed class Account : AggregateRoot<string>
         Email email,
         string hashedPassword,
         string nickname,
-        string role,
+        AccountRole role,
         TimeZoneId timeZone,
-        string? defaultMonetaryUnit,
+        CurrencyCode? defaultMonetaryUnit,
         string? registrationToken,
         bool agreedServiceTerms,
         DateTime utcNow) : base(email.Value)
@@ -135,8 +135,8 @@ public sealed class Account : AggregateRoot<string>
     /// <summary>Reconstitution constructor: assigns every field verbatim from trusted storage with
     /// no "new entity" side effects (no fresh <see cref="SecurityStamp"/>, no new timestamps).</summary>
     private Account(
-        Email email, string hashedPassword, string nickname, string? avatarImagePath, string role,
-        TimeZoneId timeZone, string? defaultMonetaryUnit, bool locked, long loginAttempt, bool emailConfirmed,
+        Email email, string hashedPassword, string nickname, string? avatarImagePath, AccountRole role,
+        TimeZoneId timeZone, CurrencyCode? defaultMonetaryUnit, bool locked, long loginAttempt, bool emailConfirmed,
         bool agreedServiceTerms, string? registrationToken, string? resetPasswordToken, DateTime created,
         DateTime updated, string? message, bool deleted, string securityStamp, bool mustChangePassword) : base(email.Value)
     {
@@ -195,9 +195,9 @@ public sealed class Account : AggregateRoot<string>
             hashedPassword,
             nickname,
             avatarImagePath,
-            role,
+            AccountRole.FromTrustedSource(role),
             TimeZoneId.FromTrustedSource(timeZoneIanaId),
-            defaultMonetaryUnit,
+            defaultMonetaryUnit == null ? null : CurrencyCode.FromTrustedSource(defaultMonetaryUnit),
             locked,
             loginAttempt,
             emailConfirmed,
@@ -221,9 +221,9 @@ public sealed class Account : AggregateRoot<string>
         string emailValue,
         string hashedPassword,
         string nickname,
-        string role,
+        AccountRole role,
         string timeZoneValue,
-        string? defaultMonetaryUnit,
+        CurrencyCode? defaultMonetaryUnit,
         string? registrationToken,
         bool agreedServiceTerms,
         DateTime utcNow,
@@ -242,9 +242,6 @@ public sealed class Account : AggregateRoot<string>
 
         if (string.IsNullOrWhiteSpace(hashedPassword))
             return LocalizableError.Validation("Account.PasswordEmpty", "Hashed password cannot be empty.");
-
-        if (role is not (Maroik.Core.Domain.Account.Role.Admin or Maroik.Core.Domain.Account.Role.User))
-            return LocalizableError.Validation("Account.RoleInvalid", "Role must be either Admin or User.");
 
         var account = new Account(
             emailResult.Value, hashedPassword, nickname, role,
@@ -357,7 +354,7 @@ public sealed class Account : AggregateRoot<string>
     /// and never changed afterward (the profile edit UI shows it read-only); the only exception is
     /// <see cref="ReplaceUnconfirmedRegistration"/>, before the registration is confirmed.
     /// </summary>
-    public void UpdateProfile(string? avatarImagePath, TimeZoneId timeZone, string? defaultMonetaryUnit, DateTime utcNow)
+    public void UpdateProfile(string? avatarImagePath, TimeZoneId timeZone, CurrencyCode? defaultMonetaryUnit, DateTime utcNow)
     {
         AvatarImagePath = avatarImagePath;
         TimeZone = timeZone;
@@ -493,15 +490,11 @@ public sealed class Account : AggregateRoot<string>
         Updated = utcNow;
     }
 
-    /// <summary>Administrator operation: changes the account's role. Only Admin or User is accepted.</summary>
-    public ErrorOr<Success> ChangeRole(string role, DateTime utcNow)
+    /// <summary>Administrator operation: changes the account's role.</summary>
+    public void ChangeRole(AccountRole role, DateTime utcNow)
     {
-        if (role is not (Maroik.Core.Domain.Account.Role.Admin or Maroik.Core.Domain.Account.Role.User))
-            return LocalizableError.Validation("Account.RoleInvalid", "Role must be either Admin or User.");
-
         Role = role;
         Updated = utcNow;
-        return Result.Success;
     }
 
     /// <summary>Administrator operation: changes the account's display time zone.</summary>

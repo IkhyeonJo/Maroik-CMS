@@ -15,7 +15,7 @@ internal static class FixedExpenditureMapper
         SubClass = fe.SubClass,
         Content = fe.Content,
         Amount = fe.Amount.Amount,
-        MonetaryUnit = fe.Amount.Currency,
+        MonetaryUnit = fe.Amount.Currency.Value,
         PaymentMethod = fe.PaymentMethod,
         MyDepositAsset = fe.MyDepositAsset,
         DepositMonth = fe.DepositMonth,

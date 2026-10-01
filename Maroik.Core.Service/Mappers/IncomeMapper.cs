@@ -15,7 +15,7 @@ internal static class IncomeMapper
         SubClass = income.SubClass,
         Content = income.Content,
         Amount = income.Amount.Amount,
-        MonetaryUnit = income.Amount.Currency,
+        MonetaryUnit = income.Amount.Currency.Value,
         DepositMyAssetProductName = income.DepositMyAssetProductName,
         Created = income.Created,
         Updated = income.Updated,

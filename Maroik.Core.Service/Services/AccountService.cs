@@ -177,7 +177,7 @@ public class AccountService(
                 newAccount.Email ?? "",
                 hashedPassword,
                 nickname,
-                Role.User,
+                AccountRole.User,
                 newAccount.TimeZoneIanaId ?? "UTC",
                 defaultMonetaryUnit: null,
                 GuidToken.Generate(utcNow),

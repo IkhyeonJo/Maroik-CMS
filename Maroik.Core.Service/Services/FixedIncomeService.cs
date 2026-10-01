@@ -54,7 +54,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
         if (asset.Deleted)
             return DeletedAssetResult;
 
-        string currency = asset.Balance.Currency;
+        string currency = asset.Balance.Currency.Value;
         var registerResult = FixedIncome.Register(accountEmail, request.MainClass, request.SubClass,
             request.Content, Math.Abs(request.Amount), currency,
             request.DepositMyAssetProductName, request.DepositMonth, request.DepositDay,
@@ -85,7 +85,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
             return ServiceResult.NotFound("FixedIncome.AssetNotFound", "The selected asset could not be found.");
         if (asset.Deleted)
             return DeletedAssetResult;
-        string currency = asset.Balance.Currency;
+        string currency = asset.Balance.Currency.Value;
 
         var updateResult = fi.Update(request.MainClass, request.SubClass, request.Content,
             Math.Abs(request.Amount), currency, request.DepositMyAssetProductName,

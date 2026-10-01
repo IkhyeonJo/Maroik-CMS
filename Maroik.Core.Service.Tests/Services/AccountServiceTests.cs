@@ -354,7 +354,7 @@ public class AccountServiceTests
 
         Assert.True(result.Success);
         Assert.NotNull(created);
-        Assert.Equal(Role.User, created.Role);
+        Assert.Equal(Role.User, created.Role.Value);
         Assert.False(created.Locked);
         Assert.False(created.EmailConfirmed);
         Assert.False(created.Deleted);

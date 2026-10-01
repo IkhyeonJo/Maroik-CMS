@@ -68,7 +68,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
             myDepositAsset = request.MyDepositAsset;
         }
 
-        string currency = payAsset.Balance.Currency;
+        string currency = payAsset.Balance.Currency.Value;
         var registerResult = FixedExpenditure.Register(accountEmail, request.MainClass, request.SubClass,
             request.Content, Math.Abs(request.Amount), currency, request.PaymentMethod,
             myDepositAsset, request.DepositMonth, request.DepositDay, request.MaturityDate, utcNow, request.Note);
@@ -110,7 +110,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
         if (fe == null)
             return ServiceResult.NotFound("FixedExpenditure.NotFound", "The fixed-expenditure record could not be found.");
 
-        string currency = payAsset.Balance.Currency;
+        string currency = payAsset.Balance.Currency.Value;
         string? myDepositAsset = requiresDepositAsset ? request.MyDepositAsset : null;
 
         var updateResult = fe.Update(request.MainClass, request.SubClass, request.Content,

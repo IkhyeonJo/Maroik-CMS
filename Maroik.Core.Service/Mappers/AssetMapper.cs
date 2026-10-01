@@ -13,7 +13,7 @@ internal static class AssetMapper
         AccountEmail = asset.AccountEmail.Value,
         Item = asset.Item,
         Amount = asset.Balance.Amount,
-        MonetaryUnit = asset.Balance.Currency,
+        MonetaryUnit = asset.Balance.Currency.Value,
         Created = asset.Created,
         Updated = asset.Updated,
         Note = asset.Note,

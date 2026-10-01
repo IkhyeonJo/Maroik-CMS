@@ -65,8 +65,8 @@ public class ErrorContractTests
     // ---- Account --------------------------------------------------------------------------
 
     /// <summary>Result of <c>Account.Create</c> with the given password hash and role.</summary>
-    private static ErrorOr<DomainAccount> NewAccount(string hash = "$2a$hash", string role = Role.User) =>
-        DomainAccount.Create(Email, hash, "Nick", role, "UTC", null, GuidToken.Generate(Now), true, Now);
+    private static ErrorOr<DomainAccount> NewAccount(string hash = "$2a$hash") =>
+        DomainAccount.Create(Email, hash, "Nick", AccountRole.User, "UTC", null, GuidToken.Generate(Now), true, Now);
 
     /// <summary>A persisted account whose confirmation, token and lockout state are set by the arguments.</summary>
     private static DomainAccount Reconstituted(bool emailConfirmed = true, string? resetToken = null, string? registrationToken = null,
@@ -79,7 +79,7 @@ public class ErrorContractTests
     public void Account_Create_Errors()
     {
         ErrorAssert.Validation(NewAccount(hash: " "), "Account.PasswordEmpty", "Hashed password cannot be empty.");
-        ErrorAssert.Validation(NewAccount(role: "Root"), "Account.RoleInvalid", "Role must be either Admin or User.");
+        ErrorAssert.Validation(AccountRole.Create("Root"), "Account.RoleInvalid", "Role must be either Admin or User.");
     }
 
     /// <summary>Verifies that confirming an already-confirmed account is a conflict and a wrong token is a validation error.</summary>
@@ -104,12 +104,11 @@ public class ErrorContractTests
         ErrorAssert.Validation(account.ResetPassword(token, " ", Now), "Account.PasswordEmpty", "New hashed password cannot be empty.");
     }
 
-    /// <summary>Verifies that <c>ChangeRole</c> rejects a role other than Admin or User.</summary>
+    /// <summary>Verifies that an account role other than Admin or User (including the menu's Anonymous) is refused.</summary>
     [Fact]
-    public void Account_ChangeRole_RejectsAnUnknownRole()
+    public void AccountRole_RejectsAnUnknownRole()
     {
-        ErrorAssert.Validation(Reconstituted().ChangeRole("Root", Now),
-            "Account.RoleInvalid", "Role must be either Admin or User.");
+        ErrorAssert.Validation(AccountRole.Create(Role.Anonymous), "Account.RoleInvalid", "Role must be either Admin or User.");
     }
 
     // ---- Board ----------------------------------------------------------------------------

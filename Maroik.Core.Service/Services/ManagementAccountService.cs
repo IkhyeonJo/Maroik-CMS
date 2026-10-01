@@ -63,13 +63,17 @@ public class ManagementAccountService(
             if (!PasswordPolicy.IsValid(request.PlainPassword))
                 return ServiceResult.Validation("Account.PasswordPolicy", PasswordPolicy.ViolationMessage);
 
+            var roleResult = AccountRole.Create(request.Role ?? Role.User);
+            if (roleResult.IsError)
+                return ServiceResult.FromError(roleResult.FirstError);
+
             string hashedPassword = passwordService.HashPassword(request.PlainPassword ?? "");
 
             var createResult = Account.Create(
                 request.Email ?? "",
                 hashedPassword,
                 nickname,
-                request.Role ?? Role.User,
+                roleResult.Value,
                 request.TimeZoneIanaId ?? "UTC",
                 defaultMonetaryUnit: null,
                 registrationToken: null,
@@ -145,7 +149,7 @@ public class ManagementAccountService(
                 return ServiceResult.NotFound("Account.NotFound", "Email address is wrong");
             }
 
-            string oldRole = account.Role;
+            AccountRole oldRole = account.Role;
             bool oldLocked = account.Locked;
             bool oldDeleted = account.Deleted;
 
@@ -200,8 +204,9 @@ public class ManagementAccountService(
 
         if (request.Role != null)
         {
-            var roleResult = account.ChangeRole(request.Role, utcNow);
+            var roleResult = AccountRole.Create(request.Role);
             if (roleResult.IsError) return roleResult.Errors;
+            account.ChangeRole(roleResult.Value, utcNow);
         }
 
         if (request.Locked)

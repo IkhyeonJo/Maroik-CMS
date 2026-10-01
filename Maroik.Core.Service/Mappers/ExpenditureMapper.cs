@@ -15,7 +15,7 @@ internal static class ExpenditureMapper
         SubClass = expenditure.SubClass,
         Content = expenditure.Content,
         Amount = expenditure.Amount.Amount,
-        MonetaryUnit = expenditure.Amount.Currency,
+        MonetaryUnit = expenditure.Amount.Currency.Value,
         PaymentMethod = expenditure.PaymentMethod,
         MyDepositAsset = expenditure.MyDepositAsset,
         Created = expenditure.Created,

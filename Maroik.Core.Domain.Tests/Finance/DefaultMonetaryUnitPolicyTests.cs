@@ -1,3 +1,4 @@
+using Maroik.Core.Domain.ValueObjects;
 using Maroik.Core.Domain.Finance;
 namespace Maroik.Core.Domain.Tests.Finance;
 
@@ -23,7 +24,7 @@ public class DefaultMonetaryUnitPolicyTests
     [Fact]
     public void Resolve_ReturnsNull_WhenNoAssets()
     {
-        var result = DefaultMonetaryUnitPolicy.Resolve("KRW", []);
+        var result = DefaultMonetaryUnitPolicy.Resolve(CurrencyCode.Create("KRW").Value, []);
 
         Assert.Null(result);
     }
@@ -34,9 +35,9 @@ public class DefaultMonetaryUnitPolicyTests
     {
         Asset[] assets = [MakeAsset("A", "KRW"), MakeAsset("B", "USD")];
 
-        var result = DefaultMonetaryUnitPolicy.Resolve("USD", assets);
+        var result = DefaultMonetaryUnitPolicy.Resolve(CurrencyCode.Create("USD").Value, assets);
 
-        Assert.Equal("USD", result);
+        Assert.Equal("USD", result?.Value);
     }
 
     /// <summary>Resolve falls back to the most common currency when the current unit is null.</summary>
@@ -47,7 +48,7 @@ public class DefaultMonetaryUnitPolicyTests
 
         var result = DefaultMonetaryUnitPolicy.Resolve(null, assets);
 
-        Assert.Equal("KRW", result);
+        Assert.Equal("KRW", result?.Value);
     }
 
     /// <summary>Resolve falls back to the most common currency when the current unit no longer matches any asset.</summary>
@@ -56,8 +57,8 @@ public class DefaultMonetaryUnitPolicyTests
     {
         Asset[] assets = [MakeAsset("A", "KRW"), MakeAsset("B", "KRW"), MakeAsset("C", "USD")];
 
-        var result = DefaultMonetaryUnitPolicy.Resolve("JPY", assets);
+        var result = DefaultMonetaryUnitPolicy.Resolve(CurrencyCode.Create("JPY").Value, assets);
 
-        Assert.Equal("KRW", result);
+        Assert.Equal("KRW", result?.Value);
     }
 }

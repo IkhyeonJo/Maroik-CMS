@@ -117,7 +117,7 @@ public class AssetService(
             }
 
             // Fall back to the existing currency when the request does not specify one.
-            string currency = request.MonetaryUnit ?? asset.Balance.Currency;
+            string currency = request.MonetaryUnit ?? asset.Balance.Currency.Value;
             var updateResult = asset.Update(request.ProductName ?? originalProductName, request.Item ?? asset.Item, request.Amount, currency, request.Note, request.Deleted, utcNow);
             if (updateResult.IsError)
             {

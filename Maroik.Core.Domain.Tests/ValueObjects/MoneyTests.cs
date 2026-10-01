@@ -16,7 +16,7 @@ public class MoneyTests
 
         Assert.False(result.IsError);
         Assert.Equal(1000m, result.Value.Amount);
-        Assert.Equal("KRW", result.Value.Currency);
+        Assert.Equal("KRW", result.Value.Currency.Value);
     }
 
     /// <summary>Create returns error, when currency empty.</summary>
@@ -39,17 +39,17 @@ public class MoneyTests
         var result = Money.Create(50m, "usd");
 
         Assert.False(result.IsError);
-        Assert.Equal("USD", result.Value.Currency);
+        Assert.Equal("USD", result.Value.Currency.Value);
     }
 
     /// <summary>Zero returns zero balance.</summary>
     [Fact]
     public void Zero_ReturnsZeroBalance()
     {
-        var money = Money.Zero("KRW");
+        var money = Money.Zero(CurrencyCode.Create("KRW").Value);
 
         Assert.Equal(0m, money.Amount);
-        Assert.Equal("KRW", money.Currency);
+        Assert.Equal("KRW", money.Currency.Value);
     }
 
     /// <summary>Add returns sum money, when same currency.</summary>
@@ -63,7 +63,7 @@ public class MoneyTests
 
         Assert.False(result.IsError);
         Assert.Equal(1500m, result.Value.Amount);
-        Assert.Equal("KRW", result.Value.Currency);
+        Assert.Equal("KRW", result.Value.Currency.Value);
     }
 
     /// <summary>Add returns error, when different currency.</summary>
@@ -90,7 +90,7 @@ public class MoneyTests
 
         Assert.False(result.IsError);
         Assert.Equal(700m, result.Value.Amount);
-        Assert.Equal("KRW", result.Value.Currency);
+        Assert.Equal("KRW", result.Value.Currency.Value);
     }
 
     /// <summary>Subtract returns error, when different currency.</summary>
@@ -137,7 +137,7 @@ public class MoneyTests
         Money result = money.WithAmount(9999m);
 
         Assert.Equal(9999m, result.Amount);
-        Assert.Equal("KRW", result.Currency);
+        Assert.Equal("KRW", result.Currency.Value);
     }
 
     /// <summary>WithAmount does not mutate the original instance.</summary>

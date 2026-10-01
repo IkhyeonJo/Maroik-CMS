@@ -406,7 +406,7 @@ public class ManagementAccountServiceTests
         }, null, Actor, TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
-        Assert.Equal(Role.Admin, account.Role);
+        Assert.Equal(Role.Admin, account.Role.Value);
         Assert.Equal("Asia/Seoul", account.TimeZone.Value);
         Assert.True(account.EmailConfirmed);
         Assert.True(account.AgreedServiceTerms);
@@ -419,7 +419,7 @@ public class ManagementAccountServiceTests
         }, null, Actor, TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
-        Assert.Equal(Role.Admin, account.Role); // a null role keeps the current one
+        Assert.Equal(Role.Admin, account.Role.Value); // a null role keeps the current one
         Assert.Equal("Asia/Seoul", account.TimeZone.Value); // so does a null time zone
         Assert.False(account.EmailConfirmed);
         Assert.False(account.AgreedServiceTerms);
@@ -531,6 +531,21 @@ public class ManagementAccountServiceTests
 
         Assert.False(result.Success);
         Assert.Equal("Account.PasswordPolicy", result.ErrorCode);
+        _passwordService.Verify(p => p.HashPassword(It.IsAny<string>()), Times.Never);
+        _accountRepo.Verify(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An account role other than Admin or User (e.g. the menu-only Anonymous) is refused before anything is hashed or stored.</summary>
+    [Fact]
+    public async Task CreateAccountAsync_RejectsARoleOtherThanAdminOrUser()
+    {
+        _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
+        AdminCreateAccountRequest request = NewAccountRequest();
+        request.Role = Role.Anonymous;
+
+        ServiceResult result = await CreateSut().CreateAccountAsync(request, Actor, TestContext.Current.CancellationToken);
+
+        Assert.Equal("Account.RoleInvalid", result.ErrorCode);
         _passwordService.Verify(p => p.HashPassword(It.IsAny<string>()), Times.Never);
         _accountRepo.Verify(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
     }
