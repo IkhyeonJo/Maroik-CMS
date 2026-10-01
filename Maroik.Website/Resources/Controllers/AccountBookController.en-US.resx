@@ -339,6 +339,9 @@
   <data name="Amount cannot be negative." xml:space="preserve">
     <value>Amount cannot be negative.</value>
   </data>
+  <data name="Amount can have up to {0} decimal places." xml:space="preserve">
+    <value>Amount can have up to {0} decimal places.</value>
+  </data>
   <data name="Amount must not exceed {0}." xml:space="preserve">
     <value>Amount must not exceed {0}.</value>
   </data>

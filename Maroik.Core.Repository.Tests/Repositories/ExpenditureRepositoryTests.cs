@@ -45,6 +45,33 @@ public sealed class ExpenditureRepositoryTests(DatabaseFixture database) : Repos
         Context.ChangeTracker.Clear();
     }
 
+    // -- Amount precision ---------------------------------------------------------
+
+    /// <summary>
+    /// Regression test: a four-decimal amount and the four-decimal balance it leaves behind are both
+    /// stored exactly (numeric(20,4)), so the database no longer rounds them apart (0.005 used to be
+    /// stored as 0.01 and 99.995 as 100.00).
+    /// </summary>
+    [Fact]
+    public async Task FourDecimalAmounts_AreStoredExactly_ForTheExpenditureAndTheAssetBalance()
+    {
+        string email = UniqueEmail();
+        await SeedAsync(MakeExpenditure(email, "Gum", paymentMethod: "Wallet", myDepositAsset: null, amount: 0.005m));
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        var asset = await Context.Assets.SingleAsync(a => a.AccountEmail == email && a.ProductName == "Wallet", ct);
+        asset.Amount = 99.995m;
+        await Context.SaveChangesAsync(ct);
+        Context.ChangeTracker.Clear();
+
+        var expenditure = Assert.Single(await Sut.GetByAccountEmailAsync(email, ct));
+        await using var fresh = NewDbContext();
+        decimal balance = (await fresh.Assets.SingleAsync(a => a.AccountEmail == email && a.ProductName == "Wallet", ct)).Amount;
+
+        Assert.Equal(0.005m, expenditure.Amount.Amount);
+        Assert.Equal(99.995m, balance);
+        Assert.Equal(100.00m, balance + expenditure.Amount.Amount);
+    }
+
     // -- GetByAccountEmailAsync -------------------------------------------------
 
     /// <summary>Verifies that <c>GetByAccountEmailAsync</c> returns only expenditures for the given e-mail.</summary>

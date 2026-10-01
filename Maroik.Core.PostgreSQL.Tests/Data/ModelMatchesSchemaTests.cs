@@ -106,6 +106,40 @@ public abstract class ModelMatchesSchemaTests(SchemaDatabaseFixture database)
     }
 
     /// <summary>
+    /// Every <c>numeric</c> column has the precision and scale the model declares, so values the
+    /// domain accepts are stored exactly as validated (the database would otherwise round them).
+    /// </summary>
+    [Fact]
+    public async Task EveryNumericColumn_HasTheModelsPrecisionAndScale()
+    {
+        await using ApplicationDbContext db = CreateContext();
+        await using NpgsqlConnection connection = await database.OpenAsync(Ct);
+        await using var command = new NpgsqlCommand(
+            """
+            SELECT c.table_name, c.column_name, c.numeric_precision, c.numeric_scale
+            FROM information_schema.columns c
+            WHERE c.table_schema = 'public' AND c.data_type = 'numeric'
+            """, connection);
+        await using var reader = await command.ExecuteReaderAsync(Ct);
+        Dictionary<(string, string), (int?, int?)> schema = [];
+        while (await reader.ReadAsync(Ct))
+            schema[(reader.GetString(0), reader.GetString(1))] =
+                (reader.IsDBNull(2) ? null : reader.GetInt32(2), reader.IsDBNull(3) ? null : reader.GetInt32(3));
+
+        Dictionary<(string, string), (int?, int?)> model = [];
+        foreach (IEntityType entity in db.Model.GetEntityTypes())
+        {
+            string table = entity.GetTableName()!;
+            var store = StoreObjectIdentifier.Table(table, entity.GetSchema());
+            foreach (IProperty property in entity.GetProperties().Where(p => BaseType(p.GetColumnType()) == "numeric"))
+                model[(table, property.GetColumnName(store)!)] = (property.GetPrecision(), property.GetScale());
+        }
+
+        Assert.NotEmpty(schema);
+        Assert.Equal(schema.OrderBy(e => e.Key), model.OrderBy(e => e.Key));
+    }
+
+    /// <summary>
     /// Every column of every table is either mapped or safe to leave out (nullable, or filled by a default) — an unmapped NOT NULL
     /// column without a default would make every insert through the model fail.
     /// </summary>

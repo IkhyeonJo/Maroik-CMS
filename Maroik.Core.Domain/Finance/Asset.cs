@@ -123,7 +123,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         var textResult = ValidateNameAndNote(productName, note);
         if (textResult.IsError) return textResult.Errors;
 
-        var rangeResult = FinanceAmountPolicy.ValidateWithinRange(amount);
+        var rangeResult = FinanceAmountPolicy.ValidateBalance(amount);
         if (rangeResult.IsError) return rangeResult.Errors;
 
         if (string.IsNullOrWhiteSpace(item))
@@ -178,7 +178,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         var addResult = Balance.Add(amount);
         if (addResult.IsError) return addResult.Errors;
 
-        // The balance is persisted in a numeric(18,2) column: a deposit that would take it past the
+        // The balance is persisted in a numeric(20,4) column: a deposit that would take it past the
         // range is a clean validation error here, not a raw numeric-overflow (SQLSTATE 22003) at save.
         var rangeResult = FinanceAmountPolicy.ValidateWithinRange(addResult.Value.Amount);
         if (rangeResult.IsError) return rangeResult.Errors;
@@ -197,7 +197,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         var subtractResult = Balance.Subtract(amount);
         if (subtractResult.IsError) return subtractResult.Errors;
 
-        // Same numeric(18,2) bound as Deposit, in the negative direction.
+        // Same numeric(20,4) bound as Deposit, in the negative direction.
         var rangeResult = FinanceAmountPolicy.ValidateWithinRange(subtractResult.Value.Amount);
         if (rangeResult.IsError) return rangeResult.Errors;
 
@@ -212,7 +212,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         if (newBalance.Currency != Balance.Currency)
             return LocalizableError.Validation("Asset.CurrencyMismatch", "Cannot change the currency of an existing asset.");
 
-        var rangeResult = FinanceAmountPolicy.ValidateWithinRange(newBalance.Amount);
+        var rangeResult = FinanceAmountPolicy.ValidateBalance(newBalance.Amount);
         if (rangeResult.IsError) return rangeResult.Errors;
 
         Balance = newBalance;
@@ -232,7 +232,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         var textResult = ValidateNameAndNote(productName, note);
         if (textResult.IsError) return textResult.Errors;
 
-        var rangeResult = FinanceAmountPolicy.ValidateWithinRange(amount);
+        var rangeResult = FinanceAmountPolicy.ValidateBalance(amount);
         if (rangeResult.IsError) return rangeResult.Errors;
 
         if (string.IsNullOrWhiteSpace(item))

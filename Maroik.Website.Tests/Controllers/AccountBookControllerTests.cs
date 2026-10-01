@@ -67,4 +67,23 @@ public class AccountBookControllerTests(MaroikWebApplicationFactory factory)
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
     }
+
+    // -- Amount inputs ------------------------------------------------------------
+
+    /// <summary>Every create/edit amount input allows four decimal places (the step the server accepts).</summary>
+    [Theory]
+    [InlineData("/AccountBook/Asset", "createAssetAmount", "editAssetAmount")]
+    [InlineData("/AccountBook/Income", "createIncomeAmount", "editIncomeAmount")]
+    [InlineData("/AccountBook/Expenditure", "createExpenditureAmount", "editExpenditureAmount")]
+    [InlineData("/Notice/FixedIncome", "createFixedIncomeAmount", "editFixedIncomeAmount")]
+    [InlineData("/Notice/FixedExpenditure", "createFixedExpenditureAmount", "editFixedExpenditureAmount")]
+    public async Task AmountInputs_AllowFourDecimalPlaces(string path, string createId, string editId)
+    {
+        var response = await GetAsUserAsync(path);
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        foreach (string id in new[] { createId, editId })
+            Assert.Matches($"<input[^>]*step=\"0.0001\"[^>]*id=\"{id}\"", html);
+    }
 }

@@ -519,6 +519,24 @@ public class IncomeServiceTests
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>An amount with a fifth decimal place is refused (never rounded); nothing is written or committed.</summary>
+    [Fact]
+    public async Task CreateAsync_ReturnsTheDecimalPlacesError_AndRollsBack_WhenTheAmountHasFiveDecimals()
+    {
+        GivenAssets(MakeAsset("SavingsAccount"));
+        IncomeRequest request = ValidRequest();
+        request.Amount = 0.00005m;
+
+        ServiceResult result = await CreateSut().CreateAsync(Email, request, TestContext.Current.CancellationToken);
+
+        Assert.Equal("Finance.AmountTooManyDecimals", result.ErrorCode);
+        Assert.Equal("Amount can have up to {0} decimal places.", result.ErrorKey);
+        Assert.Equal([4], result.ErrorArgs);
+        _incomeRepo.Verify(r => r.CreateAsync(It.IsAny<Income>(), It.IsAny<CancellationToken>()), Times.Never);
+        _assetBalance.Verify(r => r.SaveAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     /// <summary>A record the domain rejects (over-long content) is returned as its validation error before any balance moves.</summary>
     [Fact]
     public async Task CreateAsync_ReturnsTheDomainValidationError_BeforeMovingAnyBalance()

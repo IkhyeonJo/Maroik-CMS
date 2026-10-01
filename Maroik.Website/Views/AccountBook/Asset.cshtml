@@ -75,7 +75,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createAssetAmount">@Localizer["Amount"].Value</label>
-                                <input class="form-control form-control-sm" type="number" id="createAssetAmount" name="createAssetAmount" value="0">
+                                <input class="form-control form-control-sm" type="number" step="@FinanceAmountPolicy.SmallestAmountStep.ToString(System.Globalization.CultureInfo.InvariantCulture)" id="createAssetAmount" name="createAssetAmount" value="0">
                             </div>
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createAssetMonetaryUnit">@Localizer["MonetaryUnit"].Value</label>
@@ -132,7 +132,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editAssetAmount">@Localizer["Amount"].Value</label>
-                                <input class="form-control form-control-sm" type="number" id="editAssetAmount" name="editAssetAmount" value="0">
+                                <input class="form-control form-control-sm" type="number" step="@FinanceAmountPolicy.SmallestAmountStep.ToString(System.Globalization.CultureInfo.InvariantCulture)" id="editAssetAmount" name="editAssetAmount" value="0">
                             </div>
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editAssetMonetaryUnit">@Localizer["MonetaryUnit"].Value</label>

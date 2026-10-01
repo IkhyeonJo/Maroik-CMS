@@ -3,7 +3,7 @@ using DomainLocalizableError = Maroik.Core.Domain.Localization.LocalizableError;
 namespace Maroik.Core.Domain.Tests.Finance;
 
 /// <summary>
-/// Range / length limits that mirror the persisted columns (<c>numeric(18,2)</c> amounts,
+/// Range / length limits that mirror the persisted columns (<c>numeric(20,4)</c> amounts,
 /// <c>character varying(255)</c> names and notes): an over-limit value must be a clean domain
 /// validation error, not a raw SQLSTATE 22003 / 22001 from the database write.
 /// </summary>
@@ -11,17 +11,17 @@ public class FinanceAmountRangeTests
 {
     /// <summary>The largest amount (in absolute value) the policy accepts.</summary>
     private const decimal Max = FinanceAmountPolicy.MaxAbsoluteAmount;
-    /// <summary>The smallest two-decimal amount above <see cref="Max"/> (<see cref="Max"/> + 0.01).</summary>
+    /// <summary>The smallest four-decimal amount above <see cref="Max"/> (<see cref="Max"/> + 0.0001).</summary>
     private const decimal OverMax = 10_000_000_000_000_000m;
 
     // -- FinanceAmountPolicy ---------------------------------------------------
 
-    /// <summary>The largest value <c>numeric(18,2)</c> holds is accepted, in either sign.</summary>
+    /// <summary>The largest value <c>numeric(20,4)</c> holds is accepted, in either sign.</summary>
     [Theory]
     [InlineData("0")]
     [InlineData("1234.56")]
-    [InlineData("9999999999999999.99")]
-    [InlineData("-9999999999999999.99")]
+    [InlineData("9999999999999999.9999")]
+    [InlineData("-9999999999999999.9999")]
     public void ValidateWithinRange_ReturnsSuccess_ForValuesTheColumnCanHold(string amount)
         => Assert.False(FinanceAmountPolicy.ValidateWithinRange(decimal.Parse(amount, System.Globalization.CultureInfo.InvariantCulture)).IsError);
 
@@ -39,7 +39,7 @@ public class FinanceAmountRangeTests
     }
 
     /// <summary>
-    /// The limit quoted in the message is the real one, to the cent. (It used to be formatted without
+    /// The limit quoted in the message is the real one, to the last stored decimal. (It used to be formatted without
     /// decimals and so rounded up to 10,000,000,000,000,000 — a value that is itself out of range.)
     /// </summary>
     [Fact]
@@ -48,8 +48,8 @@ public class FinanceAmountRangeTests
         var error = FinanceAmountPolicy.ValidateWithinRange(OverMax).FirstError;
 
         var args = (object[])error.Metadata![DomainLocalizableError.ResourceArgsMetadataKey];
-        Assert.Equal("9,999,999,999,999,999.99", args[0]);
-        Assert.Contains("9,999,999,999,999,999.99", error.Description);
+        Assert.Equal("9,999,999,999,999,999.9999", args[0]);
+        Assert.Contains("9,999,999,999,999,999.9999", error.Description);
     }
 
     /// <summary><c>ValidateAmount</c> applies both the non-negative and the range rule.</summary>

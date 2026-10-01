@@ -346,6 +346,71 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         Assert.Equal(balanceAfterWithdrawal + 75, GetAssetBalance(asset));
     }
 
+    // -- Amount decimal places (regression: balance drift) -----------------------------
+
+    /// <summary>
+    /// Regression test: amounts used to be stored as numeric(18,2), so a 0.005 expenditure was saved
+    /// as 0.01 while the balance 99.995 was saved as 100.00 — deleting the expenditure then refunded
+    /// 0.01 and the balance grew to 100.01, a little more on every create/delete. Four decimals are now
+    /// stored exactly, so the balance returns to exactly where it started.
+    /// </summary>
+    [Fact]
+    public async Task CreateThenDeleteExpenditure_OfAFractionalAmount_RestoresTheBalanceExactly()
+    {
+        string asset = UniqueAssetName();
+        var session = await LoginAsync();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            SeedAssetIfMissing(db, asset);
+            db.Assets.Single(a => a.AccountEmail == Email && a.ProductName == asset).Amount = 100.00m;
+            db.SaveChanges();
+        }
+
+        using (var create = session.BuildJsonPostRequest("/AccountBook/CreateExpenditure", new
+        {
+            Id = 0, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Gum",
+            Amount = 0.005m, PaymentMethod = asset, MyDepositAsset = "N/A", Note = "", Created = "2026-01-15 10:30:00"
+        }))
+            Assert.Contains("\"result\":true", await (await _client.SendAsync(create, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+        long id;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var stored = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Expenditures.Single(e => e.AccountEmail == Email && e.PaymentMethod == asset);
+            Assert.Equal(0.005m, stored.Amount);
+            id = stored.Id;
+        }
+        Assert.Equal(99.995m, GetAssetBalance(asset));
+
+        using (var delete = session.BuildJsonPostRequest("/AccountBook/DeleteExpenditure", new { Id = id }))
+            Assert.Contains("\"result\":true", await (await _client.SendAsync(delete, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(100.00m, GetAssetBalance(asset));
+    }
+
+    /// <summary>A fifth decimal place is refused with its own message (never rounded), and the balance is untouched.</summary>
+    [Fact]
+    public async Task CreateExpenditure_WithFiveDecimalPlaces_IsRejected_AndLeavesTheBalanceAlone()
+    {
+        string asset = UniqueAssetName();
+        var session = await LoginAsync();
+        using (var scope = factory.Services.CreateScope())
+            SeedAssetIfMissing(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>(), asset);
+        decimal before = GetAssetBalance(asset);
+
+        using var request = session.BuildJsonPostRequest("/AccountBook/CreateExpenditure", new
+        {
+            Id = 0, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Gum",
+            Amount = 0.00005m, PaymentMethod = asset, MyDepositAsset = "N/A", Note = "", Created = "2026-01-15 10:30:00"
+        });
+        string json = await (await _client.SendAsync(request, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"result\":false", json);
+        Assert.Contains("Amount can have up to 4 decimal places.", json);
+        Assert.Equal(before, GetAssetBalance(asset));
+    }
+
     // -- IsExpenditureExists ----------------------------------------------------------
 
     /// <summary>Is expenditure exists seeded record returns success result.</summary>

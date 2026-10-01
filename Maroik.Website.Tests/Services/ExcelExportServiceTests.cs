@@ -292,7 +292,7 @@ public class ExcelExportServiceTests
     [InlineData("0.05", "0.05")]
     public void CreateFixedIncomeExcel_TrimsAmountTrailingZeros(string amount, string expected)
     {
-        // Parsed from text so the decimal keeps its scale, as a numeric(18,2) column read from the
+        // Parsed from text so the decimal keeps its scale, as a numeric(20,4) column read from the
         // database does (a double literal cast to decimal would already have dropped the zeros).
         FixedIncomeResponse[] items =
         [
