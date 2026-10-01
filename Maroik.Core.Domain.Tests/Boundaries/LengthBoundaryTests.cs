@@ -12,6 +12,9 @@ namespace Maroik.Core.Domain.Tests.Boundaries;
 /// </summary>
 public class LengthBoundaryTests
 {
+    /// <summary>The fixed "current time" every domain call in this class receives.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>A string of exactly <paramref name="length"/> characters.</summary>
     private static string Text(int length) => new('x', length);
 
@@ -64,13 +67,13 @@ public class LengthBoundaryTests
     [Fact]
     public void Calendar_Create_AcceptsANameAtTheLimit_AndRefusesOneMore()
     {
-        Assert.False(DomainCalendar.Create("a@b.com", Text(ShortTextPolicy.MaxLength), null, "UTC", "#112233").IsError);
+        Assert.False(DomainCalendar.Create("a@b.com", Text(ShortTextPolicy.MaxLength), null, "UTC", "#112233", Now).IsError);
 
-        ErrorAssert.Validation(DomainCalendar.Create("a@b.com", Text(ShortTextPolicy.MaxLength + 1), null, "UTC", "#112233"),
+        ErrorAssert.Validation(DomainCalendar.Create("a@b.com", Text(ShortTextPolicy.MaxLength + 1), null, "UTC", "#112233", Now),
             "Calendar.NameTooLong", "Calendar name must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
-        ErrorAssert.Validation(DomainCalendar.Create("a@b.com", " ", null, "UTC", "#112233"),
+        ErrorAssert.Validation(DomainCalendar.Create("a@b.com", " ", null, "UTC", "#112233", Now),
             "Calendar.NameEmpty", "Calendar name cannot be empty.");
-        ErrorAssert.Validation(DomainCalendar.Create("a@b.com", "a<b", null, "UTC", "#112233"),
+        ErrorAssert.Validation(DomainCalendar.Create("a@b.com", "a<b", null, "UTC", "#112233", Now),
             "Calendar.NameInvalid", "Calendar name cannot contain angle brackets or control characters.");
     }
 
@@ -79,7 +82,7 @@ public class LengthBoundaryTests
 
     /// <summary>Result of <c>CalendarEvent.Create</c> for a one-hour UTC event with the given text fields and status.</summary>
     private static ErrorOr.ErrorOr<CalendarEvent> Event(string title = "t", string? description = null, string? location = null, string? status = null) =>
-        CalendarEvent.Create(1, title, description, false, _start, _start.AddHours(1), "UTC", "UTC", location, status);
+        CalendarEvent.Create(1, title, description, false, _start, _start.AddHours(1), "UTC", "UTC", location, status, Now);
 
     /// <summary>Verifies the title / description / location length limits, the empty title and the unknown status on <c>CalendarEvent.Create</c>.</summary>
     [Fact]
@@ -104,17 +107,17 @@ public class LengthBoundaryTests
         CalendarEvent ev = Event().Value;
 
         Assert.False(ev.Update(Text(TitledContentPolicy.MaxTitleLength), Text(TitledContentPolicy.MaxBodyLength), false,
-            _start, _start.AddHours(1), "UTC", "UTC", Text(ShortTextPolicy.MaxLength), null).IsError);
+            _start, _start.AddHours(1), "UTC", "UTC", Text(ShortTextPolicy.MaxLength), null, Now).IsError);
 
-        ErrorAssert.Validation(ev.Update(Text(TitledContentPolicy.MaxTitleLength + 1), null, false, _start, _start.AddHours(1), "UTC", "UTC", null, null),
+        ErrorAssert.Validation(ev.Update(Text(TitledContentPolicy.MaxTitleLength + 1), null, false, _start, _start.AddHours(1), "UTC", "UTC", null, null, Now),
             "CalendarEvent.TitleTooLong", "Event title must be {0} characters or fewer.", TitledContentPolicy.MaxTitleLength);
-        ErrorAssert.Validation(ev.Update("t", Text(TitledContentPolicy.MaxBodyLength + 1), false, _start, _start.AddHours(1), "UTC", "UTC", null, null),
+        ErrorAssert.Validation(ev.Update("t", Text(TitledContentPolicy.MaxBodyLength + 1), false, _start, _start.AddHours(1), "UTC", "UTC", null, null, Now),
             "CalendarEvent.DescriptionTooLong", "Event description must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
-        ErrorAssert.Validation(ev.Update("t", null, false, _start, _start.AddHours(1), "UTC", "UTC", Text(ShortTextPolicy.MaxLength + 1), null),
+        ErrorAssert.Validation(ev.Update("t", null, false, _start, _start.AddHours(1), "UTC", "UTC", Text(ShortTextPolicy.MaxLength + 1), null, Now),
             "CalendarEvent.LocationTooLong", "Event location must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
-        ErrorAssert.Validation(ev.Update(" ", null, false, _start, _start.AddHours(1), "UTC", "UTC", null, null),
+        ErrorAssert.Validation(ev.Update(" ", null, false, _start, _start.AddHours(1), "UTC", "UTC", null, null, Now),
             "CalendarEvent.TitleEmpty", "Event title cannot be empty.");
-        ErrorAssert.Validation(ev.Update("t", null, false, _start, _start.AddHours(1), "UTC", "UTC", null, "nonsense"),
+        ErrorAssert.Validation(ev.Update("t", null, false, _start, _start.AddHours(1), "UTC", "UTC", null, "nonsense", Now),
             "CalendarEvent.StatusInvalid", "Event status is not a recognised value.");
     }
 
@@ -122,9 +125,9 @@ public class LengthBoundaryTests
     [Fact]
     public void CalendarEvent_EndEqualToStart_IsAccepted_ButEndBeforeStart_IsRefused()
     {
-        Assert.False(CalendarEvent.Create(1, "t", null, false, _start, _start, "UTC", "UTC", null, null).IsError);
+        Assert.False(CalendarEvent.Create(1, "t", null, false, _start, _start, "UTC", "UTC", null, null, Now).IsError);
 
-        ErrorAssert.Validation(CalendarEvent.Create(1, "t", null, false, _start, _start.AddMinutes(-1), "UTC", "UTC", null, null),
+        ErrorAssert.Validation(CalendarEvent.Create(1, "t", null, false, _start, _start.AddMinutes(-1), "UTC", "UTC", null, null, Now),
             "CalendarEvent.InvalidDateRange", "End date must not be earlier than start date.");
     }
 

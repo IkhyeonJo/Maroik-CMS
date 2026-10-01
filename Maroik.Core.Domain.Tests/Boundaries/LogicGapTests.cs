@@ -230,10 +230,10 @@ public class LogicGapTests
     public void CalendarEvent_Reassign_MovesTheEventAndTouchesUpdated()
     {
         DateTime start = new(2026, 1, 1, 9, 0, 0);
-        CalendarEvent ev = CalendarEvent.Create(1, "t", null, false, start, start.AddHours(1), "UTC", "UTC", null, null).Value;
+        CalendarEvent ev = CalendarEvent.Create(1, "t", null, false, start, start.AddHours(1), "UTC", "UTC", null, null, Now).Value;
         DateTime before = ev.Updated;
 
-        ev.Reassign(5, 9);
+        ev.Reassign(5, 9, Now);
 
         Assert.Equal(5, ev.CalendarId);
         Assert.Equal(9, ev.RecurrenceId);

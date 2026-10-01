@@ -57,9 +57,9 @@ public sealed class CalendarEvent : AggregateRoot<long>
     /// <summary>UTC timestamp of the most recent update.</summary>
     public DateTime Updated { get; private set; }
 
-    /// <summary>Sets the event's fields (both instants pinned to UTC via <see cref="AsUtc"/>) and stamps
-    /// <see cref="Created"/>/<see cref="Updated"/> with the current UTC time (<see cref="Reconstitute"/>
-    /// overwrites both with the stored values).</summary>
+    /// <summary>Sets the event's fields (both instants pinned to UTC via <see cref="AsUtc"/>) and its
+    /// <see cref="Created"/>/<see cref="Updated"/> stamps (the creation time for <see cref="Create"/>,
+    /// the stored values for <see cref="Reconstitute"/>).</summary>
     private CalendarEvent(
         long id,
         long calendarId,
@@ -72,7 +72,9 @@ public sealed class CalendarEvent : AggregateRoot<long>
         string? endTz,
         string? location,
         string? status,
-        long? recurrenceId) : base(id)
+        long? recurrenceId,
+        DateTime created,
+        DateTime updated) : base(id)
     {
         CalendarId = calendarId;
         Title = title;
@@ -85,8 +87,8 @@ public sealed class CalendarEvent : AggregateRoot<long>
         Location = location;
         Status = status;
         RecurrenceId = recurrenceId;
-        Created = DateTime.UtcNow;
-        Updated = DateTime.UtcNow;
+        Created = created;
+        Updated = updated;
     }
 
     /// <summary>
@@ -125,7 +127,7 @@ public sealed class CalendarEvent : AggregateRoot<long>
     {
         var calendarEvent = new CalendarEvent(
             id, calendarId, title, description, allDay,
-            startDate, endDate, startTz, endTz, location, status, recurrenceId) { Created = created, Updated = updated };
+            startDate, endDate, startTz, endTz, location, status, recurrenceId, created, updated);
 
         return calendarEvent;
     }
@@ -144,6 +146,7 @@ public sealed class CalendarEvent : AggregateRoot<long>
         string? endTz,
         string? location,
         string? status,
+        DateTime utcNow,
         long? recurrenceId = null)
     {
         if (string.IsNullOrWhiteSpace(title))
@@ -167,7 +170,7 @@ public sealed class CalendarEvent : AggregateRoot<long>
         if (timesResult.IsError) return timesResult.Errors;
 
         var calendarEvent = new CalendarEvent(0, calendarId, title, description, allDay,
-            startDate, endDate, startTz, endTz, location, status, recurrenceId);
+            startDate, endDate, startTz, endTz, location, status, recurrenceId, utcNow, utcNow);
 
         return calendarEvent;
     }
@@ -200,11 +203,11 @@ public sealed class CalendarEvent : AggregateRoot<long>
     // ------------------------------------------------------------------------
 
     /// <summary>Re-assigns the event to a different calendar or changes its recurrence rule.</summary>
-    public void Reassign(long calendarId, long? recurrenceId)
+    public void Reassign(long calendarId, long? recurrenceId, DateTime utcNow)
     {
         CalendarId = calendarId;
         RecurrenceId = recurrenceId;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Updates the event's editable fields.</summary>
@@ -217,7 +220,8 @@ public sealed class CalendarEvent : AggregateRoot<long>
         string? startTz,
         string? endTz,
         string? location,
-        string? status)
+        string? status,
+        DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(title))
             return LocalizableError.Validation("CalendarEvent.TitleEmpty", "Event title cannot be empty.");
@@ -248,7 +252,7 @@ public sealed class CalendarEvent : AggregateRoot<long>
         EndDateTimeZoneIanaId = endTz;
         Location = location;
         Status = status;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
