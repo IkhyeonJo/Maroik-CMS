@@ -24,14 +24,14 @@ public readonly record struct AssetBalanceAdjustment(string? AssetName, decimal 
 
 /// <summary>
 /// Extension methods for locking multiple <see cref="Asset"/> rows through
-/// <see cref="IAssetBalanceDomainService"/> in a deadlock-safe order.
+/// <see cref="IAssetBalanceStore"/> in a deadlock-safe order.
 /// </summary>
 public static class AssetBalanceOrdinalLockExtensions
 {
-    extension(IAssetBalanceDomainService assetBalance)
+    extension(IAssetBalanceStore assetBalance)
     {
         /// <summary>
-        /// Fetches (and row-locks via <see cref="IAssetBalanceDomainService.GetAssetsAsync"/>, in a
+        /// Fetches (and row-locks via <see cref="IAssetBalanceStore.GetAssetsAsync"/>, in a
         /// single batched round trip) every distinct, non-empty asset name in
         /// <paramref name="productNames"/>, always in ordinal name order. Locking in a single,
         /// name-based order regardless of the caller's role for each asset (payment vs. deposit,
@@ -60,7 +60,7 @@ public static class AssetBalanceOrdinalLockExtensions
         /// one from a single fetched snapshot, avoiding duplicate reads of the same asset.
         /// A caller that already holds a dictionary covering these asset names — typically because it
         /// fetched one of its own for validation just before calling this — should use the
-        /// <see cref="ApplyAssetBalanceAdjustmentsAsync(IAssetBalanceDomainService, Dictionary{string, Asset}, IEnumerable{AssetBalanceAdjustment}, string, string, DateTime, CancellationToken)"/>
+        /// <see cref="ApplyAssetBalanceAdjustmentsAsync(IAssetBalanceStore, Dictionary{string, Asset}, IEnumerable{AssetBalanceAdjustment}, string, string, DateTime, CancellationToken)"/>
         /// overload instead, to reuse that fetch rather than repeating it here.
         /// </summary>
         /// <param name="accountEmail">Owner of every asset named in <paramref name="adjustments"/>.</param>

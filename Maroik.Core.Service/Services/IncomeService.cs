@@ -13,7 +13,7 @@ namespace Maroik.Core.Service.Services;
 /// Asset ownership is verified before create/update operations to prevent cross-account data access.
 /// All write operations are wrapped in a database transaction via <see cref="IUnitOfWork"/>.
 /// </summary>
-public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDomainService assetBalance, 
+public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStore assetBalance, 
     IUnitOfWork unitOfWork, ILogger<IncomeService> logger, TimeProvider timeProvider) : IIncomeService
 {
     /// <inheritdoc />

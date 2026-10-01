@@ -17,8 +17,8 @@ public class FixedExpenditureServiceTests
 {
     /// <summary>Mock <c>IFixedExpenditureRepository</c> injected into the system under test.</summary>
     private readonly Mock<IFixedExpenditureRepository> _fixedExpenditureRepo = new();
-    /// <summary>Mock <c>IAssetBalanceDomainService</c> injected into the system under test.</summary>
-    private readonly Mock<IAssetBalanceDomainService> _assetBalance = new();
+    /// <summary>Mock <c>IAssetBalanceStore</c> injected into the system under test.</summary>
+    private readonly Mock<IAssetBalanceStore> _assetBalance = new();
 
     /// <summary>Bridges the id-lookup and no-lock asset read the service now uses to the list-/lock-based
     /// setups these tests already declare.</summary>

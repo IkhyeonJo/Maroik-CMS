@@ -18,8 +18,8 @@ public class IncomeServiceTests
 {
     /// <summary>Mock <c>IIncomeRepository</c> injected into the system under test.</summary>
     private readonly Mock<IIncomeRepository> _incomeRepo = new();
-    /// <summary>Mock <c>IAssetBalanceDomainService</c> injected into the system under test.</summary>
-    private readonly Mock<IAssetBalanceDomainService> _assetBalance = new();
+    /// <summary>Mock <c>IAssetBalanceStore</c> injected into the system under test.</summary>
+    private readonly Mock<IAssetBalanceStore> _assetBalance = new();
     /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 

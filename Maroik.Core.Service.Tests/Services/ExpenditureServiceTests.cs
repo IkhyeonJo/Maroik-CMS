@@ -18,8 +18,8 @@ public class ExpenditureServiceTests
 {
     /// <summary>Mock <c>IExpenditureRepository</c> injected into the system under test.</summary>
     private readonly Mock<IExpenditureRepository> _expenditureRepo = new();
-    /// <summary>Mock <c>IAssetBalanceDomainService</c> injected into the system under test.</summary>
-    private readonly Mock<IAssetBalanceDomainService> _assetBalance = new();
+    /// <summary>Mock <c>IAssetBalanceStore</c> injected into the system under test.</summary>
+    private readonly Mock<IAssetBalanceStore> _assetBalance = new();
     /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 

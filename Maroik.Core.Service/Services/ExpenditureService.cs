@@ -15,7 +15,7 @@ namespace Maroik.Core.Service.Services;
 /// </summary>
 public class ExpenditureService(
     IExpenditureRepository expenditureRepository,
-    IAssetBalanceDomainService assetBalance,
+    IAssetBalanceStore assetBalance,
     IUnitOfWork unitOfWork,
     ILogger<ExpenditureService> logger,
     TimeProvider timeProvider) : IExpenditureService

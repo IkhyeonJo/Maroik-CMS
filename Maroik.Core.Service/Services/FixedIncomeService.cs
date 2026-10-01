@@ -16,7 +16,7 @@ namespace Maroik.Core.Service.Services;
 /// A fixed-income entry is a schedule, not a balance movement, so these operations are single
 /// non-transactional repository writes and read the referenced asset without a row lock.
 /// </summary>
-public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IAssetBalanceDomainService assetBalance, TimeProvider timeProvider) : IFixedIncomeService
+public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IAssetBalanceStore assetBalance, TimeProvider timeProvider) : IFixedIncomeService
 {
     /// <inheritdoc />
     public async Task<List<FixedIncomeResponse>> GetFixedIncomesAsync(string accountEmail, CancellationToken ct = default)

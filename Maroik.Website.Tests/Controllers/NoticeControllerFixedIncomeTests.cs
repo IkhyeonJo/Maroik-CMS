@@ -13,7 +13,7 @@ namespace Maroik.Website.Tests.Controllers;
 /// FixedExpenditure is covered separately in <c>NoticeControllerFixedExpenditureTests</c>.
 ///
 /// Runs against a real PostgreSQL instance (via <see cref="MaroikWebApplicationFactory"/>'s
-/// Testcontainers setup), so <c>AssetBalanceDomainService.GetAssetAsync</c>'s raw-SQL
+/// Testcontainers setup), so <c>AssetBalanceStore.GetAssetAsync</c>'s raw-SQL
 /// <c>FOR UPDATE</c> query (<c>AssetRepository.FindByEmailAndProductNameForUpdateAsync</c>) —
 /// unusable under EF Core InMemory — is exercised for real on the Create/Update success paths.
 /// </summary>

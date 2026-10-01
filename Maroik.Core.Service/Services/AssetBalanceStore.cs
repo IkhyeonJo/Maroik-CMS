@@ -8,7 +8,7 @@ namespace Maroik.Core.Service.Services;
 /// needed by Finance transaction services, keeping them free of a direct
 /// <see cref="IAssetRepository"/> dependency.
 /// </summary>
-public class AssetBalanceDomainService(IAssetRepository assetRepository) : IAssetBalanceDomainService
+public class AssetBalanceStore(IAssetRepository assetRepository) : IAssetBalanceStore
 {
     /// <inheritdoc />
     /// <remarks>
