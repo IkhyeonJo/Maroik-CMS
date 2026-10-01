@@ -133,7 +133,7 @@ public sealed class CalendarEventRepositoryTests(DatabaseFixture database) : Rep
         long cal = await InsertCalendarAsync();
         string location = new('l', 255);
         var calendarEvent = CalendarEvent.Create(
-            cal, Unique("Located"), null, false, DateTime.UtcNow, DateTime.UtcNow.AddHours(1), null, null, location, "Busy").Value;
+            cal, Unique("Located"), null, false, DateTime.UtcNow, DateTime.UtcNow.AddHours(1), null, null, location, "Busy", DateTime.UtcNow).Value;
 
         long id = await Sut.CreateCalendarEventAsync(calendarEvent, TestContext.Current.CancellationToken);
         Context.ChangeTracker.Clear();
@@ -155,7 +155,7 @@ public sealed class CalendarEventRepositoryTests(DatabaseFixture database) : Rep
     {
         long cal = await InsertCalendarAsync();
         var calendarEvent = CalendarEvent.Create(
-            cal, Unique("BlankStatus"), null, false, DateTime.UtcNow, DateTime.UtcNow.AddHours(1), null, null, null, blankStatus).Value;
+            cal, Unique("BlankStatus"), null, false, DateTime.UtcNow, DateTime.UtcNow.AddHours(1), null, null, null, blankStatus, DateTime.UtcNow).Value;
 
         long id = await Sut.CreateCalendarEventAsync(calendarEvent, TestContext.Current.CancellationToken);
         Context.ChangeTracker.Clear();

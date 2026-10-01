@@ -29,7 +29,8 @@ public class CalendarService(
     IUnitOfWork unitOfWork,
     IAttachmentContentService attachmentContent,
     IOptions<ServerSetting> settings,
-    ILogger<CalendarService> logger) : ICalendarService
+    ILogger<CalendarService> logger,
+    TimeProvider timeProvider) : ICalendarService
 {
     /// <summary>
     /// The per-account unique calendar-name constraint. Calendar also has a surrogate-key
@@ -229,6 +230,7 @@ public class CalendarService(
     /// <inheritdoc />
     public async Task<ServiceResult> CreateCalendarAsync(string accountEmail, CalendarRequest request, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -242,7 +244,7 @@ public class CalendarService(
             if (calendars.Any(c => c.Name == request.Name))
                 return await unitOfWork.FailAsync(ServiceResult.Conflict("Calendar.NameExists", "The calendar already exists."), ct);
 
-            var calendarResult = Calendar.Create(accountEmail, request.Name, request.Description, request.TimeZoneIanaId, request.HtmlColorCode);
+            var calendarResult = Calendar.Create(accountEmail, request.Name, request.Description, request.TimeZoneIanaId, request.HtmlColorCode, utcNow);
             if (calendarResult.IsError)
                 return await unitOfWork.FailAsync(calendarResult.FirstError, ct);
 
@@ -274,6 +276,7 @@ public class CalendarService(
     /// <inheritdoc />
     public async Task<ServiceResult> UpdateCalendarAsync(string accountEmail, CalendarRequest request, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -285,7 +288,7 @@ public class CalendarService(
             if (previous == null || previous.AccountEmail.Value != accountEmail)
                 return await unitOfWork.FailAsync(ServiceResult.NotFound("Calendar.NotFound", "The calendar could not be found."), ct);
 
-            var updateResult = previous.Update(request.Name, request.Description, request.TimeZoneIanaId, request.HtmlColorCode);
+            var updateResult = previous.Update(request.Name, request.Description, request.TimeZoneIanaId, request.HtmlColorCode, utcNow);
             if (updateResult.IsError)
                 return await unitOfWork.FailAsync(updateResult.FirstError, ct);
 
@@ -335,6 +338,7 @@ public class CalendarService(
     /// <inheritdoc />
     public async Task<ServiceResult> EnsureDefaultCalendarAsync(string accountEmail, CalendarRequest request, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -355,7 +359,7 @@ public class CalendarService(
             if (TimeZoneId.Create(timeZoneIanaId).IsError)
                 timeZoneIanaId = "UTC";
 
-            var calendarResult = Calendar.Create(accountEmail, request.Name, request.Description, timeZoneIanaId, request.HtmlColorCode);
+            var calendarResult = Calendar.Create(accountEmail, request.Name, request.Description, timeZoneIanaId, request.HtmlColorCode, utcNow);
             if (calendarResult.IsError)
                 return await unitOfWork.FailAsync(calendarResult.FirstError, ct);
 
@@ -502,6 +506,7 @@ public class CalendarService(
         CalendarEventRequest request, string email, string roleIndex,
         List<CalendarReminderDto> reminders, AttachedFileDto? attachedFile, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         var fileError = attachmentContent.ValidateAttachedFile(attachedFile);
         if (fileError != null) return fileError;
 
@@ -522,7 +527,7 @@ public class CalendarService(
             var eventResult = CalendarEvent.Create(request.CalendarId, request.Title, description,
                 request.AllDay, request.StartDate, request.EndDate,
                 request.StartDateTimeZoneIanaId, request.EndDateTimeZoneIanaId,
-                request.Location, request.Status, request.RecurrenceId);
+                request.Location, request.Status, utcNow, request.RecurrenceId);
             if (eventResult.IsError)
             {
                 await unitOfWork.RollbackAsync(ct);
@@ -565,6 +570,7 @@ public class CalendarService(
         CalendarEventRequest request, string email, string roleIndex,
         List<CalendarReminderDto> reminders, AttachedFileDto? attachedFile, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         var fileError = attachmentContent.ValidateAttachedFile(attachedFile);
         if (fileError != null) return fileError;
 
@@ -598,14 +604,14 @@ public class CalendarService(
             var updateResult = existing.Update(request.Title, description, request.AllDay,
                 request.StartDate, request.EndDate,
                 request.StartDateTimeZoneIanaId, request.EndDateTimeZoneIanaId,
-                request.Location, request.Status);
+                request.Location, request.Status, utcNow);
             if (updateResult.IsError)
             {
                 await unitOfWork.RollbackAsync(ct);
                 return ServiceResult.FromError(updateResult.FirstError);
             }
 
-            existing.Reassign(request.CalendarId, request.RecurrenceId);
+            existing.Reassign(request.CalendarId, request.RecurrenceId, utcNow);
             await calendarEventRepository.UpdateEntityAsync(existing, ct);
 
             // Replace attachment: delete existing record then optionally upload and re-create.

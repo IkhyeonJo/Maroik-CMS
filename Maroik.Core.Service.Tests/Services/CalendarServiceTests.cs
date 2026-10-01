@@ -5,6 +5,7 @@ using Maroik.Core.Domain.Calendar;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 // ReSharper disable InvalidXmlDocComment
 
@@ -49,6 +50,11 @@ public class CalendarServiceTests
         _unitOfWork.Setup(u => u.DisposeAsync()).Returns(ValueTask.CompletedTask);
     }
 
+    /// <summary>The fixed "current time" of these tests.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+    /// <summary>The clock the service under test reads, stopped at <see cref="Now"/>.</summary>
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(Now));
+
     /// <summary>The service under test over the mocked dependencies.</summary>
     private CalendarService CreateSut() => new(
         _calendarRepo.Object,
@@ -61,7 +67,8 @@ public class CalendarServiceTests
         _unitOfWork.Object,
         _attachmentContent.Object,
         _settings,
-        NullLogger<CalendarService>.Instance);
+        NullLogger<CalendarService>.Instance,
+        _time);
 
     // -- Helpers --------------------------------------------------------------
 

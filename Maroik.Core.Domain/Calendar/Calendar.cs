@@ -36,23 +36,25 @@ public sealed class Calendar : AggregateRoot<long>
     /// <summary>UTC timestamp of the most recent update.</summary>
     public DateTime Updated { get; private set; }
 
-    /// <summary>Sets the calendar's fields and stamps <see cref="Created"/>/<see cref="Updated"/> with the
-    /// current UTC time (<see cref="Reconstitute"/> overwrites both with the stored values).</summary>
+    /// <summary>Sets the calendar's fields and its <see cref="Created"/>/<see cref="Updated"/> stamps
+    /// (the creation time for <see cref="Create"/>, the stored values for <see cref="Reconstitute"/>).</summary>
     private Calendar(
         long id,
         Email accountEmail,
         string name,
         string? description,
         TimeZoneId timeZone,
-        HtmlColorCode colorCode) : base(id)
+        HtmlColorCode colorCode,
+        DateTime created,
+        DateTime updated) : base(id)
     {
         AccountEmail = accountEmail;
         Name = name;
         Description = description;
         TimeZone = timeZone;
         ColorCode = colorCode;
-        Created = DateTime.UtcNow;
-        Updated = DateTime.UtcNow;
+        Created = created;
+        Updated = updated;
     }
 
     // ------------------------------------------------------------------------
@@ -79,7 +81,9 @@ public sealed class Calendar : AggregateRoot<long>
             name,
             description,
             TimeZoneId.FromTrustedSource(timeZoneIanaId),
-            HtmlColorCode.FromTrustedSource(htmlColorCode)) { Created = created, Updated = updated };
+            HtmlColorCode.FromTrustedSource(htmlColorCode),
+            created,
+            updated);
 
         return calendar;
     }
@@ -92,7 +96,8 @@ public sealed class Calendar : AggregateRoot<long>
         string? name,
         string? description,
         string? timeZoneValue,
-        string? htmlColorCode)
+        string? htmlColorCode,
+        DateTime utcNow)
     {
         var nameResult = ValidateName(name);
         if (nameResult.IsError) return nameResult.Errors;
@@ -106,7 +111,7 @@ public sealed class Calendar : AggregateRoot<long>
         var colorResult = HtmlColorCode.Create(htmlColorCode);
         if (colorResult.IsError) return colorResult.Errors;
 
-        var calendar = new Calendar(0, emailResult.Value, nameResult.Value, description, tzResult.Value, colorResult.Value);
+        var calendar = new Calendar(0, emailResult.Value, nameResult.Value, description, tzResult.Value, colorResult.Value, utcNow, utcNow);
         return calendar;
     }
 
@@ -119,7 +124,8 @@ public sealed class Calendar : AggregateRoot<long>
         string? name,
         string? description,
         string? timeZoneValue,
-        string? htmlColorCode)
+        string? htmlColorCode,
+        DateTime utcNow)
     {
         var nameResult = ValidateName(name);
         if (nameResult.IsError) return nameResult.Errors;
@@ -134,7 +140,7 @@ public sealed class Calendar : AggregateRoot<long>
         Description = description;
         TimeZone = tzResult.Value;
         ColorCode = colorResult.Value;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
