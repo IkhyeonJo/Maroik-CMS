@@ -369,15 +369,20 @@ public sealed class Account : AggregateRoot<string>
     /// clears <see cref="MustChangePassword"/>, since supplying a new hash here always goes through
     /// the password-policy-validated self-service flow. Also discards any pending
     /// <see cref="ResetPasswordToken"/>: a reset link mailed before this change must not stay
-    /// usable to overwrite the password the account owner just chose.
+    /// usable to overwrite the password the account owner just chose. An empty or blank hash is
+    /// rejected and nothing changes.
     /// </summary>
-    public void ChangePassword(string newHashedPassword)
+    public ErrorOr<Success> ChangePassword(string newHashedPassword)
     {
+        if (string.IsNullOrWhiteSpace(newHashedPassword))
+            return LocalizableError.Validation("Account.PasswordEmpty", "New hashed password cannot be empty.");
+
         HashedPassword = newHashedPassword;
         ResetPasswordToken = null;
         SecurityStamp = GenerateSecurityStamp();
         MustChangePassword = false;
         Updated = DateTime.UtcNow;
+        return Result.Success;
     }
 
     /// <summary>
@@ -385,15 +390,20 @@ public sealed class Account : AggregateRoot<string>
     /// new password (meeting <see cref="PasswordPolicy"/>) the next time it logs in. Regenerates
     /// <see cref="SecurityStamp"/> so any session already open under the old password is
     /// invalidated on its next request, and discards any pending <see cref="ResetPasswordToken"/>
-    /// so a reset link mailed earlier cannot be used to bypass the forced change.
+    /// so a reset link mailed earlier cannot be used to bypass the forced change. An empty or blank
+    /// hash is rejected and nothing changes.
     /// </summary>
-    public void AdminResetPassword(string newHashedPassword)
+    public ErrorOr<Success> AdminResetPassword(string newHashedPassword)
     {
+        if (string.IsNullOrWhiteSpace(newHashedPassword))
+            return LocalizableError.Validation("Account.PasswordEmpty", "New hashed password cannot be empty.");
+
         HashedPassword = newHashedPassword;
         ResetPasswordToken = null;
         SecurityStamp = GenerateSecurityStamp();
         MustChangePassword = true;
         Updated = DateTime.UtcNow;
+        return Result.Success;
     }
 
     /// <summary>Marks the account as deleted without removing the database row.</summary>

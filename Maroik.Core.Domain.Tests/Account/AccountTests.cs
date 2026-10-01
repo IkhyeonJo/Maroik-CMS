@@ -742,6 +742,54 @@ public class AccountTests
         Assert.True(account.AgreedServiceTerms);
     }
 
+    // -- Empty password hashes -------------------------------------------------
+
+    /// <summary>A self-service password change refuses an empty or blank hash and changes nothing.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ChangePassword_RejectsAnEmptyHash_AndKeepsTheCurrentCredentials(string hash)
+    {
+        var account = ValidAccount(hashedPassword: "old-hash");
+        string stamp = account.SecurityStamp;
+
+        var result = account.ChangePassword(hash);
+
+        Assert.True(result.IsError);
+        Assert.Equal("Account.PasswordEmpty", result.FirstError.Code);
+        Assert.Equal("old-hash", account.HashedPassword);
+        Assert.Equal(stamp, account.SecurityStamp);
+    }
+
+    /// <summary>An admin password reset refuses an empty or blank hash and changes nothing.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void AdminResetPassword_RejectsAnEmptyHash_AndKeepsTheCurrentCredentials(string hash)
+    {
+        var account = ValidAccount(hashedPassword: "old-hash");
+        string stamp = account.SecurityStamp;
+
+        var result = account.AdminResetPassword(hash);
+
+        Assert.True(result.IsError);
+        Assert.Equal("Account.PasswordEmpty", result.FirstError.Code);
+        Assert.Equal("old-hash", account.HashedPassword);
+        Assert.Equal(stamp, account.SecurityStamp);
+        Assert.False(account.MustChangePassword);
+    }
+
+    /// <summary>Both password replacements report success for a real hash.</summary>
+    [Fact]
+    public void ChangePassword_And_AdminResetPassword_Succeed_ForANonEmptyHash()
+    {
+        var account = ValidAccount();
+
+        Assert.False(account.AdminResetPassword("temp-hash").IsError);
+        Assert.False(account.ChangePassword("new-hash").IsError);
+        Assert.Equal("new-hash", account.HashedPassword);
+    }
+
     // -- SecurityStamp / MustChangePassword ------------------------------------
 
     /// <summary>A newly created account gets a non-empty security stamp and is not forced to change its password.</summary>
