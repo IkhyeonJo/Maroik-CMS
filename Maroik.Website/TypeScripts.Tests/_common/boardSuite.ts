@@ -174,6 +174,32 @@ function describeBoardScript(c: BoardScriptConfig): void {
             expect(((h.lastAjax().data as FormData).get("UploadedFile") as File).name).toBe("edit.zip");
         });
 
+        /** Submits the `which` form and returns the "UploadedFile" it sent. */
+        const submittedFile = (h: SiteHandle, which: string) => {
+            h.$(which === "write" ? "#formWriteBoard" : "#formEditBoard").trigger("submit");
+            return (h.lastAjax().data as FormData).get("UploadedFile");
+        };
+
+        it.each(["write", "edit"])("%s: a file rejected for its size replaces the one chosen before — nothing is sent", (which) => {
+            const h = load();
+            selectFile(h, `#${which}UploadedFile`, 10, "first.zip");
+            h.$(`#${which}UploadedFile`).trigger("change");
+            selectFile(h, `#${which}UploadedFile`, 5000, "too-big.zip");
+            h.$(`#${which}UploadedFile`).trigger("change");
+
+            expect(submittedFile(h, which)).not.toBeInstanceOf(h.win.File);
+        });
+
+        it.each(["write", "edit"])("%s: cancelling the file picker drops the file chosen before — nothing is sent", (which) => {
+            const h = load();
+            selectFile(h, `#${which}UploadedFile`, 10, "first.zip");
+            h.$(`#${which}UploadedFile`).trigger("change");
+            Object.defineProperty(h.$(`#${which}UploadedFile`)[0], "files", { configurable: true, value: [] });
+            h.$(`#${which}UploadedFile`).trigger("change");
+
+            expect(submittedFile(h, which)).not.toBeInstanceOf(h.win.File);
+        });
+
         // ---- write ---------------------------------------------------------------------------------
 
         it("write: an invalid form sends nothing", () => {

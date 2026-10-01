@@ -318,11 +318,14 @@
      */
     function CreateCalendarEventUploadedFile(obj: HTMLInputElement, errorMessage?: string) {
         if (!obj.files || obj.files.length === 0) {
+            // The picker was cancelled: the input is empty, so nothing may be sent.
+            createCalendarEventUploadedFile = undefined;
             return;
         }
         if (obj.files[0].size > maxFileSize) {
             alert(errorMessage);
             $createCalendarEventAttachment.val("");
+            createCalendarEventUploadedFile = undefined;
             return false;
         } else {
             createCalendarEventUploadedFile = obj.files[0];
@@ -332,11 +335,14 @@
     /** Same as `CreateCalendarEventUploadedFile` for the edit-event form. */
     function EditCalendarEventUploadedFile(obj: HTMLInputElement, errorMessage?: string) {
         if (!obj.files || obj.files.length === 0) {
+            // The picker was cancelled: the input is empty, so nothing may be sent.
+            editCalendarEventUploadedFile = undefined;
             return;
         }
         if (obj.files[0].size > maxFileSize) {
             alert(errorMessage);
             $editCalendarEventAttachment.val("");
+            editCalendarEventUploadedFile = undefined;
             return false;
         } else {
             editCalendarEventUploadedFile = obj.files[0];
@@ -350,6 +356,21 @@
     $editCalendarEventAttachment.off("change").on("change", function(event) {
         return EditCalendarEventUploadedFile(event.currentTarget as HTMLInputElement, $(event.currentTarget).attr("data-errorMessage"));
     });
+
+    /**
+     * Forgets the create-event attachment and empties its input. The page is not reloaded after a
+     * submit, so without this a file chosen for one event would be sent with the next one.
+     */
+    function ResetCreateCalendarEventAttachment() {
+        createCalendarEventUploadedFile = undefined;
+        $createCalendarEventAttachment.val("");
+    }
+
+    /** Same as `ResetCreateCalendarEventAttachment` for the edit-event form. */
+    function ResetEditCalendarEventAttachment() {
+        editCalendarEventUploadedFile = undefined;
+        $editCalendarEventAttachment.val("");
+    }
 
     // ================================================================
     // DOM-ready: build the date pickers, the FullCalendar instance and the
@@ -629,6 +650,7 @@
                         $createCalendarEventAllDayUncheckedStartTimeZone.val($loggedInAccountTimeZoneIanaId.val() as string);
                         $createCalendarEventAllDayUncheckedEndTimeZone.val($loggedInAccountTimeZoneIanaId.val() as string);
 
+                        ResetCreateCalendarEventAttachment();
                         $createCalendarEventTaskDialogModal.modal("show");
 
                         calendar.unselect();
@@ -873,6 +895,8 @@
                                             });
                                         }
                                     }
+
+                                    ResetEditCalendarEventAttachment();
 
                                     $editCalendarEventTaskDialogModal.modal({
                                         keyboard: false,
@@ -1439,6 +1463,10 @@
                 data: formData,
                 contentType: false,
                 processData: false,
+                complete: function() {
+                    // Accepted or refused, the file has been sent: it must not go out again.
+                    ResetCreateCalendarEventAttachment();
+                },
                 success: function(data) {
                     if (data.result) {
 
@@ -1664,6 +1692,10 @@
                 data: formData,
                 contentType: false,
                 processData: false,
+                complete: function() {
+                    // Accepted or refused, the file has been sent: it must not go out again.
+                    ResetEditCalendarEventAttachment();
+                },
                 success: function(data) {
                     if (data.result) {
 
@@ -2078,6 +2110,7 @@
                 $createCalendarEventAllDayUncheckedStartTimeZone.val($loggedInAccountTimeZoneIanaId.val() as string);
                 $createCalendarEventAllDayUncheckedEndTimeZone.val($loggedInAccountTimeZoneIanaId.val() as string);
 
+                ResetCreateCalendarEventAttachment();
                 $createCalendarEventTaskDialogModal.modal("show");
 
                 $createCalendarEventAllDayUncheckedStartDate.val(moment().format("YYYY-MM-DD"));
