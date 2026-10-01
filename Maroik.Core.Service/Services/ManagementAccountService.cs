@@ -147,7 +147,17 @@ public class ManagementAccountService(
             bool oldDeleted = account.Deleted;
 
             if (newHashedPassword != null)
-                account.AdminResetPassword(newHashedPassword);
+            {
+                var resetResult = account.AdminResetPassword(newHashedPassword);
+                if (resetResult.IsError)
+                {
+                    // The policy above already refused a blank password, so an empty hash here is
+                    // a hasher fault, not admin input.
+                    await unitOfWork.RollbackAsync(ct);
+                    logger.LogError("Admin password reset failed for {Email} by admin {Admin}: {ErrorCode}", account.Email.Value, actorEmail, resetResult.FirstError.Code);
+                    return ServiceResult.Failure("ManagementAccount.UpdateFailed", "Input is invalid");
+                }
+            }
 
             var updateResult = ApplyAdminChanges(account, request);
             if (updateResult.IsError)

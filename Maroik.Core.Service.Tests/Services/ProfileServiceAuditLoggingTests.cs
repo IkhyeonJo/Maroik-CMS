@@ -64,6 +64,28 @@ public class ProfileServiceAuditLoggingTests
             It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
     }
 
+    /// <summary>
+    /// An empty hash from the password hasher is refused by the domain: nothing is written, the
+    /// transaction is rolled back, the failure is logged as an Error and no success is logged.
+    /// </summary>
+    [Fact]
+    public async Task UpdatePassword_FailsAndLogsAnError_WhenTheHasherReturnsAnEmptyHash()
+    {
+        SetupPasswordChange(currentPasswordMatches: true);
+        _passwordService.Setup(p => p.HashPassword("NewPass1!")).Returns("");
+
+        var result = await CreateSut().UpdatePasswordAsync(Email, "oldpass", "NewPass1!", TestContext.Current.CancellationToken);
+
+        Assert.False(result.Success);
+        Assert.Equal("Profile.UpdatePasswordFailed", result.ErrorCode);
+        _accountRepo.Verify(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(),
+            It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Contains("Account.PasswordEmpty", Only(LogLevel.Error, "Password change failed").Message);
+        Assert.DoesNotContain(_logger.Collector.GetSnapshot(), r => r.Message.Contains("Password changed", StringComparison.Ordinal));
+    }
+
     /// <summary>Verifies that a password change logs an Information entry without the old or new password or the new hash.</summary>
     [Fact]
     public async Task UpdatePassword_LogsInformation_WhenThePasswordIsChanged()

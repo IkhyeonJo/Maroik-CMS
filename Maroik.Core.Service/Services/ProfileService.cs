@@ -117,7 +117,14 @@ public class ProfileService(
             // Let the domain method compute the new SecurityStamp / clear MustChangePassword and any
             // pending ResetPasswordToken, then persist only those columns (see UpdateAvatarAsync for
             // why the full-row write is avoided).
-            account.ChangePassword(passwordService.HashPassword(newPassword));
+            var changeResult = account.ChangePassword(passwordService.HashPassword(newPassword));
+            if (changeResult.IsError)
+            {
+                // The policy above already refused a blank password, so an empty hash here is a
+                // hasher fault, not user input.
+                logger.LogError("Password change failed for {Email}: {ErrorCode}", email, changeResult.FirstError.Code);
+                return await unitOfWork.FailAsync(ServiceResult.Failure("Profile.UpdatePasswordFailed", "Input is invalid"), ct);
+            }
 
             await accountRepository.UpdatePasswordAsync(
                 email, account.HashedPassword, account.SecurityStamp, account.MustChangePassword, account.ResetPasswordToken, account.Updated, ct);

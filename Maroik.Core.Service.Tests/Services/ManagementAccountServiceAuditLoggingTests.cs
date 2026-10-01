@@ -128,6 +128,26 @@ public class ManagementAccountServiceAuditLoggingTests
         Assert.Contains("password reset False", Only(LogLevel.Information, "Admin updated account").Message);
     }
 
+    /// <summary>
+    /// An empty hash from the password hasher is refused by the domain: the admin update fails,
+    /// nothing is written, the transaction is rolled back and the failure is logged as an Error.
+    /// </summary>
+    [Fact]
+    public async Task Update_FailsAndLogsAnError_WhenTheHasherReturnsAnEmptyHash()
+    {
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Existing());
+        _passwordService.Setup(p => p.HashPassword("NewPass1!")).Returns(" ");
+
+        ServiceResult result = await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = Email, EmailConfirmed = true, AgreedServiceTerms = true },
+            "NewPass1!", Actor, TestContext.Current.CancellationToken);
+
+        Assert.Equal("ManagementAccount.UpdateFailed", result.ErrorCode);
+        _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Contains("Account.PasswordEmpty", Only(LogLevel.Error, "Admin password reset failed").Message);
+    }
+
     /// <summary>Verifies that an admin update of a missing account logs a Warning.</summary>
     [Fact]
     public async Task Update_LogsWarning_WhenTheAccountDoesNotExist()
