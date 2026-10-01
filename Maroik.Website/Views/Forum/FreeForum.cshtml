@@ -102,7 +102,7 @@
                                     <span class="mailbox-attachment-icon"><i class="far fa-file"></i></span>
 
                                     <div class="mailbox-attachment-info">
-                                        <a id="aDetailBoardAttachedFile" href="#" class="mailbox-attachment-name" data-file="@Model.BoardOutputViewModel.BoardAttachedFileBase64Data" data-contenttype="@Model.BoardOutputViewModel.BoardAttachedFileContentType" data-name="@($"{Model.BoardOutputViewModel.BoardAttachedFileName}{Model.BoardOutputViewModel.BoardAttachedFileExtension}")"><i class="fas fa-paperclip"></i>@Model.BoardOutputViewModel.BoardAttachedFileName@Model.BoardOutputViewModel.BoardAttachedFileExtension</a>
+                                        <a id="aDetailBoardAttachedFile" href="#" class="mailbox-attachment-name" data-boardid="@Model.DetailBoardId" data-name="@($"{Model.BoardOutputViewModel.BoardAttachedFileName}{Model.BoardOutputViewModel.BoardAttachedFileExtension}")"><i class="fas fa-paperclip"></i>@Model.BoardOutputViewModel.BoardAttachedFileName@Model.BoardOutputViewModel.BoardAttachedFileExtension</a>
                                         <span class="mailbox-attachment-size clearfix mt-1">
                                             <span>
                                                 @(Model.BoardOutputViewModel.BoardAttachedFileSize.ToKilobytesLabel())KB
@@ -250,7 +250,7 @@
                                         <span class="mailbox-attachment-icon"><i class="far fa-file"></i></span>
 
                                         <div class="mailbox-attachment-info">
-                                            <a id="aEditBoardAttachedFile" href="#" class="mailbox-attachment-name" data-file="@Model.BoardOutputViewModel.BoardAttachedFileBase64Data" data-contenttype="@Model.BoardOutputViewModel.BoardAttachedFileContentType" data-name="@($"{Model.BoardOutputViewModel.BoardAttachedFileName}{Model.BoardOutputViewModel.BoardAttachedFileExtension}")"><i class="fas fa-paperclip"></i>@Model.BoardOutputViewModel.BoardAttachedFileName@Model.BoardOutputViewModel.BoardAttachedFileExtension</a>
+                                            <a id="aEditBoardAttachedFile" href="#" class="mailbox-attachment-name" data-boardid="@Model.EditBoardId" data-name="@($"{Model.BoardOutputViewModel.BoardAttachedFileName}{Model.BoardOutputViewModel.BoardAttachedFileExtension}")"><i class="fas fa-paperclip"></i>@Model.BoardOutputViewModel.BoardAttachedFileName@Model.BoardOutputViewModel.BoardAttachedFileExtension</a>
                                             <span class="mailbox-attachment-size clearfix mt-1">
                                                 <span>
                                                     @(Model.BoardOutputViewModel.BoardAttachedFileSize.ToKilobytesLabel())KB

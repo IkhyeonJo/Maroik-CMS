@@ -35,6 +35,8 @@ export interface BoardScriptConfig {
     existsKey: string;
     /** admin builds send a Noticed flag on write */
     hasNoticed: boolean;
+    /** URL of the attachment-download endpoint */
+    downloadAction: string;
 }
 
 /** The shared board-page DOM (list, write/edit forms, comment form, delete controls) with ids built from `c`, plus `extra`. */
@@ -473,28 +475,41 @@ function describeBoardScript(c: BoardScriptConfig): void {
 
         // ---- attachment download ----------------------------------------------------------------------
 
-        it.each(["aDetailBoardAttachedFile", "aEditBoardAttachedFile"])("clicking #%s downloads the embedded attachment under its own name", (id) => {
-            const link = `<a id="${id}" data-file="${btoa("payload")}" data-contenttype="application/zip" data-name="report.zip"></a>`;
-            let h!: SiteHandle;
-            const proto = window.HTMLAnchorElement.prototype;
-            const click = vi.spyOn(proto, "click").mockImplementation(function() { /* no navigation in jsdom */
+        /** An attachment link for post 42 named "report.zip". */
+        const attachmentLink = (id: string) => `<a id="${id}" data-boardid="42" data-name="report.zip"></a>`;
+
+        it.each(["aDetailBoardAttachedFile", "aEditBoardAttachedFile"])("clicking #%s asks the download endpoint for the post's attachment as a blob", (id) => {
+            const h = loadSite(c.area, c.feature, c.page, boardFixture(c, attachmentLink(id)));
+            const ev = h.$.Event("click");
+            h.$(`#${id}`).trigger(ev);
+
+            expect(ev.isDefaultPrevented()).toBe(true);
+            const call = h.lastAjax() as any;
+            expect(call.url).toBe(c.downloadAction);
+            expect(call.type).toBe("POST");
+            expect(call.data).toEqual({ boardId: "42" });
+            expect(call.headers).toEqual({ RequestVerificationToken: "tok" });
+            expect(call.xhrFields).toEqual({ responseType: "blob" });
+        });
+
+        it.each(["aDetailBoardAttachedFile", "aEditBoardAttachedFile"])("the file returned for #%s is saved under the attachment's name, and its object URL released shortly after", (id) => {
+            const click = vi.spyOn(window.HTMLAnchorElement.prototype, "click").mockImplementation(function() { /* no navigation in jsdom */
             });
             try {
-                h = loadSite(c.area, c.feature, c.page, boardFixture(c, link));
-                const ev = h.$.Event("click");
-                h.$(`#${id}`).trigger(ev);
-                expect(ev.isDefaultPrevented()).toBe(true);
-                expect(click).toHaveBeenCalledTimes(1);
-                expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("report.zip");
-
-                // the temporary object URL is released shortly after the click, not before
+                const h = loadSite(c.area, c.feature, c.page, boardFixture(c, attachmentLink(id)));
+                (h.win as any).URL.createObjectURL = () => "blob:attachment";
                 const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+                h.$(`#${id}`).trigger("click");
+
                 vi.useFakeTimers();
                 try {
-                    h.$(`#${id}`).trigger("click");
+                    h.respond(0, new h.win.Blob(["zip-bytes"], { type: "application/x-zip-compressed" }));
+                    expect(click).toHaveBeenCalledTimes(1);
+                    expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("report.zip");
+                    expect((click.mock.contexts[0] as HTMLAnchorElement).href).toBe("blob:attachment");
                     expect(revoke).not.toHaveBeenCalled();
                     vi.advanceTimersByTime(100);
-                    expect(revoke).toHaveBeenCalledTimes(1);
+                    expect(revoke).toHaveBeenCalledWith("blob:attachment");
                 } finally {
                     vi.useRealTimers();
                 }
@@ -503,16 +518,27 @@ function describeBoardScript(c: BoardScriptConfig): void {
             }
         });
 
-        it.each(["aDetailBoardAttachedFile", "aEditBoardAttachedFile"])("the attachment link #%s without embedded data does nothing", (id) => {
+        it.each(["aDetailBoardAttachedFile", "aEditBoardAttachedFile"])("a refusal returned for #%s is shown as the server's error, and nothing is saved", async (id) => {
             const click = vi.spyOn(window.HTMLAnchorElement.prototype, "click").mockImplementation(function() { /* noop */
             });
             try {
-                const h = loadSite(c.area, c.feature, c.page, boardFixture(c, `<a id="${id}"></a>`));
+                const h = loadSite(c.area, c.feature, c.page, boardFixture(c, attachmentLink(id)));
                 h.$(`#${id}`).trigger("click");
+
+                h.respond(0, new h.win.Blob([JSON.stringify({ result: false, error: "The post could not be found." })], { type: "application/json; charset=utf-8" }));
+
+                await vi.waitFor(() => expect(h.toastr.error).toHaveBeenCalledWith("The post could not be found."));
                 expect(click).not.toHaveBeenCalled();
             } finally {
                 click.mockRestore();
             }
+        });
+
+        it.each(["aDetailBoardAttachedFile", "aEditBoardAttachedFile"])("the attachment link #%s without a post id does nothing", (id) => {
+            const h = loadSite(c.area, c.feature, c.page, boardFixture(c, `<a id="${id}"></a>`));
+            const before = h.ajaxCalls.length;
+            h.$(`#${id}`).trigger("click");
+            expect(h.ajaxCalls.length).toBe(before);
         });
     });
 }

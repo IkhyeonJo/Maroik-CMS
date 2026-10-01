@@ -58,10 +58,10 @@ public class FileController(IFileValidationService fileValidationService, IOptio
         }
     }
 
-    /// <summary>Reads the file at the given server-side <paramref name="filePath"/> and returns its raw bytes.</summary>
+    /// <summary>Streams the file at the given server-side <paramref name="filePath"/> back to the caller.</summary>
     [AllowAnonymous]
     [HttpPost("download")]
-    public async Task<IActionResult> DownloadAsync([FromForm] string filePath, [FromForm] string? correlationId = null)
+    public IActionResult Download([FromForm] string filePath, [FromForm] string? correlationId = null)
     {
         try
         {
@@ -82,8 +82,11 @@ public class FileController(IFileValidationService fileValidationService, IOptio
                 return NotFound("File not found");
             }
 
+            // Streamed straight from disk (not read into memory first). Opened here, inside the try,
+            // so an unreadable file is still answered as "Invalid file" below.
 #pragma warning disable SCS0018
-            var fileData = await System.IO.File.ReadAllBytesAsync(resolvedPath);
+            var fileStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                bufferSize: 81920, FileOptions.Asynchronous | FileOptions.SequentialScan);
 #pragma warning restore SCS0018
 
             if (!_contentTypeProvider.TryGetContentType(sanitizedFileName, out var contentType))
@@ -92,7 +95,7 @@ public class FileController(IFileValidationService fileValidationService, IOptio
 #pragma warning disable CA1873
             logger.LogInformation("File downloaded: {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
 #pragma warning restore CA1873
-            return File(fileData, contentType, sanitizedFileName);
+            return File(fileStream, contentType, sanitizedFileName, enableRangeProcessing: true);
         }
         catch (Exception ex)
         {

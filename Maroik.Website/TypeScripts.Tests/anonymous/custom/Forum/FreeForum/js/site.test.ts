@@ -118,20 +118,41 @@ describe("Forum/FreeForum (anonymous) — navigation, images and attachments", (
         expect(revoke).toHaveBeenCalledWith(img.src);
     });
 
-    it("the download's temporary object URL is released shortly after the click, not before", () => {
+    /** The page with an attachment link for post 42 named "report.zip". */
+    const withAttachment = () => load(fixture().replace(
+        "<a id=\"aDetailBoardAttachedFile\"></a>",
+        `<a id="aDetailBoardAttachedFile" data-boardid="42" data-name="report.zip"></a>`));
+
+    it("clicking the attachment link asks the download endpoint for the post's attachment as a blob", () => {
+        const h = withAttachment();
+        const ev = h.$.Event("click");
+        h.$("#aDetailBoardAttachedFile").trigger(ev);
+
+        expect(ev.isDefaultPrevented()).toBe(true);
+        const call = h.lastAjax() as any;
+        expect(call.url).toBe("/Forum/DownloadFreeBoardAttachedFile");
+        expect(call.type).toBe("POST");
+        expect(call.data).toEqual({ boardId: "42" });
+        expect(call.headers).toEqual({ RequestVerificationToken: "tok" });
+        expect(call.xhrFields).toEqual({ responseType: "blob" });
+    });
+
+    it("the returned file is saved under the attachment's name, and its object URL released shortly after", () => {
         const click = vi.spyOn(window.HTMLAnchorElement.prototype, "click").mockImplementation(function() { /* jsdom cannot navigate */
         });
         try {
-            const h = load(fixture().replace(
-                "<a id=\"aDetailBoardAttachedFile\"></a>",
-                `<a id="aDetailBoardAttachedFile" data-file="${btoa("payload")}" data-contenttype="application/zip" data-name="report.zip"></a>`));
+            const h = withAttachment();
+            (h.win as any).URL.createObjectURL = () => "blob:attachment";
             const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+            h.$("#aDetailBoardAttachedFile").trigger("click");
             vi.useFakeTimers();
             try {
-                h.$("#aDetailBoardAttachedFile").trigger("click");
+                h.respond(0, new h.win.Blob(["zip-bytes"], { type: "application/x-zip-compressed" }));
+                expect(click).toHaveBeenCalledTimes(1);
+                expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("report.zip");
                 expect(revoke).not.toHaveBeenCalled();
                 vi.advanceTimersByTime(100);
-                expect(revoke).toHaveBeenCalledTimes(1);
+                expect(revoke).toHaveBeenCalledWith("blob:attachment");
             } finally {
                 vi.useRealTimers();
             }
@@ -140,22 +161,19 @@ describe("Forum/FreeForum (anonymous) — navigation, images and attachments", (
         }
     });
 
-    it("clicking the attachment link downloads the embedded file under its own name; a link without data does nothing", () => {
-        const click = vi.spyOn(window.HTMLAnchorElement.prototype, "click").mockImplementation(function() { /* jsdom cannot navigate */
+    it("a refusal is shown as the server's error and nothing is saved; a link without a post id does nothing", async () => {
+        const click = vi.spyOn(window.HTMLAnchorElement.prototype, "click").mockImplementation(function() { /* noop */
         });
         try {
-            const withData = load(fixture().replace(
-                "<a id=\"aDetailBoardAttachedFile\"></a>",
-                `<a id="aDetailBoardAttachedFile" data-file="${btoa("payload")}" data-contenttype="application/zip" data-name="report.zip"></a>`));
-            const ev = withData.$.Event("click");
-            withData.$("#aDetailBoardAttachedFile").trigger(ev);
-            expect(ev.isDefaultPrevented()).toBe(true);
-            expect(click).toHaveBeenCalledTimes(1);
-            expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("report.zip");
+            const h = withAttachment();
+            h.$("#aDetailBoardAttachedFile").trigger("click");
+            h.respond(0, new h.win.Blob([JSON.stringify({ result: false, error: "The post could not be found." })], { type: "application/json; charset=utf-8" }));
+            await vi.waitFor(() => expect(h.toastr.error).toHaveBeenCalledWith("The post could not be found."));
+            expect(click).not.toHaveBeenCalled();
 
             const without = load();
             without.$("#aDetailBoardAttachedFile").trigger("click");
-            expect(click).toHaveBeenCalledTimes(1);
+            expect(without.ajaxCalls).toHaveLength(0);
         } finally {
             click.mockRestore();
         }

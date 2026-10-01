@@ -266,6 +266,36 @@ public class AttachmentContentServiceTests
         Assert.Null(result);
     }
 
+    // -- OpenFileAsync -------------------------------------------------------------
+
+    /// <summary>The stream the file client opened is handed back unread.</summary>
+    [Fact]
+    public async Task OpenFileAsync_ReturnsTheOpenedStream()
+    {
+        var stream = new MemoryStream([1, 2, 3]);
+        _fileClient.Setup(f => f.OpenReadAsync("upload/a.zip", "http://filestorage.local", It.IsAny<CancellationToken>())).ReturnsAsync(stream);
+
+        Assert.Same(stream, await CreateSut().OpenFileAsync("upload/a.zip", TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>A file the storage service cannot hand out yields null and one Error entry naming the path, with the exception attached.</summary>
+    [Fact]
+    public async Task OpenFileAsync_ReturnsNullAndLogsTheFailure_WhenTheFileCannotBeOpened()
+    {
+        var logger = new Microsoft.Extensions.Logging.Testing.FakeLogger<AttachmentContentService>();
+        var failure = new HttpRequestException("404");
+        _fileClient.Setup(f => f.OpenReadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(failure);
+        var sut = new AttachmentContentService(_fileClient.Object, _rsa.Object, _imageValidator.Object, _htmlSanitizer.Object,
+            _htmlParser.Object, _settings, logger);
+
+        Assert.Null(await sut.OpenFileAsync("upload/a.zip", TestContext.Current.CancellationToken));
+
+        var record = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Error, record.Level);
+        Assert.Contains("upload/a.zip", record.Message);
+        Assert.Same(failure, record.Exception);
+    }
+
     // -- PrepareHtmlForDisplayAsync -------------------------------------------------
 
     /// <summary>

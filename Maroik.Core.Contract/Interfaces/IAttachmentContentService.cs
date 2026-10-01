@@ -26,6 +26,12 @@ public interface IAttachmentContentService
     Task<byte[]?> DownloadFileAsync(string filePath, CancellationToken ct = default);
 
     /// <summary>
+    /// Opens a stored file as a stream from file storage. Returns <see langword="null"/> (and logs)
+    /// when it cannot be opened, so a caller can report the failure instead of crashing.
+    /// </summary>
+    Task<Stream?> OpenFileAsync(string filePath, CancellationToken ct = default);
+
+    /// <summary>
     /// Downloads each inline image of <paramref name="html"/> (whose <c>alt</c> holds its plain storage
     /// path) and embeds it as base64 in <c>data-file</c>/<c>data-contenttype</c> for display, replacing
     /// the path in <c>alt</c> with its RSA-encrypted form. An image that cannot be downloaded is removed.

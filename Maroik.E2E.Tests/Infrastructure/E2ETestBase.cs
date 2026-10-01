@@ -17,6 +17,9 @@ public abstract class E2ETestBase(E2ESharedFixture fixture)
     /// <summary>The seeded database, for creating fixtures and checking what the server persisted.</summary>
     protected E2EDatabase Db => fixture.Database;
 
+    /// <summary>The in-memory file storage the website reads attachments and images from.</summary>
+    protected E2EFileStorage Files => fixture.Files;
+
     /// <summary>
     /// Signs <paramref name="account"/> in through the real login form and waits until the browser
     /// has left the login page (i.e. the server accepted the credentials and issued a session).

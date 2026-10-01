@@ -104,4 +104,44 @@ public class ForumFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture)
         string bodyText = await page.Locator("body").InnerTextAsync();
         Assert.False(string.IsNullOrWhiteSpace(bodyText));
     }
+
+    // -- Detail mode: inline image and attachment -------------------------------
+
+    /// <summary>A valid 1×1 PNG.</summary>
+    private static readonly byte[] _png = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+
+    /// <summary>
+    /// On a post's detail page the body image still arrives embedded and is shown, while the
+    /// attachment is not embedded: clicking its link downloads it from the download endpoint,
+    /// under its own name and with its stored bytes — here for a signed-out visitor.
+    /// </summary>
+    [Fact]
+    public async Task FreeForumDetail_ShowsTheBodyImage_AndDownloadsTheAttachmentFromItsEndpoint()
+    {
+        SeededAccount author = await Db.SeedAccountAsync();
+        string key = Guid.NewGuid().ToString("N");
+        string imagePath = $"upload/FreeForum/e2e/{key}.png";
+        string attachmentPath = $"upload/FreeForum/e2e/{key}.zip";
+        byte[] attachment = [.. "e2e-attachment-bytes"u8];
+        Files.Seed(imagePath, _png);
+        Files.Seed(attachmentPath, attachment);
+        long boardId = await Db.SeedFreeForumPostAsync(author.Nickname, $"<p>with image</p><img alt=\"{imagePath}\">", attachmentPath, attachment.Length);
+
+        var page = await NewPageAsync();
+        await GotoAsync(page, $"/Forum/FreeForum?method=detail&boardId={boardId}");
+
+        var image = page.Locator("#detailBoardContent img");
+        await Assertions.Expect(image).ToHaveAttributeAsync("src", new System.Text.RegularExpressions.Regex("^blob:"));
+        await page.WaitForFunctionAsync("() => document.querySelector('#detailBoardContent img')?.naturalWidth === 1");
+        Assert.DoesNotContain(Convert.ToBase64String(attachment), await page.ContentAsync());
+
+        IDownload download = await page.RunAndWaitForDownloadAsync(() => page.Locator("#aDetailBoardAttachedFile").ClickAsync());
+
+        Assert.Equal("payload.zip", download.SuggestedFilename);
+        await using Stream content = await download.CreateReadStreamAsync();
+        using var copy = new MemoryStream();
+        await content.CopyToAsync(copy, TestContext.Current.CancellationToken);
+        Assert.Equal(attachment, copy.ToArray());
+    }
 }

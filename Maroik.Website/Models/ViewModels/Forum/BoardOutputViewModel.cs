@@ -33,12 +33,6 @@ public class BoardOutputViewModel
     /// <summary>Original file name of the attached file (null when no attachment exists).</summary>
     public string? BoardAttachedFileName { get; set; }
 
-    /// <summary>Base64-encoded bytes of the attached file, used for inline preview or download link generation.</summary>
-    public string? BoardAttachedFileBase64Data { get; set; }
-
-    /// <summary>MIME type of the attached file (e.g. "application/zip"), used for data-URI or content-type headers.</summary>
-    public string? BoardAttachedFileContentType { get; set; }
-
     /// <summary>File extension of the attached file (e.g. ".zip"), used for icon selection in the view.</summary>
     public string? BoardAttachedFileExtension { get; set; }
 

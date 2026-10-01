@@ -408,6 +408,39 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         }
     }
 
+    /// <summary>
+    /// The file is streamed from disk (a <see cref="Microsoft.AspNetCore.Mvc.FileStreamResult"/> over a
+    /// <see cref="FileStream"/>), never read into one byte array first, and is named for the browser.
+    /// </summary>
+    [Fact]
+    public async Task Download_StreamsTheFileFromDisk_InsteadOfBufferingIt()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"maroik_test_{Guid.NewGuid()}.zip");
+        await File.WriteAllBytesAsync(tempPath, [1, 2, 3, 4], TestContext.Current.CancellationToken);
+        try
+        {
+            var controller = new Maroik.FileStorage.Controllers.FileController(
+                Mock.Of<IFileValidationService>(),
+                Microsoft.Extensions.Options.Options.Create(new Maroik.FileStorage.Settings.FileStorageSetting { StorageRootPath = Path.GetTempPath() }),
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<Maroik.FileStorage.Controllers.FileController>.Instance);
+
+            var result = controller.Download(tempPath);
+
+            var file = Assert.IsType<Microsoft.AspNetCore.Mvc.FileStreamResult>(result);
+            await using (file.FileStream)
+            {
+                Assert.IsType<FileStream>(file.FileStream);
+                Assert.Equal(Path.GetFileName(tempPath), file.FileDownloadName);
+                Assert.Equal("application/x-zip-compressed", file.ContentType);
+                Assert.True(file.EnableRangeProcessing);
+            }
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
     /// <summary>Verifies that <c>Download</c> returns correct content type for png.</summary>
     [Fact]
     public async Task Download_ReturnsCorrectContentType_ForPng()
