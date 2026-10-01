@@ -101,11 +101,11 @@ public class ErrorContractTests
         ErrorAssert.Validation(account.ResetPassword(token, " "), "Account.PasswordEmpty", "New hashed password cannot be empty.");
     }
 
-    /// <summary>Verifies that <c>AdminUpdate</c> rejects a role other than Admin or User.</summary>
+    /// <summary>Verifies that <c>ChangeRole</c> rejects a role other than Admin or User.</summary>
     [Fact]
-    public void Account_AdminUpdate_RejectsAnUnknownRole()
+    public void Account_ChangeRole_RejectsAnUnknownRole()
     {
-        ErrorAssert.Validation(Reconstituted().AdminUpdate("Root", null, false, 0, true, true, null, false),
+        ErrorAssert.Validation(Reconstituted().ChangeRole("Root"),
             "Account.RoleInvalid", "Role must be either Admin or User.");
     }
 

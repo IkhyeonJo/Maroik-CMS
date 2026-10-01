@@ -1,6 +1,7 @@
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Website.Tests.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Maroik.Website.Tests.Controllers;
@@ -405,7 +406,55 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
     }
 
     /// <summary>
-    /// Regression test: an out-of-range Role value must be rejected by Account.AdminUpdate's own
+    /// The admin edit form can switch every account flag off and back on: confirmation, terms,
+    /// deletion and lock, plus role, time zone and message. Each round trip is read back from the
+    /// database.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAccount_TogglesEveryAdminFlag_BothWays()
+    {
+        var session = await LoginAsAdminAsync();
+        const string email = "toggle-every-flag@test.com";
+        SeedAccount(email);
+
+        async Task UpdateAsync(bool on)
+        {
+            using var request = session.BuildJsonPostRequest("/Management/UpdateAccount", new
+            {
+                Email = email,
+                Password = "",
+                Role = on ? Role.Admin : Role.User,
+                TimeZoneIanaId = on ? "Asia/Seoul" : "UTC",
+                Locked = on,
+                EmailConfirmed = !on,
+                AgreedServiceTerms = !on,
+                Message = on ? "sanctioned" : "",
+                Deleted = on
+            });
+            var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+            Assert.Contains("\"result\":true", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        }
+
+        Maroik.Core.PostgreSQL.Models.Account Read()
+        {
+            using var scope = factory.Services.CreateScope();
+            return scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Accounts.AsNoTracking().Single(a => a.Email == email);
+        }
+
+        await UpdateAsync(on: true);
+        var flagged = Read();
+        Assert.Equal((Role.Admin, "Asia/Seoul", true, false, false, "sanctioned", true),
+            (flagged.Role, flagged.TimeZoneIanaId, flagged.Locked, flagged.EmailConfirmed, flagged.AgreedServiceTerms, flagged.Message, flagged.Deleted));
+
+        await UpdateAsync(on: false);
+        var cleared = Read();
+        Assert.Equal((Role.User, "UTC", false, true, true, false),
+            (cleared.Role, cleared.TimeZoneIanaId, cleared.Locked, cleared.EmailConfirmed, cleared.AgreedServiceTerms, cleared.Deleted));
+        Assert.True(string.IsNullOrEmpty(cleared.Message));
+    }
+
+    /// <summary>
+    /// Regression test: an out-of-range Role value must be rejected by Account.ChangeRole's own
     /// validation, not silently coerced to Role.User by the controller. Coercing it outside Core
     /// let an invalid Role bypass the Domain's validation entirely; the account's stored Role must
     /// stay unchanged when the request is rejected.
