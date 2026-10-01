@@ -12,9 +12,9 @@ internal static class AccountMapper
         target.Email = account.Email.Value;
         target.Nickname = account.Nickname;
         target.AvatarImagePath = account.AvatarImagePath;
-        target.Role = account.Role;
+        target.Role = account.Role.Value;
         target.TimeZoneIanaId = account.TimeZone.Value;
-        target.DefaultMonetaryUnit = account.DefaultMonetaryUnit;
+        target.DefaultMonetaryUnit = account.DefaultMonetaryUnit?.Value;
         target.Locked = account.Locked;
         target.LoginAttempt = account.LoginAttempt;
         target.EmailConfirmed = account.EmailConfirmed;

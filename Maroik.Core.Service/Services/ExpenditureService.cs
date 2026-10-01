@@ -82,7 +82,7 @@ public class ExpenditureService(
                     return await unitOfWork.FailAsync(CurrencyMismatchResult, ct);
             }
 
-            string currency = paymentAsset.Balance.Currency;
+            string currency = paymentAsset.Balance.Currency.Value;
             string? myDepositAsset = isTransfer ? request.MyDepositAsset : null;
 
             var expenditureResult = Expenditure.Record(accountEmail, request.MainClass, request.SubClass,
@@ -175,10 +175,10 @@ public class ExpenditureService(
             }
 
             // newPayAsset is guaranteed non-null past the AssetNotFoundResult guard above.
-            string newCurrency = newPayAsset.Balance.Currency;
+            string newCurrency = newPayAsset.Balance.Currency.Value;
             string? myDepositAsset = classResult.Value ? request.MyDepositAsset : null;
 
-            var oldSnapshot = new ExpenditureSnapshot(previous.PaymentMethod, previous.MyDepositAsset, previous.Amount.Amount, previous.Amount.Currency);
+            var oldSnapshot = new ExpenditureSnapshot(previous.PaymentMethod, previous.MyDepositAsset, previous.Amount.Amount, previous.Amount.Currency.Value);
 
             var updateResult = previous.Update(request.MainClass, request.SubClass, request.Content,
                 Math.Abs(request.Amount), newCurrency, request.PaymentMethod, myDepositAsset, request.Note, utcNow, request.Created);
@@ -187,7 +187,7 @@ public class ExpenditureService(
 
             await expenditureRepository.UpdateEntityAsync(previous, ct);
             var adjustResult = await AdjustAssetBalancesAsync(touchedAssets, oldSnapshot,
-                new ExpenditureSnapshot(previous.PaymentMethod, previous.MyDepositAsset, previous.Amount.Amount, previous.Amount.Currency), utcNow, ct);
+                new ExpenditureSnapshot(previous.PaymentMethod, previous.MyDepositAsset, previous.Amount.Amount, previous.Amount.Currency.Value), utcNow, ct);
             if (adjustResult.IsError)
                 return await unitOfWork.FailAsync(adjustResult.FirstError, ct);
 
@@ -224,7 +224,7 @@ public class ExpenditureService(
                 return await unitOfWork.FailAsync(DeletedAssetResult, ct);
 
             var adjustResult = await AdjustAssetBalancesAsync(assetsToCheck,
-                new ExpenditureSnapshot(expenditure.PaymentMethod, expenditure.MyDepositAsset, expenditure.Amount.Amount, expenditure.Amount.Currency),
+                new ExpenditureSnapshot(expenditure.PaymentMethod, expenditure.MyDepositAsset, expenditure.Amount.Amount, expenditure.Amount.Currency.Value),
                 null, utcNow, ct);
             if (adjustResult.IsError)
                 return await unitOfWork.FailAsync(adjustResult.FirstError, ct);

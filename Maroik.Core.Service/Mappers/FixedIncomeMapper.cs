@@ -15,7 +15,7 @@ internal static class FixedIncomeMapper
         SubClass = fi.SubClass,
         Content = fi.Content,
         Amount = fi.Amount.Amount,
-        MonetaryUnit = fi.Amount.Currency,
+        MonetaryUnit = fi.Amount.Currency.Value,
         DepositMyAssetProductName = fi.DepositMyAssetProductName,
         DepositMonth = fi.DepositMonth,
         DepositDay = fi.DepositDay,

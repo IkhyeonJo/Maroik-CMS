@@ -131,7 +131,7 @@ public class FinanceAmountScaleTests
         var asset = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", 1000.5m, "원", Now).Value;
 
         Assert.False(asset.Update("Wallet", "FreeDepositAndWithdrawal", 1000.5m, "KRW", null, false, Now).IsError);
-        Assert.Equal("KRW", asset.Balance.Currency);
+        Assert.Equal("KRW", asset.Balance.Currency.Value);
     }
 
     /// <summary>

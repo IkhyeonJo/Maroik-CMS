@@ -27,7 +27,7 @@ public class AssetRepository(ApplicationDbContext context)
                  "ProductName" = {asset.ProductName},
                  "Item" = {asset.Item},
                  "Amount" = {asset.Balance.Amount},
-                 "MonetaryUnit" = {asset.Balance.Currency},
+                 "MonetaryUnit" = {asset.Balance.Currency.Value},
                  "Note" = {asset.Note ?? ""},
                  "Deleted" = {asset.Deleted},
                  "Updated" = {asset.Updated}
@@ -49,7 +49,7 @@ public class AssetRepository(ApplicationDbContext context)
         AccountEmail = a.AccountEmail.Value,
         Item = a.Item,
         Amount = a.Balance.Amount,
-        MonetaryUnit = a.Balance.Currency,
+        MonetaryUnit = a.Balance.Currency.Value,
         Note = a.Note ?? "",
         Deleted = a.Deleted,
         Created = a.Created,

@@ -13,11 +13,11 @@ public sealed class Money : ValueObject
     /// <summary>Numeric amount (can be negative for debits).</summary>
     public decimal Amount { get; }
 
-    /// <summary>Currency code in upper-case (e.g. "KRW", "USD"); normally ISO 4217, but only its length is validated.</summary>
-    public string Currency { get; }
+    /// <summary>Currency code (e.g. "KRW", "USD"); see <see cref="CurrencyCode"/>.</summary>
+    public CurrencyCode Currency { get; }
 
     /// <summary>Wraps an already-validated amount and upper-cased currency; reached only through the factories.</summary>
-    private Money(decimal amount, string currency)
+    private Money(decimal amount, CurrencyCode currency)
     {
         Amount = amount;
         Currency = currency;
@@ -28,30 +28,23 @@ public sealed class Money : ValueObject
     /// Skips validation — only call this when the source is trusted (repository layer).
     /// </summary>
     internal static Money FromTrustedSource(decimal amount, string currency) =>
-        new(amount, currency.ToUpperInvariant());
-
-    /// <summary>Longest currency code the persisted <c>MonetaryUnit</c> columns (<c>varchar(45)</c>) accept.</summary>
-    private const int MaxCurrencyLength = 45;
+        new(amount, CurrencyCode.FromTrustedSource(currency));
 
     /// <summary>
     /// Creates a <see cref="Money"/> value object.
-    /// Returns a validation error if <paramref name="currency"/> is null, empty, or longer than the
-    /// persisted column allows (so an over-long value is a clean error, not a raw DB write failure).
+    /// Returns a validation error if <paramref name="currency"/> is not a valid <see cref="CurrencyCode"/>
+    /// (null, empty, or longer than the persisted column allows).
     /// </summary>
     public static ErrorOr<Money> Create(decimal amount, string? currency)
     {
-        if (string.IsNullOrWhiteSpace(currency))
-            return LocalizableError.Validation("Money.CurrencyEmpty", "Currency code cannot be empty.");
+        var currencyResult = CurrencyCode.Create(currency);
+        if (currencyResult.IsError) return currencyResult.Errors;
 
-        string trimmedCurrency = currency.Trim();
-        if (trimmedCurrency.Length > MaxCurrencyLength)
-            return LocalizableError.Validation("Money.CurrencyTooLong", "Currency code must be {0} characters or fewer.", MaxCurrencyLength);
-
-        return new Money(amount, trimmedCurrency.ToUpperInvariant());
+        return new Money(amount, currencyResult.Value);
     }
 
     /// <summary>Creates a zero-balance <see cref="Money"/> with the given currency.</summary>
-    public static Money Zero(string currency) => new(0m, currency.ToUpperInvariant());
+    public static Money Zero(CurrencyCode currency) => new(0m, currency);
 
     /// <summary>
     /// Returns a new <see cref="Money"/> with the same currency as this instance but a different
@@ -66,8 +59,8 @@ public sealed class Money : ValueObject
     /// </summary>
     public ErrorOr<Money> Add(Money other)
     {
-        if (!Currency.Equals(other.Currency, StringComparison.OrdinalIgnoreCase))
-            return LocalizableError.Validation("Money.CurrencyMismatch", "Cannot add {0} and {1}.", Currency, other.Currency);
+        if (Currency != other.Currency)
+            return LocalizableError.Validation("Money.CurrencyMismatch", "Cannot add {0} and {1}.", Currency.Value, other.Currency.Value);
 
         return new Money(Amount + other.Amount, Currency);
     }
@@ -78,8 +71,8 @@ public sealed class Money : ValueObject
     /// </summary>
     public ErrorOr<Money> Subtract(Money other)
     {
-        if (!Currency.Equals(other.Currency, StringComparison.OrdinalIgnoreCase))
-            return LocalizableError.Validation("Money.CurrencyMismatch", "Cannot subtract {0} from {1}.", other.Currency, Currency);
+        if (Currency != other.Currency)
+            return LocalizableError.Validation("Money.CurrencyMismatch", "Cannot subtract {0} from {1}.", other.Currency.Value, Currency.Value);
 
         return new Money(Amount - other.Amount, Currency);
     }

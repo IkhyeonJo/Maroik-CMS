@@ -113,7 +113,7 @@ public sealed class ExpenditureRepositoryTests(DatabaseFixture database) : Repos
 
         List<Expenditure> result = await Sut.GetByAccountEmailAsync(alice, TestContext.Current.CancellationToken);
 
-        Assert.Equal("KRW", Assert.Single(result).Amount.Currency);
+        Assert.Equal("KRW", Assert.Single(result).Amount.Currency.Value);
     }
 
     // -- FindByEmailAndIdAsync -------------------------------------------------
@@ -177,7 +177,7 @@ public sealed class ExpenditureRepositoryTests(DatabaseFixture database) : Repos
         Expenditure? found = await Sut.FindByEmailAndIdForUpdateAsync(alice, orm.Id, TestContext.Current.CancellationToken);
 
         Assert.NotNull(found);
-        Assert.Equal("KRW", found.Amount.Currency);
+        Assert.Equal("KRW", found.Amount.Currency.Value);
     }
 
     /// <summary>
@@ -215,7 +215,7 @@ public sealed class ExpenditureRepositoryTests(DatabaseFixture database) : Repos
             await Task.Delay(300, TestContext.Current.CancellationToken);
 
             expenditure.Update("ConsumerSpending", "MealOrEatOutExpenses", expenditure.Content,
-                expenditure.Amount.Amount + 100m, expenditure.Amount.Currency,
+                expenditure.Amount.Amount + 100m, expenditure.Amount.Currency.Value,
                 expenditure.PaymentMethod, expenditure.MyDepositAsset, expenditure.Note, DateTime.UtcNow);
             await repo.UpdateEntityAsync(expenditure, TestContext.Current.CancellationToken);
             // The repository defers its flush while a transaction is open on the context; this test

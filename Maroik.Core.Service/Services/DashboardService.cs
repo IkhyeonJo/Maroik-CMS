@@ -4,6 +4,7 @@ using Maroik.Core.Contract.Misc.Settings;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.Domain.Finance;
 using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.ValueObjects;
 using Maroik.Core.Service.Mappers;
 using Microsoft.Extensions.Options;
 
@@ -62,7 +63,7 @@ public class DashboardService(
         List<Asset> assets = [.. allAssets.Where(a => !a.Deleted)];
         Account? account = await accountRepository.FindByEmailAsync(accountEmail, ct);
 
-        string? defaultMonetaryUnit = account == null ? null : DefaultMonetaryUnitPolicy.Resolve(account.DefaultMonetaryUnit, allAssets);
+        CurrencyCode? defaultMonetaryUnit = account == null ? null : DefaultMonetaryUnitPolicy.Resolve(account.DefaultMonetaryUnit, allAssets);
 
         // Persist the self-corrected value (matches main): other screens that read
         // Account.DefaultMonetaryUnit directly (e.g. account management) must not see a
@@ -74,17 +75,17 @@ public class DashboardService(
             // Column-scoped write (DefaultMonetaryUnit only, no Updated bump): this fires on a
             // dashboard GET, so a full-row UpdateEntityAsync here would race — and silently
             // overwrite — a concurrent profile edit on the same account.
-            await accountRepository.UpdateDefaultMonetaryUnitAsync(accountEmail, defaultMonetaryUnit, ct);
+            await accountRepository.UpdateDefaultMonetaryUnitAsync(accountEmail, defaultMonetaryUnit?.Value, ct);
         }
 
         var summary = new DashboardDto
         {
-            DefaultMonetaryUnit = defaultMonetaryUnit,
+            DefaultMonetaryUnit = defaultMonetaryUnit?.Value,
             Assets = assets.Select(AssetMapper.ToResponse).ToList(),
             SelectedYear = yearInt,
             SelectedMonth = monthInt,
             EndYear = accountToday.Year,
-            MonetaryUnits = allAssets.Select(x => x.Balance.Currency).Distinct()
+            MonetaryUnits = allAssets.Select(x => x.Balance.Currency.Value).Distinct()
         };
 
         if (summary.DefaultMonetaryUnit != null)
@@ -111,7 +112,7 @@ public class DashboardService(
             string defaultUnit = summary.DefaultMonetaryUnit;
             Dictionary<string, string> currencyByProduct = allAssets
                 .GroupBy(a => a.ProductName)
-                .ToDictionary(g => g.Key, g => g.Last().Balance.Currency);
+                .ToDictionary(g => g.Key, g => g.Last().Balance.Currency.Value);
             summary.CurrencyByProduct = currencyByProduct;
 
             summary.YearIncomes =

@@ -52,7 +52,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
             if (depositAsset.Deleted)
                 return await unitOfWork.FailAsync(DeletedAssetResult, ct);
 
-            string currency = depositAsset.Balance.Currency;
+            string currency = depositAsset.Balance.Currency.Value;
             var incomeResult = Income.Record(accountEmail, request.MainClass, request.SubClass,
                 request.Content, Math.Abs(request.Amount), currency, request.DepositMyAssetProductName, utcNow, request.Note, request.Created);
             if (incomeResult.IsError)
@@ -112,9 +112,9 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
             // deleted asset's balance must never be touched.
             if (newAsset?.Deleted == true)
                 return await unitOfWork.FailAsync(DeletedAssetResult, ct);
-            string newCurrency = newAsset?.Balance.Currency ?? prevAsset?.Balance.Currency ?? "";
+            string newCurrency = newAsset?.Balance.Currency.Value ?? prevAsset?.Balance.Currency.Value ?? "";
 
-            var oldSnapshot = new IncomeSnapshot(previous.DepositMyAssetProductName, previous.Amount.Amount, previous.Amount.Currency);
+            var oldSnapshot = new IncomeSnapshot(previous.DepositMyAssetProductName, previous.Amount.Amount, previous.Amount.Currency.Value);
 
             var updateResult = previous.Update(request.MainClass, request.SubClass, request.Content,
                 Math.Abs(request.Amount), newCurrency, request.DepositMyAssetProductName, request.Note, utcNow, request.Created);
@@ -123,7 +123,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
 
             await incomeRepository.UpdateEntityAsync(previous, ct);
             var adjustResult = await AdjustAssetBalancesAsync(touchedAssets, oldSnapshot,
-                new IncomeSnapshot(previous.DepositMyAssetProductName, previous.Amount.Amount, previous.Amount.Currency), utcNow, ct);
+                new IncomeSnapshot(previous.DepositMyAssetProductName, previous.Amount.Amount, previous.Amount.Currency.Value), utcNow, ct);
             if (adjustResult.IsError)
                 return await unitOfWork.FailAsync(adjustResult.FirstError, ct);
 
@@ -160,7 +160,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
                 return await unitOfWork.FailAsync(DeletedAssetResult, ct);
 
             var adjustResult = await AdjustAssetBalancesAsync(assetsToCheck,
-                new IncomeSnapshot(income.DepositMyAssetProductName, income.Amount.Amount, income.Amount.Currency), null, utcNow, ct);
+                new IncomeSnapshot(income.DepositMyAssetProductName, income.Amount.Amount, income.Amount.Currency.Value), null, utcNow, ct);
             if (adjustResult.IsError)
                 return await unitOfWork.FailAsync(adjustResult.FirstError, ct);
 

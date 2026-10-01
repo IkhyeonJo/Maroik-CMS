@@ -290,13 +290,13 @@ public class AssetTests
     public void Update_ReturnsError_WhenCurrencyEmpty()
     {
         var asset = ValidAsset();
-        string originalCurrency = asset.Balance.Currency;
+        string originalCurrency = asset.Balance.Currency.Value;
 
         var result = asset.Update("Name", "FreeDepositAndWithdrawal", 1000m, "", null, false, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Money.CurrencyEmpty", result.FirstError.Code);
-        Assert.Equal(originalCurrency, asset.Balance.Currency);
+        Assert.Equal(originalCurrency, asset.Balance.Currency.Value);
     }
 
     // -- UpdateNote ------------------------------------------------------------
