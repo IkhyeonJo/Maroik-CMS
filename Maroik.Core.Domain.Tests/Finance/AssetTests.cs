@@ -119,7 +119,7 @@ public class AssetTests
     }
 
     /// <summary>
-    /// Regression: the balance lives in a numeric(18,2) column, so a deposit that would take it past
+    /// Regression: the balance lives in a numeric(20,4) column, so a deposit that would take it past
     /// <see cref="FinanceAmountPolicy.MaxAbsoluteAmount"/> is a clean validation error (and leaves the
     /// balance untouched) instead of a raw numeric-overflow at save.
     /// </summary>

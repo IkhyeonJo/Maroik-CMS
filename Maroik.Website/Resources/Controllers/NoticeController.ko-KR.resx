@@ -300,6 +300,9 @@
   <data name="Amount cannot be negative." xml:space="preserve">
     <value>금액은 음수일 수 없습니다.</value>
   </data>
+  <data name="Amount can have up to {0} decimal places." xml:space="preserve">
+    <value>금액은 소수점 이하 {0}자리까지 입력할 수 있습니다.</value>
+  </data>
   <data name="Amount must not exceed {0}." xml:space="preserve">
     <value>금액은 {0}을(를) 초과할 수 없습니다.</value>
   </data>

@@ -151,7 +151,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(255)
                 .HasComment("AccountEmail (ID)");
             entity.Property(e => e.Amount)
-                .HasPrecision(18, 2)
+                .HasPrecision(20, 4)
                 .HasComment("Amount");
             entity.Property(e => e.Created)
                 .HasComment("Created")
@@ -503,7 +503,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(255)
                 .HasComment("Account Email (ID)");
             entity.Property(e => e.Amount)
-                .HasPrecision(18, 2)
+                .HasPrecision(20, 4)
                 .HasComment("Amount");
             entity.Property(e => e.Content)
                 .HasMaxLength(255)
@@ -557,7 +557,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(255)
                 .HasComment("Account Email (ID)");
             entity.Property(e => e.Amount)
-                .HasPrecision(18, 2)
+                .HasPrecision(20, 4)
                 .HasComment("Amount");
             entity.Property(e => e.Content)
                 .HasMaxLength(255)
@@ -618,7 +618,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(255)
                 .HasComment("Account Email (ID)");
             entity.Property(e => e.Amount)
-                .HasPrecision(18, 2)
+                .HasPrecision(20, 4)
                 .HasComment("Amount");
             entity.Property(e => e.Content)
                 .HasMaxLength(255)
@@ -673,7 +673,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(255)
                 .HasComment("Account Email (ID)");
             entity.Property(e => e.Amount)
-                .HasPrecision(18, 2)
+                .HasPrecision(20, 4)
                 .HasComment("Amount");
             entity.Property(e => e.Content)
                 .HasMaxLength(255)

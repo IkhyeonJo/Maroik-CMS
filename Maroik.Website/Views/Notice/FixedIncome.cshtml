@@ -146,7 +146,7 @@
                             </div>
                             <div class="form-group col-md-6 mb-3">
                                 <label id="labelCreateFixedIncomeAmount" for="createFixedIncomeAmount">@Localizer["Amount"].Value</label>
-                                <input class="form-control form-control-sm" min="0" type="number" id="createFixedIncomeAmount" name="createFixedIncomeAmount" value="0">
+                                <input class="form-control form-control-sm" min="0" type="number" step="@FinanceAmountPolicy.SmallestAmountStep.ToString(System.Globalization.CultureInfo.InvariantCulture)" id="createFixedIncomeAmount" name="createFixedIncomeAmount" value="0">
                             </div>
                         </div>
                         <div class="form-row">
@@ -247,7 +247,7 @@
                             </div>
                             <div class="form-group col-md-6 mb-3">
                                 <label id="labelEditFixedIncomeAmount" for="editFixedIncomeAmount">@Localizer["Amount"].Value</label>
-                                <input class="form-control form-control-sm" min="0" type="number" id="editFixedIncomeAmount" name="editFixedIncomeAmount" value="0">
+                                <input class="form-control form-control-sm" min="0" type="number" step="@FinanceAmountPolicy.SmallestAmountStep.ToString(System.Globalization.CultureInfo.InvariantCulture)" id="editFixedIncomeAmount" name="editFixedIncomeAmount" value="0">
                             </div>
                         </div>
                         <div class="form-row">
