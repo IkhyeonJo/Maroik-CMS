@@ -94,6 +94,27 @@ public class ManagementAccountServiceAuditLoggingTests
         AssertNoSecretLogged("NewPass1!", "$2a$13$newhash");
     }
 
+    /// <summary>Verifies that an admin update logs a deletion, a restore and an unlock as before -> after transitions.</summary>
+    [Fact]
+    public async Task Update_LogsTheDeletedAndUnlockTransitions()
+    {
+        Account account = Existing(locked: true, loginAttempt: 5);
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = Email, Locked = false, Deleted = true, EmailConfirmed = true, AgreedServiceTerms = true },
+            null, Actor, TestContext.Current.CancellationToken);
+        FakeLogRecord deleted = Only(LogLevel.Information, "deleted False -> True");
+        Assert.Contains("locked True -> False", deleted.Message);
+
+        _logger.Collector.Clear();
+        await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = Email, Deleted = false, EmailConfirmed = true, AgreedServiceTerms = true },
+            null, Actor, TestContext.Current.CancellationToken);
+        Only(LogLevel.Information, "deleted True -> False");
+    }
+
     /// <summary>Verifies that an admin update without a new password logs <c>password reset False</c>.</summary>
     [Fact]
     public async Task Update_LogsThatThePasswordWasNotReset_WhenNoNewPasswordIsGiven()

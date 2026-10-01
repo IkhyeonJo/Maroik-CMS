@@ -390,7 +390,7 @@ public class ManagementController : Controller
             if (!ModelState.IsValid)
                 return Json(new { result = false, error = _localizer["Input is invalid"].Value });
 
-            // Role validity is enforced by Account.AdminUpdate in the Domain layer, which rejects
+            // Role validity is enforced by Account.ChangeRole in the Domain layer, which rejects
             // the request with a validation error below instead of the controller silently
             // coercing an invalid value.
             ServiceResult updateResult = await _managementAccountService.UpdateAccountAsync(

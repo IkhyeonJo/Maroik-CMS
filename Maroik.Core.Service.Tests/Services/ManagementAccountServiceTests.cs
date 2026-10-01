@@ -380,6 +380,88 @@ public class ManagementAccountServiceTests
             It.Is<Account>(a => a.Locked == false && a.LoginAttempt == 0), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>A persisted account in the opposite state of every admin toggle: deleted, unconfirmed, terms not accepted.</summary>
+    private static Account DeletedUnconfirmedAccount() =>
+        Account.Reconstitute("user@example.com", "$2a$13$placeholder", "User", null, Role.User, "UTC", null, false, 0,
+            false, false, "reg-token", null, DateTime.UtcNow, DateTime.UtcNow, null, true, "stamp", false);
+
+    /// <summary>Every admin toggle is applied in both directions: role, time zone, confirmation, terms, deletion and message.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_AppliesEveryAdminChange()
+    {
+        Account account = DeletedUnconfirmedAccount();
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+
+        ServiceResult result = await CreateSut().UpdateAccountAsync(new AdminUpdateAccountRequest
+        {
+            Email = "user@example.com", Role = Role.Admin, TimeZoneIanaId = "Asia/Seoul",
+            EmailConfirmed = true, AgreedServiceTerms = true, Deleted = false, Message = "note"
+        }, null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal(Role.Admin, account.Role);
+        Assert.Equal("Asia/Seoul", account.TimeZone.Value);
+        Assert.True(account.EmailConfirmed);
+        Assert.True(account.AgreedServiceTerms);
+        Assert.False(account.Deleted);
+        Assert.Equal("note", account.Message);
+
+        result = await CreateSut().UpdateAccountAsync(new AdminUpdateAccountRequest
+        {
+            Email = "user@example.com", EmailConfirmed = false, AgreedServiceTerms = false, Deleted = true
+        }, null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal(Role.Admin, account.Role); // a null role keeps the current one
+        Assert.Equal("Asia/Seoul", account.TimeZone.Value); // so does a null time zone
+        Assert.False(account.EmailConfirmed);
+        Assert.False(account.AgreedServiceTerms);
+        Assert.True(account.Deleted);
+        Assert.Null(account.Message);
+    }
+
+    /// <summary>An account that stays locked keeps its failed-login count; the admin path cannot set it.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_KeepsTheLoginAttemptCount_WhenTheAccountStaysLocked()
+    {
+        Account account = ActiveAccount(locked: true, loginAttempt: 4);
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+
+        await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = account.Email.Value, Locked = true, Message = "spam" }, null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(account.Locked);
+        Assert.Equal(4, account.LoginAttempt);
+        Assert.Equal("spam", account.Message);
+    }
+
+    /// <summary>An unlocked account the admin locks keeps its count and stores the admin's message.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_LocksAnUnlockedAccount()
+    {
+        Account account = ActiveAccount(locked: false, loginAttempt: 2);
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+
+        await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = account.Email.Value, Locked = true, Message = "spam" }, null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(account.Locked);
+        Assert.Equal(2, account.LoginAttempt);
+        Assert.Equal("spam", account.Message);
+    }
+
+    /// <summary>An invalid time zone is returned as the domain's validation error and nothing is written.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_ReturnsTheDomainValidationError_ForAnUnknownTimeZone()
+    {
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ActiveAccount());
+
+        ServiceResult result = await CreateSut().UpdateAccountAsync(new AdminUpdateAccountRequest { Email = "user@example.com", TimeZoneIanaId = "Not/AZone" }, null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.Equal("TimeZoneId.Invalid", result.ErrorCode);
+        _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // -- DeleteAccountAsync ---------------------------------------------------
 
     /// <summary>Verifies that <c>DeleteAccountAsync</c> returns fail when account not found.</summary>

@@ -481,36 +481,50 @@ public sealed class Account : AggregateRoot<string>
         Updated = DateTime.UtcNow;
     }
 
-    /// <summary>
-    /// Admin-level composite update. Validates and replaces the time-zone (a null one keeps the
-    /// current zone) and the role (null keeps it; otherwise Admin or User only); resets the login
-    /// counter whenever the account is unlocked.
-    /// </summary>
-    public ErrorOr<Success> AdminUpdate(
-        string? role,
-        string? timeZoneIanaId,
-        bool locked,
-        long loginAttempt,
-        bool emailConfirmed,
-        bool agreedServiceTerms,
-        string? message,
-        bool deleted)
+    /// <summary>Administrator operation: changes the account's role. Only Admin or User is accepted.</summary>
+    public ErrorOr<Success> ChangeRole(string role)
     {
-        var tzResult = TimeZoneId.Create(timeZoneIanaId ?? TimeZone.Value);
-        if (tzResult.IsError) return tzResult.Errors;
-
-        if (role is not (null or Maroik.Core.Domain.Account.Role.Admin or Maroik.Core.Domain.Account.Role.User))
+        if (role is not (Maroik.Core.Domain.Account.Role.Admin or Maroik.Core.Domain.Account.Role.User))
             return LocalizableError.Validation("Account.RoleInvalid", "Role must be either Admin or User.");
 
-        Role = role ?? Role;
-        TimeZone = tzResult.Value;
-        Locked = locked;
-        LoginAttempt = locked ? loginAttempt : 0;
-        EmailConfirmed = emailConfirmed;
-        AgreedServiceTerms = agreedServiceTerms;
-        Message = message;
-        Deleted = deleted;
+        Role = role;
         Updated = DateTime.UtcNow;
         return Result.Success;
+    }
+
+    /// <summary>Administrator operation: changes the account's display time zone.</summary>
+    public ErrorOr<Success> ChangeTimeZone(string timeZoneIanaId)
+    {
+        var tzResult = TimeZoneId.Create(timeZoneIanaId);
+        if (tzResult.IsError) return tzResult.Errors;
+
+        TimeZone = tzResult.Value;
+        Updated = DateTime.UtcNow;
+        return Result.Success;
+    }
+
+    /// <summary>
+    /// Administrator operation: marks the email address as not confirmed again. The account cannot
+    /// log in until it is confirmed (by an administrator, or through a freshly requested
+    /// confirmation mail).
+    /// </summary>
+    public void RevokeEmailConfirmation()
+    {
+        EmailConfirmed = false;
+        Updated = DateTime.UtcNow;
+    }
+
+    /// <summary>Administrator operation: withdraws the account's acceptance of the service terms.</summary>
+    public void RevokeServiceTerms()
+    {
+        AgreedServiceTerms = false;
+        Updated = DateTime.UtcNow;
+    }
+
+    /// <summary>Administrator operation: undoes <see cref="SoftDelete"/>.</summary>
+    public void Restore()
+    {
+        Deleted = false;
+        Updated = DateTime.UtcNow;
     }
 }

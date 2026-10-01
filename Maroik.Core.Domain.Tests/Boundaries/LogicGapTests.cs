@@ -147,17 +147,16 @@ public class LogicGapTests
         DomainAccount.Reconstitute(Email, "$2a$hash", "Nick", null, Role.User, "UTC", null, locked, loginAttempt, true, true,
             null, null, DateTime.UtcNow, DateTime.UtcNow, null, false, "stamp", false);
 
-    /// <summary>Verifies that an admin update keeps the login attempt count while the account stays locked and resets it on unlock.</summary>
+    /// <summary>Verifies that locking keeps the login attempt count and unlocking clears it.</summary>
     [Fact]
-    public void AdminUpdate_KeepsTheAttemptCountWhileLocked_AndClearsItOnUnlock()
+    public void Lock_KeepsTheAttemptCount_AndUnlockClearsIt()
     {
-        DomainAccount locked = Account(locked: true, loginAttempt: 3);
-        Assert.False(locked.AdminUpdate(null, null, locked: true, loginAttempt: 3, true, true, null, false).IsError);
-        Assert.Equal(3, locked.LoginAttempt);
+        DomainAccount account = Account(locked: false, loginAttempt: 3);
+        account.Lock();
+        Assert.Equal(3, account.LoginAttempt);
 
-        DomainAccount unlocked = Account(locked: true, loginAttempt: 3);
-        Assert.False(unlocked.AdminUpdate(null, null, locked: false, loginAttempt: 3, true, true, null, false).IsError);
-        Assert.Equal(0, unlocked.LoginAttempt);
+        account.Unlock();
+        Assert.Equal(0, account.LoginAttempt);
     }
 
     /// <summary>Verifies that each new account gets a different 32-hex-digit security stamp.</summary>

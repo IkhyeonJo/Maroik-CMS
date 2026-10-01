@@ -1,3 +1,4 @@
+using ErrorOr;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Account;
@@ -148,19 +149,7 @@ public class ManagementAccountService(
             if (newHashedPassword != null)
                 account.AdminResetPassword(newHashedPassword);
 
-            // The admin UI has no LoginAttempt input, and AdminUpdateAccountRequest carries no such field —
-            // pass the account's own current value instead, so AdminUpdate's "preserve while
-            // locked, reset on unlock" logic has a real count to preserve.
-            var updateResult = account.AdminUpdate(
-                request.Role,
-                request.TimeZoneIanaId,
-                request.Locked,
-                account.LoginAttempt,
-                request.EmailConfirmed,
-                request.AgreedServiceTerms,
-                request.Message,
-                request.Deleted);
-
+            var updateResult = ApplyAdminChanges(account, request);
             if (updateResult.IsError)
             {
                 await unitOfWork.RollbackAsync(ct);
@@ -180,6 +169,50 @@ public class ManagementAccountService(
             await unitOfWork.RollbackAsync(ct);
             return ServiceResult.Failure("ManagementAccount.UpdateFailed", "Input is invalid");
         }
+    }
+
+    /// <summary>
+    /// Turns the admin form's desired state into the account's own operations. A null role or time
+    /// zone keeps the current value. Saving an account as unlocked always clears its failed-login
+    /// counter (<see cref="Account.Unlock"/>); locking keeps the counter. The admin's message is
+    /// applied last so it is what the account ends up showing, whatever lock/unlock wrote.
+    /// </summary>
+    private static ErrorOr<Success> ApplyAdminChanges(Account account, AdminUpdateAccountRequest request)
+    {
+        if (request.TimeZoneIanaId != null)
+        {
+            var tzResult = account.ChangeTimeZone(request.TimeZoneIanaId);
+            if (tzResult.IsError) return tzResult.Errors;
+        }
+
+        if (request.Role != null)
+        {
+            var roleResult = account.ChangeRole(request.Role);
+            if (roleResult.IsError) return roleResult.Errors;
+        }
+
+        if (request.Locked)
+            account.Lock();
+        else
+            account.Unlock();
+
+        if (request.EmailConfirmed && !account.EmailConfirmed)
+            account.ForceConfirmEmail();
+        else if (!request.EmailConfirmed && account.EmailConfirmed)
+            account.RevokeEmailConfirmation();
+
+        if (request.AgreedServiceTerms)
+            account.AcceptServiceTerms();
+        else
+            account.RevokeServiceTerms();
+
+        if (request.Deleted)
+            account.SoftDelete();
+        else
+            account.Restore();
+
+        account.SetMessage(request.Message);
+        return Result.Success;
     }
 
     /// <summary>Unlocked lookup of an account by email.</summary>

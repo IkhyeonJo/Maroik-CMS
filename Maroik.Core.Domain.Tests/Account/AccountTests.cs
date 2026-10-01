@@ -437,44 +437,111 @@ public class AccountTests
         Assert.Equal(0, account.LoginAttempt);
     }
 
-    // -- AdminUpdate ----------------------------------------------------------
+    // -- Admin operations -----------------------------------------------------
 
-    /// <summary>Admin update returns success, when valid.</summary>
-    [Fact]
-    public void AdminUpdate_ReturnsSuccess_WhenValid()
+    /// <summary>ChangeRole sets a valid role.</summary>
+    [Theory]
+    [InlineData(Role.Admin)]
+    [InlineData(Role.User)]
+    public void ChangeRole_SetsTheRole_WhenValid(string role)
     {
         var account = ValidAccount();
 
-        var result = account.AdminUpdate("Admin", "UTC", false, 0, true, true, null, false);
+        var result = account.ChangeRole(role);
 
         Assert.False(result.IsError);
-        Assert.Equal("Admin", account.Role);
-        Assert.True(account.EmailConfirmed);
+        Assert.Equal(role, account.Role);
     }
 
-    /// <summary>Admin update resets login attempt, when unlocked.</summary>
-    [Fact]
-    public void AdminUpdate_ResetsLoginAttempt_WhenUnlocked()
+    /// <summary>ChangeRole rejects any role other than Admin or User and keeps the current one.</summary>
+    [Theory]
+    [InlineData(Role.Anonymous)]
+    [InlineData("Root")]
+    [InlineData("")]
+    public void ChangeRole_RejectsAnUnknownRole_AndKeepsTheCurrentOne(string role)
     {
         var account = ValidAccount();
-        account.RecordLoginFailure(maxAttempts: 5);
 
-        var result = account.AdminUpdate(null, "UTC", false, 5, false, true, null, false);
+        var result = account.ChangeRole(role);
+
+        Assert.True(result.IsError);
+        Assert.Equal("Account.RoleInvalid", result.FirstError.Code);
+        Assert.Equal(Role.User, account.Role);
+    }
+
+    /// <summary>ChangeTimeZone sets a valid IANA zone.</summary>
+    [Fact]
+    public void ChangeTimeZone_SetsTheZone_WhenValid()
+    {
+        var account = ValidAccount();
+
+        var result = account.ChangeTimeZone("Asia/Seoul");
 
         Assert.False(result.IsError);
-        Assert.Equal(0, account.LoginAttempt);
+        Assert.Equal("Asia/Seoul", account.TimeZone.Value);
     }
 
-    /// <summary>Admin update returns error, when time zone invalid.</summary>
+    /// <summary>ChangeTimeZone rejects an unknown zone and keeps the current one.</summary>
     [Fact]
-    public void AdminUpdate_ReturnsError_WhenTimeZoneInvalid()
+    public void ChangeTimeZone_ReturnsError_WhenTimeZoneInvalid()
     {
         var account = ValidAccount();
+        string before = account.TimeZone.Value;
 
-        var result = account.AdminUpdate(null, "Not/Valid", false, 0, false, true, null, false);
+        var result = account.ChangeTimeZone("Not/Valid");
 
         Assert.True(result.IsError);
         Assert.Equal("TimeZoneId.Invalid", result.FirstError.Code);
+        Assert.Equal(before, account.TimeZone.Value);
+    }
+
+    /// <summary>RevokeEmailConfirmation marks a confirmed account unconfirmed again.</summary>
+    [Fact]
+    public void RevokeEmailConfirmation_ClearsTheConfirmedFlag()
+    {
+        var account = ValidAccount();
+        account.ForceConfirmEmail();
+
+        account.RevokeEmailConfirmation();
+
+        Assert.False(account.EmailConfirmed);
+    }
+
+    /// <summary>RevokeServiceTerms clears the accepted-terms flag.</summary>
+    [Fact]
+    public void RevokeServiceTerms_ClearsTheAcceptedFlag()
+    {
+        var account = ValidAccount();
+        account.AcceptServiceTerms();
+
+        account.RevokeServiceTerms();
+
+        Assert.False(account.AgreedServiceTerms);
+    }
+
+    /// <summary>Restore undoes a soft delete.</summary>
+    [Fact]
+    public void Restore_ClearsTheDeletedFlag()
+    {
+        var account = ValidAccount();
+        account.SoftDelete();
+
+        account.Restore();
+
+        Assert.False(account.Deleted);
+    }
+
+    /// <summary>Lock keeps the failed-login counter; only Unlock resets it.</summary>
+    [Fact]
+    public void Lock_KeepsTheLoginAttemptCount()
+    {
+        var account = ValidAccount();
+        account.RecordLoginFailure(maxAttempts: 5);
+        account.RecordLoginFailure(maxAttempts: 5);
+
+        account.Lock();
+
+        Assert.Equal(2, account.LoginAttempt);
     }
 
     // -- SoftDelete -----------------------------------------------------------
