@@ -20,8 +20,8 @@ public class AssetBalanceOrdinalLockExtensionsTests
     /// <summary>Owner e-mail of every asset in these tests.</summary>
     private const string Email = "user@example.com";
 
-    /// <summary>Mock <c>IAssetBalanceDomainService</c> injected into the system under test.</summary>
-    private readonly Mock<IAssetBalanceDomainService> _assetBalance = new();
+    /// <summary>Mock <c>IAssetBalanceStore</c> injected into the system under test.</summary>
+    private readonly Mock<IAssetBalanceStore> _assetBalance = new();
 
     /// <summary>A persisted, active deposit asset named <paramref name="productName"/>.</summary>
     private static Asset MakeAsset(string productName, decimal amount = 100m, string currency = "KRW") =>

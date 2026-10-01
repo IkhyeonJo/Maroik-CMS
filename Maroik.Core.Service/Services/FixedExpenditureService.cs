@@ -16,7 +16,7 @@ namespace Maroik.Core.Service.Services;
 /// A fixed-expenditure entry is a schedule, not a balance movement, so these operations are single
 /// non-transactional repository writes and read the referenced asset without a row lock.
 /// </summary>
-public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditureRepository, IAssetBalanceDomainService assetBalance, TimeProvider timeProvider) : IFixedExpenditureService
+public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditureRepository, IAssetBalanceStore assetBalance, TimeProvider timeProvider) : IFixedExpenditureService
 {
     /// <inheritdoc />
     public async Task<List<FixedExpenditureResponse>> GetFixedExpendituresAsync(string accountEmail, CancellationToken ct = default)

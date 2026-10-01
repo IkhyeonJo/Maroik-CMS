@@ -3,10 +3,11 @@ using Maroik.Core.Domain.Finance;
 namespace Maroik.Core.Contract.Interfaces;
 
 /// <summary>
-/// Domain service abstraction for reading and persisting <see cref="Asset"/> balance state.
+/// Store for the <see cref="Asset"/> rows whose balance a Finance use case moves: row-locked reads
+/// and saves, delegating to the asset repository.
 /// Shields Finance transaction services from a direct repository dependency.
 /// </summary>
-public interface IAssetBalanceDomainService
+public interface IAssetBalanceStore
 {
     /// <summary>
     /// Returns the asset identified by the composite key (email + productName), or null if not found.

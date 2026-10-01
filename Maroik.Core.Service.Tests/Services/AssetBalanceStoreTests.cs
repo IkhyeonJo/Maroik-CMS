@@ -6,18 +6,18 @@ using Moq;
 namespace Maroik.Core.Service.Tests.Services;
 
 /// <summary>
-/// Unit tests for <see cref="AssetBalanceDomainService"/>.
+/// Unit tests for <see cref="AssetBalanceStore"/>.
 /// Pins the double-submit guard: balance reads must go through the row-locking
 /// repository query (SELECT ... FOR UPDATE) so that concurrent balance mutations
 /// of the same asset serialize inside the ambient unit-of-work transaction.
 /// </summary>
-public class AssetBalanceDomainServiceTests
+public class AssetBalanceStoreTests
 {
     /// <summary>Mock <c>IAssetRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAssetRepository> _assetRepo = new();
 
     /// <summary>The service under test over the mocked repository.</summary>
-    private AssetBalanceDomainService CreateSut() => new(_assetRepo.Object);
+    private AssetBalanceStore CreateSut() => new(_assetRepo.Object);
 
     /// <summary>A persisted, active 1000 KRW asset named <paramref name="name"/>.</summary>
     private static Asset MakeAsset(string name = "Wallet") =>
