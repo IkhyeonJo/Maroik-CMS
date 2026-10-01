@@ -255,6 +255,29 @@ public class FileClientTests
         Assert.Contains("name=correlationId", capturing.LastRequestBody);
     }
 
+    // -- DownloadAsync: failures are logged once, by the caller ---------------------
+
+    /// <summary>
+    /// A failed download is thrown to the caller with the storage path in its message, and not logged
+    /// here: the caller that handles it logs it once (with the path and correlation id), so the same
+    /// failure never shows up twice. Only the Information "requesting" entry is written.
+    /// </summary>
+    [Fact]
+    public async Task DownloadAsync_ThrowsTheFailure_WithoutLoggingIt()
+    {
+        _httpClientFactory.InnerHandler = new RefusingHandler(HttpStatusCode.NotFound, "File not found");
+        var logger = new RecordingLogger();
+        var sut = new FileClient(_httpClientFactory, logger);
+
+        var thrown = await Assert.ThrowsAsync<HttpRequestException>(
+            () => sut.DownloadAsync("upload/a.png", "http://filestorage.local", TestContext.Current.CancellationToken));
+
+        Assert.Contains("upload/a.png", thrown.Message);
+        Assert.Equal(HttpStatusCode.NotFound, thrown.StatusCode);
+        Assert.DoesNotContain(logger.Entries, e => e.Level >= LogLevel.Warning);
+        Assert.Single(logger.Entries, e => e.Level == LogLevel.Information && e.Message.Contains("upload/a.png"));
+    }
+
     // -- OpenReadAsync ----------------------------------------------------------
 
     /// <summary>Answers every request with the given bytes, capturing the request body first.</summary>

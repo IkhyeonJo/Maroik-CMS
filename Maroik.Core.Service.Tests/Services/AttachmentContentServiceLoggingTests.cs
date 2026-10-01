@@ -1,0 +1,103 @@
+using System.Diagnostics;
+using Maroik.Core.Contract.Dtos;
+using Maroik.Core.Contract.Interfaces;
+using Maroik.Core.Contract.Misc.Settings;
+using Maroik.Core.Service.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
+using Microsoft.Extensions.Options;
+using Moq;
+
+namespace Maroik.Core.Service.Tests.Services;
+
+/// <summary>
+/// A file-storage failure is logged once, by <see cref="AttachmentContentService"/> where it is
+/// handled (the file client only throws it): one Error entry carrying the exception, the storage
+/// path and the request's correlation id, so it can be matched with Maroik.FileStorage's own log.
+/// </summary>
+public class AttachmentContentServiceLoggingTests
+{
+    /// <summary>Mock <c>IFileClient</c> whose calls fail.</summary>
+    private readonly Mock<IFileClient> _fileClient = new();
+    /// <summary>Mock <c>IHtmlParserService</c> that hands its patch factory to the test.</summary>
+    private readonly Mock<IHtmlParserService> _htmlParser = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
+    private readonly FakeLogger<AttachmentContentService> _logger = new();
+    /// <summary>The storage failure every call fails with.</summary>
+    private readonly HttpRequestException _failure = new("File storage answered 404 for 'upload/x.png'.");
+
+    /// <summary>The service under test, over a file client whose every download and open fails.</summary>
+    private AttachmentContentService CreateSut()
+    {
+        _fileClient.Setup(f => f.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(_failure);
+        _fileClient.Setup(f => f.OpenReadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(_failure);
+        _fileClient.Setup(f => f.UploadAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var validator = new Mock<IImageValidatorService>();
+        validator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(true);
+        return new AttachmentContentService(_fileClient.Object, Mock.Of<IRsaService>(), validator.Object,
+            Mock.Of<IHtmlContentSanitizerService>(), _htmlParser.Object,
+            Options.Create(new ServerSetting { FileStorageBaseUrl = "http://filestorage.local", MaxAttachedFileSizeBytes = 1024 }), _logger);
+    }
+
+    /// <summary>Asserts exactly one Error was logged, with the failure attached, naming <paramref name="path"/> and the current correlation id.</summary>
+    private void AssertLoggedOnce(string path, Activity activity)
+    {
+        FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level >= LogLevel.Warning);
+        Assert.Equal(LogLevel.Error, record.Level);
+        Assert.Same(_failure, record.Exception);
+        Assert.Contains(path, record.Message);
+        Assert.Contains($"CorrelationId={activity.Id}", record.Message);
+    }
+
+    /// <summary>A failed attachment download.</summary>
+    [Fact]
+    public async Task DownloadFileAsync_LogsTheFailureOnce_WithPathAndCorrelationId()
+    {
+        using var activity = new Activity("request").Start();
+
+        Assert.Null(await CreateSut().DownloadFileAsync("upload/a.zip", TestContext.Current.CancellationToken));
+
+        AssertLoggedOnce("upload/a.zip", activity);
+    }
+
+    /// <summary>A failed attachment open.</summary>
+    [Fact]
+    public async Task OpenFileAsync_LogsTheFailureOnce_WithPathAndCorrelationId()
+    {
+        using var activity = new Activity("request").Start();
+
+        Assert.Null(await CreateSut().OpenFileAsync("upload/a.zip", TestContext.Current.CancellationToken));
+
+        AssertLoggedOnce("upload/a.zip", activity);
+    }
+
+    /// <summary>A body image that cannot be fetched while a post is rendered.</summary>
+    [Fact]
+    public async Task PrepareHtmlForDisplayAsync_LogsAMissingImageOnce_WithPathAndCorrelationId()
+    {
+        using var activity = new Activity("request").Start();
+        Func<string, CancellationToken, Task<HtmlImgPatch?>>? factory = null;
+        _htmlParser.Setup(p => p.TransformImageAttributesAsync(It.IsAny<string>(), It.IsAny<Func<string, CancellationToken, Task<HtmlImgPatch?>>>(), It.IsAny<CancellationToken>()))
+            .Callback<string, Func<string, CancellationToken, Task<HtmlImgPatch?>>, CancellationToken>((_, f, _) => factory = f)
+            .ReturnsAsync(("", true));
+
+        await CreateSut().PrepareHtmlForDisplayAsync("<img>", TestContext.Current.CancellationToken);
+        HtmlImgPatch? patch = await factory!("upload/img.png", TestContext.Current.CancellationToken);
+
+        Assert.True(patch!.Remove);
+        AssertLoggedOnce("upload/img.png", activity);
+    }
+
+    /// <summary>An editor image that cannot be read back right after it was stored.</summary>
+    [Fact]
+    public async Task UploadSummernoteImageAsync_LogsAFailedReadBackOnce_WithPathAndCorrelationId()
+    {
+        using var activity = new Activity("request").Start();
+        var file = new AttachedFileDto { FileName = "a.png", ContentType = "image/png", Bytes = [1, 2], Size = 2 };
+
+        SummernoteUploadResult result = await CreateSut().UploadSummernoteImageAsync(file, "user", "FreeForum", TestContext.Current.CancellationToken);
+
+        Assert.False(result.Success);
+        AssertLoggedOnce("summernote/images/", activity);
+    }
+}

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Enums;
@@ -214,7 +215,7 @@ public class ProfileService(
         }
         catch (Exception e)
         {
-            logger.LogWarning(e, "Failed to download avatar {FileName} from file storage", fileName);
+            logger.LogWarning(e, "Failed to download avatar {FileName} from file storage. CorrelationId={CorrelationId}", fileName, Activity.Current?.Id);
             return null;
         }
     }
