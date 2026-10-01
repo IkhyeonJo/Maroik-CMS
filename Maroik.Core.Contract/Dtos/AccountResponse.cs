@@ -4,7 +4,7 @@ namespace Maroik.Core.Contract.Dtos;
 
 /// <summary>
 /// Data transfer object returned when reading account information.
-/// Mirrors AccountRequest but is used exclusively for output (read) operations.
+/// The read-side counterpart of the account request DTOs, used exclusively for output (read) operations.
 /// </summary>
 public class AccountResponse
 {

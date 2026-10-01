@@ -287,21 +287,16 @@ public class ManagementController : Controller
             // Email format, password complexity, nickname length, role and time-zone are all
             // validated by ManagementAccountService / Account.Create / PasswordPolicy in the Core
             // layers — the controller only binds the request and renders the result.
-            ServiceResult createResult = await _managementAccountService.CreateAccountAsync(new AccountRequest
+            ServiceResult createResult = await _managementAccountService.CreateAccountAsync(new AdminCreateAccountRequest
             {
                 Email = accountInputViewModel.Email,
                 PlainPassword = accountInputViewModel.Password, // service validates + hashes
                 Nickname = accountInputViewModel.Nickname,
-                // Fully qualified: this controller also has an "Account" action method, which
-                // shadows the domain type name in this context.
-                AvatarImagePath = Core.Domain.Account.Account.DefaultAvatarImagePath,
                 Role = accountInputViewModel.Role,
                 TimeZoneIanaId = accountInputViewModel.TimeZoneIanaId,
-                Locked = false,
                 EmailConfirmed = true,
                 AgreedServiceTerms = true,
-                Message = EnumHelper.GetDescription(AccountMessage.Success),
-                Deleted = false
+                Message = EnumHelper.GetDescription(AccountMessage.Success)
             }, AdminEmail, HttpContext.RequestAborted);
 
             return createResult.Success
@@ -399,7 +394,7 @@ public class ManagementController : Controller
             // the request with a validation error below instead of the controller silently
             // coercing an invalid value.
             ServiceResult updateResult = await _managementAccountService.UpdateAccountAsync(
-                new AccountRequest
+                new AdminUpdateAccountRequest
                 {
                     Email = accountInputViewModel.Email,
                     Role = accountInputViewModel.Role,

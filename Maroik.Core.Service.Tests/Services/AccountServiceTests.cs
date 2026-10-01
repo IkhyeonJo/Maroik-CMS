@@ -303,12 +303,11 @@ public class AccountServiceTests
         SetupMailSuccess();
         var sut = CreateSut();
 
-        var request = new AccountRequest
+        var request = new RegisterAccountRequest
         {
             Email = "new@example.com",
             PlainPassword = "PlainPass1!",
-            Nickname = "TestUser",
-            RegistrationToken = GuidToken.Generate()
+            Nickname = "TestUser"
         };
 
         RegisterResult result = await sut.RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
@@ -316,6 +315,43 @@ public class AccountServiceTests
         Assert.True(result.Success);
         Assert.True(result.ShowResendEmail);
         _accountRepo.Verify(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// Regression test (privilege escalation): self-registration always creates an unconfirmed
+    /// <see cref="Role.User"/> account with a fresh registration token — the request type has no
+    /// role, lock, confirmation or deletion field for a caller to set.
+    /// </summary>
+    [Fact]
+    public async Task RegisterAsync_AlwaysCreatesAnUnconfirmedUserAccount()
+    {
+        _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
+        _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$hashed");
+        Account? created = null;
+        _accountRepo.Setup(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()))
+            .Callback<Account, CancellationToken>((a, _) => created = a)
+            .Returns(Task.CompletedTask);
+        _rsa.Setup(r => r.Encrypt(It.IsAny<string>())).Returns("enc-token");
+        SetupMailSuccess();
+
+        var request = new RegisterAccountRequest
+        {
+            Email = "new@example.com",
+            PlainPassword = "PlainPass1!",
+            Nickname = "TestUser",
+            TimeZoneIanaId = "UTC",
+            AgreedServiceTerms = true
+        };
+
+        RegisterResult result = await CreateSut().RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.NotNull(created);
+        Assert.Equal(Role.User, created.Role);
+        Assert.False(created.Locked);
+        Assert.False(created.EmailConfirmed);
+        Assert.False(created.Deleted);
+        Assert.True(GuidToken.IsTokenAlive(created.RegistrationToken!));
     }
 
     /// <summary>
@@ -332,7 +368,7 @@ public class AccountServiceTests
         var sut = CreateSut();
 
         RegisterResult result = await sut.RegisterAsync(
-            new AccountRequest { Email = "new@example.com", PlainPassword = "PlainPass1!", Nickname = nickname, RegistrationToken = GuidToken.Generate() },
+            new RegisterAccountRequest { Email = "new@example.com", PlainPassword = "PlainPass1!", Nickname = nickname },
             _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
@@ -349,7 +385,7 @@ public class AccountServiceTests
         var sut = CreateSut();
 
         RegisterResult result = await sut.RegisterAsync(
-            new AccountRequest { Email = "new@example.com", PlainPassword = "PlainPass1!", Nickname = "Bo\u200Bb", RegistrationToken = GuidToken.Generate() },
+            new RegisterAccountRequest { Email = "new@example.com", PlainPassword = "PlainPass1!", Nickname = "Bo\u200Bb" },
             _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
@@ -370,7 +406,7 @@ public class AccountServiceTests
         var sut = CreateSut();
 
         RegisterResult result = await sut.RegisterAsync(
-            new AccountRequest { Email = "new@example.com", PlainPassword = "PlainPass1!", Nickname = "  bob ", RegistrationToken = GuidToken.Generate() },
+            new RegisterAccountRequest { Email = "new@example.com", PlainPassword = "PlainPass1!", Nickname = "  bob " },
             _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
@@ -394,7 +430,7 @@ public class AccountServiceTests
         var sut = CreateSut();
 
         RegisterResult result = await sut.RegisterAsync(
-            new AccountRequest { Email = "new@example.com", PlainPassword = "PlainPass1!", Nickname = "bob", RegistrationToken = GuidToken.Generate() },
+            new RegisterAccountRequest { Email = "new@example.com", PlainPassword = "PlainPass1!", Nickname = "bob" },
             _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
@@ -417,7 +453,7 @@ public class AccountServiceTests
         var sut = CreateSut();
 
         RegisterResult result = await sut.RegisterAsync(
-            new AccountRequest { Email = "new@example.com", PlainPassword = "PlainPass1!", Nickname = "  Ｂｏｂ   Smith ", RegistrationToken = GuidToken.Generate() },
+            new RegisterAccountRequest { Email = "new@example.com", PlainPassword = "PlainPass1!", Nickname = "  Ｂｏｂ   Smith " },
             _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
@@ -439,12 +475,11 @@ public class AccountServiceTests
         using var activity = new Activity("test-request").Start();
         var sut = CreateSut();
 
-        var request = new AccountRequest
+        var request = new RegisterAccountRequest
         {
             Email = "new@example.com",
             PlainPassword = "PlainPass1!",
-            Nickname = "TestUser",
-            RegistrationToken = GuidToken.Generate()
+            Nickname = "TestUser"
         };
 
         await sut.RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
@@ -466,11 +501,10 @@ public class AccountServiceTests
         SetupMailFailure();
         var sut = CreateSut();
 
-        var request = new AccountRequest
+        var request = new RegisterAccountRequest
         {
             Email = "new@example.com",
-            PlainPassword = "PlainPass1!",
-            RegistrationToken = GuidToken.Generate()
+            PlainPassword = "PlainPass1!"
         };
 
         RegisterResult result = await sut.RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
@@ -494,12 +528,11 @@ public class AccountServiceTests
         _rsa.Setup(r => r.Encrypt(It.IsAny<string>())).Throws(new InvalidOperationException("key misconfigured"));
         var sut = CreateSut();
 
-        var request = new AccountRequest
+        var request = new RegisterAccountRequest
         {
             Email = "new@example.com",
             PlainPassword = "PlainPass1!",
-            Nickname = "TestUser",
-            RegistrationToken = GuidToken.Generate()
+            Nickname = "TestUser"
         };
 
         RegisterResult result = await sut.RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
@@ -519,12 +552,11 @@ public class AccountServiceTests
             .ThrowsAsync(new Exception("duplicate key", new Exception("23505: duplicate key value violates unique constraint \"Account_Nickname_unique\"")));
         var sut = CreateSut();
 
-        var request = new AccountRequest
+        var request = new RegisterAccountRequest
         {
             Email = "new@example.com",
             PlainPassword = "PlainPass1!",
-            Nickname = "TakenNick",
-            RegistrationToken = GuidToken.Generate()
+            Nickname = "TakenNick"
         };
 
         RegisterResult result = await sut.RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
@@ -550,12 +582,11 @@ public class AccountServiceTests
             .ThrowsAsync(new Exception("duplicate key", new Exception("23505: duplicate key value violates unique constraint \"Account_pk\"")));
         var sut = CreateSut();
 
-        var request = new AccountRequest
+        var request = new RegisterAccountRequest
         {
             Email = "raced@example.com",
             PlainPassword = "PlainPass1!",
-            Nickname = "SomeNick",
-            RegistrationToken = GuidToken.Generate()
+            Nickname = "SomeNick"
         };
 
         RegisterResult result = await sut.RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
@@ -592,7 +623,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
-        var request = new AccountRequest { Email = existing.Email.Value, HashedPassword = "pw" };
+        var request = new RegisterAccountRequest { Email = existing.Email.Value, PlainPassword = "pw" };
         RegisterResult result = await sut.RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
@@ -612,7 +643,7 @@ public class AccountServiceTests
         _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
         var sut = CreateSut();
 
-        var request = new AccountRequest { Email = existing.Email.Value, PlainPassword = "not-the-password" };
+        var request = new RegisterAccountRequest { Email = existing.Email.Value, PlainPassword = "not-the-password" };
         RegisterResult result = await sut.RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
@@ -640,7 +671,7 @@ public class AccountServiceTests
         _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(true);
         var sut = CreateSut();
 
-        var request = new AccountRequest { Email = existing.Email.Value, PlainPassword = "correct" };
+        var request = new RegisterAccountRequest { Email = existing.Email.Value, PlainPassword = "correct" };
         RegisterResult result = await sut.RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
@@ -1038,12 +1069,11 @@ public class AccountServiceTests
     // -- Concurrency / failure branches ----------------------------------------
 
     /// <summary>A registration request with the given nickname and password.</summary>
-    private static AccountRequest NewRegistration(string nickname = "TestUser", string password = "PlainPass1!") => new()
+    private static RegisterAccountRequest NewRegistration(string nickname = "TestUser", string password = "PlainPass1!") => new()
     {
         Email = "new@example.com",
         PlainPassword = password,
-        Nickname = nickname,
-        RegistrationToken = GuidToken.Generate()
+        Nickname = nickname
     };
 
     /// <summary>Hash returned for the new password when an unconfirmed registration is re-submitted.</summary>

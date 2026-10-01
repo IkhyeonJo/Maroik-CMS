@@ -142,7 +142,7 @@ public class AccountService(
     }
 
     /// <inheritdoc />
-    public async Task<RegisterResult> RegisterAsync(AccountRequest newAccount, EmailTemplate emailTemplate, CancellationToken ct = default)
+    public async Task<RegisterResult> RegisterAsync(RegisterAccountRequest newAccount, EmailTemplate emailTemplate, CancellationToken ct = default)
     {
         Account? existing = await FindByEmailAsync(newAccount.Email ?? "", ct);
 
@@ -168,14 +168,16 @@ public class AccountService(
             // Brand-new account: hash the plain-text password and create the domain entity.
             string hashedPassword = passwordService.HashPassword(newAccount.PlainPassword ?? "");
 
+            // Self-registration always creates a plain User account; the request has no way to
+            // choose a role or any admin-only state, and the confirmation token is generated here.
             var createResult = Account.Create(
                 newAccount.Email ?? "",
                 hashedPassword,
                 nickname,
-                newAccount.Role ?? Role.User,
+                Role.User,
                 newAccount.TimeZoneIanaId ?? "UTC",
-                newAccount.DefaultMonetaryUnit,
-                newAccount.RegistrationToken,
+                defaultMonetaryUnit: null,
+                GuidToken.Generate(),
                 newAccount.AgreedServiceTerms);
 
             if (createResult.IsError)

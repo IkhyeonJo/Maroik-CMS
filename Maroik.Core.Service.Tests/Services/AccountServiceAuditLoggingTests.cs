@@ -181,7 +181,7 @@ public class AccountServiceAuditLoggingTests
         _emailPublisher.Setup(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         await CreateSut().RegisterAsync(
-            new AccountRequest { Email = Email, PlainPassword = "PlainPass1!", Nickname = "TestUser", RegistrationToken = GuidToken.Generate() },
+            new RegisterAccountRequest { Email = Email, PlainPassword = "PlainPass1!", Nickname = "TestUser" },
             _emailTemplate, TestContext.Current.CancellationToken);
 
         Only(LogLevel.Information, "Account registered");
@@ -234,7 +234,7 @@ public class AccountServiceAuditLoggingTests
         _emailPublisher.Setup(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         await CreateSut().RegisterAsync(
-            new AccountRequest { Email = Email, PlainPassword = "PlainPass1!", Nickname = "Owner", TimeZoneIanaId = "UTC", AgreedServiceTerms = true },
+            new RegisterAccountRequest { Email = Email, PlainPassword = "PlainPass1!", Nickname = "Owner", TimeZoneIanaId = "UTC", AgreedServiceTerms = true },
             _emailTemplate, TestContext.Current.CancellationToken);
 
         Only(LogLevel.Information, "Unconfirmed registration replaced");
