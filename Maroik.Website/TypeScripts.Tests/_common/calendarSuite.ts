@@ -668,6 +668,96 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(((created?.data as FormData | undefined)?.get("CalendarEventUploadedFile") as File | null)?.name).toBe("ok.zip");
         });
 
+        // ---- the attachment sent is always the one the form shows ------------------------------------------
+        /** Puts `size` bytes named `name` (or nothing, for `null`) into the `which` attachment input and fires its change. */
+        const choose = (h: Handle, which: string, file: { size: number; name: string } | null) => {
+            const input = h.$(`#${which}CalendarEventAttachment`)[0] as HTMLInputElement;
+            const files = file ? [new h.win.File([new Uint8Array(file.size)], file.name)] : [];
+            Object.defineProperty(input, "files", { configurable: true, value: files });
+            h.$(input).trigger("change");
+        };
+        /** Submits the `which` event form and returns the attachment it sent. */
+        const sentFile = (h: Handle, which: string) => {
+            const url = which === "create" ? "/Calendar/CreateCalendarEvent" : "/Calendar/UpdateCalendarEvent";
+            const before = h.ajaxCalls.filter((a) => a.url === url).length;
+            h.$(which === "create" ? "#formCreateCalendarEvent" : "#formEditCalendarEvent").trigger("submit");
+            const calls = h.ajaxCalls.filter((a) => a.url === url);
+            expect(calls).toHaveLength(before + 1);
+            return { call: calls.at(-1)!, file: (calls.at(-1)!.data as FormData).get("CalendarEventUploadedFile") };
+        };
+        /** An event form ready to submit. */
+        const ready = (which: string) => {
+            if (which === "edit") return buildEdit();
+            const h = build();
+            h.$("#createCalendarEventAllDayUncheckedStartDate").val("2024-05-01");
+            h.$("#createCalendarEventAllDayUncheckedEndDate").val("2024-05-02");
+            return h;
+        };
+
+        it.each(["create", "edit"])("%s: a file rejected for its size replaces the one chosen before — nothing is sent", (which) => {
+            const h = ready(which);
+            choose(h, which, { size: 10, name: "first.zip" });
+            choose(h, which, { size: 1_048_577, name: "too-big.zip" });
+            expect(sentFile(h, which).file).not.toBeInstanceOf(h.win.File);
+        });
+
+        it.each(["create", "edit"])("%s: cancelling the file picker drops the file chosen before — nothing is sent", (which) => {
+            const h = ready(which);
+            choose(h, which, { size: 10, name: "first.zip" });
+            choose(h, which, null);
+            expect(sentFile(h, which).file).not.toBeInstanceOf(h.win.File);
+        });
+
+        it.each(["create", "edit"])("%s: once a submit has finished (accepted or refused) its file is not sent again", (which) => {
+            for (const answer of [{ result: true, message: "ok" }, { result: false, error: "no" }]) {
+                const h = ready(which);
+                spyModal(h);
+                choose(h, which, { size: 10, name: "first.zip" });
+                const first = sentFile(h, which);
+                expect((first.file as File).name).toBe("first.zip");
+                first.call.success!(answer);
+                first.call.complete?.();
+
+                expect(sentFile(h, which).file).not.toBeInstanceOf(h.win.File);
+                expect((h.$(`#${which}CalendarEventAttachment`)[0] as HTMLInputElement).value).toBe("");
+            }
+        });
+
+        it("opening the create-event modal (drag-select or 'add event') starts without the file chosen for an earlier event", () => {
+            for (const open of [
+                (h: Handle) => h.calendarOptions[0].select({ start: new Date("2024-01-01"), end: new Date("2024-01-02") }),
+                (h: Handle) => h.$("#aCreateCalendarEvent").trigger("click"),
+            ]) {
+                const h = ready("create");
+                spyModal(h);
+                choose(h, "create", { size: 10, name: "earlier.zip" });
+                open(h);
+                h.ajaxCalls.filter((a) => a.url === "/Calendar/GetCalendars").at(-1)!.complete?.();
+                h.$("#createCalendarEventAllDayUncheckedStartDate").val("2024-05-01");
+                h.$("#createCalendarEventAllDayUncheckedEndDate").val("2024-05-02");
+
+                expect(sentFile(h, "create").file).not.toBeInstanceOf(h.win.File);
+            }
+        });
+
+        it("opening the edit-event modal starts without the file chosen while editing another event", () => {
+            const h = buildEdit();
+            spyModal(h);
+            choose(h, "edit", { size: 10, name: "other-event.zip" });
+            clickEvent(h);
+            h.$("#editCalendarEventPopup").trigger("click");
+            h.lastAjax().success!({
+                result: true, calendarEvent: {
+                    id: 55, title: "Mine", allDay: false, displayStartDate: "2024-05-01 09:05:00", displayEndDate: "2024-05-02 10:10:00",
+                    startDateTimeZoneIanaId: "UTC", endDateTimeZoneIanaId: "Asia/Seoul", location: "", description: "<p>d</p>",
+                    calendarEventAttachedFile: null, calendarId: 1, status: "Busy", serializedCalendarReminders: "[]"
+                }
+            });
+            h.ajaxCalls.filter((a) => a.url === "/Calendar/GetCalendars").at(-1)!.complete?.();
+
+            expect(sentFile(h, "edit").file).not.toBeInstanceOf(h.win.File);
+        });
+
         it.each([["create", 0], ["edit", 1]])("the %s editor uploads a dropped image and inserts it with the stored path as alt; a refusal alerts", (which, index) => {
             const h = build();
             h.summernoteInits[index].options.callbacks.onImageUpload([new h.win.File([new Uint8Array(4)], "p.png", { type: "image/png" })]);

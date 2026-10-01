@@ -113,11 +113,14 @@
     /** Write-form attachment `change`: reject + clear if over `maxFileSize`, else stash the `File`. */
     function WriteUploadFile(obj: HTMLInputElement, errorMessage?: string) {
         if (!obj.files || obj.files.length === 0) {
+            // The picker was cancelled: the input is empty, so nothing may be sent.
+            writeUploadedFile = undefined;
             return;
         }
         if (obj.files[0].size > maxFileSize) {
             alert(errorMessage);
             (document.getElementById("writeUploadedFile") as HTMLInputElement).value = "";
+            writeUploadedFile = undefined;
             return false;
         } else {
             writeUploadedFile = obj.files[0];
@@ -127,11 +130,14 @@
     /** Same as `WriteUploadFile` for the edit form. */
     function EditUploadFile(obj: HTMLInputElement, errorMessage?: string) {
         if (!obj.files || obj.files.length === 0) {
+            // The picker was cancelled: the input is empty, so nothing may be sent.
+            editUploadedFile = undefined;
             return;
         }
         if (obj.files[0].size > maxFileSize) {
             alert(errorMessage);
             (document.getElementById("editUploadedFile") as HTMLInputElement).value = "";
+            editUploadedFile = undefined;
             return false;
         } else {
             editUploadedFile = obj.files[0];
