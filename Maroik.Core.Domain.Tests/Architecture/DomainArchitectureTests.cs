@@ -206,6 +206,53 @@ public class DomainArchitectureTests
     }
 
     /// <summary>
+    /// The domain never reads the clock (<c>DateTime.UtcNow</c>/<c>Now</c>/<c>Today</c>,
+    /// <c>DateTimeOffset.UtcNow</c>/<c>Now</c>) and never holds a <see cref="TimeProvider"/>: the
+    /// current time is a <c>DateTime utcNow</c> argument that the calling use case reads once from its
+    /// injected <see cref="TimeProvider"/>, so expiry and boundary rules are testable at exact instants
+    /// and one operation cannot stamp two different times.
+    /// </summary>
+    [Fact]
+    public void Domain_ShouldNot_ReadTheClock()
+    {
+        NetArchTest.Rules.TestResult result = Types.InAssembly(_domainAssembly)
+            .Should()
+            .MeetCustomRule(new DoesNotReadTheClock())
+            .GetResult();
+
+        Assert.True(result.IsSuccessful,
+            "Maroik.Core.Domain must take the current time as a DateTime argument instead of reading " +
+            "DateTime/DateTimeOffset.UtcNow/Now/Today or using TimeProvider.\n" +
+            "Failing types: " + string.Join(", ", result.FailingTypeNames ?? []));
+    }
+
+    /// <summary>
+    /// Flags a type whose IL reads the system clock through <see cref="DateTime"/> /
+    /// <see cref="DateTimeOffset"/> or calls into <see cref="TimeProvider"/>.
+    /// </summary>
+    private sealed class DoesNotReadTheClock : ICustomRule
+    {
+        /// <summary>The clock-reading property getters, as "declaring type::method".</summary>
+        private static readonly string[] _clockGetters =
+        [
+            "System.DateTime::get_UtcNow", "System.DateTime::get_Now", "System.DateTime::get_Today",
+            "System.DateTimeOffset::get_UtcNow", "System.DateTimeOffset::get_Now",
+        ];
+
+        /// <summary>Returns <see langword="false"/> when any method body of <paramref name="type"/> (or a type nested in it) reads the clock.</summary>
+        public bool MeetsRule(TypeDefinition type)
+            => !Flatten(type).SelectMany(t => t.Methods).Where(method => method.HasBody)
+                .SelectMany(method => method.Body.Instructions)
+                .Any(instruction => instruction.Operand is MethodReference called
+                    && (_clockGetters.Contains($"{called.DeclaringType.FullName}::{called.Name}")
+                        || called.DeclaringType.FullName == "System.TimeProvider"));
+
+        /// <summary><paramref name="type"/> and every type nested in it (lambdas and iterators compile to nested types).</summary>
+        private static IEnumerable<TypeDefinition> Flatten(TypeDefinition type)
+            => [type, .. type.NestedTypes.SelectMany(Flatten)];
+    }
+
+    /// <summary>
     /// Flags a type whose IL directly calls one of the raw <c>ErrorOr.Error</c> factory methods.
     /// Deliberately checked at the method-call level via Mono.Cecil rather than as a type-dependency
     /// (<c>HaveDependencyOn("ErrorOr.Error")</c>) rule: every Domain type legitimately references the
