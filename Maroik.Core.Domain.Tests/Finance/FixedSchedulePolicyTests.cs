@@ -55,18 +55,71 @@ public class FixedSchedulePolicyTests
     }
 
     /// <summary>
-    /// The maturity date is always computed against the current calendar year (no rollover to
-    /// next year): a January occurrence that already passed this year stays un-noticed for the
-    /// rest of the year, even though the deposit date "looks" close by day/month alone.
+    /// Regression test (year-end): the next deposit is the nearest one on or after today, so a
+    /// January deposit is noticed from late December — it used to be compared with this year's
+    /// already-passed January date and never noticed.
+    /// </summary>
+    [Theory]
+    [InlineData(12, 28, 1, 2, 7, true)]   // 5 days ahead, across the new year
+    [InlineData(12, 31, 1, 1, 1, true)]   // tomorrow, in the next year
+    [InlineData(12, 31, 1, 1, 0, false)]  // tomorrow, but a zero-day window only notices the day itself
+    [InlineData(12, 20, 1, 5, 30, true)]  // 16 days ahead
+    [InlineData(12, 20, 1, 5, 15, false)] // 16 days ahead, one beyond a 15-day window
+    [InlineData(12, 20, 1, 5, 16, true)]  // exactly at the window's edge
+    public void IsNoticed_LooksAtNextYearsDeposit_OnceThisYearsHasPassed(
+        int todayMonth, int todayDay, int depositMonth, int depositDay, int window, bool expected)
+    {
+        var today = new DateTime(2026, todayMonth, todayDay);
+
+        Assert.Equal(expected, FixedSchedulePolicy.IsNoticed(depositMonth, depositDay, today, window, unpunctuality: false));
+    }
+
+    /// <summary>The window edges on the deposit's own year: 0 days (the day itself), N days, and N+1 days.</summary>
+    [Theory]
+    [InlineData(0, 0, true)]
+    [InlineData(1, 0, false)]
+    [InlineData(7, 7, true)]
+    [InlineData(8, 7, false)]
+    public void IsNoticed_WindowBoundaries(int daysAhead, int window, bool expected)
+    {
+        var today = new DateTime(2026, 7, 20);
+        DateTime deposit = today.AddDays(daysAhead);
+
+        Assert.Equal(expected, FixedSchedulePolicy.IsNoticed(deposit.Month, deposit.Day, today, window, unpunctuality: false));
+    }
+
+    /// <summary>A (month, day) pair that exists in no year is never noticed, and never throws.</summary>
+    [Theory]
+    [InlineData(13, 1)]
+    [InlineData(0, 1)]
+    [InlineData(6, 0)]
+    [InlineData(6, 31)]
+    public void IsNoticed_ReturnsFalse_ForADateThatNeverExists(int depositMonth, int depositDay)
+    {
+        var today = new DateTime(2026, 6, 1);
+
+        Assert.False(FixedSchedulePolicy.IsNoticed(depositMonth, depositDay, today, noticeWindowDays: 400, unpunctuality: false));
+    }
+
+    /// <summary>A February 29 deposit is noticed in a leap year, inside the window.</summary>
+    [Fact]
+    public void IsNoticed_ReturnsTrue_ForFebruary29_InALeapYear()
+    {
+        var today = new DateTime(2028, 2, 25);
+
+        Assert.True(FixedSchedulePolicy.IsNoticed(depositMonth: 2, depositDay: 29, today, noticeWindowDays: 7, unpunctuality: false));
+    }
+
+    /// <summary>
+    /// Once a leap year's February 29 has passed, the next one is four years away — not next year,
+    /// where the date does not exist.
     /// </summary>
     [Fact]
-    public void IsNoticed_ReturnsFalse_WhenThisYearsOccurrenceAlreadyPassed_EvenIfDayMonthLooksClose()
+    public void IsNoticed_ReturnsFalse_ForFebruary29_AfterItHasPassedInALeapYear()
     {
-        var today = new DateTime(2026, 12, 20);
+        var today = new DateTime(2028, 3, 1);
 
-        var result = FixedSchedulePolicy.IsNoticed(depositMonth: 1, depositDay: 5, today, noticeWindowDays: 30, unpunctuality: false);
-
-        Assert.False(result);
+        Assert.False(FixedSchedulePolicy.IsNoticed(depositMonth: 2, depositDay: 29, today, noticeWindowDays: 365, unpunctuality: false));
     }
 
     /// <summary>Same year-end scenario for a different already-passed month/day combination.</summary>
