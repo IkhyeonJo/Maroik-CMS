@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
+using Maroik.Core.Contract.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 namespace Maroik.E2E.Tests.Infrastructure;
@@ -26,11 +28,22 @@ namespace Maroik.E2E.Tests.Infrastructure;
 /// </summary>
 public sealed class PlaywrightWebApplicationFactory : WebApplicationFactory<Program>
 {
+    /// <summary>Configuration values layered over the website's own settings.</summary>
     private readonly Dictionary<string, string?> _configOverrides;
+
+    /// <summary>
+    /// A throwaway RSA key pair for this run, so the inline-image path (which round-trips each image's
+    /// storage path through <c>RsaService</c>) works; generated per run, never committed.
+    /// </summary>
+    private static readonly System.Security.Cryptography.RSA _rsaKeyPair = System.Security.Cryptography.RSA.Create(2048);
+    /// <summary>The real Kestrel host the browser talks to; set when the host is created.</summary>
     private IHost? _realHost;
 
     /// <summary>Base URL of the real Kestrel server (e.g. <c>http://localhost:57432</c>).</summary>
     public string ServerBaseUrl { get; private set; } = "";
+
+    /// <summary>The in-memory file storage both hosts use instead of Maroik.FileStorage.</summary>
+    public E2EFileStorage Files { get; } = new();
 
     /// <param name="connectionString">
     /// Npgsql connection string to the seeded E2E database (from <see cref="E2EPostgresContainer"/>).
@@ -52,8 +65,8 @@ public sealed class PlaywrightWebApplicationFactory : WebApplicationFactory<Prog
             ["ServerSetting:SessionExpireMinutes"] = "60",
             ["ServerSetting:MaxLoginAttempt"] = "5",
             ["ServerSetting:NoticeMaturityDateDay"] = "7",
-            ["ServerSetting:RsaPrivateKey"] = "",
-            ["ServerSetting:RsaPublicKey"] = "",
+            ["ServerSetting:RsaPrivateKey"] = Convert.ToBase64String(_rsaKeyPair.ExportRSAPrivateKey()),
+            ["ServerSetting:RsaPublicKey"] = Convert.ToBase64String(_rsaKeyPair.ExportSubjectPublicKeyInfo()),
             ["ServerSetting:RsaAlgorithm"] = "Rsa2",
             ["ServerSetting:FileStorageBaseUrl"] = "http://localhost:5001",
             ["ServerSetting:SmtpOptions:smtpUserName"] = "test",
@@ -108,6 +121,11 @@ public sealed class PlaywrightWebApplicationFactory : WebApplicationFactory<Prog
 
             // Replace Valkey-backed Data Protection with ephemeral in-memory keys.
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
+
+            // No file-storage container in the E2E run: serve files from memory (one instance for
+            // both hosts, so what a test seeds is what the browser-facing host reads).
+            services.RemoveAll<IFileClient>();
+            services.AddSingleton<IFileClient>(Files);
         });
     }
 

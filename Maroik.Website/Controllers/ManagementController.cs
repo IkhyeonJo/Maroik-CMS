@@ -1055,21 +1055,6 @@ public class ManagementController : Controller
                             CanDelete = loggedInAccount.IsOwner(privateNoteBoard.Writer)
                         };
 
-                    // The attachment is optional: a note without one must still get its comments and
-                    // viewer data below, so this is a guard around the download only (not an early return).
-                    if (!string.IsNullOrEmpty(privateNoteOutputViewModel.BoardOutputViewModel?.BoardAttachedFilePath ?? ""))
-                    {
-                        byte[]? fileData = await _boardService.DownloadFileAsync(
-                            privateNoteOutputViewModel.BoardOutputViewModel?.BoardAttachedFilePath ?? "", HttpContext.RequestAborted);
-
-                        if (fileData != null)
-                        {
-                            privateNoteOutputViewModel.BoardOutputViewModel?.BoardAttachedFileBase64Data =
-                                Convert.ToBase64String(fileData);
-                            privateNoteOutputViewModel.BoardOutputViewModel?.BoardAttachedFileContentType = "application/octet-stream";
-                        }
-                    }
-
                     // Preload comments and accounts for detail view
                     privateNoteOutputViewModel.DetailBoardComments =
                     [
@@ -1137,22 +1122,6 @@ public class ManagementController : Controller
                             BoardAttachedFilePath = attachedFile?.Path ?? "",
                             IsImgTagIncluded = isImgTagIncluded
                         };
-
-                    if (string.IsNullOrEmpty(privateNoteOutputViewModel.BoardOutputViewModel?.BoardAttachedFilePath ?? ""))
-                    {
-                        return View(privateNoteOutputViewModel);
-                    }
-
-                    byte[]? fileData = await _boardService.DownloadFileAsync(
-                        privateNoteOutputViewModel.BoardOutputViewModel?.BoardAttachedFilePath ?? "", HttpContext.RequestAborted);
-
-                    if (fileData == null)
-                    {
-                        return View(privateNoteOutputViewModel);
-                    }
-
-                    privateNoteOutputViewModel.BoardOutputViewModel?.BoardAttachedFileBase64Data = Convert.ToBase64String(fileData);
-                    privateNoteOutputViewModel.BoardOutputViewModel?.BoardAttachedFileContentType = "application/octet-stream";
 
                     return View(privateNoteOutputViewModel);
                 }
@@ -1247,6 +1216,39 @@ public class ManagementController : Controller
                 privateNoteOutputViewModel.TypedSearchText = searchText;
                 return View(privateNoteOutputViewModel);
             }
+        }
+    }
+
+    #endregion
+
+    #region DownloadAttachedFile
+
+    /// <summary>
+    /// Streams the attachment of private note <paramref name="boardId"/>. The note's visibility (its
+    /// owner only) is checked again for the caller, and the file is streamed from file storage rather
+    /// than embedded in the page.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequiredHttpPostAccess(Role = Role.Admin)]
+    [RequiredHttpPostAccess(Role = Role.User)]
+    public async Task<IActionResult> DownloadPrivateNoteAttachedFile(long boardId)
+    {
+        try
+        {
+            // Re-fetched from the database by ViewBagPopulatorFilter on every request.
+            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            (ServiceResult result, AttachmentDownload? file) = await _boardService.OpenAttachedFileAsync(
+                boardId, BoardTypes.PrivateNote, loggedInAccount, HttpContext.RequestAborted);
+            if (!result.Success)
+                return Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+
+            return File(file!.Content, "application/octet-stream", file.FileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to download the attachment of private note {BoardId}", boardId);
+            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
         }
     }
 

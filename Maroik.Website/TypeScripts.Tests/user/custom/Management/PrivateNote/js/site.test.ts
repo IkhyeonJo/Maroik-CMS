@@ -71,6 +71,7 @@ describeBoardScript({
     commentAction: "WritePrivateNoteComment",
     existsKey: "privateNoteBoard",
     hasNoticed: false,
+    downloadAction: "/Management/DownloadPrivateNoteAttachedFile",
 });
 
 describeMissingServerConstants("user", "Management", "PrivateNote", () => fixture);

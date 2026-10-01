@@ -1252,17 +1252,6 @@ public class BoardServiceTests
         Assert.Same(expected, actual);
     }
 
-    /// <summary>The file download is delegated to the shared attachment service.</summary>
-    [Fact]
-    public async Task DownloadFileAsync_DelegatesToTheAttachmentService()
-    {
-        _attachmentContent.Setup(a => a.DownloadFileAsync("/upload/x.png", It.IsAny<CancellationToken>())).ReturnsAsync([
-            .. "\t\t"u8
-        ]);
-
-        Assert.Equal("\t\t"u8.ToArray(), await CreateSut().DownloadFileAsync("/upload/x.png", TestContext.Current.CancellationToken));
-    }
-
     // -- Domain refusals after the service's own checks ----------------------------------------------
 
     /// <summary>A comment on a locked post by someone who is neither its author nor an admin is refused by the post itself, and the transaction rolls back.</summary>

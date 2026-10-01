@@ -36,38 +36,69 @@ public class FileClient(IHttpClientFactory httpClientFactory, ILogger<FileClient
     /// <inheritdoc />
     public async Task<byte[]> DownloadAsync(string filePath, string fileStorageBaseUrl, CancellationToken ct = default)
     {
-        if (!IsSafeRelativePath(filePath))
-            throw new ArgumentException($"Unsafe storage path: '{filePath}'.", nameof(filePath));
-
-        var correlationId = Activity.Current?.Id ?? "";
-#pragma warning disable CA1873
-        logger.LogInformation("Requesting file download: {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
-#pragma warning restore CA1873
-
+        string correlationId = Activity.Current?.Id ?? "";
         try
         {
-            using HttpClient httpClient = httpClientFactory.CreateClient();
-            using MultipartFormDataContent content = [];
-
-            // Pass the server-side file path to the storage service. Separators are normalized to
-            // "/": the storage service runs on Linux and treats "\" as a literal filename
-            // character, so a path built on Windows must not be forwarded with backslashes.
-            content.Add(new StringContent(filePath.Replace('\\', '/')), "filePath");
-            // So Maroik.FileStorage's failure logs for this call can be traced back to this request.
-            content.Add(new StringContent(correlationId), "correlationId");
-
-            HttpResponseMessage response = await httpClient.PostAsync($"{fileStorageBaseUrl}/api/File/download", content, ct);
-
-            _ = response.EnsureSuccessStatusCode(); // Throw on non-2xx status
+            using HttpResponseMessage response = await SendDownloadRequestAsync(
+                filePath, fileStorageBaseUrl, correlationId, HttpCompletionOption.ResponseContentRead, ct);
             return await response.Content.ReadAsByteArrayAsync(ct); // Return raw file bytes
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ArgumentException)
         {
             // Parity with UploadAsync: log with the correlation id, then rethrow (callers of the
             // download path already handle the exception and this method has no "false" to return).
             logger.LogError(ex, "File download request failed for {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
             throw;
         }
+    }
+
+    /// <inheritdoc />
+    public async Task<Stream> OpenReadAsync(string filePath, string fileStorageBaseUrl, CancellationToken ct = default)
+    {
+        // Only the headers are awaited: the body is read from the storage service as the caller
+        // copies the returned stream, so the file is never held in memory here. Disposing the
+        // stream releases the connection.
+        HttpResponseMessage response = await SendDownloadRequestAsync(
+            filePath, fileStorageBaseUrl, Activity.Current?.Id ?? "", HttpCompletionOption.ResponseHeadersRead, ct);
+        return await response.Content.ReadAsStreamAsync(ct);
+    }
+
+    /// <summary>
+    /// Asks the storage service for <paramref name="filePath"/> and returns its successful response.
+    /// Throws <see cref="ArgumentException"/> for an unsafe path (before any request) and
+    /// <see cref="HttpRequestException"/> for a non-success answer.
+    /// </summary>
+    private async Task<HttpResponseMessage> SendDownloadRequestAsync(
+        string filePath, string fileStorageBaseUrl, string correlationId, HttpCompletionOption completion, CancellationToken ct)
+    {
+        if (!IsSafeRelativePath(filePath))
+            throw new ArgumentException($"Unsafe storage path: '{filePath}'.", nameof(filePath));
+
+#pragma warning disable CA1873
+        logger.LogInformation("Requesting file download: {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
+#pragma warning restore CA1873
+
+        // Not disposed: a client from IHttpClientFactory does not own its pooled handler, and the
+        // streaming caller still reads the response body after this method returns.
+        HttpClient httpClient = httpClientFactory.CreateClient();
+        using MultipartFormDataContent content = [];
+
+        // Pass the server-side file path to the storage service. Separators are normalized to
+        // "/": the storage service runs on Linux and treats "\" as a literal filename
+        // character, so a path built on Windows must not be forwarded with backslashes.
+        content.Add(new StringContent(filePath.Replace('\\', '/')), "filePath");
+        // So Maroik.FileStorage's failure logs for this call can be traced back to this request.
+        content.Add(new StringContent(correlationId), "correlationId");
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{fileStorageBaseUrl}/api/File/download") { Content = content };
+        HttpResponseMessage response = await httpClient.SendAsync(request, completion, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            response.Dispose();
+            throw new HttpRequestException($"File storage answered {(int)response.StatusCode} for '{filePath}'.", null, response.StatusCode);
+        }
+
+        return response;
     }
 
     /// <summary>The storage service's plain-text refusal reason, truncated; empty if it cannot be read.</summary>

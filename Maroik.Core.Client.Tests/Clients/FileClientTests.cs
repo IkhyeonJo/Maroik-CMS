@@ -255,6 +255,63 @@ public class FileClientTests
         Assert.Contains("name=correlationId", capturing.LastRequestBody);
     }
 
+    // -- OpenReadAsync ----------------------------------------------------------
+
+    /// <summary>Answers every request with the given bytes, capturing the request body first.</summary>
+    private sealed class BytesHandler(byte[] bytes) : HttpMessageHandler
+    {
+        /// <summary>The body of the most recently captured request.</summary>
+        public string? LastRequestBody { get; private set; }
+
+        /// <inheritdoc />
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            LastRequestBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
+        }
+    }
+
+    /// <summary><c>OpenReadAsync</c> returns the stored file as a readable stream, asking for it with the normalized path and the correlation id.</summary>
+    [Fact]
+    public async Task OpenReadAsync_ReturnsTheFileAsAStream()
+    {
+        using var activity = new Activity("test-request").Start();
+        var handler = new BytesHandler([1, 2, 3, 4]);
+        _httpClientFactory.InnerHandler = handler;
+
+        await using Stream stream = await CreateSut().OpenReadAsync(@"upload\Forum\a.zip", "http://filestorage.local", TestContext.Current.CancellationToken);
+        using var copy = new MemoryStream();
+        await stream.CopyToAsync(copy, TestContext.Current.CancellationToken);
+
+        Assert.Equal([1, 2, 3, 4], copy.ToArray());
+        Assert.Contains("upload/Forum/a.zip", handler.LastRequestBody);
+        Assert.Contains(activity.Id!, handler.LastRequestBody);
+    }
+
+    /// <summary><c>OpenReadAsync</c> throws for a non-success answer from the storage service.</summary>
+    [Fact]
+    public async Task OpenReadAsync_Throws_WhenTheStorageServiceRefuses()
+    {
+        _httpClientFactory.InnerHandler = new RefusingHandler(HttpStatusCode.NotFound, "File not found");
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => CreateSut().OpenReadAsync("upload/a.zip", "http://filestorage.local", TestContext.Current.CancellationToken));
+    }
+
+    /// <summary><c>OpenReadAsync</c> refuses an unsafe path before any request is sent.</summary>
+    [Theory]
+    [InlineData("/etc/passwd")]
+    [InlineData("../../etc/passwd")]
+    public async Task OpenReadAsync_ThrowsArgumentException_ForUnsafePath(string unsafePath)
+    {
+        var handler = new BytesHandler([1]);
+        _httpClientFactory.InnerHandler = handler;
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => CreateSut().OpenReadAsync(unsafePath, "http://filestorage.local", TestContext.Current.CancellationToken));
+        Assert.Null(handler.LastRequestBody);
+    }
+
     // -- Path safety ------------------------------------------------------------
 
     /// <summary>

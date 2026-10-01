@@ -103,8 +103,14 @@ public interface IBoardService
     /// </summary>
     Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string area, string boardType, CancellationToken ct = default);
 
-    /// <summary>Downloads the raw bytes of a stored file by its server-side path.</summary>
-    Task<byte[]?> DownloadFileAsync(string filePath, CancellationToken ct = default);
+    /// <summary>
+    /// Opens the attachment of post <paramref name="boardId"/> for <paramref name="viewer"/> (null for
+    /// an anonymous visitor). The post must exist, be of <paramref name="boardType"/> and be visible to
+    /// the viewer under the same rule as the post itself; otherwise nothing is opened and the result
+    /// says why. On success the file is streamed from file storage.
+    /// </summary>
+    Task<(ServiceResult Result, AttachmentDownload? File)> OpenAttachedFileAsync(
+        long boardId, string boardType, AccountResponse? viewer, CancellationToken ct = default);
 
     /// <summary>
     /// Prepares HTML content for display by downloading each inline Summernote image,

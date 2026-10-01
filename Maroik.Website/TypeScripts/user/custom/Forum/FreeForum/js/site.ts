@@ -54,7 +54,7 @@
     const $aDetailBoardAttachedFile = $("#aDetailBoardAttachedFile");
     const $aEditBoardAttachedFile = $("#aEditBoardAttachedFile");
 
-    /** base64 -> Blob, for turning server-embedded image/attachment payloads into object URLs. */
+    /** base64 -> Blob, for turning server-embedded image payloads into object URLs. */
     function base64ToBlob(base64: string, mime: string) {
         const byteCharacters = atob(base64);
         const byteNumbers = new Array(byteCharacters.length);
@@ -589,50 +589,50 @@
             $divEditBoardContent.show();
         }
 
-        // Attachment download link (detail or edit view): base64 -> Blob -> a
-        // throwaway `<a download>` that is clicked and cleaned up.
+        // Attachment download link (detail or edit view): the file is not embedded in the page.
+        // It is requested from a POST action that checks the post's visibility again and streams
+        // the file; a refusal comes back as JSON `{ result, error }` instead of a file.
+        function DownloadAttachedFile(this: HTMLElement, event: JQuery.TriggeredEvent) {
+            event.preventDefault();
+            let boardId = $(this).attr("data-boardid");
+            let name = $(this).attr("data-name");
+            if (!boardId) {
+                return;
+            }
+
+            $.ajax({
+                url: "/Forum/DownloadFreeBoardAttachedFile",
+                type: "POST",
+                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                data: { boardId: boardId },
+                xhrFields: { responseType: "blob" },
+                success: function(data: Blob) {
+                    if (data.type.indexOf("application/json") === 0) {
+                        data.text().then(function(text) {
+                            toastr.error(JSON.parse(text).error);
+                        });
+                        return;
+                    }
+
+                    let url = URL.createObjectURL(data);
+                    let a = document.createElement("a");
+                    try {
+                        a.href = url;
+                        a.download = name!;
+                        a.click();
+                    } finally {
+                        // Revoke after a tick so the download has started; drop the <a>.
+                        setTimeout(() => URL.revokeObjectURL(url), 100);
+                        a.remove();
+                    }
+                }
+            });
+        }
+
         if ($aDetailBoardAttachedFile.length > 0) {
-            $aDetailBoardAttachedFile.off("click").on("click", function(event) {
-                event.preventDefault();
-                let base64Data = $(this).attr("data-file");
-                let contentType = $(this).attr("data-contenttype");
-                let name = $(this).attr("data-name");
-
-                if (base64Data && contentType) {
-                    let blob = base64ToBlob(base64Data, contentType);
-                    let url = URL.createObjectURL(blob);
-                    let a = document.createElement("a");
-                    try {
-                        a.href = url;
-                        a.download = name!;
-                        a.click();
-                    } finally {
-                        setTimeout(() => URL.revokeObjectURL(url), 100);
-                        a.remove();
-                    }
-                }
-            });
+            $aDetailBoardAttachedFile.off("click").on("click", DownloadAttachedFile);
         } else if ($aEditBoardAttachedFile.length > 0) {
-            $aEditBoardAttachedFile.off("click").on("click", function(event) {
-                event.preventDefault();
-                let base64Data = $(this).attr("data-file");
-                let contentType = $(this).attr("data-contenttype");
-                let name = $(this).attr("data-name");
-
-                if (base64Data && contentType) {
-                    let blob = base64ToBlob(base64Data, contentType);
-                    let url = URL.createObjectURL(blob);
-                    let a = document.createElement("a");
-                    try {
-                        a.href = url;
-                        a.download = name!;
-                        a.click();
-                    } finally {
-                        setTimeout(() => URL.revokeObjectURL(url), 100);
-                        a.remove();
-                    }
-                }
-            });
+            $aEditBoardAttachedFile.off("click").on("click", DownloadAttachedFile);
         }
     });
 })();

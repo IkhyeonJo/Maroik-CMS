@@ -8,9 +8,9 @@
  *   1. Convert every server-rendered UTC timestamp on the page to the visitor's
  *      local time (the server emits UTC; the browser knows the timezone).
  *   2. Wire the search box / buttons (navigations with query-string params).
- *   3. Rehydrate inline images in the post body and the attachment download
- *      link — both are shipped as base64 in `data-*` attributes and turned into
- *      object URLs here so nothing extra is fetched.
+ *   3. Rehydrate inline images in the post body (shipped as base64 in `data-*`
+ *      attributes and turned into object URLs here), and download the post's
+ *      attachment from its POST endpoint when its link is clicked.
  *
  * IIFE-wrapped, no `import` / `export`. Most of the work runs inside a jQuery
  * `$(function)` ready callback.
@@ -28,11 +28,12 @@
     const $formWriteFreeComment = $("#formWriteFreeComment");
     const $detailBoardContent = $("#detailBoardContent");
     const $aDetailBoardAttachedFile = $("#aDetailBoardAttachedFile");
+    const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
 
     /**
      * Decodes a base64 string into a `Blob` of the given MIME type. Used to turn
      * the `data-file` payloads the server embeds into object URLs for `<img>`
-     * sources and attachment downloads.
+     * sources.
      *
      * @param base64 raw base64 (no `data:` prefix).
      * @param mime   MIME type for the resulting Blob.
@@ -154,18 +155,32 @@
         }
 
         // --- Attachment download -------------------------------------------
-        // The attachment is also embedded as base64; build a Blob, hand it to a
-        // throwaway <a download>, click it, then clean up.
-        if ($aDetailBoardAttachedFile.length > 0) {
-            $aDetailBoardAttachedFile.off("click").on("click", function(event) {
-                event.preventDefault();
-                let base64Data = $(this).attr("data-file");
-                let contentType = $(this).attr("data-contenttype");
-                let name = $(this).attr("data-name");
+        // Attachment download link (detail or edit view): the file is not embedded in the page.
+        // It is requested from a POST action that checks the post's visibility again and streams
+        // the file; a refusal comes back as JSON `{ result, error }` instead of a file.
+        function DownloadAttachedFile(this: HTMLElement, event: JQuery.TriggeredEvent) {
+            event.preventDefault();
+            let boardId = $(this).attr("data-boardid");
+            let name = $(this).attr("data-name");
+            if (!boardId) {
+                return;
+            }
 
-                if (base64Data && contentType) {
-                    let blob = base64ToBlob(base64Data, contentType);
-                    let url = URL.createObjectURL(blob);
+            $.ajax({
+                url: "/Forum/DownloadFreeBoardAttachedFile",
+                type: "POST",
+                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                data: { boardId: boardId },
+                xhrFields: { responseType: "blob" },
+                success: function(data: Blob) {
+                    if (data.type.indexOf("application/json") === 0) {
+                        data.text().then(function(text) {
+                            toastr.error(JSON.parse(text).error);
+                        });
+                        return;
+                    }
+
+                    let url = URL.createObjectURL(data);
                     let a = document.createElement("a");
                     try {
                         a.href = url;
@@ -178,6 +193,10 @@
                     }
                 }
             });
+        }
+
+        if ($aDetailBoardAttachedFile.length > 0) {
+            $aDetailBoardAttachedFile.off("click").on("click", DownloadAttachedFile);
         }
     });
 })();

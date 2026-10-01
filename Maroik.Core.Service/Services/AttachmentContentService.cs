@@ -90,6 +90,20 @@ public class AttachmentContentService(
     }
 
     /// <inheritdoc />
+    public async Task<Stream?> OpenFileAsync(string filePath, CancellationToken ct = default)
+    {
+        try
+        {
+            return await fileClient.OpenReadAsync(filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to open file {FilePath}", filePath);
+            return null;
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<(string Html, bool HasImages)> PrepareHtmlForDisplayAsync(string html, CancellationToken ct = default)
     {
         return await htmlParser.TransformImageAttributesAsync(html, async (alt, token) =>

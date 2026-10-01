@@ -228,28 +228,34 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         Assert.Empty(host.Files.UploadedPaths);
     }
 
-    /// <summary>The detail and edit pages fetch the stored attachment and embed it (base64 + content type) for the download link.</summary>
+    /// <summary>Adds a post of <paramref name="type"/> by <paramref name="writer"/> (optionally locked) with an attachment "payload.zip" stored at <paramref name="path"/>; returns its id.</summary>
+    private async Task<long> SeedPostWithAttachmentAsync(string type, string writer, string path, long size, bool locked = false)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var board = new Board { Type = type, Title = "WithFile", Content = "b", Writer = writer, Locked = locked, Noticed = false, Deleted = false, View = 0, Created = DateTime.UtcNow, Updated = DateTime.UtcNow };
+        db.Boards.Add(board);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        db.BoardAttachedFiles.Add(new BoardAttachedFile { BoardId = board.Id, Size = size, Name = "payload", Extension = ".zip", Path = path });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return board.Id;
+    }
+
+    /// <summary>
+    /// The detail and edit pages show the attachment's name and a download link for it, but no longer
+    /// fetch the file itself: nothing is read from file storage and no file bytes are embedded.
+    /// </summary>
     [Theory]
     [InlineData("FreeForum", "/Forum/FreeForum?method={0}&boardId={1}")]
     [InlineData("PrivateNote", "/Management/PrivateNote?method={0}&boardId={1}")]
-    public async Task DetailAndEditPages_EmbedTheStoredAttachment(string type, string urlFormat)
+    public async Task DetailAndEditPages_LinkTheAttachment_WithoutFetchingIt(string type, string urlFormat)
     {
         using var host = CreateHost();
         var session = await LoginAsync(host, $"storage-attach-read-{type.ToLowerInvariant()}@test.com");
         string path = $"upload/{type}/attachments/{Guid.NewGuid():N}.zip";
         byte[] bytes = [.. "attachment-payload-bytes"u8];
         host.Files.Seed(path, bytes);
-        long boardId;
-        using (var scope = factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var board = new Board { Type = type, Title = "WithFile", Content = "b", Writer = session.Nickname, Locked = false, Noticed = false, Deleted = false, View = 0, Created = DateTime.UtcNow, Updated = DateTime.UtcNow };
-            db.Boards.Add(board);
-            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-            db.BoardAttachedFiles.Add(new BoardAttachedFile { BoardId = board.Id, Size = bytes.Length, Name = "payload", Extension = ".zip", Path = path });
-            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-            boardId = board.Id;
-        }
+        long boardId = await SeedPostWithAttachmentAsync(type, session.Nickname, path, bytes.Length);
 
         foreach (string method in new[] { "detail", "edit" })
         {
@@ -259,41 +265,97 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
             string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
             Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-            Assert.Contains(Convert.ToBase64String(bytes), html);
+            Assert.Contains("payload.zip", html);
+            Assert.Contains($"data-boardid=\"{boardId}\"", html);
+            Assert.DoesNotContain(Convert.ToBase64String(bytes), html);
         }
+        Assert.DoesNotContain(path, host.Files.FetchedPaths);
     }
 
-    /// <summary>A stored attachment that cannot be fetched (storage down) leaves the page rendering — without the embedded data — instead of failing it.</summary>
+    /// <summary>The download action streams the stored attachment to a viewer of the post, named for the browser.</summary>
     [Theory]
-    [InlineData("FreeForum", "/Forum/FreeForum?method={0}&boardId={1}")]
-    [InlineData("PrivateNote", "/Management/PrivateNote?method={0}&boardId={1}")]
-    public async Task DetailAndEditPages_StillRender_WhenTheStoredAttachmentCannotBeFetched(string type, string urlFormat)
+    [InlineData("FreeForum", "/Forum/DownloadFreeBoardAttachedFile")]
+    [InlineData("PrivateNote", "/Management/DownloadPrivateNoteAttachedFile")]
+    public async Task DownloadAction_StreamsTheAttachment_ToAViewerOfThePost(string type, string url)
     {
         using var host = CreateHost();
-        var session = await LoginAsync(host, $"storage-attach-down-{type.ToLowerInvariant()}@test.com");
+        var session = await LoginAsync(host, $"storage-attach-dl-{type.ToLowerInvariant()}@test.com");
+        string path = $"upload/{type}/attachments/{Guid.NewGuid():N}.zip";
+        byte[] bytes = [.. "attachment-payload-bytes"u8];
+        host.Files.Seed(path, bytes);
+        long boardId = await SeedPostWithAttachmentAsync(type, session.Nickname, path, bytes.Length);
+
+        using var request = session.BuildFormPostRequest(url, new MultipartFormDataContent { { new StringContent(boardId.ToString()), "boardId" } });
+        var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("payload.zip", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName);
+        Assert.Equal(bytes, await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>An anonymous visitor may download the attachment of an unlocked forum post (the forum is in the anonymous menu).</summary>
+    [Fact]
+    public async Task DownloadFreeBoardAttachedFile_IsAllowedForAnAnonymousVisitor_OnAnUnlockedPost()
+    {
+        using var host = CreateHost();
+        var author = await LoginAsync(host, "storage-attach-anon-author@test.com");
+        string path = $"upload/FreeForum/attachments/{Guid.NewGuid():N}.zip";
+        host.Files.Seed(path, [1, 2, 3]);
+        long boardId = await SeedPostWithAttachmentAsync("FreeForum", author.Nickname, path, 3);
+        var anonymous = await AuthenticatedSessionHelper.AnonymousAsync(host.Client, TestContext.Current.CancellationToken);
+
+        using var request = anonymous.BuildFormPostRequest("/Forum/DownloadFreeBoardAttachedFile", new MultipartFormDataContent { { new StringContent(boardId.ToString()), "boardId" } });
+        var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal([1, 2, 3], await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>
+    /// The post's visibility is checked again on download: another account cannot fetch a private
+    /// note's attachment, nor an anonymous visitor a locked post's; nothing is read from storage.
+    /// </summary>
+    [Fact]
+    public async Task DownloadAction_RefusesAViewerWhoMayNotSeeThePost()
+    {
+        using var host = CreateHost();
+        var owner = await LoginAsync(host, "storage-attach-owner@test.com");
+        var stranger = await LoginAsync(host, "storage-attach-stranger@test.com");
+        string notePath = $"upload/PrivateNote/attachments/{Guid.NewGuid():N}.zip";
+        string lockedPath = $"upload/FreeForum/attachments/{Guid.NewGuid():N}.zip";
+        host.Files.Seed(notePath, [1]);
+        host.Files.Seed(lockedPath, [2]);
+        long noteId = await SeedPostWithAttachmentAsync("PrivateNote", owner.Nickname, notePath, 1);
+        long lockedId = await SeedPostWithAttachmentAsync("FreeForum", owner.Nickname, lockedPath, 1, locked: true);
+        var anonymous = await AuthenticatedSessionHelper.AnonymousAsync(host.Client, TestContext.Current.CancellationToken);
+
+        using var noteRequest = stranger.BuildFormPostRequest("/Management/DownloadPrivateNoteAttachedFile", new MultipartFormDataContent { { new StringContent(noteId.ToString()), "boardId" } });
+        using JsonDocument noteDoc = await PostAsync(host, noteRequest);
+        using var lockedRequest = anonymous.BuildFormPostRequest("/Forum/DownloadFreeBoardAttachedFile", new MultipartFormDataContent { { new StringContent(lockedId.ToString()), "boardId" } });
+        using JsonDocument lockedDoc = await PostAsync(host, lockedRequest);
+
+        foreach (JsonDocument doc in new[] { noteDoc, lockedDoc })
+        {
+            Assert.False(doc.RootElement.GetProperty("result").GetBoolean());
+            Assert.Equal("The post could not be found.", doc.RootElement.GetProperty("error").GetString());
+        }
+        Assert.Empty(host.Files.FetchedPaths);
+    }
+
+    /// <summary>A stored attachment that file storage cannot hand out is reported as a failed download, not served.</summary>
+    [Fact]
+    public async Task DownloadAction_ReportsAFailure_WhenStorageCannotHandOutTheFile()
+    {
+        using var host = CreateHost();
+        var session = await LoginAsync(host, "storage-attach-down@test.com");
         host.Files.ThrowOnDownload = true;
-        long boardId;
-        using (var scope = factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var board = new Board { Type = type, Title = "FileDown", Content = "b", Writer = session.Nickname, Locked = false, Noticed = false, Deleted = false, View = 0, Created = DateTime.UtcNow, Updated = DateTime.UtcNow };
-            db.Boards.Add(board);
-            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-            db.BoardAttachedFiles.Add(new BoardAttachedFile { BoardId = board.Id, Size = 10, Name = "payload", Extension = ".zip", Path = $"upload/{type}/attachments/{Guid.NewGuid():N}.zip" });
-            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-            boardId = board.Id;
-        }
+        long boardId = await SeedPostWithAttachmentAsync("FreeForum", session.Nickname, $"upload/FreeForum/attachments/{Guid.NewGuid():N}.zip", 10);
 
-        foreach (string method in new[] { "detail", "edit" })
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, string.Format(urlFormat, method, boardId));
-            request.Headers.Add("Cookie", session.CookieHeader);
-            var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
-            string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        using var request = session.BuildFormPostRequest("/Forum/DownloadFreeBoardAttachedFile", new MultipartFormDataContent { { new StringContent(boardId.ToString()), "boardId" } });
+        using JsonDocument doc = await PostAsync(host, request);
 
-            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-            Assert.Contains("FileDown", html);
-        }
+        Assert.False(doc.RootElement.GetProperty("result").GetBoolean());
+        Assert.Equal("Input is invalid", doc.RootElement.GetProperty("error").GetString());
     }
 
     /// <summary>An avatar / editor image over the configured size limit is refused with the size message, and nothing is stored.</summary>

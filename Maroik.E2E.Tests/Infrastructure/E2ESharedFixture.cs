@@ -33,6 +33,9 @@ public sealed class E2ESharedFixture : IAsyncLifetime
     /// <summary>Base URL of the in-process test server hosting the application.</summary>
     public string ServerBaseUrl => _factory!.ServerBaseUrl;
 
+    /// <summary>The in-memory file storage the website under test reads and writes.</summary>
+    public E2EFileStorage Files => _factory!.Files;
+
     /// <summary>Starts the database container and in-process server, then launches the shared browser instance.</summary>
     public async ValueTask InitializeAsync()
     {

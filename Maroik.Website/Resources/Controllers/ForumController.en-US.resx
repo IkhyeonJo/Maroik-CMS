@@ -297,4 +297,10 @@
   <data name="File storage path must be {0} characters or fewer." xml:space="preserve">
     <value>File storage path must be {0} characters or fewer.</value>
   </data>
+  <data name="The post could not be found." xml:space="preserve">
+    <value>The post could not be found.</value>
+  </data>
+  <data name="The attached file could not be found." xml:space="preserve">
+    <value>The attached file could not be found.</value>
+  </data>
 </root>

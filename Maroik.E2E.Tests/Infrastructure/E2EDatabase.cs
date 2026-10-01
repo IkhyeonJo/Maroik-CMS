@@ -75,6 +75,32 @@ public sealed class E2EDatabase(string connectionString)
             """,
             ("email", email), ("content", content), ("asset", paymentAsset), ("unpunctuality", unpunctuality));
 
+    /// <summary>
+    /// Inserts a free-forum post by <paramref name="writer"/> whose body is <paramref name="contentHtml"/>
+    /// (images reference their storage path in <c>alt</c>, as stored posts do) and, when
+    /// <paramref name="attachmentPath"/> is given, an attachment "payload.zip" stored there. Returns the post id.
+    /// </summary>
+    public async Task<long> SeedFreeForumPostAsync(string writer, string contentHtml, string? attachmentPath = null, long attachmentSize = 0)
+    {
+        long id = await ScalarAsync<long>(
+            """
+            INSERT INTO "Board" ("Type", "Title", "Content", "Writer", "Created", "Updated", "View", "Deleted", "Locked", "Noticed")
+            VALUES ('FreeForum', @title, @content, @writer, now(), now(), 0, false, false, false)
+            RETURNING "Id"
+            """,
+            ("title", $"E2E post {NewKey()}"), ("content", contentHtml), ("writer", writer));
+
+        if (attachmentPath != null)
+            await ExecuteAsync(
+                """
+                INSERT INTO "BoardAttachedFile" ("BoardId", "Size", "Name", "Extension", "Path")
+                VALUES (@id, @size, 'payload', '.zip', @path)
+                """,
+                ("id", id), ("size", attachmentSize), ("path", attachmentPath));
+
+        return id;
+    }
+
     /// <summary>Runs a statement that returns no rows.</summary>
     public async Task ExecuteAsync(string sql, params (string Name, object? Value)[] parameters)
     {

@@ -537,4 +537,10 @@
   <data name="File storage path must be {0} characters or fewer." xml:space="preserve">
     <value>파일 저장 경로는 {0}자 이하여야 합니다.</value>
   </data>
+  <data name="The post could not be found." xml:space="preserve">
+    <value>게시글을 찾을 수 없습니다.</value>
+  </data>
+  <data name="The attached file could not be found." xml:space="preserve">
+    <value>첨부파일을 찾을 수 없습니다.</value>
+  </data>
 </root>

@@ -20,6 +20,9 @@ public sealed class FakeFileClient : IFileClient
     /// <summary>When true every download throws, as an unreachable file-storage service would.</summary>
     public bool ThrowOnDownload { get; set; }
 
+    /// <summary>Every path a caller fetched, by <see cref="DownloadAsync"/> or <see cref="OpenReadAsync"/> (in order).</summary>
+    public List<string> FetchedPaths { get; } = [];
+
     /// <summary>Every path that was uploaded (in order) — pre-seeded files are not listed.</summary>
     public List<string> UploadedPaths { get; } = [];
 
@@ -30,10 +33,22 @@ public sealed class FakeFileClient : IFileClient
     public void Seed(string path, byte[] bytes) => _files[path] = (bytes, "application/octet-stream");
 
     /// <inheritdoc />
-    public Task<byte[]> DownloadAsync(string filePath, string fileStorageBaseUrl, CancellationToken ct = default) =>
-        ThrowOnDownload ? throw new IOException("file storage unreachable") : _files.TryGetValue(filePath.TrimStart('/'), out var f) || _files.TryGetValue(filePath, out f)
+    public Task<byte[]> DownloadAsync(string filePath, string fileStorageBaseUrl, CancellationToken ct = default)
+    {
+        lock (FetchedPaths) FetchedPaths.Add(filePath);
+        return ThrowOnDownload ? throw new IOException("file storage unreachable") : _files.TryGetValue(filePath.TrimStart('/'), out var f) || _files.TryGetValue(filePath, out f)
             ? Task.FromResult(f.Bytes)
             : Task.FromResult(Array.Empty<byte>());
+    }
+
+    /// <inheritdoc />
+    public Task<Stream> OpenReadAsync(string filePath, string fileStorageBaseUrl, CancellationToken ct = default)
+    {
+        lock (FetchedPaths) FetchedPaths.Add(filePath);
+        return ThrowOnDownload ? throw new IOException("file storage unreachable") : _files.TryGetValue(filePath.TrimStart('/'), out var f)
+            ? Task.FromResult<Stream>(new MemoryStream(f.Bytes, writable: false))
+            : throw new HttpRequestException("File not found", null, System.Net.HttpStatusCode.NotFound);
+    }
 
     /// <inheritdoc />
     public Task<bool> UploadAsync(byte[] fileData, string contentType, string filePath, string fileStorageBaseUrl, CancellationToken ct = default)

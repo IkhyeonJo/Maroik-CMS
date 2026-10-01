@@ -66,6 +66,7 @@ describeBoardScript({
     commentAction: "WriteFreeComment",
     existsKey: "freeBoard",
     hasNoticed: true,
+    downloadAction: "/Forum/DownloadFreeBoardAttachedFile",
 });
 
 describeMissingServerConstants("admin", "Forum", "FreeForum", () => fixture);

@@ -497,8 +497,30 @@ public class BoardService(
         => attachmentContent.UploadSummernoteImageAsync(file, area, boardType, ct);
 
     /// <inheritdoc />
-    public Task<byte[]?> DownloadFileAsync(string filePath, CancellationToken ct = default)
-        => attachmentContent.DownloadFileAsync(filePath, ct);
+    public async Task<(ServiceResult Result, AttachmentDownload? File)> OpenAttachedFileAsync(
+        long boardId, string boardType, AccountResponse? viewer, CancellationToken ct = default)
+    {
+        // The same visibility rule as the post itself, checked again here: the download endpoint is
+        // reachable without going through the detail page.
+        Board? board = await boardRepository.FindActiveByIdAsync(boardId, ct);
+        if (board == null || board.Type != boardType || !board.CanBeViewedBy(viewer?.Nickname, viewer?.Role == Role.Admin))
+        {
+            logger.LogWarning("Attachment download refused: post {BoardId} ({BoardType}) is missing or not visible to {Viewer}",
+                boardId, boardType, viewer?.Nickname ?? Role.Anonymous);
+            return (ServiceResult.NotFound("Board.NotFound", "The post could not be found."), null);
+        }
+
+        BoardAttachedFile? attachedFile = await boardAttachedFileRepository.FindByBoardIdAsync(boardId, ct);
+        if (attachedFile == null || string.IsNullOrEmpty(attachedFile.Path))
+            return (ServiceResult.NotFound("Board.AttachedFileNotFound", "The attached file could not be found."), null);
+
+        // OpenFileAsync logs its own failure (with the storage path) where it happens.
+        Stream? content = await attachmentContent.OpenFileAsync(attachedFile.Path, ct);
+        if (content == null)
+            return (ServiceResult.Failure("Board.AttachedFileUnavailable", "Input is invalid"), null);
+
+        return (ServiceResult.Ok(), new AttachmentDownload(content, $"{attachedFile.Name}{attachedFile.Extension}"));
+    }
 
     /// <summary>
     /// Builds the remote storage path for a board attachment

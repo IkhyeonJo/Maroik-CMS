@@ -244,18 +244,6 @@ public class ForumController(
                         CanDelete = freeForumOutputViewModel.LoggedInAccount.IsOwnerOrAdmin(freeBoard.Writer)
                     };
 
-                    if (!string.IsNullOrEmpty(freeForumOutputViewModel.BoardOutputViewModel?.BoardAttachedFilePath ?? ""))
-                    {
-                        byte[]? fileData = await boardService.DownloadFileAsync(freeForumOutputViewModel.BoardOutputViewModel?.BoardAttachedFilePath ?? "", ct);
-                        if (fileData != null)
-                        {
-                            freeForumOutputViewModel.BoardOutputViewModel?.BoardAttachedFileBase64Data = Convert.ToBase64String(fileData);
-                            freeForumOutputViewModel.BoardOutputViewModel?.BoardAttachedFileContentType =
-                                _contentTypeProvider.TryGetContentType(freeForumOutputViewModel.BoardOutputViewModel?.BoardAttachedFilePath ?? "", out string? contentType)
-                                    ? contentType : "application/octet-stream";
-                        }
-                    }
-
                     freeForumOutputViewModel.DetailBoardComments =
                         [.. await boardService.GetCommentsByBoardIdAsync((long)boardId, ct)];
                     var detailNicknames = freeForumOutputViewModel.DetailBoardComments.Select(c => c.Writer)
@@ -317,22 +305,6 @@ public class ForumController(
                         BoardAttachedFilePath = boardAttachedFile?.Path ?? "",
                         IsImgTagIncluded = isImgTagIncluded
                     };
-
-                    if (string.IsNullOrEmpty(freeForumOutputViewModel.BoardOutputViewModel?.BoardAttachedFilePath ?? ""))
-                    {
-                        return View(freeForumOutputViewModel);
-                    }
-
-                    byte[]? fileData = await boardService.DownloadFileAsync(freeForumOutputViewModel.BoardOutputViewModel?.BoardAttachedFilePath ?? "", ct);
-                    if (fileData == null)
-                    {
-                        return View(freeForumOutputViewModel);
-                    }
-
-                    freeForumOutputViewModel.BoardOutputViewModel?.BoardAttachedFileBase64Data = Convert.ToBase64String(fileData);
-                    freeForumOutputViewModel.BoardOutputViewModel?.BoardAttachedFileContentType =
-                        _contentTypeProvider.TryGetContentType(freeForumOutputViewModel.BoardOutputViewModel?.BoardAttachedFilePath ?? "", out string? contentType)
-                            ? contentType : "application/octet-stream";
 
                     return View(freeForumOutputViewModel);
                 }
@@ -421,6 +393,36 @@ public class ForumController(
     #endregion
 
     #region IsBoardExists
+    /// <summary>
+    /// Streams the attachment of free-forum post <paramref name="boardId"/>. The post's visibility is
+    /// checked again for the caller (the detail page is not a gate: this endpoint is reachable on its
+    /// own), and the file is streamed from file storage rather than embedded in the page.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequiredHttpPostAccess(Role = Role.Admin)]
+    [RequiredHttpPostAccess(Role = Role.User)]
+    [RequiredHttpPostAccess(Role = Role.Anonymous)]
+    public async Task<IActionResult> DownloadFreeBoardAttachedFile(long boardId, CancellationToken ct)
+    {
+        try
+        {
+            // Re-fetched from the database by ViewBagPopulatorFilter on every request.
+            AccountResponse? viewer = ViewBag.LoggedInAccount;
+            (ServiceResult result, AttachmentDownload? file) = await boardService.OpenAttachedFileAsync(boardId, BoardTypes.FreeForum, viewer, ct);
+            if (!result.Success)
+                return Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+
+            string contentType = _contentTypeProvider.TryGetContentType(file!.FileName, out string? type) ? type : "application/octet-stream";
+            return File(file.Content, contentType, file.FileName);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to download the attachment of free-forum post {BoardId}", boardId);
+            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+        }
+    }
+
     /// <summary>
     /// Checks that a free-forum post still exists and is visible to the caller (a locked post only to its
     /// author or an admin). Called by the client before confirming a delete.

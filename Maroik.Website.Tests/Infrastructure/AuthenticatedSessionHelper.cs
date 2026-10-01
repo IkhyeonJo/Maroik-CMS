@@ -132,6 +132,20 @@ public static class AuthenticatedSessionHelper
         return new AuthenticatedSession(sessionCookie, antiforgeryCookie, loginToken, nickname);
     }
 
+    /// <summary>
+    /// An anonymous visitor's antiforgery cookie/token pair (from the Login page) with no signed-in
+    /// session, for exercising the POST actions the menu grants to the Anonymous role.
+    /// </summary>
+    public static async Task<AuthenticatedSession> AnonymousAsync(HttpClient client, CancellationToken ct)
+    {
+        using var getRequest = new HttpRequestMessage(HttpMethod.Get, "/Account/Login");
+        var getResponse = await client.SendAsync(getRequest, ct);
+        string token = ExtractAntiForgeryToken(await getResponse.Content.ReadAsStringAsync(ct));
+        string antiforgeryCookie = ExtractCookieValue(getResponse, AntiforgeryCookieName)
+            ?? throw new InvalidOperationException("No antiforgery cookie on the Login GET response.");
+        return new AuthenticatedSession("", antiforgeryCookie, token, "");
+    }
+
     /// <summary>The value of <paramref name="cookieName"/> from the response's <c>Set-Cookie</c> headers, or <see langword="null"/>.</summary>
     private static string? ExtractCookieValue(HttpResponseMessage response, string cookieName)
     {
