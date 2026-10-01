@@ -57,7 +57,8 @@ public sealed class Expenditure : AggregateRoot<long>
         Money amount,
         string paymentMethod,
         string? myDepositAsset,
-        string? note) : base(id)
+        string? note,
+        DateTime utcNow) : base(id)
     {
         AccountEmail = accountEmail;
         MainClass = mainClass;
@@ -67,11 +68,11 @@ public sealed class Expenditure : AggregateRoot<long>
         PaymentMethod = paymentMethod;
         MyDepositAsset = myDepositAsset;
         Note = note;
-        Created = DateTime.UtcNow;
-        Updated = DateTime.UtcNow;
+        Created = utcNow;
+        Updated = utcNow;
     }
 
-    /// <summary>Reconstitution constructor: assigns every field verbatim from trusted storage with no <see cref="DateTime.UtcNow"/> side effect.</summary>
+    /// <summary>Reconstitution constructor: assigns every field verbatim from trusted storage with no new timestamps.</summary>
     private Expenditure(
         long id, Email accountEmail, string mainClass, string subClass, string? content, Money amount,
         string paymentMethod, string? myDepositAsset, string? note, DateTime created, DateTime updated) : base(id)
@@ -136,6 +137,7 @@ public sealed class Expenditure : AggregateRoot<long>
         string? currency,
         string? paymentMethod,
         string? myDepositAsset,
+        DateTime utcNow,
         string? note = null,
         DateTime? created = null)
     {
@@ -150,7 +152,7 @@ public sealed class Expenditure : AggregateRoot<long>
 
         var (validMainClass, validSubClass, validPaymentMethod) = coreResult.Value;
         var expenditure = new Expenditure(0, emailResult.Value, validMainClass, validSubClass, content,
-            moneyResult.Value, validPaymentMethod, myDepositAsset, note);
+            moneyResult.Value, validPaymentMethod, myDepositAsset, note, utcNow);
 
         if (created.HasValue)
             expenditure.Created = created.Value;
@@ -208,6 +210,7 @@ public sealed class Expenditure : AggregateRoot<long>
         string? paymentMethod,
         string? myDepositAsset,
         string? note,
+        DateTime utcNow,
         DateTime? created = null)
     {
         var coreResult = ValidateCoreFields(mainClass, subClass, paymentMethod, content, amount, note);
@@ -226,7 +229,7 @@ public sealed class Expenditure : AggregateRoot<long>
         Note = note;
         if (created.HasValue)
             Created = created.Value;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 }

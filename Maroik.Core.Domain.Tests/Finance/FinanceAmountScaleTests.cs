@@ -12,6 +12,9 @@ namespace Maroik.Core.Domain.Tests.Finance;
 /// </summary>
 public class FinanceAmountScaleTests
 {
+    /// <summary>The fixed "current time" every domain call in this class receives.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>An amount with five decimal places, one more than the columns store.</summary>
     private const decimal FiveDecimals = 0.00005m;
 
@@ -65,22 +68,22 @@ public class FinanceAmountScaleTests
     [Fact]
     public void Income_RecordAndUpdate_RejectFiveDecimals()
     {
-        AssertTooManyDecimals(Income.Record("user@example.com", "RegularIncome", "LaborIncome", "salary", FiveDecimals, "KRW", "Wallet").FirstError.Code);
+        AssertTooManyDecimals(Income.Record("user@example.com", "RegularIncome", "LaborIncome", "salary", FiveDecimals, "KRW", "Wallet", Now).FirstError.Code);
 
-        var income = Income.Record("user@example.com", "RegularIncome", "LaborIncome", "salary", 1000.5m, "KRW", "Wallet").Value;
+        var income = Income.Record("user@example.com", "RegularIncome", "LaborIncome", "salary", 1000.5m, "KRW", "Wallet", Now).Value;
         Assert.Equal(1000.5m, income.Amount.Amount);
-        AssertTooManyDecimals(income.Update("RegularIncome", "LaborIncome", "salary", FiveDecimals, "KRW", "Wallet", null).FirstError.Code);
+        AssertTooManyDecimals(income.Update("RegularIncome", "LaborIncome", "salary", FiveDecimals, "KRW", "Wallet", null, Now).FirstError.Code);
     }
 
     /// <summary>Expenditure: record and update.</summary>
     [Fact]
     public void Expenditure_RecordAndUpdate_RejectFiveDecimals()
     {
-        AssertTooManyDecimals(Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "lunch", FiveDecimals, "KRW", "Wallet", null).FirstError.Code);
+        AssertTooManyDecimals(Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "lunch", FiveDecimals, "KRW", "Wallet", null, Now).FirstError.Code);
 
-        var expenditure = Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "lunch", 0.005m, "KRW", "Wallet", null).Value;
+        var expenditure = Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "lunch", 0.005m, "KRW", "Wallet", null, Now).Value;
         Assert.Equal(0.005m, expenditure.Amount.Amount);
-        AssertTooManyDecimals(expenditure.Update("ConsumerSpending", "MealOrEatOutExpenses", "lunch", FiveDecimals, "KRW", "Wallet", null, null).FirstError.Code);
+        AssertTooManyDecimals(expenditure.Update("ConsumerSpending", "MealOrEatOutExpenses", "lunch", FiveDecimals, "KRW", "Wallet", null, null, Now).FirstError.Code);
     }
 
     /// <summary>FixedIncome: register and update.</summary>
@@ -88,12 +91,12 @@ public class FinanceAmountScaleTests
     public void FixedIncome_RegisterAndUpdate_RejectFiveDecimals()
     {
         AssertTooManyDecimals(FixedIncome.Register("user@example.com", "RegularIncome", "LaborIncome", "salary", FiveDecimals, "KRW",
-            "Wallet", 1, 15, new DateTime(2099, 12, 31)).FirstError.Code);
+            "Wallet", 1, 15, new DateTime(2099, 12, 31), Now).FirstError.Code);
 
         var fixedIncome = FixedIncome.Register("user@example.com", "RegularIncome", "LaborIncome", "salary", 0.0001m, "KRW",
-            "Wallet", 1, 15, new DateTime(2099, 12, 31)).Value;
+            "Wallet", 1, 15, new DateTime(2099, 12, 31), Now).Value;
         AssertTooManyDecimals(fixedIncome.Update("RegularIncome", "LaborIncome", "salary", FiveDecimals, "KRW",
-            "Wallet", 1, 15, new DateTime(2099, 12, 31), null).FirstError.Code);
+            "Wallet", 1, 15, new DateTime(2099, 12, 31), null, Now).FirstError.Code);
     }
 
     /// <summary>FixedExpenditure: register and update.</summary>
@@ -101,23 +104,23 @@ public class FinanceAmountScaleTests
     public void FixedExpenditure_RegisterAndUpdate_RejectFiveDecimals()
     {
         AssertTooManyDecimals(FixedExpenditure.Register("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "rent", FiveDecimals, "KRW",
-            "Wallet", null, 1, 15, new DateTime(2099, 12, 31)).FirstError.Code);
+            "Wallet", null, 1, 15, new DateTime(2099, 12, 31), Now).FirstError.Code);
 
         var fixedExpenditure = FixedExpenditure.Register("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "rent", 0.0001m, "KRW",
-            "Wallet", null, 1, 15, new DateTime(2099, 12, 31)).Value;
+            "Wallet", null, 1, 15, new DateTime(2099, 12, 31), Now).Value;
         AssertTooManyDecimals(fixedExpenditure.Update("ConsumerSpending", "MealOrEatOutExpenses", "rent", FiveDecimals, "KRW",
-            "Wallet", null, 1, 15, new DateTime(2099, 12, 31), null).FirstError.Code);
+            "Wallet", null, 1, 15, new DateTime(2099, 12, 31), null, Now).FirstError.Code);
     }
 
     /// <summary>Asset: a typed balance on create, update and a direct set.</summary>
     [Fact]
     public void Asset_CreateUpdateAndSetBalance_RejectFiveDecimals()
     {
-        AssertTooManyDecimals(Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", FiveDecimals, "KRW").FirstError.Code);
+        AssertTooManyDecimals(Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", FiveDecimals, "KRW", Now).FirstError.Code);
 
-        var asset = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", 100m, "KRW").Value;
-        AssertTooManyDecimals(asset.Update("Wallet", "FreeDepositAndWithdrawal", FiveDecimals, "KRW", null, false).FirstError.Code);
-        AssertTooManyDecimals(asset.SetBalance(Money.Create(FiveDecimals, "KRW").Value).FirstError.Code);
+        var asset = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", 100m, "KRW", Now).Value;
+        AssertTooManyDecimals(asset.Update("Wallet", "FreeDepositAndWithdrawal", FiveDecimals, "KRW", null, false, Now).FirstError.Code);
+        AssertTooManyDecimals(asset.SetBalance(Money.Create(FiveDecimals, "KRW").Value, Now).FirstError.Code);
         Assert.Equal(100m, asset.Balance.Amount);
     }
 
@@ -125,9 +128,9 @@ public class FinanceAmountScaleTests
     [Fact]
     public void Asset_Update_StillAcceptsACurrencyChange()
     {
-        var asset = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", 1000.5m, "원").Value;
+        var asset = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", 1000.5m, "원", Now).Value;
 
-        Assert.False(asset.Update("Wallet", "FreeDepositAndWithdrawal", 1000.5m, "KRW", null, false).IsError);
+        Assert.False(asset.Update("Wallet", "FreeDepositAndWithdrawal", 1000.5m, "KRW", null, false, Now).IsError);
         Assert.Equal("KRW", asset.Balance.Currency);
     }
 
@@ -138,12 +141,12 @@ public class FinanceAmountScaleTests
     [Fact]
     public void Asset_WithdrawThenDeposit_OfAFractionalAmount_RestoresTheBalanceExactly()
     {
-        var asset = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", 100.00m, "KRW").Value;
+        var asset = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", 100.00m, "KRW", Now).Value;
         var spent = Money.Create(0.005m, "KRW").Value;
 
-        Assert.False(asset.Withdraw(spent).IsError);
+        Assert.False(asset.Withdraw(spent, Now).IsError);
         Assert.Equal(99.995m, asset.Balance.Amount);
-        Assert.False(asset.Deposit(spent).IsError);
+        Assert.False(asset.Deposit(spent, Now).IsError);
         Assert.Equal(100m, asset.Balance.Amount);
     }
 }

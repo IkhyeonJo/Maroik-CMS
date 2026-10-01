@@ -2,6 +2,7 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Finance;
 using Maroik.Core.Service.Services;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Maroik.Core.Service.Tests.Services;
@@ -30,8 +31,13 @@ public class FixedIncomeServiceTests
             .Returns((string e, string p, CancellationToken c) => _assetBalance.Object.GetAssetAsync(e, p, c));
     }
 
+    /// <summary>The fixed "current time" of these tests.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+    /// <summary>The clock the service under test reads, stopped at <see cref="Now"/>.</summary>
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(Now));
+
     /// <summary>The service under test over the mocked dependencies.</summary>
-    private FixedIncomeService CreateSut() => new(_fixedIncomeRepo.Object, _assetBalance.Object);
+    private FixedIncomeService CreateSut() => new(_fixedIncomeRepo.Object, _assetBalance.Object, _time);
 
     // -- Helpers --------------------------------------------------------------
 

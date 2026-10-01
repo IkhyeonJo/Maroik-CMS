@@ -17,6 +17,9 @@ namespace Maroik.Core.Domain.Tests.Boundaries;
 /// </summary>
 public class ErrorContractTests
 {
+    /// <summary>The fixed "current time" every domain call in this class receives.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>Owner e-mail used by every aggregate built in these tests.</summary>
     private const string Email = "user@example.com";
 
@@ -26,47 +29,44 @@ public class ErrorContractTests
     [Fact]
     public void Asset_Create_Errors()
     {
-        ErrorAssert.Validation(Asset.Create(" ", Email, "FreeDepositAndWithdrawal", 1m, "KRW"), "Asset.ProductNameEmpty", "Product name cannot be empty.");
-        ErrorAssert.Validation(Asset.Create("a", Email, " ", 1m, "KRW"), "Asset.ItemEmpty", "Asset category (item) cannot be empty.");
-        ErrorAssert.Validation(Asset.Create("a", Email, "Nonsense", 1m, "KRW"), "Asset.ItemInvalid", "Asset category (item) is not a recognised value.");
-        ErrorAssert.Validation(Asset.Create(new string('x', FinanceTextPolicy.MaxTextLength + 1), Email, "FreeDepositAndWithdrawal", 1m, "KRW"),
+        ErrorAssert.Validation(Asset.Create(" ", Email, "FreeDepositAndWithdrawal", 1m, "KRW", Now), "Asset.ProductNameEmpty", "Product name cannot be empty.");
+        ErrorAssert.Validation(Asset.Create("a", Email, " ", 1m, "KRW", Now), "Asset.ItemEmpty", "Asset category (item) cannot be empty.");
+        ErrorAssert.Validation(Asset.Create("a", Email, "Nonsense", 1m, "KRW", Now), "Asset.ItemInvalid", "Asset category (item) is not a recognised value.");
+        ErrorAssert.Validation(Asset.Create(new string('x', FinanceTextPolicy.MaxTextLength + 1), Email, "FreeDepositAndWithdrawal", 1m, "KRW", Now),
             "Asset.ProductNameTooLong", "Product name must be {0} characters or fewer.", FinanceTextPolicy.MaxTextLength);
-        ErrorAssert.Validation(Asset.Create("a", Email, "FreeDepositAndWithdrawal", 1m, "KRW", new string('x', FinanceTextPolicy.MaxTextLength + 1)),
+        ErrorAssert.Validation(Asset.Create("a", Email, "FreeDepositAndWithdrawal", 1m, "KRW", Now, new string('x', FinanceTextPolicy.MaxTextLength + 1)),
             "Finance.NoteTooLong", "Note must be {0} characters or fewer.", FinanceTextPolicy.MaxTextLength);
-        Assert.False(Asset.Create(new string('x', FinanceTextPolicy.MaxTextLength), Email, "FreeDepositAndWithdrawal", 1m, "KRW", new string('x', FinanceTextPolicy.MaxTextLength)).IsError);
+        Assert.False(Asset.Create(new string('x', FinanceTextPolicy.MaxTextLength), Email, "FreeDepositAndWithdrawal", 1m, "KRW", Now, new string('x', FinanceTextPolicy.MaxTextLength)).IsError);
     }
 
     /// <summary>Verifies that depositing, withdrawing or setting a balance in another currency returns <c>Asset.CurrencyMismatch</c> with an operation-specific message.</summary>
     [Fact]
     public void Asset_DepositWithdrawAndUpdate_CurrencyErrors()
     {
-        Asset asset = Asset.Create("a", Email, "FreeDepositAndWithdrawal", 100m, "KRW").Value;
+        Asset asset = Asset.Create("a", Email, "FreeDepositAndWithdrawal", 100m, "KRW", Now).Value;
         Money usd = Money.Create(1m, "USD").Value;
 
-        ErrorAssert.Validation(asset.Deposit(usd), "Asset.CurrencyMismatch", "Cannot deposit a different currency into this asset.");
-        ErrorAssert.Validation(asset.Withdraw(usd), "Asset.CurrencyMismatch", "Cannot withdraw a different currency from this asset.");
-        ErrorAssert.Validation(asset.SetBalance(usd), "Asset.CurrencyMismatch", "Cannot change the currency of an existing asset.");
+        ErrorAssert.Validation(asset.Deposit(usd, Now), "Asset.CurrencyMismatch", "Cannot deposit a different currency into this asset.");
+        ErrorAssert.Validation(asset.Withdraw(usd, Now), "Asset.CurrencyMismatch", "Cannot withdraw a different currency from this asset.");
+        ErrorAssert.Validation(asset.SetBalance(usd, Now), "Asset.CurrencyMismatch", "Cannot change the currency of an existing asset.");
     }
 
     /// <summary>Verifies the empty-name, empty-item and unknown-item errors of <c>Asset.Update</c>.</summary>
     [Fact]
     public void Asset_Update_Errors()
     {
-        Asset asset = Asset.Create("a", Email, "FreeDepositAndWithdrawal", 100m, "KRW").Value;
+        Asset asset = Asset.Create("a", Email, "FreeDepositAndWithdrawal", 100m, "KRW", Now).Value;
 
-        ErrorAssert.Validation(asset.Update(" ", "FreeDepositAndWithdrawal", 1m, "KRW", null, false), "Asset.ProductNameEmpty", "Product name cannot be empty.");
-        ErrorAssert.Validation(asset.Update("a", " ", 1m, "KRW", null, false), "Asset.ItemEmpty", "Asset category cannot be empty.");
-        ErrorAssert.Validation(asset.Update("a", "Nonsense", 1m, "KRW", null, false), "Asset.ItemInvalid", "Asset category (item) is not a recognised value.");
+        ErrorAssert.Validation(asset.Update(" ", "FreeDepositAndWithdrawal", 1m, "KRW", null, false, Now), "Asset.ProductNameEmpty", "Product name cannot be empty.");
+        ErrorAssert.Validation(asset.Update("a", " ", 1m, "KRW", null, false, Now), "Asset.ItemEmpty", "Asset category cannot be empty.");
+        ErrorAssert.Validation(asset.Update("a", "Nonsense", 1m, "KRW", null, false, Now), "Asset.ItemInvalid", "Asset category (item) is not a recognised value.");
     }
 
     // ---- Account --------------------------------------------------------------------------
 
-    /// <summary>The fixed "current time" the account checks run at.</summary>
-    private static readonly DateTime AccountNow = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
-
     /// <summary>Result of <c>Account.Create</c> with the given password hash and role.</summary>
     private static ErrorOr<DomainAccount> NewAccount(string hash = "$2a$hash", string role = Role.User) =>
-        DomainAccount.Create(Email, hash, "Nick", role, "UTC", null, GuidToken.Generate(AccountNow), true, AccountNow);
+        DomainAccount.Create(Email, hash, "Nick", role, "UTC", null, GuidToken.Generate(Now), true, Now);
 
     /// <summary>A persisted account whose confirmation, token and lockout state are set by the arguments.</summary>
     private static DomainAccount Reconstituted(bool emailConfirmed = true, string? resetToken = null, string? registrationToken = null,
@@ -86,8 +86,8 @@ public class ErrorContractTests
     [Fact]
     public void Account_ConfirmEmail_Errors()
     {
-        ErrorAssert.Is(Reconstituted(emailConfirmed: true).ConfirmEmail("t", AccountNow), "Account.AlreadyConfirmed", ErrorType.Conflict, "Email address is already confirmed.");
-        ErrorAssert.Validation(Reconstituted(emailConfirmed: false, registrationToken: GuidToken.Generate(AccountNow)).ConfirmEmail("wrong", AccountNow),
+        ErrorAssert.Is(Reconstituted(emailConfirmed: true).ConfirmEmail("t", Now), "Account.AlreadyConfirmed", ErrorType.Conflict, "Email address is already confirmed.");
+        ErrorAssert.Validation(Reconstituted(emailConfirmed: false, registrationToken: GuidToken.Generate(Now)).ConfirmEmail("wrong", Now),
             "Account.InvalidToken", "Invalid email confirmation token.");
     }
 
@@ -95,20 +95,20 @@ public class ErrorContractTests
     [Fact]
     public void Account_PasswordReset_Errors()
     {
-        ErrorAssert.Is(Reconstituted(emailConfirmed: false).RequestPasswordReset(GuidToken.Generate(AccountNow), AccountNow), "Account.NotConfirmed", ErrorType.Failure,
+        ErrorAssert.Is(Reconstituted(emailConfirmed: false).RequestPasswordReset(GuidToken.Generate(Now), Now), "Account.NotConfirmed", ErrorType.Failure,
             "Email must be confirmed before resetting the password.");
 
-        string token = GuidToken.Generate(AccountNow);
+        string token = GuidToken.Generate(Now);
         DomainAccount account = Reconstituted(resetToken: token);
-        ErrorAssert.Validation(account.ResetPassword("wrong", "$2a$new", AccountNow), "Account.InvalidToken", "Invalid or expired password-reset token.");
-        ErrorAssert.Validation(account.ResetPassword(token, " ", AccountNow), "Account.PasswordEmpty", "New hashed password cannot be empty.");
+        ErrorAssert.Validation(account.ResetPassword("wrong", "$2a$new", Now), "Account.InvalidToken", "Invalid or expired password-reset token.");
+        ErrorAssert.Validation(account.ResetPassword(token, " ", Now), "Account.PasswordEmpty", "New hashed password cannot be empty.");
     }
 
     /// <summary>Verifies that <c>ChangeRole</c> rejects a role other than Admin or User.</summary>
     [Fact]
     public void Account_ChangeRole_RejectsAnUnknownRole()
     {
-        ErrorAssert.Validation(Reconstituted().ChangeRole("Root", AccountNow),
+        ErrorAssert.Validation(Reconstituted().ChangeRole("Root", Now),
             "Account.RoleInvalid", "Role must be either Admin or User.");
     }
 
@@ -194,19 +194,19 @@ public class ErrorContractTests
     [Fact]
     public void Income_Record_Errors()
     {
-        ErrorAssert.Validation(Income.Record(Email, " ", "LaborIncome", "c", 1m, "KRW", "a"), "Income.MainClassEmpty", "Main income category cannot be empty.");
-        ErrorAssert.Validation(Income.Record(Email, "RegularIncome", " ", "c", 1m, "KRW", "a"), "Income.SubClassEmpty", "Sub income category cannot be empty.");
-        ErrorAssert.Validation(Income.Record(Email, "RegularIncome", "LaborIncome", "c", 1m, "KRW", " "), "Income.DepositAssetEmpty", "Deposit asset product name cannot be empty.");
-        ErrorAssert.Validation(Income.Record(Email, "RegularIncome", "LaborIncome", " ", 1m, "KRW", "a"), "Income.ContentEmpty", "Content cannot be empty.");
+        ErrorAssert.Validation(Income.Record(Email, " ", "LaborIncome", "c", 1m, "KRW", "a", Now), "Income.MainClassEmpty", "Main income category cannot be empty.");
+        ErrorAssert.Validation(Income.Record(Email, "RegularIncome", " ", "c", 1m, "KRW", "a", Now), "Income.SubClassEmpty", "Sub income category cannot be empty.");
+        ErrorAssert.Validation(Income.Record(Email, "RegularIncome", "LaborIncome", "c", 1m, "KRW", " ", Now), "Income.DepositAssetEmpty", "Deposit asset product name cannot be empty.");
+        ErrorAssert.Validation(Income.Record(Email, "RegularIncome", "LaborIncome", " ", 1m, "KRW", "a", Now), "Income.ContentEmpty", "Content cannot be empty.");
     }
 
     /// <summary>Verifies the empty main class / sub class / payment method / content errors of <c>Expenditure.Record</c>.</summary>
     [Fact]
     public void Expenditure_Record_Errors()
     {
-        ErrorAssert.Validation(Expenditure.Record(Email, " ", "Deposit", "c", 1m, "KRW", "a", "b"), "Expenditure.MainClassEmpty", "Main expense category cannot be empty.");
-        ErrorAssert.Validation(Expenditure.Record(Email, "RegularSavings", " ", "c", 1m, "KRW", "a", "b"), "Expenditure.SubClassEmpty", "Sub expense category cannot be empty.");
-        ErrorAssert.Validation(Expenditure.Record(Email, "RegularSavings", "Deposit", "c", 1m, "KRW", " ", "b"), "Expenditure.PaymentMethodEmpty", "Payment method (asset name) cannot be empty.");
-        ErrorAssert.Validation(Expenditure.Record(Email, "RegularSavings", "Deposit", " ", 1m, "KRW", "a", "b"), "Expenditure.ContentEmpty", "Content cannot be empty.");
+        ErrorAssert.Validation(Expenditure.Record(Email, " ", "Deposit", "c", 1m, "KRW", "a", "b", Now), "Expenditure.MainClassEmpty", "Main expense category cannot be empty.");
+        ErrorAssert.Validation(Expenditure.Record(Email, "RegularSavings", " ", "c", 1m, "KRW", "a", "b", Now), "Expenditure.SubClassEmpty", "Sub expense category cannot be empty.");
+        ErrorAssert.Validation(Expenditure.Record(Email, "RegularSavings", "Deposit", "c", 1m, "KRW", " ", "b", Now), "Expenditure.PaymentMethodEmpty", "Payment method (asset name) cannot be empty.");
+        ErrorAssert.Validation(Expenditure.Record(Email, "RegularSavings", "Deposit", " ", 1m, "KRW", "a", "b", Now), "Expenditure.ContentEmpty", "Content cannot be empty.");
     }
 }

@@ -14,6 +14,9 @@ namespace Maroik.Core.Domain.Tests.Boundaries;
 /// <summary>Rules the mutation run showed no test noticed: boundaries, value equality, ownership branches, round trips.</summary>
 public class LogicGapTests
 {
+    /// <summary>The fixed "current time" every domain call in this class receives.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>Owner e-mail used by every aggregate built in these tests.</summary>
     private const string Email = "user@example.com";
 
@@ -21,11 +24,11 @@ public class LogicGapTests
 
     /// <summary>Result of registering a fixed income on the given deposit month/day (no maturity unless given).</summary>
     private static ErrorOr<FixedIncome> Income(short month, short day = 1, DateTime? maturity = null) =>
-        FixedIncome.Register(Email, "RegularIncome", "LaborIncome", "c", 1000m, "KRW", "asset", month, day, maturity ?? FixedSchedulePolicy.NoMaturityDate);
+        FixedIncome.Register(Email, "RegularIncome", "LaborIncome", "c", 1000m, "KRW", "asset", month, day, maturity ?? FixedSchedulePolicy.NoMaturityDate, Now);
 
     /// <summary>Result of registering a fixed expenditure on the given deposit month/day (no maturity unless given).</summary>
     private static ErrorOr<FixedExpenditure> Expense(short month, short day = 1, DateTime? maturity = null) =>
-        FixedExpenditure.Register(Email, "ConsumerSpending", "MealOrEatOutExpenses", "c", 1000m, "KRW", "asset", null, month, day, maturity ?? FixedSchedulePolicy.NoMaturityDate);
+        FixedExpenditure.Register(Email, "ConsumerSpending", "MealOrEatOutExpenses", "c", 1000m, "KRW", "asset", null, month, day, maturity ?? FixedSchedulePolicy.NoMaturityDate, Now);
 
     /// <summary>Verifies that months 1 and 12 are accepted as the deposit month.</summary>
     [Theory]
@@ -54,25 +57,25 @@ public class LogicGapTests
         ErrorAssert.Validation(Income(2, 30), "FixedIncome.InvalidDepositDay", "Deposit day is not valid for the selected month.");
         ErrorAssert.Validation(Expense(2, 30), "FixedExpenditure.InvalidDepositDay", "Deposit day is not valid for the selected month.");
 
-        ErrorAssert.Validation(FixedIncome.Register(Email, " ", "LaborIncome", "c", 1m, "KRW", "a", 1, 1, DateTime.UtcNow.AddDays(1)), "FixedIncome.MainClassEmpty", "Main income category cannot be empty.");
-        ErrorAssert.Validation(FixedIncome.Register(Email, "RegularIncome", " ", "c", 1m, "KRW", "a", 1, 1, DateTime.UtcNow.AddDays(1)), "FixedIncome.SubClassEmpty", "Sub income category cannot be empty.");
-        ErrorAssert.Validation(FixedIncome.Register(Email, "RegularIncome", "LaborIncome", "c", 1m, "KRW", " ", 1, 1, DateTime.UtcNow.AddDays(1)), "FixedIncome.DepositAssetEmpty", "Deposit asset product name cannot be empty.");
-        ErrorAssert.Validation(FixedExpenditure.Register(Email, " ", "MealOrEatOutExpenses", "c", 1m, "KRW", "a", null, 1, 1, DateTime.UtcNow.AddDays(1)), "FixedExpenditure.MainClassEmpty", "Main expense category cannot be empty.");
-        ErrorAssert.Validation(FixedExpenditure.Register(Email, "ConsumerSpending", " ", "c", 1m, "KRW", "a", null, 1, 1, DateTime.UtcNow.AddDays(1)), "FixedExpenditure.SubClassEmpty", "Sub expense category cannot be empty.");
-        ErrorAssert.Validation(FixedExpenditure.Register(Email, "ConsumerSpending", "MealOrEatOutExpenses", "c", 1m, "KRW", " ", null, 1, 1, DateTime.UtcNow.AddDays(1)), "FixedExpenditure.PaymentMethodEmpty", "Payment method cannot be empty.");
+        ErrorAssert.Validation(FixedIncome.Register(Email, " ", "LaborIncome", "c", 1m, "KRW", "a", 1, 1, Now.AddDays(1), Now), "FixedIncome.MainClassEmpty", "Main income category cannot be empty.");
+        ErrorAssert.Validation(FixedIncome.Register(Email, "RegularIncome", " ", "c", 1m, "KRW", "a", 1, 1, Now.AddDays(1), Now), "FixedIncome.SubClassEmpty", "Sub income category cannot be empty.");
+        ErrorAssert.Validation(FixedIncome.Register(Email, "RegularIncome", "LaborIncome", "c", 1m, "KRW", " ", 1, 1, Now.AddDays(1), Now), "FixedIncome.DepositAssetEmpty", "Deposit asset product name cannot be empty.");
+        ErrorAssert.Validation(FixedExpenditure.Register(Email, " ", "MealOrEatOutExpenses", "c", 1m, "KRW", "a", null, 1, 1, Now.AddDays(1), Now), "FixedExpenditure.MainClassEmpty", "Main expense category cannot be empty.");
+        ErrorAssert.Validation(FixedExpenditure.Register(Email, "ConsumerSpending", " ", "c", 1m, "KRW", "a", null, 1, 1, Now.AddDays(1), Now), "FixedExpenditure.SubClassEmpty", "Sub expense category cannot be empty.");
+        ErrorAssert.Validation(FixedExpenditure.Register(Email, "ConsumerSpending", "MealOrEatOutExpenses", "c", 1m, "KRW", " ", null, 1, 1, Now.AddDays(1), Now), "FixedExpenditure.PaymentMethodEmpty", "Payment method cannot be empty.");
     }
 
     /// <summary>Verifies that a maturity date in the past is refused both when registering and when updating.</summary>
     [Fact]
     public void FixedIncomeAndExpenditure_MaturityInThePast_IsRefusedOnRegisterAndOnUpdate()
     {
-        DateTime past = DateTime.UtcNow.AddDays(-30);
+        DateTime past = Now.AddDays(-30);
         const string template = "The maturity date cannot be earlier than the current date.";
 
         ErrorAssert.Validation(Income(1, 1, past), "FixedIncome.MaturityDateInPast", template);
         ErrorAssert.Validation(Expense(1, 1, past), "FixedExpenditure.MaturityDateInPast", template);
-        ErrorAssert.Validation(Income(1).Value.Update("RegularIncome", "LaborIncome", "c", 1m, "KRW", "asset", 1, 1, past, null), "FixedIncome.MaturityDateInPast", template);
-        ErrorAssert.Validation(Expense(1).Value.Update("ConsumerSpending", "MealOrEatOutExpenses", "c", 1m, "KRW", "asset", null, 1, 1, past, null), "FixedExpenditure.MaturityDateInPast", template);
+        ErrorAssert.Validation(Income(1).Value.Update("RegularIncome", "LaborIncome", "c", 1m, "KRW", "asset", 1, 1, past, null, Now), "FixedIncome.MaturityDateInPast", template);
+        ErrorAssert.Validation(Expense(1).Value.Update("ConsumerSpending", "MealOrEatOutExpenses", "c", 1m, "KRW", "asset", null, 1, 1, past, null, Now), "FixedExpenditure.MaturityDateInPast", template);
     }
 
     /// <summary>Verifies the edges of the notice window and the one-day grace for a maturity date.</summary>
@@ -142,9 +145,6 @@ public class LogicGapTests
 
     // ---- Account --------------------------------------------------------------------------------
 
-    /// <summary>The fixed "current time" the account checks run at.</summary>
-    private static readonly DateTime AccountNow = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
-
     /// <summary>A persisted, confirmed account with the given lockout state.</summary>
     private static DomainAccount Account(bool locked = false, long loginAttempt = 0) =>
         DomainAccount.Reconstitute(Email, "$2a$hash", "Nick", null, Role.User, "UTC", null, locked, loginAttempt, true, true,
@@ -155,10 +155,10 @@ public class LogicGapTests
     public void Lock_KeepsTheAttemptCount_AndUnlockClearsIt()
     {
         DomainAccount account = Account(locked: false, loginAttempt: 3);
-        account.Lock(AccountNow);
+        account.Lock(Now);
         Assert.Equal(3, account.LoginAttempt);
 
-        account.Unlock(AccountNow);
+        account.Unlock(Now);
         Assert.Equal(0, account.LoginAttempt);
     }
 
@@ -166,8 +166,8 @@ public class LogicGapTests
     [Fact]
     public void NewAccounts_GetADistinctHyphenlessSecurityStamp()
     {
-        string stamp1 = DomainAccount.Create(Email, "$2a$h", "Nick", Role.User, "UTC", null, GuidToken.Generate(AccountNow), true, AccountNow).Value.SecurityStamp;
-        string stamp2 = DomainAccount.Create(Email, "$2a$h", "Nick", Role.User, "UTC", null, GuidToken.Generate(AccountNow), true, AccountNow).Value.SecurityStamp;
+        string stamp1 = DomainAccount.Create(Email, "$2a$h", "Nick", Role.User, "UTC", null, GuidToken.Generate(Now), true, Now).Value.SecurityStamp;
+        string stamp2 = DomainAccount.Create(Email, "$2a$h", "Nick", Role.User, "UTC", null, GuidToken.Generate(Now), true, Now).Value.SecurityStamp;
 
  #pragma warning disable SYSLIB1045
         Assert.Matches(new Regex("^[0-9a-f]{32}$"), stamp1);
@@ -285,7 +285,7 @@ public class LogicGapTests
         Assert.Null(DefaultMonetaryUnitPolicy.Resolve("KRW", []));
         return;
  #pragma warning disable IDE0062
-        Asset A(string name, string unit) => Asset.Create(name, Email, "FreeDepositAndWithdrawal", 1m, unit).Value;
+        Asset A(string name, string unit) => Asset.Create(name, Email, "FreeDepositAndWithdrawal", 1m, unit, Now).Value;
  #pragma warning restore IDE0062
     }
 
@@ -330,6 +330,6 @@ public class LogicGapTests
     [Fact]
     public void Asset_Create_KeepsTheNote()
     {
-        Assert.Equal("a note", Asset.Create("a", Email, "FreeDepositAndWithdrawal", 1m, "KRW", "a note").Value.Note);
+        Assert.Equal("a note", Asset.Create("a", Email, "FreeDepositAndWithdrawal", 1m, "KRW", Now, "a note").Value.Note);
     }
 }

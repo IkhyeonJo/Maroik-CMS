@@ -16,7 +16,7 @@ namespace Maroik.Core.Service.Services;
 /// A fixed-expenditure entry is a schedule, not a balance movement, so these operations are single
 /// non-transactional repository writes and read the referenced asset without a row lock.
 /// </summary>
-public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditureRepository, IAssetBalanceDomainService assetBalance) : IFixedExpenditureService
+public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditureRepository, IAssetBalanceDomainService assetBalance, TimeProvider timeProvider) : IFixedExpenditureService
 {
     /// <inheritdoc />
     public async Task<List<FixedExpenditureResponse>> GetFixedExpendituresAsync(string accountEmail, CancellationToken ct = default)
@@ -44,6 +44,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
     /// <inheritdoc />
     public async Task<ServiceResult> CreateAsync(string accountEmail, FixedExpenditureRequest request, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         var validation = ValidateClassAndDate(request);
         if (validation.IsError) return ServiceResult.FromError(validation.FirstError);
         bool requiresDepositAsset = validation.Value;
@@ -70,13 +71,13 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
         string currency = payAsset.Balance.Currency;
         var registerResult = FixedExpenditure.Register(accountEmail, request.MainClass, request.SubClass,
             request.Content, Math.Abs(request.Amount), currency, request.PaymentMethod,
-            myDepositAsset, request.DepositMonth, request.DepositDay, request.MaturityDate, request.Note);
+            myDepositAsset, request.DepositMonth, request.DepositDay, request.MaturityDate, utcNow, request.Note);
 
         if (registerResult.IsError)
             return ServiceResult.FromError(registerResult.FirstError);
 
         var fixedExpenditure = registerResult.Value;
-        ApplyUnpunctuality(fixedExpenditure, request.Unpunctuality);
+        ApplyUnpunctuality(fixedExpenditure, request.Unpunctuality, utcNow);
         await fixedExpenditureRepository.CreateAsync(fixedExpenditure, ct);
         return ServiceResult.Ok();
     }
@@ -84,6 +85,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
     /// <inheritdoc />
     public async Task<ServiceResult> UpdateAsync(string accountEmail, FixedExpenditureRequest request, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         var validation = ValidateClassAndDate(request);
         if (validation.IsError) return ServiceResult.FromError(validation.FirstError);
         bool requiresDepositAsset = validation.Value;
@@ -113,11 +115,11 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
 
         var updateResult = fe.Update(request.MainClass, request.SubClass, request.Content,
             Math.Abs(request.Amount), currency, request.PaymentMethod, myDepositAsset,
-            request.DepositMonth, request.DepositDay, request.MaturityDate, request.Note);
+            request.DepositMonth, request.DepositDay, request.MaturityDate, request.Note, utcNow);
 
         if (updateResult.IsError) return ServiceResult.FromError(updateResult.FirstError);
 
-        ApplyUnpunctuality(fe, request.Unpunctuality);
+        ApplyUnpunctuality(fe, request.Unpunctuality, utcNow);
         await fixedExpenditureRepository.UpdateEntityAsync(fe, ct);
         return ServiceResult.Ok();
     }
@@ -125,6 +127,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteAsync(string accountEmail, long id, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         FixedExpenditure? fe = await fixedExpenditureRepository.FindByEmailAndIdAsync(accountEmail, id, ct);
         if (fe == null)
             return ServiceResult.NotFound("FixedExpenditure.NotFound", "The fixed-expenditure record could not be found.");
@@ -137,12 +140,12 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
     /// Applies the user's "always notify" choice (see <c>FixedIncomeService.ApplyUnpunctuality</c>):
     /// <c>FixedExpenditure.Update</c>/<c>Register</c> do not carry it, so it must be applied here.
     /// </summary>
-    private static void ApplyUnpunctuality(FixedExpenditure fixedExpenditure, bool unpunctuality)
+    private static void ApplyUnpunctuality(FixedExpenditure fixedExpenditure, bool unpunctuality, DateTime utcNow)
     {
         if (unpunctuality)
-            fixedExpenditure.MarkUnpunctual();
+            fixedExpenditure.MarkUnpunctual(utcNow);
         else
-            fixedExpenditure.ClearUnpunctuality();
+            fixedExpenditure.ClearUnpunctuality(utcNow);
     }
 
     /// <summary>Failure returned when a transfer's payment asset and deposit asset are the same asset.</summary>

@@ -14,7 +14,7 @@ namespace Maroik.Core.Service.Services;
 /// All write operations are wrapped in a database transaction via <see cref="IUnitOfWork"/>.
 /// </summary>
 public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDomainService assetBalance, 
-    IUnitOfWork unitOfWork, ILogger<IncomeService> logger) : IIncomeService
+    IUnitOfWork unitOfWork, ILogger<IncomeService> logger, TimeProvider timeProvider) : IIncomeService
 {
     /// <inheritdoc />
     public async Task<List<IncomeResponse>> GetIncomesAsync(string accountEmail, CancellationToken ct = default)
@@ -38,6 +38,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
     /// <inheritdoc />
     public async Task<ServiceResult> CreateAsync(string accountEmail, IncomeRequest request, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -53,14 +54,14 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
 
             string currency = depositAsset.Balance.Currency;
             var incomeResult = Income.Record(accountEmail, request.MainClass, request.SubClass,
-                request.Content, Math.Abs(request.Amount), currency, request.DepositMyAssetProductName, request.Note, request.Created);
+                request.Content, Math.Abs(request.Amount), currency, request.DepositMyAssetProductName, utcNow, request.Note, request.Created);
             if (incomeResult.IsError)
                 return await unitOfWork.FailAsync(incomeResult.FirstError, ct);
 
             var income = incomeResult.Value;
             await incomeRepository.CreateAsync(income, ct);
 
-            var depositResult = depositAsset.Deposit(income.Amount);
+            var depositResult = depositAsset.Deposit(income.Amount, utcNow);
             if (depositResult.IsError)
                 return await unitOfWork.FailAsync(depositResult.FirstError, ct);
             await assetBalance.SaveAsync(depositAsset, ct);
@@ -79,6 +80,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
     /// <inheritdoc />
     public async Task<ServiceResult> UpdateAsync(string accountEmail, IncomeRequest request, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -115,13 +117,13 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
             var oldSnapshot = new IncomeSnapshot(previous.DepositMyAssetProductName, previous.Amount.Amount, previous.Amount.Currency);
 
             var updateResult = previous.Update(request.MainClass, request.SubClass, request.Content,
-                Math.Abs(request.Amount), newCurrency, request.DepositMyAssetProductName, request.Note, request.Created);
+                Math.Abs(request.Amount), newCurrency, request.DepositMyAssetProductName, request.Note, utcNow, request.Created);
             if (updateResult.IsError)
                 return await unitOfWork.FailAsync(updateResult.FirstError, ct);
 
             await incomeRepository.UpdateEntityAsync(previous, ct);
             var adjustResult = await AdjustAssetBalancesAsync(touchedAssets, oldSnapshot,
-                new IncomeSnapshot(previous.DepositMyAssetProductName, previous.Amount.Amount, previous.Amount.Currency), ct);
+                new IncomeSnapshot(previous.DepositMyAssetProductName, previous.Amount.Amount, previous.Amount.Currency), utcNow, ct);
             if (adjustResult.IsError)
                 return await unitOfWork.FailAsync(adjustResult.FirstError, ct);
 
@@ -139,6 +141,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteAsync(string accountEmail, long id, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -157,7 +160,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
                 return await unitOfWork.FailAsync(DeletedAssetResult, ct);
 
             var adjustResult = await AdjustAssetBalancesAsync(assetsToCheck,
-                new IncomeSnapshot(income.DepositMyAssetProductName, income.Amount.Amount, income.Amount.Currency), null, ct);
+                new IncomeSnapshot(income.DepositMyAssetProductName, income.Amount.Amount, income.Amount.Currency), null, utcNow, ct);
             if (adjustResult.IsError)
                 return await unitOfWork.FailAsync(adjustResult.FirstError, ct);
 
@@ -189,7 +192,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
     /// for its own pre-write validation — instead of fetching the same assets again.
     /// </summary>
     private async Task<ErrorOr<Success>> AdjustAssetBalancesAsync(
-        Dictionary<string, Asset> touchedAssets, IncomeSnapshot toRevert, IncomeSnapshot? toApply, CancellationToken ct = default)
+        Dictionary<string, Asset> touchedAssets, IncomeSnapshot toRevert, IncomeSnapshot? toApply, DateTime utcNow, CancellationToken ct = default)
     {
         List<AssetBalanceAdjustment> adjustments =
             [new(toRevert.DepositAssetName, toRevert.Amount, IsDeposit: false, Currency: toRevert.Currency)];
@@ -197,7 +200,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceDoma
             adjustments.Add(new(toApply.Value.DepositAssetName, toApply.Value.Amount, IsDeposit: true, Currency: toApply.Value.Currency));
 
         return await assetBalance.ApplyAssetBalanceAdjustmentsAsync(
-            touchedAssets, adjustments, "Income.AssetNotFound", "The asset referenced by this income could not be found.", ct);
+            touchedAssets, adjustments, "Income.AssetNotFound", "The asset referenced by this income could not be found.", utcNow, ct);
     }
 
     /// <summary>

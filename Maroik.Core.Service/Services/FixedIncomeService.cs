@@ -16,7 +16,7 @@ namespace Maroik.Core.Service.Services;
 /// A fixed-income entry is a schedule, not a balance movement, so these operations are single
 /// non-transactional repository writes and read the referenced asset without a row lock.
 /// </summary>
-public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IAssetBalanceDomainService assetBalance) : IFixedIncomeService
+public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IAssetBalanceDomainService assetBalance, TimeProvider timeProvider) : IFixedIncomeService
 {
     /// <inheritdoc />
     public async Task<List<FixedIncomeResponse>> GetFixedIncomesAsync(string accountEmail, CancellationToken ct = default)
@@ -44,6 +44,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
     /// <inheritdoc />
     public async Task<ServiceResult> CreateAsync(string accountEmail, FixedIncomeRequest request, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         var validation = ValidateRequest(request);
         if (validation.IsError) return ServiceResult.FromError(validation.FirstError);
 
@@ -57,13 +58,13 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
         var registerResult = FixedIncome.Register(accountEmail, request.MainClass, request.SubClass,
             request.Content, Math.Abs(request.Amount), currency,
             request.DepositMyAssetProductName, request.DepositMonth, request.DepositDay,
-            request.MaturityDate, request.Note);
+            request.MaturityDate, utcNow, request.Note);
 
         if (registerResult.IsError)
             return ServiceResult.FromError(registerResult.FirstError);
 
         var fixedIncome = registerResult.Value;
-        ApplyUnpunctuality(fixedIncome, request.Unpunctuality);
+        ApplyUnpunctuality(fixedIncome, request.Unpunctuality, utcNow);
         await fixedIncomeRepository.CreateAsync(fixedIncome, ct);
         return ServiceResult.Ok();
     }
@@ -71,6 +72,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
     /// <inheritdoc />
     public async Task<ServiceResult> UpdateAsync(string accountEmail, FixedIncomeRequest request, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         var validation = ValidateRequest(request);
         if (validation.IsError) return ServiceResult.FromError(validation.FirstError);
 
@@ -87,11 +89,11 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
 
         var updateResult = fi.Update(request.MainClass, request.SubClass, request.Content,
             Math.Abs(request.Amount), currency, request.DepositMyAssetProductName,
-            request.DepositMonth, request.DepositDay, request.MaturityDate, request.Note);
+            request.DepositMonth, request.DepositDay, request.MaturityDate, request.Note, utcNow);
 
         if (updateResult.IsError) return ServiceResult.FromError(updateResult.FirstError);
 
-        ApplyUnpunctuality(fi, request.Unpunctuality);
+        ApplyUnpunctuality(fi, request.Unpunctuality, utcNow);
         await fixedIncomeRepository.UpdateEntityAsync(fi, ct);
         return ServiceResult.Ok();
     }
@@ -99,6 +101,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteAsync(string accountEmail, long id, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         FixedIncome? fi = await fixedIncomeRepository.FindByEmailAndIdAsync(accountEmail, id, ct);
         if (fi == null)
             return ServiceResult.NotFound("FixedIncome.NotFound", "The fixed-income record could not be found.");
@@ -112,12 +115,12 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
     /// carry it, so without this the edit form's Unpunctuality checkbox would reach the request and
     /// then be silently dropped — the flag could never be set or cleared.
     /// </summary>
-    private static void ApplyUnpunctuality(FixedIncome fixedIncome, bool unpunctuality)
+    private static void ApplyUnpunctuality(FixedIncome fixedIncome, bool unpunctuality, DateTime utcNow)
     {
         if (unpunctuality)
-            fixedIncome.MarkUnpunctual();
+            fixedIncome.MarkUnpunctual(utcNow);
         else
-            fixedIncome.ClearUnpunctuality();
+            fixedIncome.ClearUnpunctuality(utcNow);
     }
 
     /// <summary>Failure returned when the chosen deposit asset has been soft-deleted.</summary>

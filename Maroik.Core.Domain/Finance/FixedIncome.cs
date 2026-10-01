@@ -66,7 +66,8 @@ public sealed class FixedIncome : AggregateRoot<long>
         short depositMonth,
         short depositDay,
         DateTime maturityDate,
-        string? note) : base(id)
+        string? note,
+        DateTime utcNow) : base(id)
     {
         AccountEmail = accountEmail;
         MainClass = mainClass;
@@ -78,11 +79,11 @@ public sealed class FixedIncome : AggregateRoot<long>
         DepositDay = depositDay;
         MaturityDate = maturityDate;
         Note = note;
-        Created = DateTime.UtcNow;
-        Updated = DateTime.UtcNow;
+        Created = utcNow;
+        Updated = utcNow;
     }
 
-    /// <summary>Reconstitution constructor: assigns every field verbatim from trusted storage with no <see cref="DateTime.UtcNow"/> side effect.</summary>
+    /// <summary>Reconstitution constructor: assigns every field verbatim from trusted storage with no new timestamps.</summary>
     private FixedIncome(
         long id, Email accountEmail, string mainClass, string subClass, string? content, Money amount,
         string depositMyAssetProductName, short depositMonth, short depositDay, DateTime maturityDate,
@@ -159,6 +160,7 @@ public sealed class FixedIncome : AggregateRoot<long>
         short depositMonth,
         short depositDay,
         DateTime maturityDate,
+        DateTime utcNow,
         string? note = null)
     {
         var coreResult = ValidateCoreFields(mainClass, subClass, depositMyAssetProductName, depositMonth, depositDay, amount, content, note);
@@ -170,13 +172,13 @@ public sealed class FixedIncome : AggregateRoot<long>
         var moneyResult = Money.Create(amount, currency);
         if (moneyResult.IsError) return moneyResult.Errors;
 
-        if (!FixedSchedulePolicy.IsAcceptableMaturityDate(maturityDate, DateTime.UtcNow))
+        if (!FixedSchedulePolicy.IsAcceptableMaturityDate(maturityDate, utcNow))
             return LocalizableError.Validation("FixedIncome.MaturityDateInPast",
                 "The maturity date cannot be earlier than the current date.");
 
         var (validMainClass, validSubClass, validDepositAsset) = coreResult.Value;
         var fixedIncome = new FixedIncome(0, emailResult.Value, validMainClass, validSubClass, content,
-            moneyResult.Value, validDepositAsset, depositMonth, depositDay, maturityDate, note);
+            moneyResult.Value, validDepositAsset, depositMonth, depositDay, maturityDate, note, utcNow);
 
         return fixedIncome;
     }
@@ -223,17 +225,17 @@ public sealed class FixedIncome : AggregateRoot<long>
     // ------------------------------------------------------------------------
 
     /// <summary>Sets the "always notify" (<see cref="Unpunctuality"/>) flag.</summary>
-    public void MarkUnpunctual()
+    public void MarkUnpunctual(DateTime utcNow)
     {
         Unpunctuality = true;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Clears the "always notify" (<see cref="Unpunctuality"/>) flag, returning to date-based notice.</summary>
-    public void ClearUnpunctuality()
+    public void ClearUnpunctuality(DateTime utcNow)
     {
         Unpunctuality = false;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Updates all editable fields.</summary>
@@ -247,7 +249,8 @@ public sealed class FixedIncome : AggregateRoot<long>
         short depositMonth,
         short depositDay,
         DateTime maturityDate,
-        string? note)
+        string? note,
+        DateTime utcNow)
     {
         var coreResult = ValidateCoreFields(mainClass, subClass, depositMyAssetProductName, depositMonth, depositDay, amount, content, note);
         if (coreResult.IsError) return coreResult.Errors;
@@ -258,7 +261,7 @@ public sealed class FixedIncome : AggregateRoot<long>
         // Reject moving the maturity date into the past, but let an edit that leaves an already
         // past date untouched through, so an expired schedule's other fields stay editable.
         if (maturityDate.Date != MaturityDate.Date
-            && !FixedSchedulePolicy.IsAcceptableMaturityDate(maturityDate, DateTime.UtcNow))
+            && !FixedSchedulePolicy.IsAcceptableMaturityDate(maturityDate, utcNow))
             return LocalizableError.Validation("FixedIncome.MaturityDateInPast",
                 "The maturity date cannot be earlier than the current date.");
 
@@ -272,7 +275,7 @@ public sealed class FixedIncome : AggregateRoot<long>
         DepositDay = depositDay;
         MaturityDate = maturityDate;
         Note = note;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 }

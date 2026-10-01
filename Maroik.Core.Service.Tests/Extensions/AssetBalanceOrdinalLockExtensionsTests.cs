@@ -14,6 +14,9 @@ namespace Maroik.Core.Service.Tests.Extensions;
 /// </summary>
 public class AssetBalanceOrdinalLockExtensionsTests
 {
+    /// <summary>The fixed "current time" passed to the adjustments.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>Owner e-mail of every asset in these tests.</summary>
     private const string Email = "user@example.com";
 
@@ -122,7 +125,7 @@ public class AssetBalanceOrdinalLockExtensionsTests
 
         var result = await _assetBalance.Object.ApplyAssetBalanceAdjustmentsAsync(
             Email, [new AssetBalanceAdjustment("Wallet", 30m, IsDeposit: true)],
-            "NotFound", "not found", TestContext.Current.CancellationToken);
+            "NotFound", "not found", Now, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsError);
         _assetBalance.Verify(a => a.GetAssetsAsync(Email, It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -145,7 +148,7 @@ public class AssetBalanceOrdinalLockExtensionsTests
 
         var result = await _assetBalance.Object.ApplyAssetBalanceAdjustmentsAsync(
             assets, [new AssetBalanceAdjustment("Wallet", 30m, IsDeposit: true)],
-            "NotFound", "not found", TestContext.Current.CancellationToken);
+            "NotFound", "not found", Now, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsError);
         _assetBalance.Verify(a => a.GetAssetsAsync(It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -173,7 +176,7 @@ public class AssetBalanceOrdinalLockExtensionsTests
                 new AssetBalanceAdjustment("Payment", 40m, IsDeposit: false),
                 new AssetBalanceAdjustment("Deposit", 40m, IsDeposit: true)
             ],
-            "NotFound", "not found", TestContext.Current.CancellationToken);
+            "NotFound", "not found", Now, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsError);
         Assert.Equal(60m, payment.Balance.Amount);
@@ -194,7 +197,7 @@ public class AssetBalanceOrdinalLockExtensionsTests
 
         var result = await _assetBalance.Object.ApplyAssetBalanceAdjustmentsAsync(
             assets, [new AssetBalanceAdjustment(null, 10m, IsDeposit: true), new AssetBalanceAdjustment("", 10m, IsDeposit: true)],
-            "NotFound", "not found", TestContext.Current.CancellationToken);
+            "NotFound", "not found", Now, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsError);
         Assert.Equal(0, saveCalls);
@@ -215,7 +218,7 @@ public class AssetBalanceOrdinalLockExtensionsTests
                 new AssetBalanceAdjustment("Wallet", 10m, IsDeposit: true),
                 new AssetBalanceAdjustment("Missing", 10m, IsDeposit: true)
             ],
-            "Income.AssetNotFound", "The asset could not be found.", TestContext.Current.CancellationToken);
+            "Income.AssetNotFound", "The asset could not be found.", Now, TestContext.Current.CancellationToken);
 
         Assert.True(result.IsError);
         Assert.Equal("Income.AssetNotFound", result.FirstError.Code);
@@ -233,7 +236,7 @@ public class AssetBalanceOrdinalLockExtensionsTests
 
         var result = await _assetBalance.Object.ApplyAssetBalanceAdjustmentsAsync(
             assets, [new AssetBalanceAdjustment("Wallet", 10m, IsDeposit: true, Currency: "USD")],
-            "NotFound", "not found", TestContext.Current.CancellationToken);
+            "NotFound", "not found", Now, TestContext.Current.CancellationToken);
 
         Assert.True(result.IsError);
         Assert.Equal("Asset.CurrencyMismatch", result.FirstError.Code);

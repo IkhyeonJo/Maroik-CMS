@@ -18,7 +18,8 @@ namespace Maroik.Core.Service.Services;
 public class AssetService(
     IAssetRepository assetRepository,
     IUnitOfWork unitOfWork,
-    ILogger<AssetService> logger) : IAssetService
+    ILogger<AssetService> logger,
+    TimeProvider timeProvider) : IAssetService
 {
     /// <inheritdoc />
     public async Task<List<AssetResponse>> GetAssetsAsync(string accountEmail, CancellationToken ct = default)
@@ -42,6 +43,7 @@ public class AssetService(
     /// <inheritdoc />
     public async Task<ServiceResult> CreateAsync(string accountEmail, AssetRequest request, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         if (!AssetItems.IsKnown(request.Item))
             return ServiceResult.Validation("Asset.ItemInvalid", "Asset category (item) is not a recognised value.");
 
@@ -60,6 +62,7 @@ public class AssetService(
             request.Item,
             request.Amount,
             request.MonetaryUnit,
+            utcNow,
             request.Note);
 
         if (createResult.IsError)
@@ -93,6 +96,7 @@ public class AssetService(
     /// <inheritdoc />
     public async Task<ServiceResult> UpdateAsync(string accountEmail, AssetRequest request, string originalProductName, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -114,7 +118,7 @@ public class AssetService(
 
             // Fall back to the existing currency when the request does not specify one.
             string currency = request.MonetaryUnit ?? asset.Balance.Currency;
-            var updateResult = asset.Update(request.ProductName ?? originalProductName, request.Item ?? asset.Item, request.Amount, currency, request.Note, request.Deleted);
+            var updateResult = asset.Update(request.ProductName ?? originalProductName, request.Item ?? asset.Item, request.Amount, currency, request.Note, request.Deleted, utcNow);
             if (updateResult.IsError)
             {
                 await unitOfWork.RollbackAsync(ct);
@@ -155,6 +159,7 @@ public class AssetService(
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteAsync(string accountEmail, string productName, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -170,7 +175,7 @@ public class AssetService(
             }
 
             // Soft-delete preserves the record for historical reporting while hiding it from active use.
-            asset.SoftDelete();
+            asset.SoftDelete(utcNow);
 
             await assetRepository.UpdateEntityAsync(asset, ct);
             await unitOfWork.CommitAsync(ct);

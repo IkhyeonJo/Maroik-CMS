@@ -9,6 +9,9 @@ namespace Maroik.Core.Domain.Tests.Finance;
 /// </summary>
 public class AssetTests
 {
+    /// <summary>The fixed "current time" every domain call in this class receives.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>Creates a valid asset; each argument can be overridden per test.</summary>
     private static Asset ValidAsset(
         string productName = "My Bank",
@@ -16,15 +19,29 @@ public class AssetTests
         string item = "FreeDepositAndWithdrawal",
         decimal amount = 1000m,
         string currency = "KRW")
-        => Asset.Create(productName, email, item, amount, currency).Value;
+        => Asset.Create(productName, email, item, amount, currency, Now).Value;
 
     // -- Create ---------------------------------------------------------------
+
+    /// <summary>A new asset's Created and Updated are the instant passed in; later changes stamp only Updated.</summary>
+    [Fact]
+    public void Create_StampsCreatedAndUpdated_WithTheGivenInstant_AndDepositStampsUpdated()
+    {
+        var asset = ValidAsset();
+
+        Assert.Equal(Now, asset.Created);
+        Assert.Equal(asset.Created, asset.Updated);
+
+        Assert.False(asset.Deposit(Money.Create(1m, "KRW").Value, Now.AddMinutes(5)).IsError);
+        Assert.Equal(Now, asset.Created);
+        Assert.Equal(Now.AddMinutes(5), asset.Updated);
+    }
 
     /// <summary>Create returns asset, when valid.</summary>
     [Fact]
     public void Create_ReturnsAsset_WhenValid()
     {
-        var result = Asset.Create("Savings", "user@example.com", "FreeDepositAndWithdrawal", 5000m, "KRW");
+        var result = Asset.Create("Savings", "user@example.com", "FreeDepositAndWithdrawal", 5000m, "KRW", Now);
 
         Assert.False(result.IsError);
         Assert.Equal("Savings", result.Value.ProductName);
@@ -38,7 +55,7 @@ public class AssetTests
     [InlineData("   ")]
     public void Create_ReturnsError_WhenProductNameEmpty(string? name)
     {
-        var result = Asset.Create(name, "user@example.com", "FreeDepositAndWithdrawal", 0m, "KRW");
+        var result = Asset.Create(name, "user@example.com", "FreeDepositAndWithdrawal", 0m, "KRW", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Asset.ProductNameEmpty", result.FirstError.Code);
@@ -51,7 +68,7 @@ public class AssetTests
     [InlineData("   ")]
     public void Create_ReturnsError_WhenItemEmpty(string? item)
     {
-        var result = Asset.Create("Savings", "user@example.com", item, 0m, "KRW");
+        var result = Asset.Create("Savings", "user@example.com", item, 0m, "KRW", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Asset.ItemEmpty", result.FirstError.Code);
@@ -69,7 +86,7 @@ public class AssetTests
     [InlineData("freeDepositAndWithdrawal")]
     public void Create_ReturnsError_WhenItemNotRecognised(string item)
     {
-        var result = Asset.Create("Savings", "user@example.com", item, 0m, "KRW");
+        var result = Asset.Create("Savings", "user@example.com", item, 0m, "KRW", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Asset.ItemInvalid", result.FirstError.Code);
@@ -79,7 +96,7 @@ public class AssetTests
     [Fact]
     public void Create_ReturnsError_WhenEmailInvalid()
     {
-        var result = Asset.Create("Savings", "bademail", "FreeDepositAndWithdrawal", 0m, "KRW");
+        var result = Asset.Create("Savings", "bademail", "FreeDepositAndWithdrawal", 0m, "KRW", Now);
 
         Assert.True(result.IsError);
     }
@@ -88,7 +105,7 @@ public class AssetTests
     [Fact]
     public void Create_ReturnsError_WhenCurrencyEmpty()
     {
-        var result = Asset.Create("Savings", "user@example.com", "FreeDepositAndWithdrawal", 0m, null);
+        var result = Asset.Create("Savings", "user@example.com", "FreeDepositAndWithdrawal", 0m, null, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Money.CurrencyEmpty", result.FirstError.Code);
@@ -102,7 +119,7 @@ public class AssetTests
     {
         var asset = ValidAsset(amount: 1000m);
 
-        asset.Deposit(Money.Create(500m, "KRW").Value);
+        asset.Deposit(Money.Create(500m, "KRW").Value, Now);
 
         Assert.Equal(1500m, asset.Balance.Amount);
     }
@@ -113,7 +130,7 @@ public class AssetTests
     {
         var asset = ValidAsset(amount: 1000m);
 
-        asset.Withdraw(Money.Create(300m, "KRW").Value);
+        asset.Withdraw(Money.Create(300m, "KRW").Value, Now);
 
         Assert.Equal(700m, asset.Balance.Amount);
     }
@@ -128,7 +145,7 @@ public class AssetTests
     {
         var asset = ValidAsset(amount: FinanceAmountPolicy.MaxAbsoluteAmount);
 
-        var result = asset.Deposit(Money.Create(0.01m, "KRW").Value);
+        var result = asset.Deposit(Money.Create(0.01m, "KRW").Value, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Finance.AmountOutOfRange", result.FirstError.Code);
@@ -141,7 +158,7 @@ public class AssetTests
     {
         var asset = ValidAsset(amount: -FinanceAmountPolicy.MaxAbsoluteAmount);
 
-        var result = asset.Withdraw(Money.Create(0.01m, "KRW").Value);
+        var result = asset.Withdraw(Money.Create(0.01m, "KRW").Value, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Finance.AmountOutOfRange", result.FirstError.Code);
@@ -154,7 +171,7 @@ public class AssetTests
     {
         var asset = ValidAsset(amount: FinanceAmountPolicy.MaxAbsoluteAmount - 1m);
 
-        var result = asset.Deposit(Money.Create(1m, "KRW").Value);
+        var result = asset.Deposit(Money.Create(1m, "KRW").Value, Now);
 
         Assert.False(result.IsError);
         Assert.Equal(FinanceAmountPolicy.MaxAbsoluteAmount, asset.Balance.Amount);
@@ -166,7 +183,7 @@ public class AssetTests
     {
         var asset = ValidAsset(amount: 1000m, currency: "KRW");
 
-        var result = asset.Deposit(Money.Create(500m, "USD").Value);
+        var result = asset.Deposit(Money.Create(500m, "USD").Value, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Asset.CurrencyMismatch", result.FirstError.Code);
@@ -179,7 +196,7 @@ public class AssetTests
     {
         var asset = ValidAsset(amount: 1000m, currency: "KRW");
 
-        var result = asset.Withdraw(Money.Create(300m, "USD").Value);
+        var result = asset.Withdraw(Money.Create(300m, "USD").Value, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Asset.CurrencyMismatch", result.FirstError.Code);
@@ -195,7 +212,7 @@ public class AssetTests
         var asset = ValidAsset(amount: 1000m, currency: "KRW");
         var newBalance = Money.Create(9999m, "KRW").Value;
 
-        var result = asset.SetBalance(newBalance);
+        var result = asset.SetBalance(newBalance, Now);
 
         Assert.False(result.IsError);
         Assert.Equal(9999m, asset.Balance.Amount);
@@ -208,7 +225,7 @@ public class AssetTests
         var asset = ValidAsset(currency: "KRW");
         var usdBalance = Money.Create(100m, "USD").Value;
 
-        var result = asset.SetBalance(usdBalance);
+        var result = asset.SetBalance(usdBalance, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Asset.CurrencyMismatch", result.FirstError.Code);
@@ -222,7 +239,7 @@ public class AssetTests
     {
         var asset = ValidAsset();
 
-        var result = asset.Update("New Name", "InvestmentAsset", 2000m, "KRW", "memo", false);
+        var result = asset.Update("New Name", "InvestmentAsset", 2000m, "KRW", "memo", false, Now);
 
         Assert.False(result.IsError);
         Assert.Equal("New Name", asset.ProductName);
@@ -236,7 +253,7 @@ public class AssetTests
     {
         var asset = ValidAsset();
 
-        var result = asset.Update("", "FreeDepositAndWithdrawal", 0m, "KRW", null, false);
+        var result = asset.Update("", "FreeDepositAndWithdrawal", 0m, "KRW", null, false, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Asset.ProductNameEmpty", result.FirstError.Code);
@@ -250,7 +267,7 @@ public class AssetTests
     {
         var asset = ValidAsset();
 
-        var result = asset.Update("Name", "", 0m, "KRW", null, false);
+        var result = asset.Update("Name", "", 0m, "KRW", null, false, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Asset.ItemEmpty", result.FirstError.Code);
@@ -262,7 +279,7 @@ public class AssetTests
     {
         var asset = ValidAsset();
 
-        var result = asset.Update("Name", "Stock", 1000m, "KRW", null, false);
+        var result = asset.Update("Name", "Stock", 1000m, "KRW", null, false, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Asset.ItemInvalid", result.FirstError.Code);
@@ -275,7 +292,7 @@ public class AssetTests
         var asset = ValidAsset();
         string originalCurrency = asset.Balance.Currency;
 
-        var result = asset.Update("Name", "FreeDepositAndWithdrawal", 1000m, "", null, false);
+        var result = asset.Update("Name", "FreeDepositAndWithdrawal", 1000m, "", null, false, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Money.CurrencyEmpty", result.FirstError.Code);
@@ -290,7 +307,7 @@ public class AssetTests
     {
         var asset = ValidAsset();
 
-        asset.UpdateNote("memo text");
+        asset.UpdateNote("memo text", Now);
 
         Assert.Equal("memo text", asset.Note);
     }
@@ -300,9 +317,9 @@ public class AssetTests
     public void UpdateNote_ClearsNote_WhenNull()
     {
         var asset = ValidAsset();
-        asset.UpdateNote("memo");
+        asset.UpdateNote("memo", Now);
 
-        asset.UpdateNote(null);
+        asset.UpdateNote(null, Now);
 
         Assert.Null(asset.Note);
     }
@@ -315,7 +332,7 @@ public class AssetTests
     {
         var asset = ValidAsset();
 
-        asset.SoftDelete();
+        asset.SoftDelete(Now);
 
         Assert.True(asset.Deleted);
     }

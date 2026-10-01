@@ -48,7 +48,8 @@ public sealed class Income : AggregateRoot<long>
         string? content,
         Money amount,
         string depositMyAssetProductName,
-        string? note) : base(id)
+        string? note,
+        DateTime utcNow) : base(id)
     {
         AccountEmail = accountEmail;
         MainClass = mainClass;
@@ -57,11 +58,11 @@ public sealed class Income : AggregateRoot<long>
         Amount = amount;
         DepositMyAssetProductName = depositMyAssetProductName;
         Note = note;
-        Created = DateTime.UtcNow;
-        Updated = DateTime.UtcNow;
+        Created = utcNow;
+        Updated = utcNow;
     }
 
-    /// <summary>Reconstitution constructor: assigns every field verbatim from trusted storage with no <see cref="DateTime.UtcNow"/> side effect.</summary>
+    /// <summary>Reconstitution constructor: assigns every field verbatim from trusted storage with no new timestamps.</summary>
     private Income(
         long id, Email accountEmail, string mainClass, string subClass, string? content, Money amount,
         string depositMyAssetProductName, string? note, DateTime created, DateTime updated) : base(id)
@@ -122,6 +123,7 @@ public sealed class Income : AggregateRoot<long>
         decimal amount,
         string? currency,
         string? depositMyAssetProductName,
+        DateTime utcNow,
         string? note = null,
         DateTime? created = null)
     {
@@ -136,7 +138,7 @@ public sealed class Income : AggregateRoot<long>
 
         var (validMainClass, validSubClass, validDepositAsset) = coreResult.Value;
         var income = new Income(0, emailResult.Value, validMainClass, validSubClass, content,
-            moneyResult.Value, validDepositAsset, note);
+            moneyResult.Value, validDepositAsset, note, utcNow);
 
         if (created.HasValue)
             income.Created = created.Value;
@@ -193,6 +195,7 @@ public sealed class Income : AggregateRoot<long>
         string? currency,
         string? depositMyAssetProductName,
         string? note,
+        DateTime utcNow,
         DateTime? created = null)
     {
         var coreResult = ValidateCoreFields(mainClass, subClass, depositMyAssetProductName, content, amount, note);
@@ -210,7 +213,7 @@ public sealed class Income : AggregateRoot<long>
         Note = note;
         if (created.HasValue)
             Created = created.Value;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 }

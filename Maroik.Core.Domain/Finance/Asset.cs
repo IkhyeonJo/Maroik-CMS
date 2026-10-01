@@ -51,17 +51,18 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         string productName,
         Email accountEmail,
         string item,
-        Money balance) : base((productName, accountEmail.Value))
+        Money balance,
+        DateTime utcNow) : base((productName, accountEmail.Value))
     {
         ProductName = productName;
         AccountEmail = accountEmail;
         Item = item;
         Balance = balance;
-        Created = DateTime.UtcNow;
-        Updated = DateTime.UtcNow;
+        Created = utcNow;
+        Updated = utcNow;
     }
 
-    /// <summary>Reconstitution constructor: assigns every field verbatim from trusted storage with no <see cref="DateTime.UtcNow"/> side effect.</summary>
+    /// <summary>Reconstitution constructor: assigns every field verbatim from trusted storage with no new timestamps.</summary>
     private Asset(
         string productName, Email accountEmail, string item, Money balance,
         string? note, bool deleted, DateTime created, DateTime updated) : base((productName, accountEmail.Value))
@@ -115,6 +116,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         string? item,
         decimal amount,
         string? currency,
+        DateTime utcNow,
         string? note = null)
     {
         if (string.IsNullOrWhiteSpace(productName))
@@ -141,7 +143,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         var moneyResult = Money.Create(amount, currency);
         if (moneyResult.IsError) return moneyResult.Errors;
 
-        var asset = new Asset(productName, emailResult.Value, item, moneyResult.Value)
+        var asset = new Asset(productName, emailResult.Value, item, moneyResult.Value, utcNow)
         {
             Note = note
         };
@@ -170,7 +172,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
     }
 
     /// <summary>Adds the given amount to the balance (e.g. on income deposit).</summary>
-    public ErrorOr<Success> Deposit(Money amount)
+    public ErrorOr<Success> Deposit(Money amount, DateTime utcNow)
     {
         if (amount.Currency != Balance.Currency)
             return LocalizableError.Validation("Asset.CurrencyMismatch", "Cannot deposit a different currency into this asset.");
@@ -184,12 +186,12 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         if (rangeResult.IsError) return rangeResult.Errors;
 
         Balance = addResult.Value;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
     /// <summary>Subtracts the given amount from the balance (e.g. on expenditure payment).</summary>
-    public ErrorOr<Success> Withdraw(Money amount)
+    public ErrorOr<Success> Withdraw(Money amount, DateTime utcNow)
     {
         if (amount.Currency != Balance.Currency)
             return LocalizableError.Validation("Asset.CurrencyMismatch", "Cannot withdraw a different currency from this asset.");
@@ -202,12 +204,12 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         if (rangeResult.IsError) return rangeResult.Errors;
 
         Balance = subtractResult.Value;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
     /// <summary>Directly sets the balance to the given value (e.g. reconciliation).</summary>
-    public ErrorOr<Success> SetBalance(Money newBalance)
+    public ErrorOr<Success> SetBalance(Money newBalance, DateTime utcNow)
     {
         if (newBalance.Currency != Balance.Currency)
             return LocalizableError.Validation("Asset.CurrencyMismatch", "Cannot change the currency of an existing asset.");
@@ -216,7 +218,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         if (rangeResult.IsError) return rangeResult.Errors;
 
         Balance = newBalance;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
@@ -224,7 +226,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
     /// Updates all editable fields of the asset, including renaming and currency changes.
     /// Used by the service layer when an admin/user modifies asset details.
     /// </summary>
-    public ErrorOr<Success> Update(string productName, string item, decimal amount, string currency, string? note, bool deleted)
+    public ErrorOr<Success> Update(string productName, string item, decimal amount, string currency, string? note, bool deleted, DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(productName))
             return LocalizableError.Validation("Asset.ProductNameEmpty", "Product name cannot be empty.");
@@ -249,21 +251,21 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         Balance = moneyResult.Value;
         Note = note;
         Deleted = deleted;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
     /// <summary>Updates the optional memo attached to this asset.</summary>
-    public void UpdateNote(string? note)
+    public void UpdateNote(string? note, DateTime utcNow)
     {
         Note = note;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Marks the asset as logically deleted.</summary>
-    public void SoftDelete()
+    public void SoftDelete(DateTime utcNow)
     {
         Deleted = true;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 }
