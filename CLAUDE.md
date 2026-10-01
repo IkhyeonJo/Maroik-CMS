@@ -26,6 +26,69 @@ logic into the Core layers:
 
 @.claude/rules/frontend-no-business-logic.md
 
+## Intended design — do not "fix" these
+
+The items below look like gaps or smells but are deliberate. Do not change them, add guards around
+them, or refactor them away unless the owner explicitly asks for that specific change.
+
+Deployment and schema
+- Every deployment wipes the server data and recreates the database from `Init.sql`. There are no
+  production migrations, no data back-fills and no backward-compatibility concerns. A schema change
+  means editing `Init.sql` (every variant) and the EF Core model so they match — nothing else.
+
+Authorization and navigation
+- The navigation menu is the access-control list: a `Category` maps to one controller, a `SubCategory`
+  to one action, and `AuthorizationFilter` allows a GET only when it resolves to a menu item for the
+  role. Controller boundaries follow the menu, so large controllers (organized with `#region`) and
+  mode-switching GET actions such as `FreeForum(method = "edit")` are intended. Do not split controllers
+  (including into partial classes) or add GET actions that would need new menu rows.
+- `AuthorizationFilter.Deny()` redirects to `/Dashboard/AnonymousIndex`, and each role's `_Layout`
+  script has a global `ajaxError` handler that sends every failed AJAX call to the same page. The two
+  work as a pair; keep both.
+- An administrator can change, lock or delete their own account and edit or delete any menu entry,
+  including the ones that grant their own access. No self-lockout or last-admin protection is wanted.
+
+Accounts
+- A failed-login lockout is permanent until the user resets the password or an admin unlocks the
+  account. A successful password reset always unlocks the account, including an admin-imposed lock.
+  Admin sanctions use `AdminResetPassword` + `MustChangePassword`, not `Locked`.
+- Registration and password-reset tokens are stored in the database as plain values (they expire after
+  24 hours). The admin account grid intentionally shows, exports and searches `HashedPassword`,
+  `RegistrationToken` and `ResetPasswordToken`.
+- IP-based rate limiting is done at Cloudflare. Do not add `AddRateLimiter` or IP-keyed throttling in
+  the app (behind Cloudflare, `RemoteIpAddress` is an edge address shared by every visitor).
+
+Finance
+- An asset's currency label can be edited at any time (e.g. "원" → "KRW"). Never reject a currency
+  change, whatever the existing balance looks like.
+
+Files and content
+- Maroik.FileStorage is only ever reachable on the internal network; its `[AllowAnonymous]` endpoints
+  and always-on Swagger UI are intended.
+- Editing a post, private note or calendar event without choosing a new file removes the existing
+  attachment (pinned by tests such as `EditBoardAsync_ClearsTheExistingAttachmentRecord_WhenNoFileIsSubmitted`).
+- Inline images in post / event bodies are fetched and embedded as base64 on every view
+  (`PrepareHtmlForDisplayAsync`). Keep that rendering path.
+
+Calendar
+- `GetCalendarEvents` loads every event of the selected calendars at once and the client pages through
+  them locally; `CalendarController` filters the requested calendars down to the ones the viewer may
+  see. No date-range querying.
+- Event reminders are stored but never delivered, and `CalendarRecurrence` / `RecurrenceId` are unused.
+  Both are unimplemented on purpose — do not implement delivery and do not drop the table.
+
+Client scripts
+- No bundler, no `import`/`export`: every `site.ts` is an IIFE global script compiled 1:1.
+- Each role (`admin` / `user` / `anonymous`) keeps its own script per view, even when two scripts are
+  nearly identical. Do not merge them into shared scripts; the only shared helpers are the `window`
+  globals each role's `_Layout` script defines.
+
+Error handling
+- Controller actions keep their per-action `catch` blocks and return HTTP 200 with
+  `{ result, error }`; exceptions are logged on the server. A genuine input-validation failure shows its
+  specific reason (or "Input is invalid"), while an infrastructure failure shows a generic
+  "temporary error, please try again" message.
+
 ## Strict TDD — no test, no code
 
 All new and changed code is written test-first. This is a hard rule, not a preference:
