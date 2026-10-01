@@ -6,6 +6,7 @@ using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Maroik.Core.Service.Tests.Services;
@@ -35,10 +36,15 @@ public class ProfileServiceAuditLoggingTests
     /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<ProfileService> _logger = new();
 
+    /// <summary>The fixed "current time" of these tests.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+    /// <summary>The clock the service under test reads, stopped at <see cref="Now"/>.</summary>
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(Now));
+
     /// <summary>The service under test over the mocked dependencies and the capturing logger.</summary>
     private ProfileService CreateSut() => new(_accountRepo.Object, _assetRepo.Object, _passwordService.Object,
         _fileClient.Object, _imageValidator.Object,
-        Options.Create(new ServerSetting { FileStorageBaseUrl = "http://localhost:5001" }), _unitOfWork.Object, _logger);
+        Options.Create(new ServerSetting { FileStorageBaseUrl = "http://localhost:5001" }), _unitOfWork.Object, _logger, _time);
 
     /// <summary>The persisted account for <see cref="Email"/>.</summary>
     private static Account Existing() =>

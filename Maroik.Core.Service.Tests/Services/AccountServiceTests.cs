@@ -8,6 +8,7 @@ using Maroik.Core.Domain.Account;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 // ReSharper disable AccessToDisposedClosure
 
@@ -51,6 +52,11 @@ public class AccountServiceTests
     public AccountServiceTests() =>
         _passwordService.Setup(p => p.VerifyPassword(ConfirmPassword, It.IsAny<string>())).Returns(true);
 
+    /// <summary>The fixed "current time" of these tests.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+    /// <summary>The clock the service under test reads, stopped at <see cref="Now"/>.</summary>
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(Now));
+
     /// <summary>The service under test over the mocked dependencies.</summary>
     private AccountService CreateSut() => new(
         _accountRepo.Object,
@@ -60,7 +66,8 @@ public class AccountServiceTests
         _settings,
         _rsa.Object,
         NullLogger<AccountService>.Instance,
-        _unitOfWork.Object);
+        _unitOfWork.Object,
+        _time);
 
     // -- Helpers --------------------------------------------------------------
 
@@ -351,7 +358,7 @@ public class AccountServiceTests
         Assert.False(created.Locked);
         Assert.False(created.EmailConfirmed);
         Assert.False(created.Deleted);
-        Assert.True(GuidToken.IsTokenAlive(created.RegistrationToken!));
+        Assert.True(GuidToken.IsTokenAlive(created.RegistrationToken!, Now));
     }
 
     /// <summary>
@@ -600,7 +607,7 @@ public class AccountServiceTests
     [Fact]
     public async Task RegisterAsync_ResendsConfirmationEmail_WhenAccountExistsButNotConfirmed()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var existing = ActiveAccount(emailConfirmed: false, registrationToken: token);
         SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
         _rsa.Setup(r => r.Encrypt(It.IsAny<string>())).Returns("enc-token");
@@ -721,7 +728,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_ReturnsInvalidToken_WhenAccountNotFound()
     {
-        string freshToken = GuidToken.Generate();
+        string freshToken = GuidToken.Generate(Now);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
         var sut = CreateSut();
@@ -752,7 +759,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_ConfirmsAccount_WhenTokenIsValid()
     {
-        string freshToken = GuidToken.Generate();
+        string freshToken = GuidToken.Generate(Now);
         var account = ActiveAccount(emailConfirmed: false, registrationToken: freshToken);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
@@ -781,7 +788,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_ReturnsInvalidTokenNotCreated_WhenAccountVanishesBeforeWrite()
     {
-        string freshToken = GuidToken.Generate();
+        string freshToken = GuidToken.Generate(Now);
         var account = ActiveAccount(emailConfirmed: false, registrationToken: freshToken);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
@@ -806,7 +813,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_DoesNotUseFullRowUpdate_WhenTokenIsValid()
     {
-        string freshToken = GuidToken.Generate();
+        string freshToken = GuidToken.Generate(Now);
         var account = ActiveAccount(emailConfirmed: false, registrationToken: freshToken);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
@@ -825,7 +832,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_ReturnsNotCreated_WhenAccountAlreadyConfirmed()
     {
-        string freshToken = GuidToken.Generate();
+        string freshToken = GuidToken.Generate(Now);
         var account = ActiveAccount(emailConfirmed: true);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
@@ -982,7 +989,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ValidateResetPasswordTokenAsync_ReturnsToken_WhenValid()
     {
-        string freshToken = GuidToken.Generate();
+        string freshToken = GuidToken.Generate(Now);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ActiveAccount());
@@ -1027,7 +1034,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ResetPasswordAsync_UpdatesPasswordAndUnlocksAccount_WhenValid()
     {
-        string freshToken = GuidToken.Generate();
+        string freshToken = GuidToken.Generate(Now);
         var account = ActiveAccount(locked: true, loginAttempt: 3, resetPasswordToken: freshToken);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
@@ -1199,7 +1206,7 @@ public class AccountServiceTests
         Assert.True(result.Success);
         _accountRepo.Verify(r => r.UpdateRegistrationTokenAsync(
             existing.Email.Value,
-            It.Is<string?>(t => t != null && t != expired && GuidToken.IsTokenAlive(t)),
+            It.Is<string?>(t => t != null && t != expired && GuidToken.IsTokenAlive(t, Now)),
             It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
@@ -1207,7 +1214,7 @@ public class AccountServiceTests
     [Fact]
     public async Task RegisterAsync_Unconfirmed_RollsBackAndRethrows_WhenPersistingTheReplacementFails()
     {
-        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
         SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
         _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("db down"));
@@ -1227,7 +1234,7 @@ public class AccountServiceTests
     [Fact]
     public async Task RegisterAsync_Unconfirmed_ReplacesTheEarlierRegistrantsCredentials()
     {
-        string squatterToken = GuidToken.Generate();
+        string squatterToken = GuidToken.Generate(Now);
         var existing = ActiveAccount(emailConfirmed: false, registrationToken: squatterToken); // nickname "User", time zone "UTC"
         SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
         _rsa.Setup(r => r.Encrypt(It.IsAny<string>())).Returns("enc-token");
@@ -1247,7 +1254,7 @@ public class AccountServiceTests
         Assert.Equal("Owner", saved.Nickname);
         Assert.Equal("Asia/Seoul", saved.TimeZone.Value);
         Assert.NotEqual(squatterToken, saved.RegistrationToken);
-        Assert.True(GuidToken.IsTokenAlive(saved.RegistrationToken!));
+        Assert.True(GuidToken.IsTokenAlive(saved.RegistrationToken!, Now));
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
         _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -1256,7 +1263,7 @@ public class AccountServiceTests
     [Fact]
     public async Task RegisterAsync_Unconfirmed_ReturnsNicknameConflict_WhenAnotherAccountHoldsTheNickname()
     {
-        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
         SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
         _accountRepo.Setup(r => r.NicknameExistsIgnoreCaseAsync("Taken", It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
@@ -1277,7 +1284,7 @@ public class AccountServiceTests
     [Fact]
     public async Task RegisterAsync_Unconfirmed_KeepsItsOwnNickname_WithoutAConflictCheck()
     {
-        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate()); // nickname "User"
+        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now)); // nickname "User"
         SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
         _accountRepo.Setup(r => r.NicknameExistsIgnoreCaseAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
         _rsa.Setup(r => r.Encrypt(It.IsAny<string>())).Returns("enc-token");
@@ -1294,7 +1301,7 @@ public class AccountServiceTests
     [Fact]
     public async Task RegisterAsync_Unconfirmed_ReturnsNicknameConflict_WhenTheUniqueIndexRacesAtCommit()
     {
-        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
         SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
         _unitOfWork.Setup(u => u.CommitAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("duplicate key", new Exception("23505: duplicate key value violates unique constraint \"Account_unique_index_0\"")));
@@ -1314,7 +1321,7 @@ public class AccountServiceTests
     [InlineData("admin", "PlainPass1!")]
     public async Task RegisterAsync_Unconfirmed_RefusesInvalidInput_BeforeHashingOrLocking(string nickname, string password)
     {
-        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
         SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
 
         RegisterResult result = await CreateSut().RegisterAsync(NewRegistration(nickname, password), _emailTemplate, TestContext.Current.CancellationToken);
@@ -1394,7 +1401,7 @@ public class AccountServiceTests
         Assert.True(result.Success);
         Assert.True(result.RepeatEmailSend);
         _accountRepo.Verify(r => r.UpdateRegistrationTokenAsync(
-            account.Email.Value, It.Is<string?>(t => t != null && t != expired && GuidToken.IsTokenAlive(t)),
+            account.Email.Value, It.Is<string?>(t => t != null && t != expired && GuidToken.IsTokenAlive(t, Now)),
             It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
@@ -1402,7 +1409,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ResendConfirmationEmailAsync_RollsBackAndRethrows_WhenPersistingTheTokenFails()
     {
-        var account = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        var account = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
         SetupUnconfirmedAccountForRegister(account, lockedRead: account);
         _accountRepo.Setup(r => r.UpdateRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("db down"));
@@ -1434,7 +1441,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ResendConfirmationEmailAsync_ReportsStatusError_WhenTheFinalStatusWriteFails()
     {
-        var account = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        var account = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
         SetupUnconfirmedAccountForRegister(account, lockedRead: account);
         _rsa.Setup(r => r.Encrypt(It.IsAny<string>())).Returns("enc-token");
         SetupMailSuccess();
@@ -1451,7 +1458,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ResendConfirmationEmailAsync_ReportsSendFailure_EvenWhenRecordingTheFailureAlsoFails()
     {
-        var account = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        var account = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
         SetupUnconfirmedAccountForRegister(account, lockedRead: account);
         _rsa.Setup(r => r.Encrypt(It.IsAny<string>())).Returns("enc-token");
         SetupMailFailure();
@@ -1473,7 +1480,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_ReturnsWrongPassword_AndConfirmsNothing_WhenThePasswordDoesNotMatch()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var account = ActiveAccount(emailConfirmed: false, registrationToken: token);
         SetupConfirmLookup(account, account, token);
         _passwordService.Setup(p => p.VerifyPassword("Not-The-Password1!", account.HashedPassword)).Returns(false);
@@ -1494,7 +1501,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_ChecksThePasswordAgainstTheLockedRow()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var account = ActiveAccount(emailConfirmed: false, registrationToken: token);
         SetupConfirmLookup(account, account, token);
         _accountRepo.Setup(r => r.UpdateEmailConfirmationAsync(
@@ -1513,7 +1520,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ValidateRegistrationTokenAsync_ReturnsTheTokenForTheForm_WhenTheLinkIsLive()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(token, It.IsAny<CancellationToken>()))
             .ReturnsAsync(ActiveAccount(emailConfirmed: false, registrationToken: token));
@@ -1533,7 +1540,7 @@ public class AccountServiceTests
     [InlineData("expired")]
     public async Task ValidateRegistrationTokenAsync_ReturnsInvalidToken_WhenTheLinkIsDead(string kind)
     {
-        string token = kind == "expired" ? BuildExpiredToken() : GuidToken.Generate();
+        string token = kind == "expired" ? BuildExpiredToken() : GuidToken.Generate(Now);
         if (kind == "undecryptable")
             _rsa.Setup(r => r.Decrypt("enc")).Throws(new FormatException("bad cipher"));
         else
@@ -1562,7 +1569,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_ReturnsInvalidTokenNotCreated_WhenTheRowVanishesUnderTheLock()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         SetupConfirmLookup(ActiveAccount(emailConfirmed: false, registrationToken: token), locked: null, token);
 
         ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
@@ -1576,9 +1583,9 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_ReturnsInvalidTokenButCreated_WhenTheTokenWasSupersededUnderTheLock()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var stale = ActiveAccount(emailConfirmed: false, registrationToken: token);
-        var superseded = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        var superseded = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
         SetupConfirmLookup(stale, superseded, token);
 
         ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
@@ -1594,7 +1601,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_RollsBack_WhenWritingTheAlreadyConfirmedMessageFails()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var found = ActiveAccount(emailConfirmed: false, registrationToken: token);
         SetupConfirmLookup(found, ActiveAccount(emailConfirmed: true), token);
         _accountRepo.Setup(r => r.UpdateMessageAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
@@ -1612,7 +1619,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_ReturnsErrorKey_WhenTheConfirmationWriteThrows()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var account = ActiveAccount(emailConfirmed: false, registrationToken: token);
         SetupConfirmLookup(account, account, token);
         _accountRepo.Setup(r => r.UpdateEmailConfirmationAsync(
@@ -1631,7 +1638,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_RollsBackAndRethrows_WhenTheLockedReadThrows()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ActiveAccount(emailConfirmed: false, registrationToken: token));
@@ -1677,7 +1684,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ResetPasswordAsync_ReturnsPolicyViolation_AndDoesNotHash_WhenPasswordIsTooWeak()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var account = ActiveAccount(resetPasswordToken: token);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
@@ -1695,7 +1702,7 @@ public class AccountServiceTests
     [InlineData(true)]
     public async Task ResetPasswordAsync_ReturnsInvalid_WhenTheLockedRowIsMissingOrDeleted(bool rowExistsButDeleted)
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var found = ActiveAccount(resetPasswordToken: token);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(found);
@@ -1714,7 +1721,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ResetPasswordAsync_ReturnsInvalid_WhenTheTokenWasConsumedConcurrently()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var found = ActiveAccount(resetPasswordToken: token);
         var consumed = ActiveAccount(resetPasswordToken: null);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
@@ -1732,7 +1739,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ResetPasswordAsync_RollsBackAndReportsFailure_WhenTheWriteThrows()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var account = ActiveAccount(resetPasswordToken: token);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
@@ -1750,11 +1757,6 @@ public class AccountServiceTests
 
     // -- Private helpers ------------------------------------------------------
 
-    /// <summary>A token in the <c>GuidToken</c> layout (UTC timestamp + GUID, base64) issued 25 hours ago.</summary>
-    private static string BuildExpiredToken()
-    {
-        byte[] time = BitConverter.GetBytes(DateTime.UtcNow.AddHours(-25).ToBinary());
-        byte[] key = Guid.NewGuid().ToByteArray();
-        return Convert.ToBase64String(time.Concat(key).ToArray());
-    }
+    /// <summary>A token minted 25 hours before <see cref="Now"/>, past its 24h validity window.</summary>
+    private static string BuildExpiredToken() => GuidToken.Generate(Now.AddHours(-25));
 }

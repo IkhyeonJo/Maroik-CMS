@@ -530,7 +530,7 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
             await using var unitOfWork = new UnitOfWork(context);
             await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
             Account account = (await repo.FindByEmailForUpdateAsync(email, TestContext.Current.CancellationToken))!;
-            account.RecordLoginFailure(maxAttempts: 100);
+            account.RecordLoginFailure(maxAttempts: 100, DateTime.UtcNow);
             await repo.UpdateEntityAsync(account, TestContext.Current.CancellationToken);
             await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
         }));

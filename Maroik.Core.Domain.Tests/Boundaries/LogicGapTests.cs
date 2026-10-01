@@ -142,6 +142,9 @@ public class LogicGapTests
 
     // ---- Account --------------------------------------------------------------------------------
 
+    /// <summary>The fixed "current time" the account checks run at.</summary>
+    private static readonly DateTime AccountNow = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>A persisted, confirmed account with the given lockout state.</summary>
     private static DomainAccount Account(bool locked = false, long loginAttempt = 0) =>
         DomainAccount.Reconstitute(Email, "$2a$hash", "Nick", null, Role.User, "UTC", null, locked, loginAttempt, true, true,
@@ -152,10 +155,10 @@ public class LogicGapTests
     public void Lock_KeepsTheAttemptCount_AndUnlockClearsIt()
     {
         DomainAccount account = Account(locked: false, loginAttempt: 3);
-        account.Lock();
+        account.Lock(AccountNow);
         Assert.Equal(3, account.LoginAttempt);
 
-        account.Unlock();
+        account.Unlock(AccountNow);
         Assert.Equal(0, account.LoginAttempt);
     }
 
@@ -163,8 +166,8 @@ public class LogicGapTests
     [Fact]
     public void NewAccounts_GetADistinctHyphenlessSecurityStamp()
     {
-        string stamp1 = DomainAccount.Create(Email, "$2a$h", "Nick", Role.User, "UTC", null, GuidToken.Generate(), true).Value.SecurityStamp;
-        string stamp2 = DomainAccount.Create(Email, "$2a$h", "Nick", Role.User, "UTC", null, GuidToken.Generate(), true).Value.SecurityStamp;
+        string stamp1 = DomainAccount.Create(Email, "$2a$h", "Nick", Role.User, "UTC", null, GuidToken.Generate(AccountNow), true, AccountNow).Value.SecurityStamp;
+        string stamp2 = DomainAccount.Create(Email, "$2a$h", "Nick", Role.User, "UTC", null, GuidToken.Generate(AccountNow), true, AccountNow).Value.SecurityStamp;
 
  #pragma warning disable SYSLIB1045
         Assert.Matches(new Regex("^[0-9a-f]{32}$"), stamp1);

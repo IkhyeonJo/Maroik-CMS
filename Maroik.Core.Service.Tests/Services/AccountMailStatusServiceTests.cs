@@ -2,6 +2,7 @@ using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Helpers;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.Service.Services;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 // ReSharper disable AccessToDisposedClosure
 
@@ -16,8 +17,13 @@ public class AccountMailStatusServiceTests
     /// <summary>Mock <c>IAccountRepository</c> injected into the system under test.</summary>
     private readonly Mock<IAccountRepository> _accountRepo = new();
 
+    /// <summary>The fixed "current time" of these tests.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+    /// <summary>The clock the service under test reads, stopped at <see cref="Now"/>.</summary>
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(Now));
+
     /// <summary>The service under test over the mocked repository.</summary>
-    private AccountMailStatusService CreateSut() => new(_accountRepo.Object);
+    private AccountMailStatusService CreateSut() => new(_accountRepo.Object, _time);
 
     /// <summary>A confirmed, unlocked account whose stored mail-status message is <paramref name="message"/>.</summary>
     private static Account ActiveAccount(string email = "user@example.com", string? message = null) => Account.Reconstitute(

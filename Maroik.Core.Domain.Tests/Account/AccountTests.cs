@@ -9,6 +9,9 @@ namespace Maroik.Core.Domain.Tests.Account;
 /// </summary>
 public class AccountTests
 {
+    /// <summary>The fixed "current time" every domain call in this class receives.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>Creates a valid new account through <c>Account.Create</c>; each argument can be overridden per test.</summary>
     private static Domain.Account.Account ValidAccount(
         string email = "user@example.com",
@@ -18,26 +21,38 @@ public class AccountTests
         string timeZone = "UTC",
         string? registrationToken = "token-123",
         bool agreedServiceTerms = true)
-        => Domain.Account.Account.Create(email, hashedPassword, nickname, role, timeZone, "KRW", registrationToken, agreedServiceTerms).Value;
+        => Domain.Account.Account.Create(email, hashedPassword, nickname, role, timeZone, "KRW", registrationToken, agreedServiceTerms, Now).Value;
 
-    /// <summary>
-    /// Builds a token using the same encoding as <see cref="GuidToken.Generate"/> but timestamped
-    /// 25 hours in the past, i.e. past <see cref="GuidToken"/>'s 24h validity window.
-    /// </summary>
-    private static string ExpiredToken()
-    {
-        byte[] time = BitConverter.GetBytes(DateTime.UtcNow.AddHours(-25).ToBinary());
-        byte[] key = Guid.NewGuid().ToByteArray();
-        return Convert.ToBase64String([.. time, .. key]);
-    }
+    /// <summary>A token minted 25 hours before <see cref="Now"/>, past <see cref="GuidToken"/>'s 24h validity window.</summary>
+    private static string ExpiredToken() => GuidToken.Generate(Now.AddHours(-25));
 
     // -- Create ---------------------------------------------------------------
+
+    /// <summary>A new account's Created and Updated are the same instant: the one passed in.</summary>
+    [Fact]
+    public void Create_StampsCreatedAndUpdated_WithTheSameGivenInstant()
+    {
+        var account = ValidAccount();
+
+        Assert.Equal(Now, account.Created);
+        Assert.Equal(account.Created, account.Updated);
+    }
+
+    /// <summary>A registration token is checked against the time passed in: alive at exactly 24 h, refused one tick later.</summary>
+    [Fact]
+    public void ConfirmEmail_UsesTheGivenTime_ForTheTokenExpiry()
+    {
+        string token = GuidToken.Generate(Now);
+
+        Assert.False(ValidAccount(registrationToken: token).ConfirmEmail(token, Now.AddHours(24)).IsError);
+        Assert.Equal("Account.InvalidToken", ValidAccount(registrationToken: token).ConfirmEmail(token, Now.AddHours(24).AddTicks(1)).FirstError.Code);
+    }
 
     /// <summary>Create returns account, when all inputs valid.</summary>
     [Fact]
     public void Create_ReturnsAccount_WhenAllInputsValid()
     {
-        var result = Domain.Account.Account.Create("user@example.com", "hashed", "Nick", "User", "UTC", "KRW", "tok", true);
+        var result = Domain.Account.Account.Create("user@example.com", "hashed", "Nick", "User", "UTC", "KRW", "tok", true, Now);
 
         Assert.False(result.IsError);
         Assert.Equal("user@example.com", result.Value.Email.Value);
@@ -51,7 +66,7 @@ public class AccountTests
     [InlineData(null)]
     public void Create_ReturnsError_WhenEmailInvalid(string? email)
     {
-        var result = Domain.Account.Account.Create(email!, "hashed", "Nick", "User", "UTC", null, null, true);
+        var result = Domain.Account.Account.Create(email!, "hashed", "Nick", "User", "UTC", null, null, true, Now);
 
         Assert.True(result.IsError);
     }
@@ -63,7 +78,7 @@ public class AccountTests
     [InlineData(null)]
     public void Create_ReturnsError_WhenNicknameEmpty(string? nickname)
     {
-        var result = Domain.Account.Account.Create("user@example.com", "hashed", nickname!, "User", "UTC", null, null, true);
+        var result = Domain.Account.Account.Create("user@example.com", "hashed", nickname!, "User", "UTC", null, null, true, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.NicknameEmpty", result.FirstError.Code);
@@ -73,7 +88,7 @@ public class AccountTests
     [Fact]
     public void Create_ReturnsError_WhenNicknameTooLong()
     {
-        var result = Domain.Account.Account.Create("user@example.com", "hashed", new string('n', 256), "User", "UTC", null, null, true);
+        var result = Domain.Account.Account.Create("user@example.com", "hashed", new string('n', 256), "User", "UTC", null, null, true, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.NicknameTooLong", result.FirstError.Code);
@@ -83,7 +98,7 @@ public class AccountTests
     [Fact]
     public void Create_ReturnsAccount_WhenNicknameAtMaxLength()
     {
-        var result = Domain.Account.Account.Create("user@example.com", "hashed", new string('n', 255), "User", "UTC", null, null, true);
+        var result = Domain.Account.Account.Create("user@example.com", "hashed", new string('n', 255), "User", "UTC", null, null, true, Now);
 
         Assert.False(result.IsError);
     }
@@ -92,7 +107,7 @@ public class AccountTests
     [Fact]
     public void Create_StoresNormalizedNickname()
     {
-        var result = Domain.Account.Account.Create("user@example.com", "hashed", "  Ｂｏｂ   Smith ", "User", "UTC", null, null, true);
+        var result = Domain.Account.Account.Create("user@example.com", "hashed", "  Ｂｏｂ   Smith ", "User", "UTC", null, null, true, Now);
 
         Assert.False(result.IsError);
         Assert.Equal("Bob Smith", result.Value.Nickname);
@@ -105,7 +120,7 @@ public class AccountTests
     [InlineData("A d m i n")]
     public void Create_ReturnsError_WhenNicknameIsReserved(string nickname)
     {
-        var result = Domain.Account.Account.Create("user@example.com", "hashed", nickname, "User", "UTC", null, null, true);
+        var result = Domain.Account.Account.Create("user@example.com", "hashed", nickname, "User", "UTC", null, null, true, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.NicknameReserved", result.FirstError.Code);
@@ -115,7 +130,7 @@ public class AccountTests
     [Fact]
     public void Create_AcceptsReservedNickname_WhenAllowReservedNickname()
     {
-        var result = Domain.Account.Account.Create("user@example.com", "hashed", "Admin", "Admin", "UTC", null, null, true, allowReservedNickname: true);
+        var result = Domain.Account.Account.Create("user@example.com", "hashed", "Admin", "Admin", "UTC", null, null, true, Now, allowReservedNickname: true);
 
         Assert.False(result.IsError);
         Assert.Equal("Admin", result.Value.Nickname);
@@ -125,7 +140,7 @@ public class AccountTests
     [Fact]
     public void Create_ReturnsError_WhenNicknameHasInvisibleCharacters()
     {
-        var result = Domain.Account.Account.Create("user@example.com", "hashed", "Bo\u200Bb", "User", "UTC", null, null, true);
+        var result = Domain.Account.Account.Create("user@example.com", "hashed", "Bo\u200Bb", "User", "UTC", null, null, true, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.NicknameInvalidCharacters", result.FirstError.Code);
@@ -138,7 +153,7 @@ public class AccountTests
     [InlineData(null)]
     public void Create_ReturnsError_WhenPasswordEmpty(string? password)
     {
-        var result = Domain.Account.Account.Create("user@example.com", password!, "Nick", "User", "UTC", null, null, true);
+        var result = Domain.Account.Account.Create("user@example.com", password!, "Nick", "User", "UTC", null, null, true, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.PasswordEmpty", result.FirstError.Code);
@@ -148,7 +163,7 @@ public class AccountTests
     [Fact]
     public void Create_ReturnsError_WhenTimeZoneInvalid()
     {
-        var result = Domain.Account.Account.Create("user@example.com", "hashed", "Nick", "User", "Not/Valid", null, null, true);
+        var result = Domain.Account.Account.Create("user@example.com", "hashed", "Nick", "User", "Not/Valid", null, null, true, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("TimeZoneId.Invalid", result.FirstError.Code);
@@ -161,7 +176,7 @@ public class AccountTests
     [InlineData("")]
     public void Create_ReturnsError_WhenRoleInvalid(string role)
     {
-        var result = Domain.Account.Account.Create("user@example.com", "hashed", "Nick", role, "UTC", null, null, true);
+        var result = Domain.Account.Account.Create("user@example.com", "hashed", "Nick", role, "UTC", null, null, true, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.RoleInvalid", result.FirstError.Code);
@@ -173,10 +188,10 @@ public class AccountTests
     [Fact]
     public void ConfirmEmail_Succeeds_WhenTokenMatches()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: token);
 
-        var result = account.ConfirmEmail(token);
+        var result = account.ConfirmEmail(token, Now);
 
         Assert.False(result.IsError);
         Assert.True(account.EmailConfirmed);
@@ -187,11 +202,11 @@ public class AccountTests
     [Fact]
     public void ConfirmEmail_ReturnsError_WhenAlreadyConfirmed()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: token);
-        account.ConfirmEmail(token);
+        account.ConfirmEmail(token, Now);
 
-        var result = account.ConfirmEmail(token);
+        var result = account.ConfirmEmail(token, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.AlreadyConfirmed", result.FirstError.Code);
@@ -206,7 +221,7 @@ public class AccountTests
         string token = ExpiredToken();
         var account = ValidAccount(registrationToken: token);
 
-        var result = account.ConfirmEmail(token);
+        var result = account.ConfirmEmail(token, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.InvalidToken", result.FirstError.Code);
@@ -219,7 +234,7 @@ public class AccountTests
     {
         var account = ValidAccount(registrationToken: "correct");
 
-        var result = account.ConfirmEmail("wrong");
+        var result = account.ConfirmEmail("wrong", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.InvalidToken", result.FirstError.Code);
@@ -237,7 +252,7 @@ public class AccountTests
     {
         var account = ValidAccount(registrationToken: storedToken);
 
-        var result = account.ConfirmEmail(storedToken ?? "");
+        var result = account.ConfirmEmail(storedToken ?? "", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.InvalidToken", result.FirstError.Code);
@@ -250,11 +265,11 @@ public class AccountTests
     [Fact]
     public void RequestPasswordReset_Succeeds_WhenEmailConfirmed()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: token);
-        account.ConfirmEmail(token);
+        account.ConfirmEmail(token, Now);
 
-        var result = account.RequestPasswordReset("reset-token");
+        var result = account.RequestPasswordReset("reset-token", Now);
 
         Assert.False(result.IsError);
         Assert.Equal("reset-token", account.ResetPasswordToken);
@@ -266,7 +281,7 @@ public class AccountTests
     {
         var account = ValidAccount();
 
-        var result = account.RequestPasswordReset("reset-token");
+        var result = account.RequestPasswordReset("reset-token", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.NotConfirmed", result.FirstError.Code);
@@ -276,12 +291,12 @@ public class AccountTests
     [Fact]
     public void RequestPasswordReset_Succeeds_WhenLocked()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: token);
-        account.ConfirmEmail(token);
-        account.Lock("reason");
+        account.ConfirmEmail(token, Now);
+        account.Lock(Now, "reason");
 
-        var result = account.RequestPasswordReset("reset-token");
+        var result = account.RequestPasswordReset("reset-token", Now);
 
         Assert.False(result.IsError);
         Assert.Equal("reset-token", account.ResetPasswordToken);
@@ -293,13 +308,13 @@ public class AccountTests
     [Fact]
     public void ResetPassword_Succeeds_WhenTokenValid()
     {
-        string registrationToken = GuidToken.Generate();
+        string registrationToken = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: registrationToken);
-        account.ConfirmEmail(registrationToken);
-        string resetToken = GuidToken.Generate();
-        account.RequestPasswordReset(resetToken);
+        account.ConfirmEmail(registrationToken, Now);
+        string resetToken = GuidToken.Generate(Now);
+        account.RequestPasswordReset(resetToken, Now);
 
-        var result = account.ResetPassword(resetToken, "newHash");
+        var result = account.ResetPassword(resetToken, "newHash", Now);
 
         Assert.False(result.IsError);
         Assert.Equal("newHash", account.HashedPassword);
@@ -310,12 +325,12 @@ public class AccountTests
     [Fact]
     public void ResetPassword_ReturnsError_WhenTokenInvalid()
     {
-        string registrationToken = GuidToken.Generate();
+        string registrationToken = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: registrationToken);
-        account.ConfirmEmail(registrationToken);
-        account.RequestPasswordReset(GuidToken.Generate());
+        account.ConfirmEmail(registrationToken, Now);
+        account.RequestPasswordReset(GuidToken.Generate(Now), Now);
 
-        var result = account.ResetPassword("wrong-tok", "newHash");
+        var result = account.ResetPassword("wrong-tok", "newHash", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.InvalidToken", result.FirstError.Code);
@@ -326,13 +341,13 @@ public class AccountTests
     [Fact]
     public void ResetPassword_ReturnsError_WhenTokenExpired()
     {
-        string registrationToken = GuidToken.Generate();
+        string registrationToken = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: registrationToken);
-        account.ConfirmEmail(registrationToken);
+        account.ConfirmEmail(registrationToken, Now);
         string expiredResetToken = ExpiredToken();
-        account.RequestPasswordReset(expiredResetToken);
+        account.RequestPasswordReset(expiredResetToken, Now);
 
-        var result = account.ResetPassword(expiredResetToken, "newHash");
+        var result = account.ResetPassword(expiredResetToken, "newHash", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.InvalidToken", result.FirstError.Code);
@@ -342,13 +357,13 @@ public class AccountTests
     [Fact]
     public void ResetPassword_ReturnsError_WhenNewPasswordEmpty()
     {
-        string registrationToken = GuidToken.Generate();
+        string registrationToken = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: registrationToken);
-        account.ConfirmEmail(registrationToken);
-        string resetToken = GuidToken.Generate();
-        account.RequestPasswordReset(resetToken);
+        account.ConfirmEmail(registrationToken, Now);
+        string resetToken = GuidToken.Generate(Now);
+        account.RequestPasswordReset(resetToken, Now);
 
-        var result = account.ResetPassword(resetToken, "");
+        var result = account.ResetPassword(resetToken, "", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.PasswordEmpty", result.FirstError.Code);
@@ -362,8 +377,8 @@ public class AccountTests
     {
         var account = ValidAccount();
 
-        account.RecordLoginFailure(maxAttempts: 5);
-        account.RecordLoginFailure(maxAttempts: 5);
+        account.RecordLoginFailure(maxAttempts: 5, Now);
+        account.RecordLoginFailure(maxAttempts: 5, Now);
 
         Assert.Equal(2, account.LoginAttempt);
         Assert.False(account.Locked);
@@ -375,9 +390,9 @@ public class AccountTests
     {
         var account = ValidAccount();
 
-        account.RecordLoginFailure(maxAttempts: 3);
-        account.RecordLoginFailure(maxAttempts: 3);
-        account.RecordLoginFailure(maxAttempts: 3);
+        account.RecordLoginFailure(maxAttempts: 3, Now);
+        account.RecordLoginFailure(maxAttempts: 3, Now);
+        account.RecordLoginFailure(maxAttempts: 3, Now);
 
         Assert.Equal(3, account.LoginAttempt);
         Assert.True(account.Locked);
@@ -389,9 +404,9 @@ public class AccountTests
     {
         var account = ValidAccount();
 
-        account.RecordLoginFailure(maxAttempts: 2);
-        account.RecordLoginFailure(maxAttempts: 2);
-        account.RecordLoginFailure(maxAttempts: 2);
+        account.RecordLoginFailure(maxAttempts: 2, Now);
+        account.RecordLoginFailure(maxAttempts: 2, Now);
+        account.RecordLoginFailure(maxAttempts: 2, Now);
 
         Assert.True(account.Locked);
     }
@@ -401,10 +416,10 @@ public class AccountTests
     public void ResetLoginAttempt_SetsCounterToZero()
     {
         var account = ValidAccount();
-        account.RecordLoginFailure(maxAttempts: 5);
-        account.RecordLoginFailure(maxAttempts: 5);
+        account.RecordLoginFailure(maxAttempts: 5, Now);
+        account.RecordLoginFailure(maxAttempts: 5, Now);
 
-        account.ResetLoginAttempt();
+        account.ResetLoginAttempt(Now);
 
         Assert.Equal(0, account.LoginAttempt);
     }
@@ -417,7 +432,7 @@ public class AccountTests
     {
         var account = ValidAccount();
 
-        account.Lock("spam");
+        account.Lock(Now, "spam");
 
         Assert.True(account.Locked);
         Assert.Equal("spam", account.Message);
@@ -428,10 +443,10 @@ public class AccountTests
     public void Unlock_SetsLockedFalseAndResetsAttempts()
     {
         var account = ValidAccount();
-        account.RecordLoginFailure(maxAttempts: 5);
-        account.Lock();
+        account.RecordLoginFailure(maxAttempts: 5, Now);
+        account.Lock(Now);
 
-        account.Unlock();
+        account.Unlock(Now);
 
         Assert.False(account.Locked);
         Assert.Equal(0, account.LoginAttempt);
@@ -447,7 +462,7 @@ public class AccountTests
     {
         var account = ValidAccount();
 
-        var result = account.ChangeRole(role);
+        var result = account.ChangeRole(role, Now);
 
         Assert.False(result.IsError);
         Assert.Equal(role, account.Role);
@@ -462,7 +477,7 @@ public class AccountTests
     {
         var account = ValidAccount();
 
-        var result = account.ChangeRole(role);
+        var result = account.ChangeRole(role, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.RoleInvalid", result.FirstError.Code);
@@ -475,7 +490,7 @@ public class AccountTests
     {
         var account = ValidAccount();
 
-        var result = account.ChangeTimeZone("Asia/Seoul");
+        var result = account.ChangeTimeZone("Asia/Seoul", Now);
 
         Assert.False(result.IsError);
         Assert.Equal("Asia/Seoul", account.TimeZone.Value);
@@ -488,7 +503,7 @@ public class AccountTests
         var account = ValidAccount();
         string before = account.TimeZone.Value;
 
-        var result = account.ChangeTimeZone("Not/Valid");
+        var result = account.ChangeTimeZone("Not/Valid", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("TimeZoneId.Invalid", result.FirstError.Code);
@@ -500,9 +515,9 @@ public class AccountTests
     public void RevokeEmailConfirmation_ClearsTheConfirmedFlag()
     {
         var account = ValidAccount();
-        account.ForceConfirmEmail();
+        account.ForceConfirmEmail(Now);
 
-        account.RevokeEmailConfirmation();
+        account.RevokeEmailConfirmation(Now);
 
         Assert.False(account.EmailConfirmed);
     }
@@ -512,9 +527,9 @@ public class AccountTests
     public void RevokeServiceTerms_ClearsTheAcceptedFlag()
     {
         var account = ValidAccount();
-        account.AcceptServiceTerms();
+        account.AcceptServiceTerms(Now);
 
-        account.RevokeServiceTerms();
+        account.RevokeServiceTerms(Now);
 
         Assert.False(account.AgreedServiceTerms);
     }
@@ -524,9 +539,9 @@ public class AccountTests
     public void Restore_ClearsTheDeletedFlag()
     {
         var account = ValidAccount();
-        account.SoftDelete();
+        account.SoftDelete(Now);
 
-        account.Restore();
+        account.Restore(Now);
 
         Assert.False(account.Deleted);
     }
@@ -536,10 +551,10 @@ public class AccountTests
     public void Lock_KeepsTheLoginAttemptCount()
     {
         var account = ValidAccount();
-        account.RecordLoginFailure(maxAttempts: 5);
-        account.RecordLoginFailure(maxAttempts: 5);
+        account.RecordLoginFailure(maxAttempts: 5, Now);
+        account.RecordLoginFailure(maxAttempts: 5, Now);
 
-        account.Lock();
+        account.Lock(Now);
 
         Assert.Equal(2, account.LoginAttempt);
     }
@@ -552,7 +567,7 @@ public class AccountTests
     {
         var account = ValidAccount();
 
-        account.SoftDelete();
+        account.SoftDelete(Now);
 
         Assert.True(account.Deleted);
     }
@@ -569,9 +584,9 @@ public class AccountTests
     {
         var account = ValidAccount(hashedPassword: "old-hash", nickname: "Squatter", timeZone: "UTC", agreedServiceTerms: false);
         string oldStamp = account.SecurityStamp;
-        string newToken = GuidToken.Generate();
+        string newToken = GuidToken.Generate(Now);
 
-        var result = account.ReplaceUnconfirmedRegistration("new-hash", "  Real   Owner ", "Asia/Seoul", newToken, agreedServiceTerms: true);
+        var result = account.ReplaceUnconfirmedRegistration("new-hash", "  Real   Owner ", "Asia/Seoul", newToken, agreedServiceTerms: true, Now);
 
         Assert.False(result.IsError);
         Assert.Equal("new-hash", account.HashedPassword);
@@ -587,25 +602,25 @@ public class AccountTests
     [Fact]
     public void ReplaceUnconfirmedRegistration_InvalidatesThePreviouslyMailedToken()
     {
-        string oldToken = GuidToken.Generate();
-        string newToken = GuidToken.Generate();
+        string oldToken = GuidToken.Generate(Now);
+        string newToken = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: oldToken);
 
-        account.ReplaceUnconfirmedRegistration("new-hash", "Owner", "UTC", newToken, agreedServiceTerms: true);
+        account.ReplaceUnconfirmedRegistration("new-hash", "Owner", "UTC", newToken, agreedServiceTerms: true, Now);
 
-        Assert.True(account.ConfirmEmail(oldToken).IsError);
-        Assert.False(account.ConfirmEmail(newToken).IsError);
+        Assert.True(account.ConfirmEmail(oldToken, Now).IsError);
+        Assert.False(account.ConfirmEmail(newToken, Now).IsError);
     }
 
     /// <summary>A confirmed account's credentials can never be replaced by a registration.</summary>
     [Fact]
     public void ReplaceUnconfirmedRegistration_ReturnsConflict_AndChangesNothing_WhenAlreadyConfirmed()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var account = ValidAccount(hashedPassword: "owner-hash", nickname: "Owner", registrationToken: token);
-        account.ConfirmEmail(token);
+        account.ConfirmEmail(token, Now);
 
-        var result = account.ReplaceUnconfirmedRegistration("attacker-hash", "Attacker", "UTC", GuidToken.Generate(), agreedServiceTerms: true);
+        var result = account.ReplaceUnconfirmedRegistration("attacker-hash", "Attacker", "UTC", GuidToken.Generate(Now), agreedServiceTerms: true, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.AlreadyConfirmed", result.FirstError.Code);
@@ -623,10 +638,10 @@ public class AccountTests
     public void ReplaceUnconfirmedRegistration_ReturnsError_AndChangesNothing_WhenInputIsInvalid(
         string hashedPassword, string nickname, string timeZone, string expectedCode)
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var account = ValidAccount(hashedPassword: "old-hash", nickname: "Squatter", registrationToken: token);
 
-        var result = account.ReplaceUnconfirmedRegistration(hashedPassword, nickname, timeZone, GuidToken.Generate(), agreedServiceTerms: true);
+        var result = account.ReplaceUnconfirmedRegistration(hashedPassword, nickname, timeZone, GuidToken.Generate(Now), agreedServiceTerms: true, Now);
 
         Assert.True(result.IsError);
         Assert.Equal(expectedCode, result.FirstError.Code);
@@ -644,7 +659,7 @@ public class AccountTests
         var account = ValidAccount();
         var newTz = TimeZoneId.Create("Asia/Seoul").Value;
 
-        account.UpdateProfile("/avatar.png", newTz, "USD");
+        account.UpdateProfile("/avatar.png", newTz, "USD", Now);
 
         Assert.Equal("/avatar.png", account.AvatarImagePath);
         Assert.Equal("Asia/Seoul", account.TimeZone.Value);
@@ -657,9 +672,9 @@ public class AccountTests
     {
         var account = ValidAccount();
         var tz = TimeZoneId.Create("UTC").Value;
-        account.UpdateProfile("/avatar.png", tz, "KRW");
+        account.UpdateProfile("/avatar.png", tz, "KRW", Now);
 
-        account.UpdateProfile(null, tz, null);
+        account.UpdateProfile(null, tz, null, Now);
 
         Assert.Null(account.AvatarImagePath);
         Assert.Null(account.DefaultMonetaryUnit);
@@ -673,7 +688,7 @@ public class AccountTests
     {
         var account = ValidAccount();
 
-        account.ChangePassword("newHash");
+        account.ChangePassword("newHash", Now);
 
         Assert.Equal("newHash", account.HashedPassword);
     }
@@ -686,7 +701,7 @@ public class AccountTests
     {
         var account = ValidAccount();
 
-        account.SetMessage("Under review");
+        account.SetMessage("Under review", Now);
 
         Assert.Equal("Under review", account.Message);
     }
@@ -696,9 +711,9 @@ public class AccountTests
     public void SetMessage_ClearsMessage_WhenNull()
     {
         var account = ValidAccount();
-        account.SetMessage("some message");
+        account.SetMessage("some message", Now);
 
-        account.SetMessage(null);
+        account.SetMessage(null, Now);
 
         Assert.Null(account.Message);
     }
@@ -711,7 +726,7 @@ public class AccountTests
     {
         var account = ValidAccount(registrationToken: "tok");
 
-        account.ForceConfirmEmail();
+        account.ForceConfirmEmail(Now);
 
         Assert.True(account.EmailConfirmed);
         Assert.Null(account.RegistrationToken);
@@ -722,9 +737,9 @@ public class AccountTests
     public void ForceConfirmEmail_IsIdempotent_WhenAlreadyConfirmed()
     {
         var account = ValidAccount(registrationToken: "tok");
-        account.ForceConfirmEmail();
+        account.ForceConfirmEmail(Now);
 
-        account.ForceConfirmEmail();
+        account.ForceConfirmEmail(Now);
 
         Assert.True(account.EmailConfirmed);
     }
@@ -737,7 +752,7 @@ public class AccountTests
     {
         var account = ValidAccount(agreedServiceTerms: false);
 
-        account.AcceptServiceTerms();
+        account.AcceptServiceTerms(Now);
 
         Assert.True(account.AgreedServiceTerms);
     }
@@ -753,7 +768,7 @@ public class AccountTests
         var account = ValidAccount(hashedPassword: "old-hash");
         string stamp = account.SecurityStamp;
 
-        var result = account.ChangePassword(hash);
+        var result = account.ChangePassword(hash, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.PasswordEmpty", result.FirstError.Code);
@@ -770,7 +785,7 @@ public class AccountTests
         var account = ValidAccount(hashedPassword: "old-hash");
         string stamp = account.SecurityStamp;
 
-        var result = account.AdminResetPassword(hash);
+        var result = account.AdminResetPassword(hash, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Account.PasswordEmpty", result.FirstError.Code);
@@ -785,8 +800,8 @@ public class AccountTests
     {
         var account = ValidAccount();
 
-        Assert.False(account.AdminResetPassword("temp-hash").IsError);
-        Assert.False(account.ChangePassword("new-hash").IsError);
+        Assert.False(account.AdminResetPassword("temp-hash", Now).IsError);
+        Assert.False(account.ChangePassword("new-hash", Now).IsError);
         Assert.Equal("new-hash", account.HashedPassword);
     }
 
@@ -809,7 +824,7 @@ public class AccountTests
         var account = ValidAccount();
         string originalStamp = account.SecurityStamp;
 
-        account.ChangePassword("newHash");
+        account.ChangePassword("newHash", Now);
 
         Assert.NotEqual(originalStamp, account.SecurityStamp);
     }
@@ -819,9 +834,9 @@ public class AccountTests
     public void ChangePassword_ClearsMustChangePassword()
     {
         var account = ValidAccount();
-        account.AdminResetPassword("tempHash");
+        account.AdminResetPassword("tempHash", Now);
 
-        account.ChangePassword("newHash");
+        account.ChangePassword("newHash", Now);
 
         Assert.False(account.MustChangePassword);
     }
@@ -833,7 +848,7 @@ public class AccountTests
         var account = ValidAccount();
         string originalStamp = account.SecurityStamp;
 
-        account.AdminResetPassword("tempHash");
+        account.AdminResetPassword("tempHash", Now);
 
         Assert.Equal("tempHash", account.HashedPassword);
         Assert.True(account.MustChangePassword);
@@ -844,16 +859,16 @@ public class AccountTests
     [Fact]
     public void ChangePassword_ClearsPendingResetPasswordToken()
     {
-        string registrationToken = GuidToken.Generate();
+        string registrationToken = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: registrationToken);
-        account.ConfirmEmail(registrationToken);
-        string resetToken = GuidToken.Generate();
-        account.RequestPasswordReset(resetToken);
+        account.ConfirmEmail(registrationToken, Now);
+        string resetToken = GuidToken.Generate(Now);
+        account.RequestPasswordReset(resetToken, Now);
 
-        account.ChangePassword("newHash");
+        account.ChangePassword("newHash", Now);
 
         Assert.Null(account.ResetPasswordToken);
-        Assert.True(account.ResetPassword(resetToken, "attackerHash").IsError);
+        Assert.True(account.ResetPassword(resetToken, "attackerHash", Now).IsError);
         Assert.Equal("newHash", account.HashedPassword);
     }
 
@@ -861,16 +876,16 @@ public class AccountTests
     [Fact]
     public void AdminResetPassword_ClearsPendingResetPasswordToken()
     {
-        string registrationToken = GuidToken.Generate();
+        string registrationToken = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: registrationToken);
-        account.ConfirmEmail(registrationToken);
-        string resetToken = GuidToken.Generate();
-        account.RequestPasswordReset(resetToken);
+        account.ConfirmEmail(registrationToken, Now);
+        string resetToken = GuidToken.Generate(Now);
+        account.RequestPasswordReset(resetToken, Now);
 
-        account.AdminResetPassword("tempHash");
+        account.AdminResetPassword("tempHash", Now);
 
         Assert.Null(account.ResetPasswordToken);
-        Assert.True(account.ResetPassword(resetToken, "attackerHash").IsError);
+        Assert.True(account.ResetPassword(resetToken, "attackerHash", Now).IsError);
         Assert.Equal("tempHash", account.HashedPassword);
         Assert.True(account.MustChangePassword);
     }
@@ -879,17 +894,17 @@ public class AccountTests
     [Fact]
     public void ResetPassword_RegeneratesSecurityStamp_AndClearsMustChangePassword()
     {
-        string registrationToken = GuidToken.Generate();
+        string registrationToken = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: registrationToken);
-        account.ConfirmEmail(registrationToken);
+        account.ConfirmEmail(registrationToken, Now);
         // The admin reset comes first: it discards any reset link requested before it, so the
         // link used below must be requested afterward.
-        account.AdminResetPassword("tempHash");
-        string resetToken = GuidToken.Generate();
-        account.RequestPasswordReset(resetToken);
+        account.AdminResetPassword("tempHash", Now);
+        string resetToken = GuidToken.Generate(Now);
+        account.RequestPasswordReset(resetToken, Now);
         string stampBeforeReset = account.SecurityStamp;
 
-        var result = account.ResetPassword(resetToken, "newHash");
+        var result = account.ResetPassword(resetToken, "newHash", Now);
 
         Assert.False(result.IsError);
         Assert.NotEqual(stampBeforeReset, account.SecurityStamp);
@@ -904,7 +919,7 @@ public class AccountTests
     {
         var account = ValidAccount(registrationToken: "old-token");
 
-        account.RegenerateRegistrationToken("fresh-token");
+        account.RegenerateRegistrationToken("fresh-token", Now);
 
         Assert.Equal("fresh-token", account.RegistrationToken);
     }
@@ -913,11 +928,11 @@ public class AccountTests
     [Fact]
     public void RegenerateRegistrationToken_IsANoOp_OnceConfirmed()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         var account = ValidAccount(registrationToken: token);
-        account.ConfirmEmail(token);
+        account.ConfirmEmail(token, Now);
 
-        account.RegenerateRegistrationToken("fresh-token");
+        account.RegenerateRegistrationToken("fresh-token", Now);
 
         Assert.Null(account.RegistrationToken);
     }

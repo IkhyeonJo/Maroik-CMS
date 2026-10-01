@@ -94,7 +94,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
     public async Task ConfirmEmail_WhenTheConfirmationWriteFails_ShowsTheErrorAndKeepsTheAccountUnconfirmed()
     {
         string email = $"confirm-fail-{Guid.NewGuid():N}@test.com";
-        string rawToken = GuidToken.Generate();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
         await SeedAccountAsync(email, registrationToken: rawToken, emailConfirmed: false);
         await using var host = HostWithFailing<IAccountRepository>(nameof(IAccountRepository.UpdateEmailConfirmationAsync));
         var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false });
@@ -123,7 +123,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
     public async Task ResetPassword_WhenTheLockedReadFails_ReShowsTheFormAndKeepsTheToken()
     {
         string email = $"reset-fail-{Guid.NewGuid():N}@test.com";
-        string rawToken = GuidToken.Generate();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
         await SeedAccountAsync(email, resetPasswordToken: rawToken);
         await using var host = HostWithFailing<IAccountRepository>(nameof(IAccountRepository.FindByEmailForUpdateAsync));
         var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false });

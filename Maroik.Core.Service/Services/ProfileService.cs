@@ -28,7 +28,8 @@ public class ProfileService(
     IImageValidatorService imageValidator,
     IOptions<ServerSetting> settings,
     IUnitOfWork unitOfWork,
-    ILogger<ProfileService> logger) : IProfileService
+    ILogger<ProfileService> logger,
+    TimeProvider timeProvider) : IProfileService
 {
     /// <summary>Relative storage directory (under the file-storage root) that holds uploaded avatars.</summary>
     private const string AvatarStorageDirectory = "upload/Management/Profile/Avatar";
@@ -55,7 +56,7 @@ public class ProfileService(
 
             // Column-scoped write: touch only AvatarImagePath/Updated so a concurrent timezone or
             // password change on the same account is not clobbered by a full-row overwrite.
-            await accountRepository.UpdateAvatarPathAsync(email, avatarPath, DateTime.UtcNow, ct);
+            await accountRepository.UpdateAvatarPathAsync(email, avatarPath, timeProvider.GetUtcNow().UtcDateTime, ct);
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -79,7 +80,7 @@ public class ProfileService(
                 return ServiceResult.FromError(tzResult.FirstError);
 
             // Column-scoped write: touch only TimeZoneIanaId/Updated (see UpdateAvatarAsync).
-            await accountRepository.UpdateTimeZoneAsync(email, tzResult.Value.Value, DateTime.UtcNow, ct);
+            await accountRepository.UpdateTimeZoneAsync(email, tzResult.Value.Value, timeProvider.GetUtcNow().UtcDateTime, ct);
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -117,7 +118,7 @@ public class ProfileService(
             // Let the domain method compute the new SecurityStamp / clear MustChangePassword and any
             // pending ResetPasswordToken, then persist only those columns (see UpdateAvatarAsync for
             // why the full-row write is avoided).
-            var changeResult = account.ChangePassword(passwordService.HashPassword(newPassword));
+            var changeResult = account.ChangePassword(passwordService.HashPassword(newPassword), timeProvider.GetUtcNow().UtcDateTime);
             if (changeResult.IsError)
             {
                 // The policy above already refused a blank password, so an empty hash here is a

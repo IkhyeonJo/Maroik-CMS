@@ -30,7 +30,8 @@ public class AccountService(
     IOptions<ServerSetting> settings,
     IRsaService rsa,
     ILogger<AccountService> logger,
-    IUnitOfWork unitOfWork
+    IUnitOfWork unitOfWork,
+    TimeProvider timeProvider
     ) : IAccountService
 {
     /// <inheritdoc />
@@ -51,6 +52,7 @@ public class AccountService(
     /// <inheritdoc />
     public async Task<LoginResult> LoginAsync(string email, string password, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -69,7 +71,7 @@ public class AccountService(
                 // ...and issue an equivalent (0-row) column write + commit so this path's DB cost
                 // matches the wrong-password path below (which persists the failed-attempt counter),
                 // instead of returning early after a bare rollback.
-                _ = await accountRepository.UpdateMessageAsync(email, null, DateTime.UtcNow, ct);
+                _ = await accountRepository.UpdateMessageAsync(email, null, utcNow, ct);
                 await unitOfWork.CommitAsync(ct);
                 logger.LogWarning("Login failed: no account for {Email}", email);
                 return LoginResult.Fail(genericLoginError);
@@ -96,7 +98,7 @@ public class AccountService(
             // account is in — every wrong guess returns the same generic error.
             if (!passwordService.VerifyPassword(password, account.HashedPassword))
             {
-                account.RecordLoginFailure(settings.Value.MaxLoginAttempt);
+                account.RecordLoginFailure(settings.Value.MaxLoginAttempt, utcNow);
                 await accountRepository.UpdateEntityAsync(account, ct);
                 await unitOfWork.CommitAsync(ct);
                 logger.LogWarning("Login failed: wrong password for {Email} (failed attempts: {LoginAttempts})", email, account.LoginAttempt);
@@ -127,7 +129,7 @@ public class AccountService(
             }
 
             // Successful login: clear any prior failed attempt counter.
-            account.ResetLoginAttempt();
+            account.ResetLoginAttempt(utcNow);
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
 
@@ -144,6 +146,7 @@ public class AccountService(
     /// <inheritdoc />
     public async Task<RegisterResult> RegisterAsync(RegisterAccountRequest newAccount, EmailTemplate emailTemplate, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         Account? existing = await FindByEmailAsync(newAccount.Email ?? "", ct);
 
         if (existing == null)
@@ -177,14 +180,14 @@ public class AccountService(
                 Role.User,
                 newAccount.TimeZoneIanaId ?? "UTC",
                 defaultMonetaryUnit: null,
-                GuidToken.Generate(),
-                newAccount.AgreedServiceTerms);
+                GuidToken.Generate(utcNow),
+                newAccount.AgreedServiceTerms, utcNow);
 
             if (createResult.IsError)
                 return RegisterResult.FromError(createResult.FirstError);
 
             var account = createResult.Value;
-            account.SetMessage(EnumHelper.GetDescription(AccountMessage.UserCreatedVerifyEmail));
+            account.SetMessage(EnumHelper.GetDescription(AccountMessage.UserCreatedVerifyEmail), utcNow);
 
             try
             {
@@ -215,7 +218,7 @@ public class AccountService(
             // successful send should not overwrite it with VerifyEmail.
             return await SendConfirmationEmailAndUpdateStatusAsync(
                 account, emailTemplate,
-                setVerifyEmailMessageOnSuccess: false, repeat: false, ct);
+                setVerifyEmailMessageOnSuccess: false, repeat: false, utcNow, ct);
         }
 
         if (!existing.EmailConfirmed)
@@ -269,7 +272,7 @@ public class AccountService(
 
                 // A fresh token always: every link mailed for the replaced registration dies with it.
                 var replaceResult = found.ReplaceUnconfirmedRegistration(
-                    hashedPassword, nickname, newAccount.TimeZoneIanaId ?? "UTC", GuidToken.Generate(), newAccount.AgreedServiceTerms);
+                    hashedPassword, nickname, newAccount.TimeZoneIanaId ?? "UTC", GuidToken.Generate(utcNow), newAccount.AgreedServiceTerms, utcNow);
                 if (replaceResult.IsError)
                 {
                     await unitOfWork.RollbackAsync(ct);
@@ -301,7 +304,7 @@ public class AccountService(
             // which need this row's lock held.
             return await SendConfirmationEmailAndUpdateStatusAsync(
                 locked, emailTemplate,
-                setVerifyEmailMessageOnSuccess: true, repeat: false, ct);
+                setVerifyEmailMessageOnSuccess: true, repeat: false, utcNow, ct);
         }
 
         // Account is fully confirmed: tell the caller it already exists and bring the account's own
@@ -333,14 +336,14 @@ public class AccountService(
             {
                 if (!existing.AgreedServiceTerms)
                 {
-                    existing.AcceptServiceTerms();
+                    existing.AcceptServiceTerms(utcNow);
                     await accountRepository.UpdateAgreedServiceTermsAsync(
                         existing.Email.Value, existing.AgreedServiceTerms, existing.Updated, ct);
                 }
 
                 if (!string.Equals(existing.Message, alreadyCreatedMessage, StringComparison.Ordinal))
                 {
-                    existing.SetMessage(alreadyCreatedMessage);
+                    existing.SetMessage(alreadyCreatedMessage, utcNow);
                     await accountRepository.UpdateMessageAsync(
                         existing.Email.Value, existing.Message, existing.Updated, ct);
                 }
@@ -358,6 +361,7 @@ public class AccountService(
     /// <inheritdoc />
     public async Task<RegisterResult> ResendConfirmationEmailAsync(string email, EmailTemplate emailTemplate, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         Account? account = await FindByEmailAsync(email, ct);
         if (account == null)
             return RegisterResult.Fail("Failed to resend email", showResendEmail: true);
@@ -398,8 +402,8 @@ public class AccountService(
 
             // Ensure a live token exists before building the confirmation URL — regenerate when it is
             // missing OR has passed its 24h TTL (otherwise a resend just re-sends a dead link).
-            if (string.IsNullOrEmpty(found.RegistrationToken) || !GuidToken.IsTokenAlive(found.RegistrationToken))
-                found.RegenerateRegistrationToken(GuidToken.Generate());
+            if (string.IsNullOrEmpty(found.RegistrationToken) || !GuidToken.IsTokenAlive(found.RegistrationToken, utcNow))
+                found.RegenerateRegistrationToken(GuidToken.Generate(utcNow), utcNow);
 
             await accountRepository.UpdateRegistrationTokenAsync(found.Email.Value, found.RegistrationToken, found.Updated, ct);
             await unitOfWork.CommitAsync(ct);
@@ -415,12 +419,13 @@ public class AccountService(
         // repeat: true signals the UI that this is a resend, not the first confirmation.
         return await SendConfirmationEmailAndUpdateStatusAsync(
             locked, emailTemplate,
-            setVerifyEmailMessageOnSuccess: true, repeat: true, ct);
+            setVerifyEmailMessageOnSuccess: true, repeat: true, utcNow, ct);
     }
 
     /// <inheritdoc />
     public async Task<ConfirmEmailResult> ValidateRegistrationTokenAsync(string encryptedToken, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         string rawToken;
         try { rawToken = rsa.Decrypt(encryptedToken); }
         catch (Exception e)
@@ -430,7 +435,7 @@ public class AccountService(
         }
 
         Account? account = await FindByRegistrationTokenAsync(rawToken, ct);
-        if (account == null || !GuidToken.IsTokenAlive(rawToken))
+        if (account == null || !GuidToken.IsTokenAlive(rawToken, utcNow))
         {
             logger.LogWarning("Email confirmation link rejected: invalid or expired token");
             return new ConfirmEmailResult { InvalidToken = true, AccountCreated = false };
@@ -443,6 +448,7 @@ public class AccountService(
     /// <inheritdoc />
     public async Task<ConfirmEmailResult> ConfirmEmailAsync(string encryptedToken, string password, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         string rawToken;
         try { rawToken = rsa.Decrypt(encryptedToken); }
         catch (Exception e)
@@ -459,7 +465,7 @@ public class AccountService(
         }
 
         // Reject tokens that have passed their time-to-live window.
-        if (!GuidToken.IsTokenAlive(rawToken))
+        if (!GuidToken.IsTokenAlive(rawToken, utcNow))
         {
             logger.LogWarning("Email confirmation rejected: invalid or expired token for {Email}", account.Email.Value);
             return new ConfirmEmailResult { InvalidToken = true, AccountCreated = false };
@@ -496,7 +502,7 @@ public class AccountService(
                 return new ConfirmEmailResult { WrongPassword = true, RegistrationToken = encryptedToken };
             }
 
-            var confirmResult = locked.ConfirmEmail(rawToken);
+            var confirmResult = locked.ConfirmEmail(rawToken, utcNow);
 
             if (confirmResult.IsError)
             {
@@ -508,7 +514,7 @@ public class AccountService(
                 }
 
                 // Email was already confirmed by a previous request.
-                locked.SetMessage(EnumHelper.GetDescription(AccountMessage.UserAlreadyCreated));
+                locked.SetMessage(EnumHelper.GetDescription(AccountMessage.UserAlreadyCreated), utcNow);
                 try
                 {
                     await accountRepository.UpdateMessageAsync(locked.Email.Value, locked.Message, locked.Updated, ct);
@@ -522,7 +528,7 @@ public class AccountService(
                 return new ConfirmEmailResult { InvalidToken = false, AccountCreated = false };
             }
 
-            locked.SetMessage(EnumHelper.GetDescription(AccountMessage.Success));
+            locked.SetMessage(EnumHelper.GetDescription(AccountMessage.Success), utcNow);
             int rowsAffected;
             try
             {
@@ -568,6 +574,7 @@ public class AccountService(
     /// <inheritdoc />
     public async Task<bool> ForgotPasswordAsync(string email, EmailTemplate emailTemplate, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         Account? account = await FindByEmailAsync(email, ct);
 
         // Silently succeed even when the email is unknown / unconfirmed to avoid user enumeration.
@@ -581,20 +588,20 @@ public class AccountService(
         {
             try
             {
-                _ = rsa.Encrypt(GuidToken.Generate());
+                _ = rsa.Encrypt(GuidToken.Generate(utcNow));
                 // The write targets NoAccountEmail, never `email`: for an address that IS registered
                 // (but unconfirmed or deleted) this branch must not touch that stranger's row — an
                 // anonymous caller who merely knows the address could otherwise rewrite its Updated
                 // stamp and clear its token. An empty address matches no row (Account.Email is the
                 // non-empty primary key), so the statement costs the same and changes nothing.
-                _ = await accountRepository.UpdateResetPasswordTokenAsync(NoAccountEmail, null, DateTime.UtcNow, ct);
+                _ = await accountRepository.UpdateResetPasswordTokenAsync(NoAccountEmail, null, utcNow, ct);
             }
             catch (Exception e) { logger.LogWarning(e, "ForgotPassword equalization failed for {Email}", email); }
             logger.LogWarning("Password reset ignored for {Email}: unknown, unconfirmed or deleted account", email);
             return true;
         }
 
-        string resetPasswordToken = GuidToken.Generate();
+        string resetPasswordToken = GuidToken.Generate(utcNow);
 
         try
         {
@@ -602,7 +609,7 @@ public class AccountService(
             // database will actually accept. The reverse order can e-mail a link whose token was
             // never saved (mail sent, then the save fails) — a dead link the user cannot use.
             // Cannot fail: RequestPasswordReset only errors when EmailConfirmed is false, already ruled out above.
-            _ = account.RequestPasswordReset(resetPasswordToken);
+            _ = account.RequestPasswordReset(resetPasswordToken, utcNow);
 
             // Column-scoped writes (ResetPasswordToken/Message + Updated), not a full-row
             // UpdateEntityAsync: this runs off an un-locked read, so a concurrent self-service
@@ -616,7 +623,7 @@ public class AccountService(
             if (published)
                 logger.LogInformation("Password reset requested for {Email}", account.Email.Value);
 
-            account.SetMessage(EnumHelper.GetDescription(published ? AccountMessage.ResetPasswordMail : AccountMessage.FailToMailSent));
+            account.SetMessage(EnumHelper.GetDescription(published ? AccountMessage.ResetPasswordMail : AccountMessage.FailToMailSent), utcNow);
             await accountRepository.UpdateMessageAsync(account.Email.Value, account.Message, account.Updated, ct);
         }
         catch (Exception e) { logger.LogWarning(e, "ForgotPassword failed for {Email}", email); }
@@ -627,6 +634,7 @@ public class AccountService(
     /// <inheritdoc />
     public async Task<ResetPasswordValidationResult> ValidateResetPasswordTokenAsync(string encryptedToken, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         string rawToken;
         try { rawToken = rsa.Decrypt(encryptedToken); }
         catch (Exception e)
@@ -640,7 +648,7 @@ public class AccountService(
         // Reject if account not found, deleted, token has expired, or email is unconfirmed. Mirrors
         // the same guard on ForgotPasswordAsync / ResetPasswordAsync so a soft-deleted account's
         // lingering token can never be reported "valid" here only to be rejected at the actual reset.
-        if (account == null || account.Deleted || !GuidToken.IsTokenAlive(rawToken) || !account.EmailConfirmed)
+        if (account == null || account.Deleted || !GuidToken.IsTokenAlive(rawToken, utcNow) || !account.EmailConfirmed)
         {
             logger.LogWarning("Password reset link rejected: invalid or expired token");
             return new ResetPasswordValidationResult { FailToReset = true };
@@ -653,6 +661,7 @@ public class AccountService(
     /// <inheritdoc />
     public async Task<ServiceResult> ResetPasswordAsync(string encryptedToken, string newPassword, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         string rawToken;
         try { rawToken = rsa.Decrypt(encryptedToken); }
         catch (Exception e)
@@ -662,7 +671,7 @@ public class AccountService(
         }
 
         Account? found = await FindByResetPasswordTokenAsync(rawToken, ct);
-        if (found == null || found.Deleted || !GuidToken.IsTokenAlive(rawToken) || !found.EmailConfirmed)
+        if (found == null || found.Deleted || !GuidToken.IsTokenAlive(rawToken, utcNow) || !found.EmailConfirmed)
         {
             logger.LogWarning("Password reset rejected: invalid or expired token");
             return ServiceResult.Fail("reset-password-invalid");
@@ -691,7 +700,7 @@ public class AccountService(
 
             // ResetPassword re-checks the stored token, so a concurrent reset that already consumed
             // it between the lookup and this lock is rejected here (compare-and-swap).
-            var resetResult = account.ResetPassword(rawToken, newHashedPassword);
+            var resetResult = account.ResetPassword(rawToken, newHashedPassword, utcNow);
             if (resetResult.IsError)
             {
                 await unitOfWork.RollbackAsync(ct);
@@ -700,8 +709,8 @@ public class AccountService(
             }
 
             // Unlock the account so the user can log in immediately after resetting their password.
-            account.Unlock();
-            account.SetMessage(EnumHelper.GetDescription(AccountMessage.SuccessToResetPassword));
+            account.Unlock(utcNow);
+            account.SetMessage(EnumHelper.GetDescription(AccountMessage.SuccessToResetPassword), utcNow);
 
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
@@ -740,7 +749,7 @@ public class AccountService(
     /// </summary>
     private async Task<RegisterResult> SendConfirmationEmailAndUpdateStatusAsync(
         Account account, EmailTemplate emailTemplate,
-        bool setVerifyEmailMessageOnSuccess, bool repeat, CancellationToken ct)
+        bool setVerifyEmailMessageOnSuccess, bool repeat, DateTime utcNow, CancellationToken ct)
     {
         // Persist the (possibly just-regenerated) registration token BEFORE the mail goes out, so a
         // link that reaches the user always corresponds to a token FindByRegistrationTokenAsync can
@@ -777,7 +786,7 @@ public class AccountService(
         {
             try
             {
-                account.SetMessage(EnumHelper.GetDescription(AccountMessage.FailToMailSent));
+                account.SetMessage(EnumHelper.GetDescription(AccountMessage.FailToMailSent), utcNow);
                 await accountRepository.UpdateMessageAsync(account.Email.Value, account.Message, account.Updated, ct);
             }
             catch (Exception e) { logger.LogWarning(e, "Failed to update account message after mail send failure for {Email}", account.Email.Value); }
@@ -792,7 +801,7 @@ public class AccountService(
         {
             try
             {
-                account.SetMessage(EnumHelper.GetDescription(AccountMessage.VerifyEmail));
+                account.SetMessage(EnumHelper.GetDescription(AccountMessage.VerifyEmail), utcNow);
                 await accountRepository.UpdateMessageAsync(account.Email.Value, account.Message, account.Updated, ct);
             }
             catch (Exception e)

@@ -7,6 +7,7 @@ using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Maroik.Core.Service.Tests.Services;
@@ -55,9 +56,14 @@ public class AccountServiceAuditLoggingTests
     public AccountServiceAuditLoggingTests() =>
         _passwordService.Setup(p => p.VerifyPassword(ConfirmPassword, It.IsAny<string>())).Returns(true);
 
+    /// <summary>The fixed "current time" of these tests.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+    /// <summary>The clock the service under test reads, stopped at <see cref="Now"/>.</summary>
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(Now));
+
     /// <summary>The service under test over the mocked dependencies and the capturing logger.</summary>
     private AccountService CreateSut() => new(_accountRepo.Object, _passwordService.Object, _mailClient.Object,
-        _emailPublisher.Object, _settings, _rsa.Object, _logger, _unitOfWork.Object);
+        _emailPublisher.Object, _settings, _rsa.Object, _logger, _unitOfWork.Object, _time);
 
     /// <summary>A persisted account for <see cref="Email"/> whose state is set by the arguments.</summary>
     private static Account ExistingAccount(bool deleted = false, bool locked = false, bool emailConfirmed = true,
@@ -192,7 +198,7 @@ public class AccountServiceAuditLoggingTests
     [Fact]
     public async Task ConfirmEmail_LogsInformation_WhenTheTokenConfirmsTheAccount()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         Account account = ExistingAccount(emailConfirmed: false, registrationToken: token);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
@@ -209,7 +215,7 @@ public class AccountServiceAuditLoggingTests
     [Fact]
     public async Task ConfirmEmail_LogsWarning_WhenThePasswordDoesNotMatchTheRegistration()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         Account account = ExistingAccount(emailConfirmed: false, registrationToken: token);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
@@ -225,7 +231,7 @@ public class AccountServiceAuditLoggingTests
     [Fact]
     public async Task Register_LogsInformation_WhenAnUnconfirmedRegistrationIsReplaced()
     {
-        Account existing = ExistingAccount(emailConfirmed: false, registrationToken: GuidToken.Generate());
+        Account existing = ExistingAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$replaced");
@@ -289,7 +295,7 @@ public class AccountServiceAuditLoggingTests
     [Fact]
     public async Task ResetPassword_LogsInformation_WhenThePasswordIsReset()
     {
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(Now);
         Account account = ExistingAccount(locked: true, loginAttempt: 3, resetPasswordToken: token);
         _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
