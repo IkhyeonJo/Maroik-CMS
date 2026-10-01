@@ -62,8 +62,8 @@ public class ManagementControllerAuditActorTests(MaroikWebApplicationFactory fac
         var accounts = new Mock<IManagementAccountService>();
         var menus = new Mock<IMenuService>();
         ServiceResult ok = ServiceResult.Ok();
-        accounts.Setup(s => s.CreateAccountAsync(It.IsAny<AccountRequest>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ok);
-        accounts.Setup(s => s.UpdateAccountAsync(It.IsAny<AccountRequest>(), It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ok);
+        accounts.Setup(s => s.CreateAccountAsync(It.IsAny<AdminCreateAccountRequest>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ok);
+        accounts.Setup(s => s.UpdateAccountAsync(It.IsAny<AdminUpdateAccountRequest>(), It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ok);
         accounts.Setup(s => s.DeleteAccountAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ok);
         menus.Setup(s => s.GetAllCategoriesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(
         [
@@ -110,8 +110,8 @@ public class ManagementControllerAuditActorTests(MaroikWebApplicationFactory fac
             Assert.True(json.Contains("\"result\":true"), $"{url}: {(int)response.StatusCode} {json}");
         }
 
-        accounts.Verify(s => s.CreateAccountAsync(It.IsAny<AccountRequest>(), AdminEmail, It.IsAny<CancellationToken>()), Times.Once);
-        accounts.Verify(s => s.UpdateAccountAsync(It.IsAny<AccountRequest>(), It.IsAny<string?>(), AdminEmail, It.IsAny<CancellationToken>()), Times.Once);
+        accounts.Verify(s => s.CreateAccountAsync(It.IsAny<AdminCreateAccountRequest>(), AdminEmail, It.IsAny<CancellationToken>()), Times.Once);
+        accounts.Verify(s => s.UpdateAccountAsync(It.IsAny<AdminUpdateAccountRequest>(), It.IsAny<string?>(), AdminEmail, It.IsAny<CancellationToken>()), Times.Once);
         accounts.Verify(s => s.DeleteAccountAsync(It.IsAny<string>(), AdminEmail, It.IsAny<CancellationToken>()), Times.Once);
         menus.Verify(s => s.CreateCategoryAsync(It.IsAny<CategoryRequest>(), AdminEmail, It.IsAny<CancellationToken>()), Times.Once);
         menus.Verify(s => s.UpdateCategoryAsync(It.IsAny<CategoryRequest>(), AdminEmail, It.IsAny<CancellationToken>()), Times.Once);

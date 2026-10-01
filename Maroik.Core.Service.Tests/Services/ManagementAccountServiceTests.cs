@@ -116,7 +116,7 @@ public class ManagementAccountServiceTests
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ActiveAccount("existing@example.com"));
         var sut = CreateSut();
 
-        ServiceResult result = await sut.CreateAccountAsync(new AccountRequest
+        ServiceResult result = await sut.CreateAccountAsync(new AdminCreateAccountRequest
         {
             Email = "existing@example.com",
             PlainPassword = "plain"
@@ -135,7 +135,7 @@ public class ManagementAccountServiceTests
         _accountRepo.Setup(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
-        ServiceResult result = await sut.CreateAccountAsync(new AccountRequest
+        ServiceResult result = await sut.CreateAccountAsync(new AdminCreateAccountRequest
         {
             Email = "new@example.com",
             PlainPassword = "Plain1234!",
@@ -156,7 +156,7 @@ public class ManagementAccountServiceTests
         _accountRepo.Setup(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
-        ServiceResult result = await sut.CreateAccountAsync(new AccountRequest
+        ServiceResult result = await sut.CreateAccountAsync(new AdminCreateAccountRequest
         {
             Email = "staff@example.com",
             PlainPassword = "Plain1234!",
@@ -176,7 +176,7 @@ public class ManagementAccountServiceTests
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
         var sut = CreateSut();
 
-        ServiceResult result = await sut.CreateAccountAsync(new AccountRequest
+        ServiceResult result = await sut.CreateAccountAsync(new AdminCreateAccountRequest
         {
             Email = "new@example.com",
             PlainPassword = "Plain1234!",
@@ -196,7 +196,7 @@ public class ManagementAccountServiceTests
         _accountRepo.Setup(r => r.NicknameExistsIgnoreCaseAsync("bob", It.IsAny<CancellationToken>())).ReturnsAsync(true);
         var sut = CreateSut();
 
-        ServiceResult result = await sut.CreateAccountAsync(new AccountRequest
+        ServiceResult result = await sut.CreateAccountAsync(new AdminCreateAccountRequest
         {
             Email = "new@example.com",
             PlainPassword = "Plain1234!",
@@ -226,7 +226,7 @@ public class ManagementAccountServiceTests
             .ThrowsAsync(new Exception("duplicate key", new Exception("23505: duplicate key value violates unique constraint \"Account_Nickname_unique\"")));
         var sut = CreateSut();
 
-        ServiceResult result = await sut.CreateAccountAsync(new AccountRequest
+        ServiceResult result = await sut.CreateAccountAsync(new AdminCreateAccountRequest
         {
             Email = "new@example.com",
             PlainPassword = "Plain1234!",
@@ -253,7 +253,7 @@ public class ManagementAccountServiceTests
             .ThrowsAsync(new Exception("duplicate key", new Exception("23505: duplicate key value violates unique constraint \"Account_unique_index_0\"")));
         var sut = CreateSut();
 
-        ServiceResult result = await sut.CreateAccountAsync(new AccountRequest
+        ServiceResult result = await sut.CreateAccountAsync(new AdminCreateAccountRequest
         {
             Email = "new@example.com",
             PlainPassword = "Plain1234!",
@@ -280,7 +280,7 @@ public class ManagementAccountServiceTests
             .ThrowsAsync(new Exception("duplicate key", new Exception("23505: duplicate key value violates unique constraint \"Account_pk\"")));
         var sut = CreateSut();
 
-        ServiceResult result = await sut.CreateAccountAsync(new AccountRequest
+        ServiceResult result = await sut.CreateAccountAsync(new AdminCreateAccountRequest
         {
             Email = "raced@example.com",
             PlainPassword = "Plain1234!",
@@ -303,7 +303,7 @@ public class ManagementAccountServiceTests
         var sut = CreateSut();
 
         ServiceResult result = await sut.UpdateAccountAsync(
-            new AccountRequest { Email = "ghost@example.com" }, null, Actor, TestContext.Current.CancellationToken);
+            new AdminUpdateAccountRequest { Email = "ghost@example.com" }, null, Actor, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Contains("wrong", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
@@ -319,7 +319,7 @@ public class ManagementAccountServiceTests
         var sut = CreateSut();
 
         ServiceResult result = await sut.UpdateAccountAsync(
-            new AccountRequest { Email = account.Email.Value, Role = "User" }, null, Actor, TestContext.Current.CancellationToken);
+            new AdminUpdateAccountRequest { Email = account.Email.Value, Role = "User" }, null, Actor, TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         _accountRepo.Verify(r => r.UpdateEntityAsync(
@@ -338,7 +338,7 @@ public class ManagementAccountServiceTests
         var sut = CreateSut();
 
         ServiceResult result = await sut.UpdateAccountAsync(
-            new AccountRequest { Email = account.Email.Value, Role = "User" }, "NewPass1!", Actor, TestContext.Current.CancellationToken);
+            new AdminUpdateAccountRequest { Email = account.Email.Value, Role = "User" }, "NewPass1!", Actor, TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         _accountRepo.Verify(r => r.UpdateEntityAsync(
@@ -357,7 +357,7 @@ public class ManagementAccountServiceTests
         var sut = CreateSut();
 
         await sut.UpdateAccountAsync(
-            new AccountRequest { Email = account.Email.Value, Role = "User" }, "NewPass1!", Actor, TestContext.Current.CancellationToken);
+            new AdminUpdateAccountRequest { Email = account.Email.Value, Role = "User" }, "NewPass1!", Actor, TestContext.Current.CancellationToken);
 
         Assert.True(account.MustChangePassword);
         Assert.NotEqual(originalStamp, account.SecurityStamp);
@@ -373,7 +373,7 @@ public class ManagementAccountServiceTests
         var sut = CreateSut();
 
         ServiceResult result = await sut.UpdateAccountAsync(
-            new AccountRequest { Email = account.Email.Value, Locked = false }, null, Actor, TestContext.Current.CancellationToken);
+            new AdminUpdateAccountRequest { Email = account.Email.Value, Locked = false }, null, Actor, TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         _accountRepo.Verify(r => r.UpdateEntityAsync(
@@ -427,7 +427,7 @@ public class ManagementAccountServiceTests
     // -- CreateAccountAsync: validation and failures ---------------------------------
 
     /// <summary>An admin create-account request with the given e-mail, password and nickname.</summary>
-    private static AccountRequest NewAccountRequest(string email = "new@example.com", string password = "Plain1234!", string nickname = "NewUser") => new()
+    private static AdminCreateAccountRequest NewAccountRequest(string email = "new@example.com", string password = "Plain1234!", string nickname = "NewUser") => new()
     {
         Email = email, PlainPassword = password, Nickname = nickname, EmailConfirmed = true
     };
@@ -465,7 +465,7 @@ public class ManagementAccountServiceTests
     {
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
         _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$hashed");
-        AccountRequest request = NewAccountRequest();
+        AdminCreateAccountRequest request = NewAccountRequest();
         request.Message = "created by admin";
         request.EmailConfirmed = true;
 
@@ -493,7 +493,7 @@ public class ManagementAccountServiceTests
     [Fact]
     public async Task UpdateAccountAsync_ReturnsPolicyViolation_BeforeLockingTheRow_WhenTheNewPasswordIsTooWeak()
     {
-        ServiceResult result = await CreateSut().UpdateAccountAsync(new AccountRequest { Email = "user@example.com" }, "weak", Actor, TestContext.Current.CancellationToken);
+        ServiceResult result = await CreateSut().UpdateAccountAsync(new AdminUpdateAccountRequest { Email = "user@example.com" }, "weak", Actor, TestContext.Current.CancellationToken);
 
         Assert.Equal("Account.PasswordPolicy", result.ErrorCode);
         _passwordService.Verify(p => p.HashPassword(It.IsAny<string>()), Times.Never);
@@ -506,7 +506,7 @@ public class ManagementAccountServiceTests
     {
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ActiveAccount());
 
-        ServiceResult result = await CreateSut().UpdateAccountAsync(new AccountRequest { Email = "user@example.com", Role = "SuperUser", TimeZoneIanaId = "UTC" }, null, Actor, TestContext.Current.CancellationToken);
+        ServiceResult result = await CreateSut().UpdateAccountAsync(new AdminUpdateAccountRequest { Email = "user@example.com", Role = "SuperUser", TimeZoneIanaId = "UTC" }, null, Actor, TestContext.Current.CancellationToken);
 
         Assert.Equal("Account.RoleInvalid", result.ErrorCode);
         _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -519,7 +519,7 @@ public class ManagementAccountServiceTests
     {
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("secret detail"));
 
-        ServiceResult result = await CreateSut().UpdateAccountAsync(new AccountRequest { Email = "user@example.com" }, null, Actor, TestContext.Current.CancellationToken);
+        ServiceResult result = await CreateSut().UpdateAccountAsync(new AdminUpdateAccountRequest { Email = "user@example.com" }, null, Actor, TestContext.Current.CancellationToken);
 
         Assert.Equal("ManagementAccount.UpdateFailed", result.ErrorCode);
         Assert.DoesNotContain("secret detail", result.ErrorKey);

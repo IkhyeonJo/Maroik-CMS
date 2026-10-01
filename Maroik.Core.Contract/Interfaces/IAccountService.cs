@@ -25,7 +25,7 @@ public interface IAccountService
     /// new mail); a confirmed one is reported as already existing. Returns a <see cref="RegisterResult"/>
     /// with status details.
     /// </summary>
-    Task<RegisterResult> RegisterAsync(AccountRequest newAccount, EmailTemplate emailTemplate, CancellationToken ct = default);
+    Task<RegisterResult> RegisterAsync(RegisterAccountRequest newAccount, EmailTemplate emailTemplate, CancellationToken ct = default);
 
     /// <summary>Re-sends the confirmation email to an unverified account.</summary>
     Task<RegisterResult> ResendConfirmationEmailAsync(string email, EmailTemplate emailTemplate, CancellationToken ct = default);

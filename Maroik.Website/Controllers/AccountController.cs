@@ -1,7 +1,5 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Helpers;
-using Maroik.Core.Domain.Account;
 using Maroik.Core.Domain.Localization;
 using Maroik.Website.Attributes;
 using Maroik.Website.Contracts;
@@ -138,20 +136,14 @@ public class AccountController(
 
             var emailTemplate = localizer.ToConfirmationEmailTemplate();
 
-            var newAccount = new AccountRequest
+            // Role, confirmation state and the registration token are fixed by the service.
+            var newAccount = new RegisterAccountRequest
             {
                 Email = loginInputViewModel.Email,
                 PlainPassword = loginInputViewModel.Password, // service validates + hashes
                 Nickname = loginInputViewModel.Nickname,
-                AvatarImagePath = Account.DefaultAvatarImagePath,
-                Role = Role.User,
                 TimeZoneIanaId = loginInputViewModel.TimeZoneIanaId,
-                Locked = false,
-                EmailConfirmed = false,
-                AgreedServiceTerms = true,
-                RegistrationToken = GuidToken.Generate(),
-                Message = EnumHelper.GetDescription(AccountMessage.UserCreatedVerifyEmail),
-                Deleted = false
+                AgreedServiceTerms = true
             };
 
             var result = await accountService.RegisterAsync(newAccount, emailTemplate, ct);

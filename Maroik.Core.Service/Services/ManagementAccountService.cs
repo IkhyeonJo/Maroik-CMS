@@ -37,7 +37,7 @@ public class ManagementAccountService(
     }
 
     /// <inheritdoc />
-    public async Task<ServiceResult> CreateAccountAsync(AccountRequest request, string actorEmail, CancellationToken ct = default)
+    public async Task<ServiceResult> CreateAccountAsync(AdminCreateAccountRequest request, string actorEmail, CancellationToken ct = default)
     {
         try
         {
@@ -68,8 +68,8 @@ public class ManagementAccountService(
                 nickname,
                 request.Role ?? Role.User,
                 request.TimeZoneIanaId ?? "UTC",
-                request.DefaultMonetaryUnit,
-                request.RegistrationToken,
+                defaultMonetaryUnit: null,
+                registrationToken: null,
                 request.AgreedServiceTerms,
                 allowReservedNickname: true);
 
@@ -110,7 +110,7 @@ public class ManagementAccountService(
     }
 
     /// <inheritdoc />
-    public async Task<ServiceResult> UpdateAccountAsync(AccountRequest request, string? newPassword, string actorEmail, CancellationToken ct = default)
+    public async Task<ServiceResult> UpdateAccountAsync(AdminUpdateAccountRequest request, string? newPassword, string actorEmail, CancellationToken ct = default)
     {
         // An admin-set password always forces the account to pick its own new one (meeting
         // PasswordPolicy) at next login — see Account.AdminResetPassword. It must still meet the
@@ -148,7 +148,7 @@ public class ManagementAccountService(
             if (newHashedPassword != null)
                 account.AdminResetPassword(newHashedPassword);
 
-            // The admin UI has no LoginAttempt input, and AccountRequest carries no such field —
+            // The admin UI has no LoginAttempt input, and AdminUpdateAccountRequest carries no such field —
             // pass the account's own current value instead, so AdminUpdate's "preserve while
             // locked, reset on unlock" logic has a real count to preserve.
             var updateResult = account.AdminUpdate(
