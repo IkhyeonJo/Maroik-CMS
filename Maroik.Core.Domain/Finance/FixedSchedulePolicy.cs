@@ -35,12 +35,12 @@ public static class FixedSchedulePolicy
         => maturityDate.Date >= todayUtc.Date.AddDays(-1);
 
     /// <summary>
-    /// Returns <see langword="true"/> when this year's scheduled deposit for
-    /// (<paramref name="depositMonth"/>, <paramref name="depositDay"/>) has not yet passed and
-    /// falls within <paramref name="noticeWindowDays"/> days of <paramref name="today"/>,
-    /// or when <paramref name="unpunctuality"/> is set.
-    /// Once this year's occurrence has passed, it stays un-noticed until next year (matches main).
-    /// Returns <see langword="false"/> for invalid date combinations (e.g. Feb 29 in a non-leap year).
+    /// Returns <see langword="true"/> when the next scheduled deposit for
+    /// (<paramref name="depositMonth"/>, <paramref name="depositDay"/>) — the nearest date on or
+    /// after <paramref name="today"/> that exists, this year or next year — falls within
+    /// <paramref name="noticeWindowDays"/> days of <paramref name="today"/>, or when
+    /// <paramref name="unpunctuality"/> is set. A pair that does not exist in a year (February 29
+    /// outside a leap year) has no deposit that year, so it is not noticed then.
     /// </summary>
     public static bool IsNoticed(
         int depositMonth,
@@ -54,19 +54,22 @@ public static class FixedSchedulePolicy
         // Compare on whole calendar days, independent of the caller's time-of-day: a non-midnight
         // "today" would otherwise flip the "noticed on the deposit day itself" result.
         today = today.Date;
-        try
-        {
-            var depositDate = new DateTime(today.Year, depositMonth, depositDay);
-            double daysUntil = (depositDate - today).TotalDays;
-            return daysUntil >= 0 && daysUntil <= noticeWindowDays;
-        }
-        catch
-        {
-            // ArgumentOutOfRangeException from the DateTime constructor: the (month, day) pair does
-            // not exist this year (e.g. Feb 29 in a non-leap year) — an expected, documented "not noticed".
-            return false;
-        }
+        DateTime? nextDeposit = DepositDateIn(today.Year, depositMonth, depositDay) is { } thisYear && thisYear >= today
+            ? thisYear
+            : DepositDateIn(today.Year + 1, depositMonth, depositDay);
+
+        return nextDeposit is { } deposit && (deposit - today).TotalDays <= noticeWindowDays;
     }
+
+    /// <summary>
+    /// The deposit date for (<paramref name="month"/>, <paramref name="day"/>) in
+    /// <paramref name="year"/>, or <see langword="null"/> when that date does not exist in that
+    /// year (e.g. February 29 outside a leap year, or an out-of-range month or day).
+    /// </summary>
+    private static DateTime? DepositDateIn(int year, int month, int day)
+        => month is >= 1 and <= 12 && day >= 1 && day <= DateTime.DaysInMonth(year, month)
+            ? new DateTime(year, month, day)
+            : null;
 
     /// <summary>
     /// Returns <see langword="true"/> when <paramref name="maturityDate"/> is strictly
