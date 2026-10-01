@@ -27,7 +27,8 @@ public class BoardService(
     IUnitOfWork unitOfWork,
     IAttachmentContentService attachmentContent,
     IOptions<ServerSetting> settings,
-    ILogger<BoardService> logger) : IBoardService
+    ILogger<BoardService> logger,
+    TimeProvider timeProvider) : IBoardService
 {
     /// <summary>
     /// Maps each board type name to its corresponding file-storage area folder name.
@@ -106,6 +107,7 @@ public class BoardService(
     /// <inheritdoc />
     public async Task<ServiceResult> WriteBoardAsync(BoardRequest request, bool isAdmin, AttachedFileDto? attachedFile, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         var fileError = attachmentContent.ValidateAttachedFile(attachedFile);
         if (fileError != null) return fileError;
 
@@ -114,7 +116,7 @@ public class BoardService(
         await unitOfWork.BeginAsync(ct);
         try
         {
-            var boardResult = Board.Create(request.Type, request.Title, content, request.Writer);
+            var boardResult = Board.Create(request.Type, request.Title, content, request.Writer, utcNow);
             if (boardResult.IsError)
             {
                 await unitOfWork.RollbackAsync(ct);
@@ -122,10 +124,10 @@ public class BoardService(
             }
 
             var board = boardResult.Value;
-            if (request.Locked) board.Lock();
+            if (request.Locked) board.Lock(utcNow);
             // Pinning a post site-wide is an admin-only action — enforced here, not just by the
             // caller, so a future write path can't accidentally honor a non-admin's Noticed=true.
-            if (request.Noticed && isAdmin) board.Pin();
+            if (request.Noticed && isAdmin) board.Pin(utcNow);
 
             long boardId = await boardRepository.WriteBoardAsync(board, ct);
 
@@ -169,6 +171,7 @@ public class BoardService(
     /// <inheritdoc />
     public async Task<ServiceResult> EditBoardAsync(BoardRequest request, string writerNickname, bool isAdmin, AttachedFileDto? newFile, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         var fileError = attachmentContent.ValidateAttachedFile(newFile);
         if (fileError != null) return fileError;
 
@@ -209,7 +212,7 @@ public class BoardService(
                     return ServiceResult.Fail("Input is invalid");
                 case true:
                 {
-                    var updateResult = board.Update(request.Title, content);
+                    var updateResult = board.Update(request.Title, content, utcNow);
                     if (updateResult.IsError)
                     {
                         await unitOfWork.RollbackAsync(ct);
@@ -221,14 +224,14 @@ public class BoardService(
                     // one (see the default branch below), never impose it -- so the author may lower
                     // it as well as raise it. (Noticed, by contrast, is set only at write time and
                     // deliberately kept out of this edit path.)
-                    if (request.Locked) board.Lock();
-                    else board.Unlock();
+                    if (request.Locked) board.Lock(utcNow);
+                    else board.Unlock(utcNow);
                     break;
                 }
                 default:
                     // adminClearingSomeoneElsesLock: an admin acting on a post they don't own may only
                     // clear its lock -- title and content are left untouched.
-                    board.Unlock();
+                    board.Unlock(utcNow);
                     logger.LogInformation("Lock on post {BoardId} of {Writer} cleared by admin {Requester}", board.Id, board.Writer, writerNickname);
                     break;
             }
@@ -257,6 +260,7 @@ public class BoardService(
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteBoardAsync(long boardId, string boardType, string requesterNickname, bool isAdmin, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -280,7 +284,7 @@ public class BoardService(
             }
 
             // Cannot fail: the post was loaded as active and not deleted just above (SoftDelete only refuses an already-deleted post).
-            _ = board.SoftDelete();
+            _ = board.SoftDelete(utcNow);
 
             await boardRepository.UpdateEntityAsync(board, ct);
             await unitOfWork.CommitAsync(ct);
@@ -298,6 +302,7 @@ public class BoardService(
     /// <inheritdoc />
     public async Task<ServiceResult> WriteCommentAsync(BoardCommentRequest request, string? requiredOwnerNickname = null, bool isAdmin = false, string? requiredType = null, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         string content = attachmentContent.SanitizeContent(request.Content ?? "");
 
         await unitOfWork.BeginAsync(ct);
@@ -328,14 +333,14 @@ public class BoardService(
             // collide with the Order of one still active.
             long order = existingList.Count == 0 ? 0 : existingList.Max(c => c.Order) + 1;
 
-            var commentResult = BoardComment.Create(request.BoardId, order, request.AvatarImagePath, request.Writer, content);
+            var commentResult = BoardComment.Create(request.BoardId, order, request.AvatarImagePath, request.Writer, content, utcNow);
             if (commentResult.IsError)
             {
                 await unitOfWork.RollbackAsync(ct);
                 return ServiceResult.FromError(commentResult.FirstError);
             }
 
-            var addResult = board.AddComment(commentResult.Value, request.Writer, isAdmin);
+            var addResult = board.AddComment(commentResult.Value, utcNow, request.Writer, isAdmin);
             if (addResult.IsError)
             {
                 await unitOfWork.RollbackAsync(ct);

@@ -7,6 +7,9 @@ namespace Maroik.Core.Domain.Tests.Board;
 /// </summary>
 public class BoardTests
 {
+    /// <summary>The fixed "current time" every domain call in this class receives.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>A persisted, unlocked, non-deleted free-forum post written by Alice.</summary>
     private static Domain.Board.Board ValidBoard(long id = 1) =>
         Domain.Board.Board.Reconstitute(id, "FreeForum", "Hello World", "content", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0, false, false, false);
@@ -21,7 +24,7 @@ public class BoardTests
     [Fact]
     public void Create_ReturnsBoard_WhenValid()
     {
-        var result = Domain.Board.Board.Create("FreeForum", "Title", "body", "Alice");
+        var result = Domain.Board.Board.Create("FreeForum", "Title", "body", "Alice", Now);
 
         Assert.False(result.IsError);
         Assert.Equal("FreeForum", result.Value.Type);
@@ -35,7 +38,7 @@ public class BoardTests
     [InlineData("   ")]
     public void Create_ReturnsError_WhenTypeEmpty(string? type)
     {
-        var result = Domain.Board.Board.Create(type, "Title", null, "Alice");
+        var result = Domain.Board.Board.Create(type, "Title", null, "Alice", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.TypeEmpty", result.FirstError.Code);
@@ -48,7 +51,7 @@ public class BoardTests
     [InlineData("freeforum")]
     public void Create_ReturnsError_WhenTypeNotKnown(string type)
     {
-        var result = Domain.Board.Board.Create(type, "Title", null, "Alice");
+        var result = Domain.Board.Board.Create(type, "Title", null, "Alice", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.TypeInvalid", result.FirstError.Code);
@@ -60,7 +63,7 @@ public class BoardTests
     [InlineData(BoardTypes.PrivateNote)]
     public void Create_Succeeds_ForKnownType(string type)
     {
-        var result = Domain.Board.Board.Create(type, "Title", "body", "Alice");
+        var result = Domain.Board.Board.Create(type, "Title", "body", "Alice", Now);
 
         Assert.False(result.IsError);
         Assert.Equal(type, result.Value.Type);
@@ -73,7 +76,7 @@ public class BoardTests
     [InlineData("   ")]
     public void Create_ReturnsError_WhenTitleEmpty(string? title)
     {
-        var result = Domain.Board.Board.Create("FreeForum", title, null, "Alice");
+        var result = Domain.Board.Board.Create("FreeForum", title, null, "Alice", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.TitleEmpty", result.FirstError.Code);
@@ -83,7 +86,7 @@ public class BoardTests
     [Fact]
     public void Create_ReturnsError_WhenTitleTooLong()
     {
-        var result = Domain.Board.Board.Create("FreeForum", new string('x', 101), null, "Alice");
+        var result = Domain.Board.Board.Create("FreeForum", new string('x', 101), null, "Alice", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.TitleTooLong", result.FirstError.Code);
@@ -93,7 +96,7 @@ public class BoardTests
     [Fact]
     public void Create_ReturnsError_WhenContentTooLong()
     {
-        var result = Domain.Board.Board.Create("FreeForum", "Title", new string('x', 16385), "Alice");
+        var result = Domain.Board.Board.Create("FreeForum", "Title", new string('x', 16385), "Alice", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.ContentTooLong", result.FirstError.Code);
@@ -106,7 +109,7 @@ public class BoardTests
     [InlineData("   ")]
     public void Create_ReturnsError_WhenWriterEmpty(string? writer)
     {
-        var result = Domain.Board.Board.Create("FreeForum", "Title", null, writer);
+        var result = Domain.Board.Board.Create("FreeForum", "Title", null, writer, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.WriterEmpty", result.FirstError.Code);
@@ -120,7 +123,7 @@ public class BoardTests
     {
         var board = ValidBoard();
 
-        var result = board.Update("New Title", "New content");
+        var result = board.Update("New Title", "New content", Now);
 
         Assert.False(result.IsError);
         Assert.Equal("New Title", board.Title);
@@ -131,9 +134,9 @@ public class BoardTests
     public void Update_ReturnsError_WhenDeleted()
     {
         var board = ValidBoard();
-        board.SoftDelete();
+        board.SoftDelete(Now);
 
-        var result = board.Update("New Title", null);
+        var result = board.Update("New Title", null, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.Deleted", result.FirstError.Code);
@@ -145,7 +148,7 @@ public class BoardTests
     {
         var board = ValidBoard();
 
-        var result = board.Update(new string('x', 101), null);
+        var result = board.Update(new string('x', 101), null, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.TitleTooLong", result.FirstError.Code);
@@ -174,7 +177,7 @@ public class BoardTests
         var board = ValidBoard(id: 1);
         var comment = ValidComment(boardId: 1);
 
-        var result = board.AddComment(comment);
+        var result = board.AddComment(comment, Now);
 
         Assert.False(result.IsError);
         Assert.Single(board.Comments);
@@ -185,9 +188,9 @@ public class BoardTests
     public void AddComment_ReturnsError_WhenLocked()
     {
         var board = ValidBoard(id: 1);
-        board.Lock();
+        board.Lock(Now);
 
-        var result = board.AddComment(ValidComment(boardId: 1));
+        var result = board.AddComment(ValidComment(boardId: 1), Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.Locked", result.FirstError.Code);
@@ -198,9 +201,9 @@ public class BoardTests
     public void AddComment_ReturnsError_WhenLockedAndCommenterIsNotOwnerOrAdmin()
     {
         var board = ValidBoard(id: 1);
-        board.Lock();
+        board.Lock(Now);
 
-        var result = board.AddComment(ValidComment(boardId: 1), commenterNickname: "Bob", isAdmin: false);
+        var result = board.AddComment(ValidComment(boardId: 1), Now, commenterNickname: "Bob", isAdmin: false);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.Locked", result.FirstError.Code);
@@ -211,9 +214,9 @@ public class BoardTests
     public void AddComment_Succeeds_WhenLockedAndCommenterIsOwner()
     {
         var board = ValidBoard(id: 1);
-        board.Lock();
+        board.Lock(Now);
 
-        var result = board.AddComment(ValidComment(boardId: 1), commenterNickname: "Alice", isAdmin: false);
+        var result = board.AddComment(ValidComment(boardId: 1), Now, commenterNickname: "Alice", isAdmin: false);
 
         Assert.False(result.IsError);
         Assert.Single(board.Comments);
@@ -224,9 +227,9 @@ public class BoardTests
     public void AddComment_Succeeds_WhenLockedAndCommenterIsAdmin()
     {
         var board = ValidBoard(id: 1);
-        board.Lock();
+        board.Lock(Now);
 
-        var result = board.AddComment(ValidComment(boardId: 1), commenterNickname: "Bob", isAdmin: true);
+        var result = board.AddComment(ValidComment(boardId: 1), Now, commenterNickname: "Bob", isAdmin: true);
 
         Assert.False(result.IsError);
         Assert.Single(board.Comments);
@@ -237,9 +240,9 @@ public class BoardTests
     public void AddComment_ReturnsError_WhenDeleted()
     {
         var board = ValidBoard(id: 1);
-        board.SoftDelete();
+        board.SoftDelete(Now);
 
-        var result = board.AddComment(ValidComment(boardId: 1));
+        var result = board.AddComment(ValidComment(boardId: 1), Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.Deleted", result.FirstError.Code);
@@ -252,7 +255,7 @@ public class BoardTests
         var board = ValidBoard(id: 1);
         var comment = ValidComment(boardId: 99);
 
-        var result = board.AddComment(comment);
+        var result = board.AddComment(comment, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.CommentMismatch", result.FirstError.Code);
@@ -266,7 +269,7 @@ public class BoardTests
     {
         var board = ValidBoard();
 
-        board.Lock();
+        board.Lock(Now);
 
         Assert.True(board.Locked);
     }
@@ -276,9 +279,9 @@ public class BoardTests
     public void Unlock_SetsLockedFalse()
     {
         var board = ValidBoard();
-        board.Lock();
+        board.Lock(Now);
 
-        board.Unlock();
+        board.Unlock(Now);
 
         Assert.False(board.Locked);
     }
@@ -291,7 +294,7 @@ public class BoardTests
     {
         var board = ValidBoard();
 
-        board.Pin();
+        board.Pin(Now);
 
         Assert.True(board.Noticed);
     }
@@ -301,9 +304,9 @@ public class BoardTests
     public void Unpin_SetsNoticedFalse()
     {
         var board = ValidBoard();
-        board.Pin();
+        board.Pin(Now);
 
-        board.Unpin();
+        board.Unpin(Now);
 
         Assert.False(board.Noticed);
     }
@@ -316,7 +319,7 @@ public class BoardTests
     {
         var board = ValidBoard();
 
-        var result = board.SoftDelete();
+        var result = board.SoftDelete(Now);
 
         Assert.False(result.IsError);
         Assert.True(board.Deleted);
@@ -327,9 +330,9 @@ public class BoardTests
     public void SoftDelete_ReturnsError_WhenAlreadyDeleted()
     {
         var board = ValidBoard();
-        board.SoftDelete();
+        board.SoftDelete(Now);
 
-        var result = board.SoftDelete();
+        var result = board.SoftDelete(Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.AlreadyDeleted", result.FirstError.Code);
@@ -520,9 +523,9 @@ public class BoardTests
     [Fact]
     public void Update_ReturnsError_WhenContentTooLong()
     {
-        var board = Domain.Board.Board.Create("FreeForum", "Title", "body", "Alice").Value;
+        var board = Domain.Board.Board.Create("FreeForum", "Title", "body", "Alice", Now).Value;
 
-        var result = board.Update("Title", new string('x', 16385));
+        var result = board.Update("Title", new string('x', 16385), Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Board.ContentTooLong", result.FirstError.Code);

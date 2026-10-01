@@ -8,13 +8,16 @@ namespace Maroik.Core.Domain.Tests.Board;
 /// </summary>
 public class BoardCommentTests
 {
+    /// <summary>The fixed "current time" every domain call in this class receives.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     // -- Create ---------------------------------------------------------------
 
     /// <summary>Create returns comment, when valid.</summary>
     [Fact]
     public void Create_ReturnsComment_WhenValid()
     {
-        var result = BoardComment.Create(10, 1, null, "Alice", "Hello!");
+        var result = BoardComment.Create(10, 1, null, "Alice", "Hello!", Now);
 
         Assert.False(result.IsError);
         Assert.Equal("Alice", result.Value.Writer);
@@ -28,7 +31,7 @@ public class BoardCommentTests
     [InlineData("   ")]
     public void Create_ReturnsError_WhenWriterEmpty(string? writer)
     {
-        var result = BoardComment.Create(10, 1, null, writer, "content");
+        var result = BoardComment.Create(10, 1, null, writer, "content", Now);
 
         Assert.True(result.IsError);
         Assert.Equal("BoardComment.WriterEmpty", result.FirstError.Code);
@@ -40,9 +43,9 @@ public class BoardCommentTests
     {
         const int max = DomainTitledContentPolicy.MaxBodyLength;
 
-        Assert.False(BoardComment.Create(10, 1, null, "Alice", new string('a', max)).IsError);
+        Assert.False(BoardComment.Create(10, 1, null, "Alice", new string('a', max), Now).IsError);
 
-        var tooLong = BoardComment.Create(10, 1, null, "Alice", new string('a', max + 1));
+        var tooLong = BoardComment.Create(10, 1, null, "Alice", new string('a', max + 1), Now);
         Assert.True(tooLong.IsError);
         Assert.Equal("BoardComment.ContentTooLong", tooLong.FirstError.Code);
         Assert.Equal("Comment must be {0} characters or fewer.", tooLong.FirstError.Metadata!["ResourceKey"]);
@@ -56,7 +59,7 @@ public class BoardCommentTests
     [InlineData("   ")]
     public void Create_ReturnsError_WhenContentEmpty(string? content)
     {
-        var result = BoardComment.Create(10, 1, null, "Alice", content);
+        var result = BoardComment.Create(10, 1, null, "Alice", content, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("BoardComment.ContentEmpty", result.FirstError.Code);
@@ -68,7 +71,7 @@ public class BoardCommentTests
     [Fact]
     public void SoftDelete_Succeeds_WhenNotDeleted()
     {
-        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!").Value;
+        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!", Now).Value;
 
         var result = comment.SoftDelete();
 
@@ -80,7 +83,7 @@ public class BoardCommentTests
     [Fact]
     public void SoftDelete_ReturnsError_WhenAlreadyDeleted()
     {
-        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!").Value;
+        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!", Now).Value;
         comment.SoftDelete();
 
         var result = comment.SoftDelete();
@@ -95,7 +98,7 @@ public class BoardCommentTests
     [Fact]
     public void IsOwnedBy_ReturnsTrue_ForWriter()
     {
-        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!").Value;
+        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!", Now).Value;
 
         Assert.True(comment.IsOwnedBy("Alice"));
     }
@@ -104,7 +107,7 @@ public class BoardCommentTests
     [Fact]
     public void IsOwnedBy_ReturnsFalse_ForNonWriter()
     {
-        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!").Value;
+        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!", Now).Value;
 
         Assert.False(comment.IsOwnedBy("Bob"));
     }
@@ -113,7 +116,7 @@ public class BoardCommentTests
     [Fact]
     public void CanBeDeletedBy_ReturnsTrue_ForWriter()
     {
-        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!").Value;
+        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!", Now).Value;
 
         Assert.True(comment.CanBeDeletedBy("Alice", isAdmin: false));
     }
@@ -122,7 +125,7 @@ public class BoardCommentTests
     [Fact]
     public void CanBeDeletedBy_ReturnsTrue_ForNonWriterAdmin()
     {
-        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!").Value;
+        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!", Now).Value;
 
         Assert.True(comment.CanBeDeletedBy("Bob", isAdmin: true));
     }
@@ -131,7 +134,7 @@ public class BoardCommentTests
     [Fact]
     public void CanBeDeletedBy_ReturnsFalse_ForNonWriterNonAdmin()
     {
-        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!").Value;
+        var comment = BoardComment.Create(10, 1, null, "Alice", "Hello!", Now).Value;
 
         Assert.False(comment.CanBeDeletedBy("Bob", isAdmin: false));
     }

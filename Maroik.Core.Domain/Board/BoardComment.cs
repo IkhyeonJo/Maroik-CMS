@@ -34,22 +34,23 @@ public sealed class BoardComment : AggregateRoot<long>
     /// <summary>Soft-delete flag.</summary>
     public bool Deleted { get; private set; }
 
-    /// <summary>Sets the comment's fields and stamps <see cref="Created"/> with the current UTC time
-    /// (<see cref="Reconstitute"/> overwrites it with the stored value).</summary>
+    /// <summary>Sets the comment's fields and its <see cref="Created"/> stamp (the creation time for
+    /// <see cref="Create"/>, the stored value for <see cref="Reconstitute"/>).</summary>
     private BoardComment(
         long id,
         long boardId,
         long order,
         string? avatarImagePath,
         string writer,
-        string? content) : base(id)
+        string? content,
+        DateTime created) : base(id)
     {
         BoardId = boardId;
         Order = order;
         AvatarImagePath = avatarImagePath;
         Writer = writer;
         Content = content;
-        Created = DateTime.UtcNow;
+        Created = created;
     }
 
     /// <summary>
@@ -66,9 +67,9 @@ public sealed class BoardComment : AggregateRoot<long>
         DateTime created,
         bool deleted)
     {
-        var comment = new BoardComment(id, boardId, order, avatarImagePath, writer, content)
+        var comment = new BoardComment(id, boardId, order, avatarImagePath, writer, content, created)
         {
-            Created = created, Deleted = deleted
+            Deleted = deleted
         };
         return comment;
     }
@@ -79,7 +80,8 @@ public sealed class BoardComment : AggregateRoot<long>
         long order,
         string? avatarImagePath,
         string? writer,
-        string? content)
+        string? content,
+        DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(writer))
             return LocalizableError.Validation("BoardComment.WriterEmpty", "Comment author (writer) cannot be empty.");
@@ -92,7 +94,7 @@ public sealed class BoardComment : AggregateRoot<long>
         if (content.Length > TitledContentPolicy.MaxBodyLength)
             return LocalizableError.Validation("BoardComment.ContentTooLong", "Comment must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
 
-        return new BoardComment(0, boardId, order, avatarImagePath, writer, content);
+        return new BoardComment(0, boardId, order, avatarImagePath, writer, content, utcNow);
     }
 
     /// <summary>Marks the comment as soft-deleted (content is retained in the database).</summary>

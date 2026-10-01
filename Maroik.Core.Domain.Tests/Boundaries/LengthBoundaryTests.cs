@@ -27,11 +27,11 @@ public class LengthBoundaryTests
     [Fact]
     public void Board_Create_AcceptsATitleAndContentAtTheLimit_AndRefusesOneMore()
     {
-        Assert.False(Domain.Board.Board.Create(BoardTypes.FreeForum, Text(TitledContentPolicy.MaxTitleLength), Text(TitledContentPolicy.MaxBodyLength), Writer).IsError);
+        Assert.False(Domain.Board.Board.Create(BoardTypes.FreeForum, Text(TitledContentPolicy.MaxTitleLength), Text(TitledContentPolicy.MaxBodyLength), Writer, Now).IsError);
 
-        ErrorAssert.Validation(Domain.Board.Board.Create(BoardTypes.FreeForum, Text(TitledContentPolicy.MaxTitleLength + 1), "c", Writer),
+        ErrorAssert.Validation(Domain.Board.Board.Create(BoardTypes.FreeForum, Text(TitledContentPolicy.MaxTitleLength + 1), "c", Writer, Now),
             "Board.TitleTooLong", "Post title must be {0} characters or fewer.", TitledContentPolicy.MaxTitleLength);
-        ErrorAssert.Validation(Domain.Board.Board.Create(BoardTypes.FreeForum, "t", Text(TitledContentPolicy.MaxBodyLength + 1), Writer),
+        ErrorAssert.Validation(Domain.Board.Board.Create(BoardTypes.FreeForum, "t", Text(TitledContentPolicy.MaxBodyLength + 1), Writer, Now),
             "Board.ContentTooLong", "Post content must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
     }
 
@@ -39,13 +39,13 @@ public class LengthBoundaryTests
     [Fact]
     public void Board_Update_AcceptsATitleAndContentAtTheLimit_AndRefusesOneMore()
     {
-        Domain.Board.Board board = Domain.Board.Board.Create(BoardTypes.FreeForum, "t", "c", Writer).Value;
+        Domain.Board.Board board = Domain.Board.Board.Create(BoardTypes.FreeForum, "t", "c", Writer, Now).Value;
 
-        Assert.False(board.Update(Text(TitledContentPolicy.MaxTitleLength), Text(TitledContentPolicy.MaxBodyLength)).IsError);
+        Assert.False(board.Update(Text(TitledContentPolicy.MaxTitleLength), Text(TitledContentPolicy.MaxBodyLength), Now).IsError);
 
-        ErrorAssert.Validation(board.Update(Text(TitledContentPolicy.MaxTitleLength + 1), "c"),
+        ErrorAssert.Validation(board.Update(Text(TitledContentPolicy.MaxTitleLength + 1), "c", Now),
             "Board.TitleTooLong", "Post title must be {0} characters or fewer.", TitledContentPolicy.MaxTitleLength);
-        ErrorAssert.Validation(board.Update("t", Text(TitledContentPolicy.MaxBodyLength + 1)),
+        ErrorAssert.Validation(board.Update("t", Text(TitledContentPolicy.MaxBodyLength + 1), Now),
             "Board.ContentTooLong", "Post content must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
     }
 
@@ -53,11 +53,11 @@ public class LengthBoundaryTests
     [Fact]
     public void Board_ValidationMessages_ForEmptyAndUnknownInput()
     {
-        ErrorAssert.Validation(Domain.Board.Board.Create("", "t", "c", Writer), "Board.TypeEmpty", "Board type cannot be empty.");
-        ErrorAssert.Validation(Domain.Board.Board.Create("Nonsense", "t", "c", Writer), "Board.TypeInvalid", "Board type is not a recognised value.");
-        ErrorAssert.Validation(Domain.Board.Board.Create(BoardTypes.FreeForum, " ", "c", Writer), "Board.TitleEmpty", "Post title cannot be empty.");
-        ErrorAssert.Validation(Domain.Board.Board.Create(BoardTypes.FreeForum, "t", "c", " "), "Board.WriterEmpty", "Post author (writer) cannot be empty.");
-        ErrorAssert.Validation(Domain.Board.Board.Create(BoardTypes.FreeForum, "t", "c", Writer).Value.Update(" ", "c"),
+        ErrorAssert.Validation(Domain.Board.Board.Create("", "t", "c", Writer, Now), "Board.TypeEmpty", "Board type cannot be empty.");
+        ErrorAssert.Validation(Domain.Board.Board.Create("Nonsense", "t", "c", Writer, Now), "Board.TypeInvalid", "Board type is not a recognised value.");
+        ErrorAssert.Validation(Domain.Board.Board.Create(BoardTypes.FreeForum, " ", "c", Writer, Now), "Board.TitleEmpty", "Post title cannot be empty.");
+        ErrorAssert.Validation(Domain.Board.Board.Create(BoardTypes.FreeForum, "t", "c", " ", Now), "Board.WriterEmpty", "Post author (writer) cannot be empty.");
+        ErrorAssert.Validation(Domain.Board.Board.Create(BoardTypes.FreeForum, "t", "c", Writer, Now).Value.Update(" ", "c", Now),
             "Board.TitleEmpty", "Post title cannot be empty.");
     }
 

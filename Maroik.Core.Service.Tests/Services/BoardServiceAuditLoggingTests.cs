@@ -7,6 +7,7 @@ using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Maroik.Core.Service.Tests.Services;
@@ -42,10 +43,15 @@ public class BoardServiceAuditLoggingTests
         _attachedFileRepo.Setup(r => r.FindByBoardIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).ReturnsAsync((BoardAttachedFile?)null);
     }
 
+    /// <summary>The fixed "current time" of these tests.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+    /// <summary>The clock the service under test reads, stopped at <see cref="Now"/>.</summary>
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(Now));
+
     /// <summary>The service under test over the mocked dependencies and the capturing logger.</summary>
     private BoardService CreateSut() => new(_boardRepo.Object, _attachedFileRepo.Object, _commentRepo.Object,
         Mock.Of<IFileClient>(), _unitOfWork.Object, _attachmentContent.Object,
-        Options.Create(new ServerSetting { FileStorageBaseUrl = "https://files.example.com" }), _logger);
+        Options.Create(new ServerSetting { FileStorageBaseUrl = "https://files.example.com" }), _logger, _time);
 
     /// <summary>A free-forum post whose title and content are secrets that must never be logged.</summary>
     private static Board MakeBoard(string writer = "Alice", bool locked = false) =>
