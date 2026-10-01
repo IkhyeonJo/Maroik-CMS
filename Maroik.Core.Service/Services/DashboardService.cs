@@ -23,11 +23,14 @@ public class DashboardService(
     IExpenditureRepository expenditureRepository,
     IFixedIncomeRepository fixedIncomeRepository,
     IFixedExpenditureRepository fixedExpenditureRepository,
-    IOptions<ServerSetting> settings) : IDashboardService
+    IOptions<ServerSetting> settings,
+    TimeProvider timeProvider) : IDashboardService
 {
     /// <inheritdoc />
     public async Task<DashboardDto> GetSummaryAsync(string accountEmail, string year, string month, string timeZoneId, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
+
         // The public demo account always shows a fixed, pre-seeded period (configured via
         // ServerSetting.DemoAccountEmail/DemoDashboardYear/DemoDashboardMonth) so visitors see
         // consistent sample data regardless of when they browse the demo.
@@ -39,7 +42,7 @@ public class DashboardService(
         }
 
         // Normalize year/month
-        DateTime accountToday = DateTime.UtcNow.ConvertTimeByTimeZoneIanaId(timeZoneId);
+        DateTime accountToday = utcNow.ConvertTimeByTimeZoneIanaId(timeZoneId);
         if (!int.TryParse(year, out int yearInt)) yearInt = accountToday.Year;
         if (!int.TryParse(month, out int monthInt)) monthInt = accountToday.Month;
 
@@ -160,7 +163,7 @@ public class DashboardService(
         if (firstExpenditure != null && firstExpenditure.Created != DateTime.MinValue && firstExpenditure.Created < firstCreated)
             firstCreated = firstExpenditure.Created;
         if (firstCreated == DateTime.MaxValue)
-            firstCreated = DateTime.UtcNow;
+            firstCreated = utcNow;
 
         // Convert to user timezone. ConvertTimeByTimeZoneIanaId (not the raw TimeZoneInfo API) is
         // required here: firstCreated is DateTimeKind.Unspecified as returned by Npgsql but
@@ -179,7 +182,7 @@ public class DashboardService(
         int incomesNoticed = 0, expendituresNoticed = 0;
         int incomesExpired = 0, expendituresExpired = 0;
 
-        DateTime currentDate = DateTime.UtcNow.ConvertTimeByTimeZoneIanaId(timeZoneId).Date;
+        DateTime currentDate = timeProvider.GetUtcNow().UtcDateTime.ConvertTimeByTimeZoneIanaId(timeZoneId).Date;
 
         foreach (var item in await fixedIncomeRepository.GetByAccountEmailAsync(email, ct))
         {

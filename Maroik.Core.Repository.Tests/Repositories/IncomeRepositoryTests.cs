@@ -199,7 +199,7 @@ public sealed class IncomeRepositoryTests(DatabaseFixture database) : Repository
             await Task.Delay(300, TestContext.Current.CancellationToken);
 
             income.Update("RegularIncome", "LaborIncome", income.Content, income.Amount.Amount + 100m,
-                income.Amount.Currency, income.DepositMyAssetProductName, income.Note);
+                income.Amount.Currency, income.DepositMyAssetProductName, income.Note, DateTime.UtcNow);
             await repo.UpdateEntityAsync(income, TestContext.Current.CancellationToken);
             // The repository defers its flush while a transaction is open on the context; this test
             // drives the transaction directly, so it flushes the pending UPDATE itself before commit.

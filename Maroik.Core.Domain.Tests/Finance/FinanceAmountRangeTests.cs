@@ -9,6 +9,9 @@ namespace Maroik.Core.Domain.Tests.Finance;
 /// </summary>
 public class FinanceAmountRangeTests
 {
+    /// <summary>The fixed "current time" every domain call in this class receives.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>The largest amount (in absolute value) the policy accepts.</summary>
     private const decimal Max = FinanceAmountPolicy.MaxAbsoluteAmount;
     /// <summary>The smallest four-decimal amount above <see cref="Max"/> (<see cref="Max"/> + 0.0001).</summary>
@@ -67,7 +70,7 @@ public class FinanceAmountRangeTests
     [Fact]
     public void Income_Record_ReturnsError_WhenAmountOutOfRange()
     {
-        var result = Income.Record("user@example.com", "RegularIncome", "LaborIncome", "salary", OverMax, "KRW", "Wallet");
+        var result = Income.Record("user@example.com", "RegularIncome", "LaborIncome", "salary", OverMax, "KRW", "Wallet", Now);
 
         Assert.Equal("Finance.AmountOutOfRange", result.FirstError.Code);
     }
@@ -75,13 +78,13 @@ public class FinanceAmountRangeTests
     /// <summary>Income.Record accepts the largest storable amount.</summary>
     [Fact]
     public void Income_Record_Succeeds_AtTheMaximumAmount()
-        => Assert.False(Income.Record("user@example.com", "RegularIncome", "LaborIncome", "salary", Max, "KRW", "Wallet").IsError);
+        => Assert.False(Income.Record("user@example.com", "RegularIncome", "LaborIncome", "salary", Max, "KRW", "Wallet", Now).IsError);
 
     /// <summary>Expenditure.Record rejects an over-range amount.</summary>
     [Fact]
     public void Expenditure_Record_ReturnsError_WhenAmountOutOfRange()
     {
-        var result = Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "lunch", OverMax, "KRW", "Wallet", null);
+        var result = Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "lunch", OverMax, "KRW", "Wallet", null, Now);
 
         Assert.Equal("Finance.AmountOutOfRange", result.FirstError.Code);
     }
@@ -91,7 +94,7 @@ public class FinanceAmountRangeTests
     public void FixedIncome_Register_ReturnsError_WhenAmountOutOfRange()
     {
         var result = FixedIncome.Register("user@example.com", "RegularIncome", "LaborIncome", "salary", OverMax, "KRW",
-            "Wallet", 1, 15, new DateTime(2099, 12, 31));
+            "Wallet", 1, 15, new DateTime(2099, 12, 31), Now);
 
         Assert.Equal("Finance.AmountOutOfRange", result.FirstError.Code);
     }
@@ -101,7 +104,7 @@ public class FinanceAmountRangeTests
     public void FixedExpenditure_Register_ReturnsError_WhenAmountOutOfRange()
     {
         var result = FixedExpenditure.Register("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "rent", OverMax, "KRW",
-            "Wallet", null, 1, 15, new DateTime(2099, 12, 31));
+            "Wallet", null, 1, 15, new DateTime(2099, 12, 31), Now);
 
         Assert.Equal("Finance.AmountOutOfRange", result.FirstError.Code);
     }
@@ -112,7 +115,7 @@ public class FinanceAmountRangeTests
     [Fact]
     public void Asset_Create_Succeeds_AtTheColumnLimits()
     {
-        var result = Asset.Create(new string('a', 255), "user@example.com", "FreeDepositAndWithdrawal", Max, "KRW", new string('n', 255));
+        var result = Asset.Create(new string('a', 255), "user@example.com", "FreeDepositAndWithdrawal", Max, "KRW", Now, new string('n', 255));
 
         Assert.False(result.IsError);
     }
@@ -120,13 +123,13 @@ public class FinanceAmountRangeTests
     /// <summary>A negative balance is still allowed (overdraft / debt), down to the column's limit.</summary>
     [Fact]
     public void Asset_Create_Succeeds_WithANegativeBalance()
-        => Assert.False(Asset.Create("Loan", "user@example.com", "FreeDepositAndWithdrawal", -Max, "KRW").IsError);
+        => Assert.False(Asset.Create("Loan", "user@example.com", "FreeDepositAndWithdrawal", -Max, "KRW", Now).IsError);
 
     /// <summary>A product name over 255 characters is rejected.</summary>
     [Fact]
     public void Asset_Create_ReturnsError_WhenProductNameTooLong()
     {
-        var result = Asset.Create(new string('a', 256), "user@example.com", "FreeDepositAndWithdrawal", 1m, "KRW");
+        var result = Asset.Create(new string('a', 256), "user@example.com", "FreeDepositAndWithdrawal", 1m, "KRW", Now);
 
         Assert.Equal("Asset.ProductNameTooLong", result.FirstError.Code);
     }
@@ -135,7 +138,7 @@ public class FinanceAmountRangeTests
     [Fact]
     public void Asset_Create_ReturnsError_WhenNoteTooLong()
     {
-        var result = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", 1m, "KRW", new string('n', 256));
+        var result = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", 1m, "KRW", Now, new string('n', 256));
 
         Assert.Equal("Finance.NoteTooLong", result.FirstError.Code);
     }
@@ -146,7 +149,7 @@ public class FinanceAmountRangeTests
     [InlineData("-10000000000000000")]
     public void Asset_Create_ReturnsError_WhenBalanceOutOfRange(string amount)
     {
-        var result = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", decimal.Parse(amount), "KRW");
+        var result = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", decimal.Parse(amount), "KRW", Now);
 
         Assert.Equal("Finance.AmountOutOfRange", result.FirstError.Code);
     }
@@ -155,11 +158,11 @@ public class FinanceAmountRangeTests
     [Fact]
     public void Asset_Update_AppliesTheSameLimits()
     {
-        var asset = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", 1m, "KRW").Value;
+        var asset = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", 1m, "KRW", Now).Value;
 
-        Assert.Equal("Asset.ProductNameTooLong", asset.Update(new string('a', 256), "FreeDepositAndWithdrawal", 1m, "KRW", null, false).FirstError.Code);
-        Assert.Equal("Finance.NoteTooLong", asset.Update("Wallet", "FreeDepositAndWithdrawal", 1m, "KRW", new string('n', 256), false).FirstError.Code);
-        Assert.Equal("Finance.AmountOutOfRange", asset.Update("Wallet", "FreeDepositAndWithdrawal", OverMax, "KRW", null, false).FirstError.Code);
-        Assert.False(asset.Update(new string('a', 255), "FreeDepositAndWithdrawal", Max, "KRW", new string('n', 255), false).IsError);
+        Assert.Equal("Asset.ProductNameTooLong", asset.Update(new string('a', 256), "FreeDepositAndWithdrawal", 1m, "KRW", null, false, Now).FirstError.Code);
+        Assert.Equal("Finance.NoteTooLong", asset.Update("Wallet", "FreeDepositAndWithdrawal", 1m, "KRW", new string('n', 256), false, Now).FirstError.Code);
+        Assert.Equal("Finance.AmountOutOfRange", asset.Update("Wallet", "FreeDepositAndWithdrawal", OverMax, "KRW", null, false, Now).FirstError.Code);
+        Assert.False(asset.Update(new string('a', 255), "FreeDepositAndWithdrawal", Max, "KRW", new string('n', 255), false, Now).IsError);
     }
 }

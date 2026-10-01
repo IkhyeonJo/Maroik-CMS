@@ -216,7 +216,7 @@ public sealed class ExpenditureRepositoryTests(DatabaseFixture database) : Repos
 
             expenditure.Update("ConsumerSpending", "MealOrEatOutExpenses", expenditure.Content,
                 expenditure.Amount.Amount + 100m, expenditure.Amount.Currency,
-                expenditure.PaymentMethod, expenditure.MyDepositAsset, expenditure.Note);
+                expenditure.PaymentMethod, expenditure.MyDepositAsset, expenditure.Note, DateTime.UtcNow);
             await repo.UpdateEntityAsync(expenditure, TestContext.Current.CancellationToken);
             // The repository defers its flush while a transaction is open on the context; this test
             // drives the transaction directly, so it flushes the pending UPDATE itself before commit.

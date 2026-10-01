@@ -7,13 +7,16 @@ namespace Maroik.Core.Domain.Tests.Finance;
 /// </summary>
 public class FixedExpenditureTests
 {
+    /// <summary>The fixed "current time" every domain call in this class receives.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>Maturity date one year from now.</summary>
-    private static readonly DateTime _maturity = DateTime.UtcNow.AddYears(1);
+    private static readonly DateTime _maturity = Now.AddYears(1);
 
     /// <summary>A valid KRW Netflix expenditure paid from "My Card", scheduled for month 1, day 1.</summary>
     private static FixedExpenditure ValidFixedExpenditure() =>
         FixedExpenditure.Register("user@example.com", "ConsumerSpending", "LeisureOrCulture", "Netflix",
-            15000m, "KRW", "My Card", null, 1, 1, _maturity).Value;
+            15000m, "KRW", "My Card", null, 1, 1, _maturity, Now).Value;
 
     // -- Register -------------------------------------------------------------
 
@@ -22,7 +25,7 @@ public class FixedExpenditureTests
     public void Register_ReturnsFixedExpenditure_WhenValid()
     {
         var result = FixedExpenditure.Register("user@example.com", "ConsumerSpending", "LeisureOrCulture", "Netflix",
-            15000m, "KRW", "My Card", null, 1, 1, _maturity);
+            15000m, "KRW", "My Card", null, 1, 1, _maturity, Now);
 
         Assert.False(result.IsError);
         Assert.Equal(1, result.Value.DepositDay);
@@ -36,7 +39,7 @@ public class FixedExpenditureTests
     public void Register_ReturnsError_WhenDepositDayOutOfRange(short day)
     {
         var result = FixedExpenditure.Register("user@example.com", "ConsumerSpending", "LeisureOrCulture", null,
-            0m, "KRW", "My Card", null, 1, day, _maturity);
+            0m, "KRW", "My Card", null, 1, day, _maturity, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("FixedExpenditure.InvalidDepositDay", result.FirstError.Code);
@@ -52,7 +55,7 @@ public class FixedExpenditureTests
     public void Register_ReturnsError_WhenDepositDayInvalidForMonth(short month, short day)
     {
         var result = FixedExpenditure.Register("user@example.com", "ConsumerSpending", "LeisureOrCulture", null,
-            0m, "KRW", "My Card", null, month, day, _maturity);
+            0m, "KRW", "My Card", null, month, day, _maturity, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("FixedExpenditure.InvalidDepositDay", result.FirstError.Code);
@@ -65,7 +68,7 @@ public class FixedExpenditureTests
     public void Register_ReturnsError_WhenDepositMonthOutOfRange(short month)
     {
         var result = FixedExpenditure.Register("user@example.com", "ConsumerSpending", "LeisureOrCulture", null,
-            0m, "KRW", "My Card", null, month, 1, _maturity);
+            0m, "KRW", "My Card", null, month, 1, _maturity, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("FixedExpenditure.InvalidDepositMonth", result.FirstError.Code);
@@ -78,7 +81,7 @@ public class FixedExpenditureTests
     public void Register_ReturnsError_WhenPaymentMethodEmpty(string? method)
     {
         var result = FixedExpenditure.Register("user@example.com", "ConsumerSpending", "LeisureOrCulture", null,
-            0m, "KRW", method, null, 1, 1, _maturity);
+            0m, "KRW", method, null, 1, 1, _maturity, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("FixedExpenditure.PaymentMethodEmpty", result.FirstError.Code);
@@ -89,7 +92,7 @@ public class FixedExpenditureTests
     public void Register_ReturnsError_WhenMaturityDateInPast()
     {
         var result = FixedExpenditure.Register("user@example.com", "ConsumerSpending", "LeisureOrCulture", "Netflix",
-            15000m, "KRW", "My Card", null, 1, 1, DateTime.UtcNow.AddYears(-1));
+            15000m, "KRW", "My Card", null, 1, 1, Now.AddYears(-1), Now);
 
         Assert.True(result.IsError);
         Assert.Equal("FixedExpenditure.MaturityDateInPast", result.FirstError.Code);
@@ -100,7 +103,7 @@ public class FixedExpenditureTests
     public void Register_Succeeds_WithNoMaturityDateSentinel()
     {
         var result = FixedExpenditure.Register("user@example.com", "ConsumerSpending", "LeisureOrCulture", "Netflix",
-            15000m, "KRW", "My Card", null, 1, 1, FixedSchedulePolicy.NoMaturityDate);
+            15000m, "KRW", "My Card", null, 1, 1, FixedSchedulePolicy.NoMaturityDate, Now);
 
         Assert.False(result.IsError);
     }
@@ -113,7 +116,7 @@ public class FixedExpenditureTests
     {
         var fe = ValidFixedExpenditure();
 
-        fe.MarkUnpunctual();
+        fe.MarkUnpunctual(Now);
 
         Assert.True(fe.Unpunctuality);
     }
@@ -123,9 +126,9 @@ public class FixedExpenditureTests
     public void ClearUnpunctuality_ClearsFlag()
     {
         var fe = ValidFixedExpenditure();
-        fe.MarkUnpunctual();
+        fe.MarkUnpunctual(Now);
 
-        fe.ClearUnpunctuality();
+        fe.ClearUnpunctuality(Now);
 
         Assert.False(fe.Unpunctuality);
     }
@@ -138,7 +141,7 @@ public class FixedExpenditureTests
     {
         var fe = ValidFixedExpenditure();
 
-        var result = fe.Update("ConsumerSpending", "ProtectionTypeInsurance", "Car insurance", 80000m, "KRW", "Bank Account", null, 1, 15, _maturity, "note");
+        var result = fe.Update("ConsumerSpending", "ProtectionTypeInsurance", "Car insurance", 80000m, "KRW", "Bank Account", null, 1, 15, _maturity, "note", Now);
 
         Assert.False(result.IsError);
         Assert.Equal("ProtectionTypeInsurance", fe.SubClass);
@@ -153,7 +156,7 @@ public class FixedExpenditureTests
     {
         var fe = ValidFixedExpenditure();
 
-        var result = fe.Update("ConsumerSpending", "LeisureOrCulture", null, 0m, "KRW", "My Card", null, 1, day, _maturity, null);
+        var result = fe.Update("ConsumerSpending", "LeisureOrCulture", null, 0m, "KRW", "My Card", null, 1, day, _maturity, null, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("FixedExpenditure.InvalidDepositDay", result.FirstError.Code);
@@ -165,7 +168,7 @@ public class FixedExpenditureTests
     {
         var fe = ValidFixedExpenditure();
 
-        var result = fe.Update("ConsumerSpending", "LeisureOrCulture", null, 0m, "KRW", "My Card", null, 4, 31, _maturity, null);
+        var result = fe.Update("ConsumerSpending", "LeisureOrCulture", null, 0m, "KRW", "My Card", null, 4, 31, _maturity, null, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("FixedExpenditure.InvalidDepositDay", result.FirstError.Code);
@@ -178,7 +181,7 @@ public class FixedExpenditureTests
         var fe = ValidFixedExpenditure();
 
         var result = fe.Update("ConsumerSpending", "LeisureOrCulture", null, 0m, "KRW", "My Card", null, 1, 15,
-            DateTime.UtcNow.AddYears(-1), null);
+            Now.AddYears(-1), null, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("FixedExpenditure.MaturityDateInPast", result.FirstError.Code);
@@ -191,12 +194,12 @@ public class FixedExpenditureTests
     [Fact]
     public void Update_Succeeds_WhenPastMaturityDateLeftUnchanged()
     {
-        var pastMaturity = DateTime.UtcNow.AddYears(-1);
+        var pastMaturity = Now.AddYears(-1);
         var fe = FixedExpenditure.Reconstitute(1, "user@example.com", "ConsumerSpending", "LeisureOrCulture", "Netflix",
-            15000m, "KRW", "My Card", null, 1, 1, pastMaturity, null, false, DateTime.UtcNow.AddYears(-2), DateTime.UtcNow.AddYears(-2));
+            15000m, "KRW", "My Card", null, 1, 1, pastMaturity, null, false, Now.AddYears(-2), Now.AddYears(-2));
 
         var result = fe.Update("ConsumerSpending", "LeisureOrCulture", "Netflix Premium", 20000m, "KRW", "My Card", null, 1, 1,
-            pastMaturity, null);
+            pastMaturity, null, Now);
 
         Assert.False(result.IsError);
         Assert.Equal("Netflix Premium", fe.Content);
@@ -211,7 +214,7 @@ public class FixedExpenditureTests
     [InlineData("  ")]
     public void Register_ReturnsError_WhenMainClassEmpty(string? mainClass)
     {
-        var result = FixedExpenditure.Register("user@example.com", mainClass, "LeisureOrCulture", "Netflix", 1m, "KRW", "My Card", null, 1, 1, _maturity);
+        var result = FixedExpenditure.Register("user@example.com", mainClass, "LeisureOrCulture", "Netflix", 1m, "KRW", "My Card", null, 1, 1, _maturity, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("FixedExpenditure.MainClassEmpty", result.FirstError.Code);
@@ -224,7 +227,7 @@ public class FixedExpenditureTests
     [InlineData("  ")]
     public void Register_ReturnsError_WhenSubClassEmpty(string? subClass)
     {
-        var result = FixedExpenditure.Register("user@example.com", "ConsumerSpending", subClass, "Netflix", 1m, "KRW", "My Card", null, 1, 1, _maturity);
+        var result = FixedExpenditure.Register("user@example.com", "ConsumerSpending", subClass, "Netflix", 1m, "KRW", "My Card", null, 1, 1, _maturity, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("FixedExpenditure.SubClassEmpty", result.FirstError.Code);

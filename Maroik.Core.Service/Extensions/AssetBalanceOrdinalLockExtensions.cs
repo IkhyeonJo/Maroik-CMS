@@ -60,19 +60,21 @@ public static class AssetBalanceOrdinalLockExtensions
         /// one from a single fetched snapshot, avoiding duplicate reads of the same asset.
         /// A caller that already holds a dictionary covering these asset names — typically because it
         /// fetched one of its own for validation just before calling this — should use the
-        /// <see cref="ApplyAssetBalanceAdjustmentsAsync(IAssetBalanceDomainService, Dictionary{string, Asset}, IEnumerable{AssetBalanceAdjustment}, string, string, CancellationToken)"/>
+        /// <see cref="ApplyAssetBalanceAdjustmentsAsync(IAssetBalanceDomainService, Dictionary{string, Asset}, IEnumerable{AssetBalanceAdjustment}, string, string, DateTime, CancellationToken)"/>
         /// overload instead, to reuse that fetch rather than repeating it here.
         /// </summary>
         /// <param name="accountEmail">Owner of every asset named in <paramref name="adjustments"/>.</param>
         /// <param name="adjustments">Adjustments to apply; entries with an empty <see cref="AssetBalanceAdjustment.AssetName"/> are skipped.</param>
         /// <param name="notFoundErrorCode">Error code used when a non-empty asset name does not resolve to an asset.</param>
         /// <param name="notFoundErrorMessage">Error message used when a non-empty asset name does not resolve to an asset.</param>
+        /// <param name="utcNow">The current UTC time, stamped on every adjusted asset.</param>
         /// <param name="ct">Cancellation token.</param>
         public async Task<ErrorOr<Success>> ApplyAssetBalanceAdjustmentsAsync(
             string accountEmail,
             IEnumerable<AssetBalanceAdjustment> adjustments,
             string notFoundErrorCode,
             string notFoundErrorMessage,
+            DateTime utcNow,
             CancellationToken ct = default)
         {
             List<AssetBalanceAdjustment> toApply = [.. adjustments.Where(a => !string.IsNullOrEmpty(a.AssetName))];
@@ -80,7 +82,7 @@ public static class AssetBalanceOrdinalLockExtensions
                 accountEmail, toApply.Select(a => a.AssetName), ct);
 
             return await assetBalance.ApplyAssetBalanceAdjustmentsAsync(
-                assets, toApply, notFoundErrorCode, notFoundErrorMessage, ct);
+                assets, toApply, notFoundErrorCode, notFoundErrorMessage, utcNow, ct);
         }
 
         /// <summary>
@@ -93,12 +95,14 @@ public static class AssetBalanceOrdinalLockExtensions
         /// <param name="adjustments">Adjustments to apply; entries with an empty <see cref="AssetBalanceAdjustment.AssetName"/> are skipped.</param>
         /// <param name="notFoundErrorCode">Error code used when a non-empty asset name does not resolve to an asset.</param>
         /// <param name="notFoundErrorMessage">Error message used when a non-empty asset name does not resolve to an asset.</param>
+        /// <param name="utcNow">The current UTC time, stamped on every adjusted asset.</param>
         /// <param name="ct">Cancellation token.</param>
         public async Task<ErrorOr<Success>> ApplyAssetBalanceAdjustmentsAsync(
             Dictionary<string, Asset> assets,
             IEnumerable<AssetBalanceAdjustment> adjustments,
             string notFoundErrorCode,
             string notFoundErrorMessage,
+            DateTime utcNow,
             CancellationToken ct = default)
         {
             List<AssetBalanceAdjustment> toApply = [.. adjustments.Where(a => !string.IsNullOrEmpty(a.AssetName))];
@@ -121,7 +125,7 @@ public static class AssetBalanceOrdinalLockExtensions
                     amount = moneyResult.Value;
                 }
 
-                var result = adjustment.IsDeposit ? asset.Deposit(amount) : asset.Withdraw(amount);
+                var result = adjustment.IsDeposit ? asset.Deposit(amount, utcNow) : asset.Withdraw(amount, utcNow);
                 if (result.IsError) return result.Errors;
 
                 touchedNames.Add(adjustment.AssetName!);

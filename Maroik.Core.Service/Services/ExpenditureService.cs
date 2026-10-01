@@ -17,7 +17,8 @@ public class ExpenditureService(
     IExpenditureRepository expenditureRepository,
     IAssetBalanceDomainService assetBalance,
     IUnitOfWork unitOfWork,
-    ILogger<ExpenditureService> logger) : IExpenditureService
+    ILogger<ExpenditureService> logger,
+    TimeProvider timeProvider) : IExpenditureService
 {
     /// <inheritdoc />
     public async Task<List<ExpenditureResponse>> GetExpendituresAsync(string accountEmail, CancellationToken ct = default)
@@ -45,6 +46,7 @@ public class ExpenditureService(
     /// <inheritdoc />
     public async Task<ServiceResult> CreateAsync(string accountEmail, ExpenditureRequest request, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -84,21 +86,21 @@ public class ExpenditureService(
             string? myDepositAsset = isTransfer ? request.MyDepositAsset : null;
 
             var expenditureResult = Expenditure.Record(accountEmail, request.MainClass, request.SubClass,
-                request.Content, Math.Abs(request.Amount), currency, request.PaymentMethod, myDepositAsset, request.Note, request.Created);
+                request.Content, Math.Abs(request.Amount), currency, request.PaymentMethod, myDepositAsset, utcNow, request.Note, request.Created);
             if (expenditureResult.IsError)
                 return await unitOfWork.FailAsync(expenditureResult.FirstError, ct);
 
             var expenditure = expenditureResult.Value;
             await expenditureRepository.CreateAsync(expenditure, ct);
 
-            var withdrawResult = paymentAsset.Withdraw(expenditure.Amount);
+            var withdrawResult = paymentAsset.Withdraw(expenditure.Amount, utcNow);
             if (withdrawResult.IsError)
                 return await unitOfWork.FailAsync(withdrawResult.FirstError, ct);
             await assetBalance.SaveAsync(paymentAsset, ct);
 
             if (depositAsset != null)
             {
-                var depositResult = depositAsset.Deposit(expenditure.Amount);
+                var depositResult = depositAsset.Deposit(expenditure.Amount, utcNow);
                 if (depositResult.IsError)
                     return await unitOfWork.FailAsync(depositResult.FirstError, ct);
                 await assetBalance.SaveAsync(depositAsset, ct);
@@ -117,6 +119,7 @@ public class ExpenditureService(
     /// <inheritdoc />
     public async Task<ServiceResult> UpdateAsync(string accountEmail, ExpenditureRequest request, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -178,13 +181,13 @@ public class ExpenditureService(
             var oldSnapshot = new ExpenditureSnapshot(previous.PaymentMethod, previous.MyDepositAsset, previous.Amount.Amount, previous.Amount.Currency);
 
             var updateResult = previous.Update(request.MainClass, request.SubClass, request.Content,
-                Math.Abs(request.Amount), newCurrency, request.PaymentMethod, myDepositAsset, request.Note, request.Created);
+                Math.Abs(request.Amount), newCurrency, request.PaymentMethod, myDepositAsset, request.Note, utcNow, request.Created);
             if (updateResult.IsError)
                 return await unitOfWork.FailAsync(updateResult.FirstError, ct);
 
             await expenditureRepository.UpdateEntityAsync(previous, ct);
             var adjustResult = await AdjustAssetBalancesAsync(touchedAssets, oldSnapshot,
-                new ExpenditureSnapshot(previous.PaymentMethod, previous.MyDepositAsset, previous.Amount.Amount, previous.Amount.Currency), ct);
+                new ExpenditureSnapshot(previous.PaymentMethod, previous.MyDepositAsset, previous.Amount.Amount, previous.Amount.Currency), utcNow, ct);
             if (adjustResult.IsError)
                 return await unitOfWork.FailAsync(adjustResult.FirstError, ct);
 
@@ -201,6 +204,7 @@ public class ExpenditureService(
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteAsync(string accountEmail, long id, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -221,7 +225,7 @@ public class ExpenditureService(
 
             var adjustResult = await AdjustAssetBalancesAsync(assetsToCheck,
                 new ExpenditureSnapshot(expenditure.PaymentMethod, expenditure.MyDepositAsset, expenditure.Amount.Amount, expenditure.Amount.Currency),
-                null, ct);
+                null, utcNow, ct);
             if (adjustResult.IsError)
                 return await unitOfWork.FailAsync(adjustResult.FirstError, ct);
 
@@ -264,7 +268,7 @@ public class ExpenditureService(
     /// for its own pre-write validation — instead of fetching the same assets again.
     /// </summary>
     private async Task<ErrorOr<Success>> AdjustAssetBalancesAsync(
-        Dictionary<string, Asset> touchedAssets, ExpenditureSnapshot toRevert, ExpenditureSnapshot? toApply, CancellationToken ct = default)
+        Dictionary<string, Asset> touchedAssets, ExpenditureSnapshot toRevert, ExpenditureSnapshot? toApply, DateTime utcNow, CancellationToken ct = default)
     {
         List<AssetBalanceAdjustment> adjustments =
         [
@@ -278,7 +282,7 @@ public class ExpenditureService(
         }
 
         return await assetBalance.ApplyAssetBalanceAdjustmentsAsync(
-            touchedAssets, adjustments, "Expenditure.AssetNotFound", "The asset referenced by this expenditure could not be found.", ct);
+            touchedAssets, adjustments, "Expenditure.AssetNotFound", "The asset referenced by this expenditure could not be found.", utcNow, ct);
     }
 
     /// <summary>

@@ -7,9 +7,12 @@ namespace Maroik.Core.Domain.Tests.Finance;
 /// </summary>
 public class ExpenditureTests
 {
+    /// <summary>The fixed "current time" every domain call in this class receives.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>A valid KRW lunch expenditure paid from "My Card".</summary>
     private static Expenditure ValidExpenditure() =>
-        Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "Lunch", 15000m, "KRW", "My Card", null).Value;
+        Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "Lunch", 15000m, "KRW", "My Card", null, Now).Value;
 
     // -- Record ---------------------------------------------------------------
 
@@ -17,7 +20,7 @@ public class ExpenditureTests
     [Fact]
     public void Record_ReturnsExpenditure_WhenValid()
     {
-        var result = Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "Lunch", 15000m, "KRW", "My Card", null);
+        var result = Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", "Lunch", 15000m, "KRW", "My Card", null, Now);
 
         Assert.False(result.IsError);
         Assert.Equal("ConsumerSpending", result.Value.MainClass);
@@ -31,7 +34,7 @@ public class ExpenditureTests
     [InlineData("   ")]
     public void Record_ReturnsError_WhenMainClassEmpty(string? mainClass)
     {
-        var result = Expenditure.Record("user@example.com", mainClass, "MealOrEatOutExpenses", null, 0m, "KRW", "My Card", null);
+        var result = Expenditure.Record("user@example.com", mainClass, "MealOrEatOutExpenses", null, 0m, "KRW", "My Card", null, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Expenditure.MainClassEmpty", result.FirstError.Code);
@@ -44,7 +47,7 @@ public class ExpenditureTests
     [InlineData("   ")]
     public void Record_ReturnsError_WhenSubClassEmpty(string? subClass)
     {
-        var result = Expenditure.Record("user@example.com", "ConsumerSpending", subClass, null, 0m, "KRW", "My Card", null);
+        var result = Expenditure.Record("user@example.com", "ConsumerSpending", subClass, null, 0m, "KRW", "My Card", null, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Expenditure.SubClassEmpty", result.FirstError.Code);
@@ -57,7 +60,7 @@ public class ExpenditureTests
     [InlineData("   ")]
     public void Record_ReturnsError_WhenPaymentMethodEmpty(string? method)
     {
-        var result = Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", null, 0m, "KRW", method, null);
+        var result = Expenditure.Record("user@example.com", "ConsumerSpending", "MealOrEatOutExpenses", null, 0m, "KRW", method, null, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Expenditure.PaymentMethodEmpty", result.FirstError.Code);
@@ -67,7 +70,7 @@ public class ExpenditureTests
     [Fact]
     public void Record_ReturnsError_WhenEmailInvalid()
     {
-        var result = Expenditure.Record("bademail", "ConsumerSpending", "MealOrEatOutExpenses", null, 0m, "KRW", "My Card", null);
+        var result = Expenditure.Record("bademail", "ConsumerSpending", "MealOrEatOutExpenses", null, 0m, "KRW", "My Card", null, Now);
 
         Assert.True(result.IsError);
     }
@@ -80,7 +83,7 @@ public class ExpenditureTests
     {
         var expenditure = ValidExpenditure();
 
-        var result = expenditure.Update("NonConsumerSpending", "Tax", "Income tax", 300000m, "KRW", "Bank Account", null, "note");
+        var result = expenditure.Update("NonConsumerSpending", "Tax", "Income tax", 300000m, "KRW", "Bank Account", null, "note", Now);
 
         Assert.False(result.IsError);
         Assert.Equal("NonConsumerSpending", expenditure.MainClass);
@@ -93,7 +96,7 @@ public class ExpenditureTests
     {
         var expenditure = ValidExpenditure();
 
-        var result = expenditure.Update("ConsumerSpending", "MealOrEatOutExpenses", null, 0m, "KRW", "", null, null);
+        var result = expenditure.Update("ConsumerSpending", "MealOrEatOutExpenses", null, 0m, "KRW", "", null, null, Now);
 
         Assert.True(result.IsError);
         Assert.Equal("Expenditure.PaymentMethodEmpty", result.FirstError.Code);

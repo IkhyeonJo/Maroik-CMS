@@ -5,6 +5,7 @@ using Maroik.Core.Domain.Account;
 using Maroik.Core.Domain.Finance;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Maroik.Core.Service.Tests.Services;
@@ -30,6 +31,11 @@ public class DashboardServiceTests
     /// <summary>Mock <c>IFixedExpenditureRepository</c> injected into the system under test.</summary>
     private readonly Mock<IFixedExpenditureRepository> _fixedExpenditureRepo = new();
 
+    /// <summary>The fixed "current time" of these tests.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+    /// <summary>The clock the service under test reads, stopped at <see cref="Now"/>.</summary>
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(Now));
+
     /// <summary>The service under test over the mocked dependencies, with <paramref name="settings"/> or defaults.</summary>
     private DashboardService CreateSut(ServerSetting? settings = null) => new(
         _accountRepo.Object,
@@ -38,7 +44,8 @@ public class DashboardServiceTests
         _expenditureRepo.Object,
         _fixedIncomeRepo.Object,
         _fixedExpenditureRepo.Object,
-        Options.Create(settings ?? new ServerSetting()));
+        Options.Create(settings ?? new ServerSetting()),
+        _time);
 
     // -- Helpers --------------------------------------------------------------
 
@@ -176,8 +183,8 @@ public class DashboardServiceTests
 
         DashboardDto summary = await sut.GetSummaryAsync(email, "bad", "bad", "UTC", TestContext.Current.CancellationToken);
 
-        Assert.Equal(DateTime.UtcNow.Year, summary.SelectedYear);
-        Assert.Equal(DateTime.UtcNow.Month, summary.SelectedMonth);
+        Assert.Equal(Now.Year, summary.SelectedYear);
+        Assert.Equal(Now.Month, summary.SelectedMonth);
     }
 
     /// <summary>
@@ -200,7 +207,7 @@ public class DashboardServiceTests
         DashboardDto summary = await sut.GetSummaryAsync(email, "2025", "13", "UTC", TestContext.Current.CancellationToken);
 
         Assert.Equal(2025, summary.SelectedYear);
-        Assert.Equal(DateTime.UtcNow.Month, summary.SelectedMonth);
+        Assert.Equal(Now.Month, summary.SelectedMonth);
     }
 
     /// <summary>Verifies that <c>GetSummaryAsync</c> sets default monetary unit when account has none but assets exist.</summary>
@@ -540,7 +547,7 @@ public class DashboardServiceTests
     public async Task GetNoticeCountsAsync_CountsExpiredItems_WhenMaturityDateIsPast()
     {
         const string email = "user@example.com";
-        var pastDate = DateTime.UtcNow.Date.AddDays(-10);
+        var pastDate = Now.Date.AddDays(-10);
 
         _fixedIncomeRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(
         [
