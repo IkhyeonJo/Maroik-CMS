@@ -1,6 +1,7 @@
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Maroik.Core.Service.Extensions;
 
@@ -17,6 +18,8 @@ public static class ServiceCollectionExtensions
         /// </summary>
         public void AddApplicationServices()
         {
+            // The one clock every use case reads (once per use case) and hands to the domain.
+            services.TryAddSingleton(TimeProvider.System);
             services.AddScoped<IPasswordService, PasswordService>();
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IAccountMailStatusService, AccountMailStatusService>();

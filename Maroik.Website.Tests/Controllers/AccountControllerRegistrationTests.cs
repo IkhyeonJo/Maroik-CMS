@@ -354,7 +354,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     public async Task ConfirmEmail_Get_ValidToken_ShowsThePasswordForm_AndDoesNotActivate()
     {
         string email = UniqueEmail();
-        string rawToken = GuidToken.Generate();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
         await SeedAccountAsync(email, emailConfirmed: false, registrationToken: rawToken);
 
         var response = await _client.GetAsync($"/Account/ConfirmEmail?registrationToken={Uri.EscapeDataString(EncryptToken(rawToken))}", TestContext.Current.CancellationToken);
@@ -370,7 +370,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     public async Task ConfirmEmail_Post_RegistrationPassword_ActivatesAccount()
     {
         string email = UniqueEmail();
-        string rawToken = GuidToken.Generate();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
         await SeedAccountAsync(email, emailConfirmed: false, registrationToken: rawToken);
 
         var response = await SubmitConfirmationAsync(EncryptToken(rawToken), "OldPassword1!");
@@ -387,7 +387,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     public async Task ConfirmEmail_Post_WrongPassword_DoesNotActivate_AndReShowsTheForm()
     {
         string email = UniqueEmail();
-        string rawToken = GuidToken.Generate();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
         await SeedAccountAsync(email, emailConfirmed: false, registrationToken: rawToken);
 
         var response = await SubmitConfirmationAsync(EncryptToken(rawToken), "SomeoneElses1!");
@@ -406,7 +406,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     public async Task Register_UnconfirmedEmail_ReplacesTheEarlierRegistrantsPassword()
     {
         string email = UniqueEmail();
-        await SeedAccountAsync(email, emailConfirmed: false, registrationToken: GuidToken.Generate());
+        await SeedAccountAsync(email, emailConfirmed: false, registrationToken: GuidToken.Generate(DateTime.UtcNow));
 
         var response = await PostFormAsync("/Account/Register", new Dictionary<string, string>
         {
@@ -431,7 +431,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     public async Task ConfirmEmail_AlreadyConfirmed_DoesNotError()
     {
         string email = UniqueEmail();
-        string rawToken = GuidToken.Generate();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
         await SeedAccountAsync(email, emailConfirmed: true, registrationToken: rawToken);
 
         var response = await _client.GetAsync($"/Account/ConfirmEmail?registrationToken={Uri.EscapeDataString(EncryptToken(rawToken))}", TestContext.Current.CancellationToken);
@@ -484,7 +484,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     public async Task ResetPassword_Get_ValidToken_DoesNotFail()
     {
         string email = UniqueEmail();
-        string rawToken = GuidToken.Generate();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
         await SeedAccountAsync(email, emailConfirmed: true, resetPasswordToken: rawToken);
 
         using var scope = factory.Services.CreateScope();
@@ -505,7 +505,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     public async Task ResetPassword_Post_ValidToken_ChangesPasswordAndAllowsLoginWithNewPassword()
     {
         string email = UniqueEmail();
-        string rawToken = GuidToken.Generate();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
         await SeedAccountAsync(email, emailConfirmed: true, resetPasswordToken: rawToken);
 
         using var scope = factory.Services.CreateScope();
@@ -540,7 +540,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     {
         using var scope = factory.Services.CreateScope();
         var rsa = scope.ServiceProvider.GetRequiredService<IRsaService>();
-        string encryptedToken = rsa.Encrypt(GuidToken.Generate()); // well-formed but not stored on any account
+        string encryptedToken = rsa.Encrypt(GuidToken.Generate(DateTime.UtcNow)); // well-formed but not stored on any account
 
         var response = await PostFormAsync("/Account/ResetPassword", new Dictionary<string, string>
         {
@@ -563,7 +563,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     public async Task ResetPassword_Post_PasswordOver72Bytes_ReShowsTheFormAndKeepsTheToken()
     {
         string email = UniqueEmail();
-        string rawToken = GuidToken.Generate();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
         await SeedAccountAsync(email, emailConfirmed: true, resetPasswordToken: rawToken);
 
         using var scope = factory.Services.CreateScope();
@@ -707,7 +707,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     public async Task ResetPassword_Post_PasswordTheServiceRefuses_ReShowsTheFormAndKeepsTheToken()
     {
         string email = UniqueEmail();
-        string rawToken = GuidToken.Generate();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
         await SeedAccountAsync(email, emailConfirmed: true, resetPasswordToken: rawToken);
         using var scope = factory.Services.CreateScope();
         string encryptedToken = scope.ServiceProvider.GetRequiredService<IRsaService>().Encrypt(rawToken);

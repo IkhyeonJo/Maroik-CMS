@@ -61,9 +61,12 @@ public class ErrorContractTests
 
     // ---- Account --------------------------------------------------------------------------
 
+    /// <summary>The fixed "current time" the account checks run at.</summary>
+    private static readonly DateTime AccountNow = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+
     /// <summary>Result of <c>Account.Create</c> with the given password hash and role.</summary>
     private static ErrorOr<DomainAccount> NewAccount(string hash = "$2a$hash", string role = Role.User) =>
-        DomainAccount.Create(Email, hash, "Nick", role, "UTC", null, GuidToken.Generate(), true);
+        DomainAccount.Create(Email, hash, "Nick", role, "UTC", null, GuidToken.Generate(AccountNow), true, AccountNow);
 
     /// <summary>A persisted account whose confirmation, token and lockout state are set by the arguments.</summary>
     private static DomainAccount Reconstituted(bool emailConfirmed = true, string? resetToken = null, string? registrationToken = null,
@@ -83,8 +86,8 @@ public class ErrorContractTests
     [Fact]
     public void Account_ConfirmEmail_Errors()
     {
-        ErrorAssert.Is(Reconstituted(emailConfirmed: true).ConfirmEmail("t"), "Account.AlreadyConfirmed", ErrorType.Conflict, "Email address is already confirmed.");
-        ErrorAssert.Validation(Reconstituted(emailConfirmed: false, registrationToken: GuidToken.Generate()).ConfirmEmail("wrong"),
+        ErrorAssert.Is(Reconstituted(emailConfirmed: true).ConfirmEmail("t", AccountNow), "Account.AlreadyConfirmed", ErrorType.Conflict, "Email address is already confirmed.");
+        ErrorAssert.Validation(Reconstituted(emailConfirmed: false, registrationToken: GuidToken.Generate(AccountNow)).ConfirmEmail("wrong", AccountNow),
             "Account.InvalidToken", "Invalid email confirmation token.");
     }
 
@@ -92,20 +95,20 @@ public class ErrorContractTests
     [Fact]
     public void Account_PasswordReset_Errors()
     {
-        ErrorAssert.Is(Reconstituted(emailConfirmed: false).RequestPasswordReset(GuidToken.Generate()), "Account.NotConfirmed", ErrorType.Failure,
+        ErrorAssert.Is(Reconstituted(emailConfirmed: false).RequestPasswordReset(GuidToken.Generate(AccountNow), AccountNow), "Account.NotConfirmed", ErrorType.Failure,
             "Email must be confirmed before resetting the password.");
 
-        string token = GuidToken.Generate();
+        string token = GuidToken.Generate(AccountNow);
         DomainAccount account = Reconstituted(resetToken: token);
-        ErrorAssert.Validation(account.ResetPassword("wrong", "$2a$new"), "Account.InvalidToken", "Invalid or expired password-reset token.");
-        ErrorAssert.Validation(account.ResetPassword(token, " "), "Account.PasswordEmpty", "New hashed password cannot be empty.");
+        ErrorAssert.Validation(account.ResetPassword("wrong", "$2a$new", AccountNow), "Account.InvalidToken", "Invalid or expired password-reset token.");
+        ErrorAssert.Validation(account.ResetPassword(token, " ", AccountNow), "Account.PasswordEmpty", "New hashed password cannot be empty.");
     }
 
     /// <summary>Verifies that <c>ChangeRole</c> rejects a role other than Admin or User.</summary>
     [Fact]
     public void Account_ChangeRole_RejectsAnUnknownRole()
     {
-        ErrorAssert.Validation(Reconstituted().ChangeRole("Root"),
+        ErrorAssert.Validation(Reconstituted().ChangeRole("Root", AccountNow),
             "Account.RoleInvalid", "Role must be either Admin or User.");
     }
 

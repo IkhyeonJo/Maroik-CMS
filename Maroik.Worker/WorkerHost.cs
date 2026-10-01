@@ -62,6 +62,7 @@ internal static class WorkerHost
 
         builder.Services.AddRepositoryContext(builder.Configuration);
         builder.Services.AddRepositoryServices();
+        builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddScoped<IAccountMailStatusService, AccountMailStatusService>();
 
         #endregion

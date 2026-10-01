@@ -20,7 +20,8 @@ public class ManagementAccountService(
     IAccountRepository accountRepository,
     IPasswordService passwordService,
     IUnitOfWork unitOfWork,
-    ILogger<ManagementAccountService> logger) : IManagementAccountService
+    ILogger<ManagementAccountService> logger,
+    TimeProvider timeProvider) : IManagementAccountService
 {
     /// <inheritdoc />
     public async Task<List<AdminAccountResponse>> GetAllAccountsAsync(CancellationToken ct = default)
@@ -40,6 +41,7 @@ public class ManagementAccountService(
     /// <inheritdoc />
     public async Task<ServiceResult> CreateAccountAsync(AdminCreateAccountRequest request, string actorEmail, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         try
         {
             if (await FindByEmailAsync(request.Email ?? "", ct) != null)
@@ -71,17 +73,17 @@ public class ManagementAccountService(
                 request.TimeZoneIanaId ?? "UTC",
                 defaultMonetaryUnit: null,
                 registrationToken: null,
-                request.AgreedServiceTerms,
+                request.AgreedServiceTerms, utcNow,
                 allowReservedNickname: true);
 
             if (createResult.IsError)
                 return ServiceResult.FromError(createResult.FirstError);
 
             var account = createResult.Value;
-            account.SetMessage(request.Message);
+            account.SetMessage(request.Message, utcNow);
 
             if (request.EmailConfirmed)
-                account.ForceConfirmEmail();
+                account.ForceConfirmEmail(utcNow);
 
             try
             {
@@ -113,6 +115,7 @@ public class ManagementAccountService(
     /// <inheritdoc />
     public async Task<ServiceResult> UpdateAccountAsync(AdminUpdateAccountRequest request, string? newPassword, string actorEmail, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         // An admin-set password always forces the account to pick its own new one (meeting
         // PasswordPolicy) at next login — see Account.AdminResetPassword. It must still meet the
         // policy itself so there is no weak-password window before that forced change. Hash it up
@@ -148,7 +151,7 @@ public class ManagementAccountService(
 
             if (newHashedPassword != null)
             {
-                var resetResult = account.AdminResetPassword(newHashedPassword);
+                var resetResult = account.AdminResetPassword(newHashedPassword, utcNow);
                 if (resetResult.IsError)
                 {
                     // The policy above already refused a blank password, so an empty hash here is
@@ -159,7 +162,7 @@ public class ManagementAccountService(
                 }
             }
 
-            var updateResult = ApplyAdminChanges(account, request);
+            var updateResult = ApplyAdminChanges(account, request, utcNow);
             if (updateResult.IsError)
             {
                 await unitOfWork.RollbackAsync(ct);
@@ -187,41 +190,41 @@ public class ManagementAccountService(
     /// counter (<see cref="Account.Unlock"/>); locking keeps the counter. The admin's message is
     /// applied last so it is what the account ends up showing, whatever lock/unlock wrote.
     /// </summary>
-    private static ErrorOr<Success> ApplyAdminChanges(Account account, AdminUpdateAccountRequest request)
+    private static ErrorOr<Success> ApplyAdminChanges(Account account, AdminUpdateAccountRequest request, DateTime utcNow)
     {
         if (request.TimeZoneIanaId != null)
         {
-            var tzResult = account.ChangeTimeZone(request.TimeZoneIanaId);
+            var tzResult = account.ChangeTimeZone(request.TimeZoneIanaId, utcNow);
             if (tzResult.IsError) return tzResult.Errors;
         }
 
         if (request.Role != null)
         {
-            var roleResult = account.ChangeRole(request.Role);
+            var roleResult = account.ChangeRole(request.Role, utcNow);
             if (roleResult.IsError) return roleResult.Errors;
         }
 
         if (request.Locked)
-            account.Lock();
+            account.Lock(utcNow);
         else
-            account.Unlock();
+            account.Unlock(utcNow);
 
         if (request.EmailConfirmed && !account.EmailConfirmed)
-            account.ForceConfirmEmail();
+            account.ForceConfirmEmail(utcNow);
         else if (!request.EmailConfirmed && account.EmailConfirmed)
-            account.RevokeEmailConfirmation();
+            account.RevokeEmailConfirmation(utcNow);
 
         if (request.AgreedServiceTerms)
-            account.AcceptServiceTerms();
+            account.AcceptServiceTerms(utcNow);
         else
-            account.RevokeServiceTerms();
+            account.RevokeServiceTerms(utcNow);
 
         if (request.Deleted)
-            account.SoftDelete();
+            account.SoftDelete(utcNow);
         else
-            account.Restore();
+            account.Restore(utcNow);
 
-        account.SetMessage(request.Message);
+        account.SetMessage(request.Message, utcNow);
         return Result.Success;
     }
 
@@ -232,6 +235,7 @@ public class ManagementAccountService(
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteAccountAsync(string email, string actorEmail, CancellationToken ct = default)
     {
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         await unitOfWork.BeginAsync(ct);
         try
         {
@@ -246,7 +250,7 @@ public class ManagementAccountService(
                 return ServiceResult.NotFound("Account.NotFound", "Fail to find the account by given email address");
             }
 
-            account.SoftDelete();
+            account.SoftDelete(utcNow);
 
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);

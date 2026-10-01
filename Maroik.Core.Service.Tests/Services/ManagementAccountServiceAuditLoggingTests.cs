@@ -4,6 +4,7 @@ using Maroik.Core.Domain.Account;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Maroik.Core.Service.Tests.Services;
@@ -30,8 +31,13 @@ public class ManagementAccountServiceAuditLoggingTests
     /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<ManagementAccountService> _logger = new();
 
+    /// <summary>The fixed "current time" of these tests.</summary>
+    private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+    /// <summary>The clock the service under test reads, stopped at <see cref="Now"/>.</summary>
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(Now));
+
     /// <summary>The service under test over the mocked dependencies and the capturing logger.</summary>
-    private ManagementAccountService CreateSut() => new(_accountRepo.Object, _passwordService.Object, _unitOfWork.Object, _logger);
+    private ManagementAccountService CreateSut() => new(_accountRepo.Object, _passwordService.Object, _unitOfWork.Object, _logger, _time);
 
     /// <summary>The persisted target account, with the given lockout state.</summary>
     private static Account Existing(bool locked = false, long loginAttempt = 0) =>

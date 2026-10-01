@@ -116,7 +116,8 @@ public sealed class Account : AggregateRoot<string>
         TimeZoneId timeZone,
         string? defaultMonetaryUnit,
         string? registrationToken,
-        bool agreedServiceTerms) : base(email.Value)
+        bool agreedServiceTerms,
+        DateTime utcNow) : base(email.Value)
     {
         Email = email;
         HashedPassword = hashedPassword;
@@ -127,12 +128,12 @@ public sealed class Account : AggregateRoot<string>
         RegistrationToken = registrationToken;
         AgreedServiceTerms = agreedServiceTerms;
         SecurityStamp = GenerateSecurityStamp();
-        Created = DateTime.UtcNow;
-        Updated = DateTime.UtcNow;
+        Created = utcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Reconstitution constructor: assigns every field verbatim from trusted storage with
-    /// no "new entity" side effects (no fresh <see cref="SecurityStamp"/>, no <see cref="DateTime.UtcNow"/>).</summary>
+    /// no "new entity" side effects (no fresh <see cref="SecurityStamp"/>, no new timestamps).</summary>
     private Account(
         Email email, string hashedPassword, string nickname, string? avatarImagePath, string role,
         TimeZoneId timeZone, string? defaultMonetaryUnit, bool locked, long loginAttempt, bool emailConfirmed,
@@ -225,6 +226,7 @@ public sealed class Account : AggregateRoot<string>
         string? defaultMonetaryUnit,
         string? registrationToken,
         bool agreedServiceTerms,
+        DateTime utcNow,
         bool allowReservedNickname = false)
     {
         var emailResult = Email.Create(emailValue);
@@ -246,7 +248,7 @@ public sealed class Account : AggregateRoot<string>
 
         var account = new Account(
             emailResult.Value, hashedPassword, nickname, role,
-            tzResult.Value, defaultMonetaryUnit, registrationToken, agreedServiceTerms);
+            tzResult.Value, defaultMonetaryUnit, registrationToken, agreedServiceTerms, utcNow);
 
         return account;
     }
@@ -261,17 +263,17 @@ public sealed class Account : AggregateRoot<string>
     /// here, not just by callers, so this invariant can't be silently skipped by a future caller
     /// that forgets to pre-check <see cref="GuidToken.IsTokenAlive"/> itself.
     /// </summary>
-    public ErrorOr<Success> ConfirmEmail(string token)
+    public ErrorOr<Success> ConfirmEmail(string token, DateTime utcNow)
     {
         if (EmailConfirmed)
             return LocalizableError.Conflict("Account.AlreadyConfirmed", "Email address is already confirmed.");
 
-        if (!TokensMatch(RegistrationToken, token) || !GuidToken.IsTokenAlive(RegistrationToken!))
+        if (!TokensMatch(RegistrationToken, token) || !GuidToken.IsTokenAlive(RegistrationToken!, utcNow))
             return LocalizableError.Validation("Account.InvalidToken", "Invalid email confirmation token.");
 
         EmailConfirmed = true;
         RegistrationToken = null;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
@@ -281,13 +283,13 @@ public sealed class Account : AggregateRoot<string>
     /// Available even when the account is locked, since resetting the password
     /// is the intended way for a user to recover from a login lockout.
     /// </summary>
-    public ErrorOr<Success> RequestPasswordReset(string resetToken)
+    public ErrorOr<Success> RequestPasswordReset(string resetToken, DateTime utcNow)
     {
         if (!EmailConfirmed)
             return LocalizableError.Failure("Account.NotConfirmed", "Email must be confirmed before resetting the password.");
 
         ResetPasswordToken = resetToken;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
@@ -297,9 +299,9 @@ public sealed class Account : AggregateRoot<string>
     /// here, not just by callers, so this invariant can't be silently skipped by a future caller
     /// that forgets to pre-check <see cref="GuidToken.IsTokenAlive"/> itself.
     /// </summary>
-    public ErrorOr<Success> ResetPassword(string token, string newHashedPassword)
+    public ErrorOr<Success> ResetPassword(string token, string newHashedPassword, DateTime utcNow)
     {
-        if (!TokensMatch(ResetPasswordToken, token) || !GuidToken.IsTokenAlive(ResetPasswordToken!))
+        if (!TokensMatch(ResetPasswordToken, token) || !GuidToken.IsTokenAlive(ResetPasswordToken!, utcNow))
             return LocalizableError.Validation("Account.InvalidToken", "Invalid or expired password-reset token.");
 
         if (string.IsNullOrWhiteSpace(newHashedPassword))
@@ -309,45 +311,45 @@ public sealed class Account : AggregateRoot<string>
         ResetPasswordToken = null;
         SecurityStamp = GenerateSecurityStamp();
         MustChangePassword = false;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
     /// <summary>
     /// Increments the failed-login counter and locks the account when <paramref name="maxAttempts"/> is reached.
     /// </summary>
-    public void RecordLoginFailure(int maxAttempts)
+    public void RecordLoginFailure(int maxAttempts, DateTime utcNow)
     {
         LoginAttempt++;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         if (LoginAttempt >= maxAttempts)
-            Lock(AccountLockedMessage);
+            Lock(utcNow, AccountLockedMessage);
     }
 
     /// <summary>Resets the failed-login counter to zero (called after a successful login).</summary>
-    public void ResetLoginAttempt()
+    public void ResetLoginAttempt(DateTime utcNow)
     {
         LoginAttempt = 0;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>
     /// Locks the account, preventing login.
     /// </summary>
-    public void Lock(string? message = null)
+    public void Lock(DateTime utcNow, string? message = null)
     {
         Locked = true;
         Message = message;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Unlocks the account and resets the login-attempt counter.</summary>
-    public void Unlock()
+    public void Unlock(DateTime utcNow)
     {
         Locked = false;
         LoginAttempt = 0;
         Message = null;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>
@@ -355,12 +357,12 @@ public sealed class Account : AggregateRoot<string>
     /// and never changed afterward (the profile edit UI shows it read-only); the only exception is
     /// <see cref="ReplaceUnconfirmedRegistration"/>, before the registration is confirmed.
     /// </summary>
-    public void UpdateProfile(string? avatarImagePath, TimeZoneId timeZone, string? defaultMonetaryUnit)
+    public void UpdateProfile(string? avatarImagePath, TimeZoneId timeZone, string? defaultMonetaryUnit, DateTime utcNow)
     {
         AvatarImagePath = avatarImagePath;
         TimeZone = timeZone;
         DefaultMonetaryUnit = defaultMonetaryUnit;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>
@@ -372,7 +374,7 @@ public sealed class Account : AggregateRoot<string>
     /// usable to overwrite the password the account owner just chose. An empty or blank hash is
     /// rejected and nothing changes.
     /// </summary>
-    public ErrorOr<Success> ChangePassword(string newHashedPassword)
+    public ErrorOr<Success> ChangePassword(string newHashedPassword, DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(newHashedPassword))
             return LocalizableError.Validation("Account.PasswordEmpty", "New hashed password cannot be empty.");
@@ -381,7 +383,7 @@ public sealed class Account : AggregateRoot<string>
         ResetPasswordToken = null;
         SecurityStamp = GenerateSecurityStamp();
         MustChangePassword = false;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
@@ -393,7 +395,7 @@ public sealed class Account : AggregateRoot<string>
     /// so a reset link mailed earlier cannot be used to bypass the forced change. An empty or blank
     /// hash is rejected and nothing changes.
     /// </summary>
-    public ErrorOr<Success> AdminResetPassword(string newHashedPassword)
+    public ErrorOr<Success> AdminResetPassword(string newHashedPassword, DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(newHashedPassword))
             return LocalizableError.Validation("Account.PasswordEmpty", "New hashed password cannot be empty.");
@@ -402,22 +404,22 @@ public sealed class Account : AggregateRoot<string>
         ResetPasswordToken = null;
         SecurityStamp = GenerateSecurityStamp();
         MustChangePassword = true;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
     /// <summary>Marks the account as deleted without removing the database row.</summary>
-    public void SoftDelete()
+    public void SoftDelete(DateTime utcNow)
     {
         Deleted = true;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Sets the administrative notification message (e.g. lock reason, status text).</summary>
-    public void SetMessage(string? message)
+    public void SetMessage(string? message, DateTime utcNow)
     {
         Message = message;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>
@@ -429,7 +431,7 @@ public sealed class Account : AggregateRoot<string>
     /// has not finished registering. Refused once the email is confirmed.
     /// </summary>
     public ErrorOr<Success> ReplaceUnconfirmedRegistration(
-        string hashedPassword, string nickname, string timeZoneValue, string registrationToken, bool agreedServiceTerms)
+        string hashedPassword, string nickname, string timeZoneValue, string registrationToken, bool agreedServiceTerms, DateTime utcNow)
     {
         if (EmailConfirmed)
             return LocalizableError.Conflict("Account.AlreadyConfirmed", "Email address is already confirmed.");
@@ -449,7 +451,7 @@ public sealed class Account : AggregateRoot<string>
         AgreedServiceTerms = agreedServiceTerms;
         RegistrationToken = registrationToken;
         SecurityStamp = GenerateSecurityStamp();
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
@@ -459,7 +461,7 @@ public sealed class Account : AggregateRoot<string>
     /// can always be recovered by requesting a fresh email. No-op once the email is confirmed
     /// (there is nothing left to confirm).
     /// </summary>
-    public void RegenerateRegistrationToken(string newToken)
+    public void RegenerateRegistrationToken(string newToken, DateTime utcNow)
     {
         if (EmailConfirmed)
         {
@@ -467,49 +469,49 @@ public sealed class Account : AggregateRoot<string>
         }
 
         RegistrationToken = newToken;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>
     /// Admin bypass: confirms the email without token validation.
     /// Use only when an admin creates an account that should be immediately active.
     /// </summary>
-    public void ForceConfirmEmail()
+    public void ForceConfirmEmail(DateTime utcNow)
     {
         EmailConfirmed = true;
         RegistrationToken = null;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>
     /// Ensures the service-terms acceptance flag is set to true.
     /// Used when a returning user tries to register again on an already-confirmed account.
     /// </summary>
-    public void AcceptServiceTerms()
+    public void AcceptServiceTerms(DateTime utcNow)
     {
         AgreedServiceTerms = true;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Administrator operation: changes the account's role. Only Admin or User is accepted.</summary>
-    public ErrorOr<Success> ChangeRole(string role)
+    public ErrorOr<Success> ChangeRole(string role, DateTime utcNow)
     {
         if (role is not (Maroik.Core.Domain.Account.Role.Admin or Maroik.Core.Domain.Account.Role.User))
             return LocalizableError.Validation("Account.RoleInvalid", "Role must be either Admin or User.");
 
         Role = role;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
     /// <summary>Administrator operation: changes the account's display time zone.</summary>
-    public ErrorOr<Success> ChangeTimeZone(string timeZoneIanaId)
+    public ErrorOr<Success> ChangeTimeZone(string timeZoneIanaId, DateTime utcNow)
     {
         var tzResult = TimeZoneId.Create(timeZoneIanaId);
         if (tzResult.IsError) return tzResult.Errors;
 
         TimeZone = tzResult.Value;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
         return Result.Success;
     }
 
@@ -518,23 +520,23 @@ public sealed class Account : AggregateRoot<string>
     /// log in until it is confirmed (by an administrator, or through a freshly requested
     /// confirmation mail).
     /// </summary>
-    public void RevokeEmailConfirmation()
+    public void RevokeEmailConfirmation(DateTime utcNow)
     {
         EmailConfirmed = false;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Administrator operation: withdraws the account's acceptance of the service terms.</summary>
-    public void RevokeServiceTerms()
+    public void RevokeServiceTerms(DateTime utcNow)
     {
         AgreedServiceTerms = false;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 
     /// <summary>Administrator operation: undoes <see cref="SoftDelete"/>.</summary>
-    public void Restore()
+    public void Restore(DateTime utcNow)
     {
         Deleted = false;
-        Updated = DateTime.UtcNow;
+        Updated = utcNow;
     }
 }
