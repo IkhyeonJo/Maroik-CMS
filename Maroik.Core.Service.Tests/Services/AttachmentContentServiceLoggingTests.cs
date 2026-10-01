@@ -31,12 +31,9 @@ public class AttachmentContentServiceLoggingTests
     {
         _fileClient.Setup(f => f.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(_failure);
         _fileClient.Setup(f => f.OpenReadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(_failure);
-        _fileClient.Setup(f => f.UploadAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        var validator = new Mock<IImageValidatorService>();
-        validator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(true);
-        return new AttachmentContentService(_fileClient.Object, Mock.Of<IRsaService>(), validator.Object,
+        return new AttachmentContentService(_fileClient.Object, Mock.Of<IRsaService>(), Mock.Of<IImageValidatorService>(),
             Mock.Of<IHtmlContentSanitizerService>(), _htmlParser.Object,
-            Options.Create(new ServerSetting { FileStorageBaseUrl = "http://filestorage.local", MaxAttachedFileSizeBytes = 1024 }), _logger);
+            Options.Create(new ServerSetting { FileStorageBaseUrl = "http://filestorage.local" }), _logger);
     }
 
     /// <summary>Asserts exactly one Error was logged, with the failure attached, naming <paramref name="path"/> and the current correlation id.</summary>
@@ -86,18 +83,5 @@ public class AttachmentContentServiceLoggingTests
 
         Assert.True(patch!.Remove);
         AssertLoggedOnce("upload/img.png", activity);
-    }
-
-    /// <summary>An editor image that cannot be read back right after it was stored.</summary>
-    [Fact]
-    public async Task UploadSummernoteImageAsync_LogsAFailedReadBackOnce_WithPathAndCorrelationId()
-    {
-        using var activity = new Activity("request").Start();
-        var file = new AttachedFileDto { FileName = "a.png", ContentType = "image/png", Bytes = [1, 2], Size = 2 };
-
-        SummernoteUploadResult result = await CreateSut().UploadSummernoteImageAsync(file, "user", "FreeForum", TestContext.Current.CancellationToken);
-
-        Assert.False(result.Success);
-        AssertLoggedOnce("summernote/images/", activity);
     }
 }

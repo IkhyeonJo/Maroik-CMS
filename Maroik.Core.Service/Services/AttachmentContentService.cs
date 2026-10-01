@@ -64,16 +64,9 @@ public class AttachmentContentService(
         if (!uploaded)
             return SummernoteUploadResult.Fail("Input is invalid");
 
-        try
-        {
-            byte[] fileBytes = await fileClient.DownloadAsync(filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
-            return SummernoteUploadResult.Ok(fileBytes, file.ContentType, imageFile, filePath);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to download file {FilePath} immediately after upload. CorrelationId={CorrelationId}", filePath, Activity.Current?.Id);
-            return SummernoteUploadResult.Fail("Input is invalid");
-        }
+        // File storage only reports success once it has stored the bytes as sent, so the editor gets
+        // the bytes already in hand instead of a second round trip to read them back.
+        return SummernoteUploadResult.Ok(file.Bytes, file.ContentType, imageFile, filePath);
     }
 
     /// <inheritdoc />

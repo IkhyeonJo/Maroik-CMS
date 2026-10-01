@@ -200,44 +200,28 @@ public class AttachmentContentServiceTests
         _fileClient.Verify(f => f.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    /// <summary>Verifies that a successful upload+re-download returns the downloaded bytes and content type.</summary>
+    /// <summary>
+    /// A stored editor image is returned from the bytes already in hand: the upload's success means
+    /// file storage kept them as sent, so nothing is downloaded back.
+    /// </summary>
     [Fact]
-    public async Task UploadSummernoteImageAsync_ReturnsOk_WhenUploadAndDownloadSucceed()
+    public async Task UploadSummernoteImageAsync_ReturnsTheUploadedBytes_WithoutDownloadingThemBack()
     {
         _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(true);
+        string? storedPath = null;
         _fileClient.Setup(f => f.UploadAsync(
             It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<byte[], string, string, string, CancellationToken>((_, _, path, _, _) => storedPath = path)
             .ReturnsAsync(true);
-        byte[] downloaded =
-        [
-            .. "\t\t\t"u8
-        ];
-        _fileClient.Setup(f => f.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(downloaded);
         var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = "image/png", FileName = "x.png" };
 
         var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
-        Assert.Equal(downloaded, result.FileBytes);
+        Assert.Equal(file.Bytes, result.FileBytes);
         Assert.Equal("image/png", result.ContentType);
-    }
-
-    /// <summary>Verifies that an exception from the post-upload re-download is caught and returned as a failure, not propagated.</summary>
-    [Fact]
-    public async Task UploadSummernoteImageAsync_ReturnsFail_WhenDownloadThrows()
-    {
-        _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(true);
-        _fileClient.Setup(f => f.UploadAsync(
-            It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _fileClient.Setup(f => f.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new HttpRequestException("storage unreachable"));
-        var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = "image/png", FileName = "x.png" };
-
-        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
-
-        Assert.False(result.Success);
+        Assert.Equal(storedPath, result.FilePath);
+        _fileClient.Verify(f => f.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // -- DownloadFileAsync ---------------------------------------------------------
