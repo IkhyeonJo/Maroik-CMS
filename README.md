@@ -15,29 +15,47 @@ This repository is a portfolio snapshot of Maroik. The original Maroik repositor
 ### 1. Personal Finance Management
 - Expense tracking and categorization
 - Income recording
+- Fixed (recurring) income and expenditure with deposit-day reminders — the next deposit is found across the year end (e.g. 28 Dec → 2 Jan), and a 29 February schedule is skipped in common years
+- Amounts are kept exactly to four decimal places (`numeric(20,4)`); a fifth decimal is rejected instead of silently rounded, so an asset's balance always equals the sum of what was recorded against it
 - Financial reports and analytics
-- Export to Excel
+- Export to Excel — amounts as numeric cells (they sum and sort in Excel), timestamps as `yyyy-MM-dd HH:mm:ss` in the viewer's time zone
 
 ### 2. Calendar and Schedule Management
 - Monthly calendar view
-- Event creation and management
+- Event creation and management, with a file attachment and inline images per event
+- Calendars shared with other users or the public
 
 ### 3. Bulletin Board System
 - Post creation, editing, and deletion
 - Comment system
-- File attachments (virus-scanned with ClamAV)
+- File attachments (virus-scanned with ClamAV), downloaded through a separate access-checked POST action and streamed — the post page itself carries only the file's name and size
+- Rich-text editor images, embedded in the post when it is viewed
 - Search functionality
 
 ### 4. User Management
 - Role-based access control (Admin/User)
-- User profile management
+- User profile management, including an avatar
 - Session-based authentication
-- Password management
+- Password management (registration confirmation, password reset, forced password change)
+- E-mail addresses are matched trimmed and case-insensitively at login, password reset and confirmation resend
+- Privacy: uploaded avatars and editor images are re-encoded without their metadata (EXIF GPS position, camera model, capture time), after first being turned upright by their EXIF orientation
 
 ### 5. Admin Dashboard
-- User management
-- System settings
+- User management — role change, lock/unlock, e-mail confirmation, terms agreement, soft delete/restore, password reset with a forced change at next login; role, lock and delete changes are audit-logged with the acting admin
+- Navigation menu management (the menu doubles as the access-control list)
+- Account export to Excel without password hashes or registration/reset tokens
 - Analytics dashboard
+
+### Error messages
+- A refused write shows its actual reason, localized in English and Korean (e.g. "Only zip extension allowed.", "Cannot add a comment to a locked post.", "Role must be Admin, User or Anonymous.").
+- A server-side fault (database, file storage) shows "A temporary error occurred. Please try again later." instead of blaming the user's input; the exception is logged once, where it is handled.
+
+## Engineering Highlights
+- **DDD + Clean Architecture, enforced by tests.** Dependencies point Website → Service → Domain; NetArchTest rules fail the build when a layer reaches the wrong way, when the domain logs, reads the clock, or builds an error outside `LocalizableError`, and when a project is missing from the solution.
+- **Deterministic time.** Domain methods take the current time as a `DateTime utcNow` argument; each use case reads `TimeProvider` once and passes the same instant everywhere, so `Created == Updated` on creation and token expiry is tested at its exact boundaries with `FakeTimeProvider`.
+- **Rich domain model.** Value objects (`Email`, `Money`, `CurrencyCode`, `AccountRole`, …) replace primitive strings; admin actions are intent-revealing aggregate operations (`ChangeRole`, `Lock`/`Unlock`, `ForceConfirmEmail`/`RevokeEmailConfirmation`, `AcceptServiceTerms`/`RevokeServiceTerms`, `SoftDelete`/`Restore`, `AdminResetPassword`) instead of a field-overwriting update.
+- **Use-case DTOs.** Self-registration, admin account creation and admin account update each have their own request type, so a registration form can never carry a role, lock or confirmation flag.
+- **Test-first development.** Every change starts with a failing test, including the log entries it must write; real PostgreSQL and RabbitMQ run in Testcontainers instead of mocks wherever the behaviour depends on them.
 
 ## Technologies Used
 
@@ -48,6 +66,8 @@ This repository is a portfolio snapshot of Maroik. The original Maroik repositor
 - Valkey (Redis-compatible) — session store and Data Protection key ring
 - RabbitMQ 4 — outbound e-mail queue consumed by `Maroik.Worker`
 - ClamAV — upload scanning in `Maroik.FileStorage`
+- Magick.NET — image validation and metadata stripping
+- DocumentFormat.OpenXml — Excel export
 - Docker
   - Multi-stage builds
   - Container orchestration
@@ -106,7 +126,7 @@ Maroik/
 - Folders that are not code projects — `Maroik.SSL`, `Maroik.DB`, `Maroik.Log` — intentionally keep their existing casing, because docker-compose volume mounts reference them by name.
 
 ## Testing
-Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all. Coverage target: line >= 80 %, branch >= 65 %.
+Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all. Coverage target: line >= 80 %, branch >= 65 %. At the time of writing the suites hold about 4,200 tests (3,323 .NET + 848 Vitest), all passing.
 
 | Tests | What they cover | Needs Docker |
 |---|---|---|
