@@ -144,7 +144,7 @@ public class AttachmentContentServiceTests
         _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(false);
         var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = "image/png", FileName = "x.png" };
 
-        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
+        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", "uploader@test.com", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         _fileClient.Verify(f => f.UploadAsync(
@@ -162,7 +162,7 @@ public class AttachmentContentServiceTests
         _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(true);
         var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = contentType, FileName = fileName };
 
-        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
+        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", "uploader@test.com", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         _fileClient.Verify(f => f.UploadAsync(
@@ -177,7 +177,7 @@ public class AttachmentContentServiceTests
         _imageValidator.Setup(v => v.IsSvg(It.IsAny<byte[]>())).Returns(true);
         var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = "image/png", FileName = "x.png" };
 
-        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
+        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", "uploader@test.com", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         _fileClient.Verify(f => f.UploadAsync(
@@ -194,7 +194,7 @@ public class AttachmentContentServiceTests
             .ReturnsAsync(false);
         var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = "image/png", FileName = "x.png" };
 
-        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
+        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", "uploader@test.com", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
@@ -217,7 +217,7 @@ public class AttachmentContentServiceTests
             .ReturnsAsync(true);
         var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = "image/png", FileName = "x.png" };
 
-        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
+        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", "uploader@test.com", TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.Equal(file.Bytes, result.FileBytes);
@@ -245,7 +245,7 @@ public class AttachmentContentServiceTests
             .ReturnsAsync(true);
         var file = new AttachedFileDto { Bytes = uploadedBytes, ContentType = "image/jpeg", FileName = "photo.jpg" };
 
-        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
+        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", "uploader@test.com", TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.Equal(strippedBytes, stored);
@@ -269,7 +269,7 @@ public class AttachmentContentServiceTests
             .ReturnsAsync(true);
         var file = new AttachedFileDto { Bytes = jpeg, ContentType = "image/png", FileName = "photo.png" };
 
-        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
+        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", "uploader@test.com", TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.EndsWith(".jpg", storedPath);
@@ -285,7 +285,7 @@ public class AttachmentContentServiceTests
         _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(false);
         var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = "image/png", FileName = "x.png" };
 
-        await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
+        await CreateSut().UploadSummernoteImageAsync(file, "board", "post", "uploader@test.com", TestContext.Current.CancellationToken);
 
         _imageValidator.Verify(v => v.StripMetadata(It.IsAny<byte[]>()), Times.Never);
     }

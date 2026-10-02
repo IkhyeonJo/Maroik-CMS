@@ -40,7 +40,7 @@ public class AttachmentContentService(
     }
 
     /// <inheritdoc />
-    public async Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string area, string subArea, CancellationToken ct = default)
+    public async Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string area, string subArea, string actorEmail, CancellationToken ct = default)
     {
         string ext = Path.GetExtension(file.FileName).ToLowerInvariant();
 
@@ -50,10 +50,23 @@ public class AttachmentContentService(
         // bytes, and Magick is told to read exactly that format), so the label on the file never
         // decides which decoder the bytes are fed to.
         if (!ImageUploadPolicy.IsAllowedExtension(ext) || !ImageUploadPolicy.IsAllowedContentType(file.ContentType))
+        {
+            logger.LogWarning("Editor image upload refused: extension or content type not allowed ({Extension}, {ContentType}) in {Area}/{SubArea} for {Email}",
+                ext, file.ContentType, area, subArea, actorEmail);
             return SummernoteUploadResult.Fail("Invalid image file.");
+        }
 
-        if (imageValidator.IsSvg(file.Bytes) || !imageValidator.IsValidImage(file.Bytes))
+        if (imageValidator.IsSvg(file.Bytes))
+        {
+            logger.LogWarning("Editor image upload refused: SVG is not allowed in {Area}/{SubArea} for {Email}", area, subArea, actorEmail);
             return SummernoteUploadResult.Fail("Invalid image file.");
+        }
+
+        if (!imageValidator.IsValidImage(file.Bytes))
+        {
+            logger.LogWarning("Editor image upload refused: not a valid image in {Area}/{SubArea} for {Email}", area, subArea, actorEmail);
+            return SummernoteUploadResult.Fail("Invalid image file.");
+        }
 
         // Re-encode without metadata: a phone photo's EXIF (GPS position, camera, capture time) must
         // not reach the readers of the post or shared calendar.

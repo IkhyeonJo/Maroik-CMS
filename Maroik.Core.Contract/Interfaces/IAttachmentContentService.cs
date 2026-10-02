@@ -16,8 +16,11 @@ public interface IAttachmentContentService
     /// </summary>
     ServiceResult? ValidateAttachedFile(AttachedFileDto? attachedFile);
 
-    /// <summary>Validates, uploads, and re-downloads a Summernote inline image for preview.</summary>
-    Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string area, string subArea, CancellationToken ct = default);
+    /// <summary>
+    /// Validates and uploads a Summernote inline image for preview. <paramref name="actorEmail"/> is the signed-in
+    /// account uploading it, recorded when the image is refused.
+    /// </summary>
+    Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string area, string subArea, string actorEmail, CancellationToken ct = default);
 
     /// <summary>
     /// Opens a stored file as a stream from file storage. Returns <see langword="null"/> (and logs)

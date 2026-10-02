@@ -1276,9 +1276,9 @@ public class BoardServiceTests
     {
         var file = new AttachedFileDto { Bytes = [1], ContentType = "image/png", FileName = "a.png", Size = 1 };
         var expected = SummernoteUploadResult.Fail("nope");
-        _attachmentContent.Setup(a => a.UploadSummernoteImageAsync(file, "user", BoardTypes.FreeForum, It.IsAny<CancellationToken>())).ReturnsAsync(expected);
+        _attachmentContent.Setup(a => a.UploadSummernoteImageAsync(file, "user", BoardTypes.FreeForum, "uploader@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(expected);
 
-        SummernoteUploadResult actual = await CreateSut().UploadSummernoteImageAsync(file, "user", BoardTypes.FreeForum, TestContext.Current.CancellationToken);
+        SummernoteUploadResult actual = await CreateSut().UploadSummernoteImageAsync(file, "user", BoardTypes.FreeForum, "uploader@test.com", TestContext.Current.CancellationToken);
 
         Assert.Same(expected, actual);
     }

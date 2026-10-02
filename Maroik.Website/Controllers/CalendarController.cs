@@ -121,19 +121,28 @@ public class CalendarController(
         if (summernoteImageFile == null)
             return Ok(new { result = false, errorMessage = localizer["Please attach a file."].Value });
 
+        // A refused upload is a security event: record who sent what (the attachment service logs its own refusals).
+        AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+        string uploaderEmail = loggedInAccount.Email!;
         if (summernoteImageFile.Length <= 0 || summernoteImageFile.Length > serverSettings.Value.MaxAttachedFileSizeBytes)
+        {
+            logger.LogWarning("Editor image upload refused: size {Size} bytes is outside the {MaxBytes}-byte limit for {Email}",
+                summernoteImageFile.Length, serverSettings.Value.MaxAttachedFileSizeBytes, uploaderEmail);
             return Ok(new { result = false, errorMessage = localizer["File Size must be smaller than {0}MB.", serverSettings.Value.MaxAttachedFileSizeBytes / (1024 * 1024)].ToPlainString() });
+        }
 
         var ext = Path.GetExtension(summernoteImageFile.FileName).ToLowerInvariant();
         if (!ImageUploadPolicy.IsAllowedExtension(ext))
+        {
+            logger.LogWarning("Editor image upload refused: extension not allowed ({Extension}) for {Email}", ext, uploaderEmail);
             return Ok(new { result = false, errorMessage = localizer["Only .jpg or jpeg or .png file allowed."].Value });
+        }
 
-        AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
         string roleIndex = $"{loggedInAccount.Role}Index";
 
         AttachedFileDto file = (await summernoteImageFile.ToAttachedFileInfoAsync(serverSettings.Value.MaxAttachedFileSizeBytes, HttpContext.RequestAborted))!;
 
-        SummernoteUploadResult uploadResult = await calendarService.UploadSummernoteImageAsync(file, roleIndex, HttpContext.RequestAborted);
+        SummernoteUploadResult uploadResult = await calendarService.UploadSummernoteImageAsync(file, roleIndex, uploaderEmail, HttpContext.RequestAborted);
 
         if (!uploadResult.Success)
             return Ok(new { result = false, errorMessage = localizer[uploadResult.ErrorKey ?? "Input is invalid"].Value });

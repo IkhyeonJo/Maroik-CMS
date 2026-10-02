@@ -781,8 +781,8 @@ public class CalendarService(
     }
 
     /// <inheritdoc />
-    public Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string roleIndex, CancellationToken ct = default)
-        => attachmentContent.UploadSummernoteImageAsync(file, "Calendar", roleIndex, ct);
+    public Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string roleIndex, string actorEmail, CancellationToken ct = default)
+        => attachmentContent.UploadSummernoteImageAsync(file, "Calendar", roleIndex, actorEmail, ct);
 
     /// <inheritdoc />
     public async Task<(ServiceResult Result, AttachmentDownload? File)> OpenCalendarEventAttachedFileAsync(

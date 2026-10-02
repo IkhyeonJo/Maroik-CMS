@@ -956,16 +956,25 @@ public class ManagementController : Controller
         if (summernoteImageFile == null)
             return Ok(new { result = false, errorMessage = _localizer["Please attach a file."].Value });
 
+        // A refused upload is a security event: record who sent what (the attachment service logs its own refusals).
+        string uploaderEmail = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
         if (summernoteImageFile.Length <= 0 || summernoteImageFile.Length > _serverSettings.Value.MaxAttachedFileSizeBytes)
+        {
+            _logger.LogWarning("Editor image upload refused: size {Size} bytes is outside the {MaxBytes}-byte limit for {Email}",
+                summernoteImageFile.Length, _serverSettings.Value.MaxAttachedFileSizeBytes, uploaderEmail);
             return Ok(new { result = false, errorMessage = _localizer["File Size must be smaller than {0}MB.", _serverSettings.Value.MaxAttachedFileSizeBytes / (1024 * 1024)].ToPlainString() });
+        }
 
         var ext = Path.GetExtension(summernoteImageFile.FileName).ToLowerInvariant();
         if (!ImageUploadPolicy.IsAllowedExtension(ext))
+        {
+            _logger.LogWarning("Editor image upload refused: extension not allowed ({Extension}) for {Email}", ext, uploaderEmail);
             return Ok(new { result = false, errorMessage = _localizer["Only .jpg or jpeg or .png file allowed."].Value });
+        }
 
         AttachedFileDto file = (await summernoteImageFile.ToAttachedFileInfoAsync(_serverSettings.Value.MaxAttachedFileSizeBytes, HttpContext.RequestAborted))!;
 
-        SummernoteUploadResult uploadResult = await _boardService.UploadSummernoteImageAsync(file, "Management", BoardTypes.PrivateNote, HttpContext.RequestAborted);
+        SummernoteUploadResult uploadResult = await _boardService.UploadSummernoteImageAsync(file, "Management", BoardTypes.PrivateNote, uploaderEmail, HttpContext.RequestAborted);
 
         if (!uploadResult.Success)
             return Ok(new { result = false, errorMessage = _localizer[uploadResult.ErrorKey ?? "Input is invalid"].Value });

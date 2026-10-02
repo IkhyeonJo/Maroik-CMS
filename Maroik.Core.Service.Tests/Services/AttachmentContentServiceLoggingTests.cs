@@ -73,4 +73,70 @@ public class AttachmentContentServiceLoggingTests
         Assert.True(patch!.Remove);
         AssertLoggedOnce("upload/img.png", activity);
     }
+    // -- Refused editor images ------------------------------------------------------
+
+    /// <summary>The service under test for an editor-image upload, over <paramref name="imageValidator"/>.</summary>
+    private AttachmentContentService CreateUploadSut(Mock<IImageValidatorService> imageValidator) =>
+        new(_fileClient.Object, Mock.Of<IRsaService>(), imageValidator.Object,
+            Mock.Of<IHtmlContentSanitizerService>(), _htmlParser.Object,
+            Options.Create(new ServerSetting { FileStorageBaseUrl = "http://filestorage.local" }), _logger);
+
+    /// <summary>
+    /// Asserts the refusal was logged as exactly one Warning naming the uploader, the editor area and
+    /// <paramref name="reason"/>, and that nothing was sent to file storage.
+    /// </summary>
+    private void AssertRefusalLoggedOnce(string reason)
+    {
+        FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level >= LogLevel.Warning);
+        Assert.Equal(LogLevel.Warning, record.Level);
+        Assert.Contains("Editor image upload refused", record.Message);
+        Assert.Contains(reason, record.Message);
+        Assert.Contains("uploader@test.com", record.Message);
+        Assert.Contains("Forum/FreeForum", record.Message);
+        _fileClient.Verify(f => f.UploadAsync(
+            It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An image refused for its extension or declared content type is logged with both.</summary>
+    [Fact]
+    public async Task UploadSummernoteImageAsync_LogsARefusedExtensionOrContentType()
+    {
+        var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = "image/gif", FileName = "x.gif" };
+
+        SummernoteUploadResult result = await CreateUploadSut(ImageValidatorMock.Create())
+            .UploadSummernoteImageAsync(file, "Forum", "FreeForum", "uploader@test.com", TestContext.Current.CancellationToken);
+
+        Assert.False(result.Success);
+        AssertRefusalLoggedOnce("image/gif");
+    }
+
+    /// <summary>An SVG document is logged as refused for being SVG.</summary>
+    [Fact]
+    public async Task UploadSummernoteImageAsync_LogsARefusedSvg()
+    {
+        Mock<IImageValidatorService> validator = ImageValidatorMock.Create();
+        validator.Setup(v => v.IsSvg(It.IsAny<byte[]>())).Returns(true);
+        var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = "image/png", FileName = "x.png" };
+
+        SummernoteUploadResult result = await CreateUploadSut(validator)
+            .UploadSummernoteImageAsync(file, "Forum", "FreeForum", "uploader@test.com", TestContext.Current.CancellationToken);
+
+        Assert.False(result.Success);
+        AssertRefusalLoggedOnce("SVG");
+    }
+
+    /// <summary>Bytes that are not a valid JPEG / PNG are logged as refused for not being a valid image.</summary>
+    [Fact]
+    public async Task UploadSummernoteImageAsync_LogsARefusedInvalidImage()
+    {
+        Mock<IImageValidatorService> validator = ImageValidatorMock.Create();
+        validator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(false);
+        var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = "image/png", FileName = "x.png" };
+
+        SummernoteUploadResult result = await CreateUploadSut(validator)
+            .UploadSummernoteImageAsync(file, "Forum", "FreeForum", "uploader@test.com", TestContext.Current.CancellationToken);
+
+        Assert.False(result.Success);
+        AssertRefusalLoggedOnce("not a valid image");
+    }
 }
