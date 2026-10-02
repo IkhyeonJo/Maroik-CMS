@@ -53,8 +53,9 @@ Accounts
   account. A successful password reset always unlocks the account, including an admin-imposed lock.
   Admin sanctions use `AdminResetPassword` + `MustChangePassword`, not `Locked`.
 - Registration and password-reset tokens are stored in the database as plain values (they expire after
-  24 hours). The admin account grid intentionally shows, exports and searches `HashedPassword`,
-  `RegistrationToken` and `ResetPasswordToken`.
+  24 hours). The admin account grid intentionally shows and searches `HashedPassword`,
+  `RegistrationToken` and `ResetPasswordToken`. Its Excel export (`ExcelExportService.CreateAccountExcel`)
+  deliberately leaves those three columns out — keep them out of the export.
 - IP-based rate limiting is done at Cloudflare. Do not add `AddRateLimiter` or IP-keyed throttling in
   the app (behind Cloudflare, `RemoteIpAddress` is an edge address shared by every visitor).
 
