@@ -225,7 +225,7 @@
                         </div>
                         <div id="divEditBoardContent" class="form-group" style="@(Model.BoardOutputViewModel!.IsImgTagIncluded ? "display:none;" : "")">
                             <label for="editBoardContent" class="control-label"></label>
-                            <textarea name="editBoardContent" id="editBoardContent" maxlength="16384">@Html.Raw(Model.BoardOutputViewModel!.Content)</textarea> @*maxlength: 16KB*@
+                            <textarea name="editBoardContent" id="editBoardContent" maxlength="16384">@Model.BoardOutputViewModel!.Content</textarea> @*maxlength: 16KB*@
                         </div>
 
                         <div class="form-group">

@@ -334,6 +334,54 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         Assert.DoesNotContain(path, host.Files.FetchedPaths);
     }
 
+    /// <summary>
+    /// The edit page HTML-encodes the stored body into the editor's <c>&lt;textarea&gt;</c> (RCDATA): an attribute
+    /// value holding <c>&lt;/textarea&gt;</c> cannot close it early and inject markup, an entity in the body is not
+    /// decoded away, and the textarea's value — what Summernote loads — is the body itself, inline image included.
+    /// </summary>
+    [Theory]
+    [InlineData("FreeForum", "/Forum/FreeForum?method=edit&boardId={0}")]
+    [InlineData("PrivateNote", "/Management/PrivateNote?method=edit&boardId={0}")]
+    public async Task EditPage_EncodesTheBodyIntoTheEditorTextarea(string type, string urlFormat)
+    {
+        using var host = CreateHost();
+        var session = await LoginAsync(host, $"storage-edit-textarea-{type.ToLowerInvariant()}@test.com");
+        string imagePath = $"upload/{type}/{Guid.NewGuid():N}.png";
+        host.Files.Seed(imagePath, _png);
+        const string breakout = "</textarea><b id=escaped>injected</b>";
+        long boardId;
+        using (var scope = host.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var board = new Board
+            {
+                Type = type, Title = "Textarea", Writer = session.Nickname, Created = DateTime.UtcNow, Updated = DateTime.UtcNow,
+                Content = $"<p title=\"{breakout}\">a &lt;tag&gt;</p><p><img alt=\"{imagePath}\"></p>"
+            };
+            db.Boards.Add(board);
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            boardId = board.Id;
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, string.Format(urlFormat, boardId));
+        request.Headers.Add("Cookie", session.CookieHeader);
+        var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+        var parser = new AngleSharp.Html.Parser.HtmlParser();
+        using var page = parser.ParseDocument(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Null(page.GetElementById("escaped"));
+        var textarea = Assert.IsType<AngleSharp.Html.Dom.IHtmlTextAreaElement>(page.GetElementById("editBoardContent"), exactMatch: false);
+
+        using var body = parser.ParseDocument(textarea.Value);
+        var paragraph = body.QuerySelector("p[title]")!;
+        Assert.Equal(breakout, paragraph.GetAttribute("title"));
+        Assert.Equal("a <tag>", paragraph.TextContent);
+        var image = body.QuerySelector("img")!;
+        Assert.Equal(Convert.ToBase64String(_png), image.GetAttribute("data-file"));
+        Assert.NotEqual(imagePath, image.GetAttribute("alt"));
+    }
+
     /// <summary>The download action streams the stored attachment to a viewer of the post, named for the browser.</summary>
     [Theory]
     [InlineData("FreeForum", "/Forum/DownloadFreeBoardAttachedFile")]
