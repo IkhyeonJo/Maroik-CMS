@@ -62,6 +62,7 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
             Created = DateTime.UtcNow,
             Updated = DateTime.UtcNow
         };
+        TestAccounts.EnsureNickname(db, board.Writer);
         db.Boards.Add(board);
         db.SaveChanges();
         return board.Id;
@@ -282,6 +283,7 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        TestAccounts.EnsureNickname(db, writer);
         db.BoardComments.Add(new BoardComment
         {
             BoardId = boardId,

@@ -50,4 +50,7 @@ public partial class BoardComment
 
     /// <summary>The post this comment belongs to.</summary>
     public virtual Board Board { get; set; } = null!;
+
+    /// <summary>The account that wrote this comment (Writer → Account.Nickname).</summary>
+    public virtual Account WriterNavigation { get; set; } = null!;
 }

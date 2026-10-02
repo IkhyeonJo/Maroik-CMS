@@ -220,6 +220,74 @@ public abstract class ModelMatchesSchemaTests(SchemaDatabaseFixture database)
         Assert.True(missing.Count == 0, "foreign keys in the model but not in the database: " + string.Join("; ", missing));
     }
 
+    /// <summary>
+    /// Every foreign-key constraint of the database is a relationship of the model (same table, columns and referenced table): a
+    /// constraint added to the init scripts without its navigation would leave the model unaware of it.
+    /// </summary>
+    [Fact]
+    public async Task EveryDatabaseForeignKey_IsAModelRelationship()
+    {
+        await using ApplicationDbContext db = CreateContext();
+        await using NpgsqlConnection connection = await database.OpenAsync(Ct);
+        await using var command = new NpgsqlCommand(
+            """
+            SELECT con.conrelid::regclass::text, con.confrelid::regclass::text,
+                   (SELECT string_agg(a.attname, ',' ORDER BY k.ord) FROM unnest(con.conkey) WITH ORDINALITY k(attnum, ord) JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = k.attnum)
+            FROM pg_constraint con
+            WHERE con.contype = 'f' AND con.connamespace = 'public'::regnamespace
+            """, connection);
+        await using var reader = await command.ExecuteReaderAsync(Ct);
+        List<string> real = [];
+        while (await reader.ReadAsync(Ct))
+            real.Add($"{reader.GetString(0).Trim('"')}({reader.GetString(2)})->{reader.GetString(1).Trim('"')}");
+
+        HashSet<string> modelled =
+        [
+            .. from fk in db.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys())
+               let store = StoreObjectIdentifier.Table(fk.DeclaringEntityType.GetTableName()!, fk.DeclaringEntityType.GetSchema())
+               select $"{fk.DeclaringEntityType.GetTableName()}({string.Join(',', fk.Properties.Select(p => p.GetColumnName(store)!))})->{fk.PrincipalEntityType.GetTableName()}"
+        ];
+        List<string> missing = [.. real.Where(key => !modelled.Contains(key))];
+
+        Assert.True(missing.Count == 0, "foreign keys in the database but not in the model: " + string.Join("; ", missing));
+    }
+
+    /// <summary>
+    /// A post's and a comment's <c>Writer</c> is the author's <c>Account.Nickname</c>, enforced by a foreign key that follows a nickname
+    /// change (<c>ON UPDATE CASCADE</c>) — so a later account that takes the old nickname does not inherit the posts. The model maps the
+    /// same relationship onto the nickname (an alternate key) under the same constraint names.
+    /// </summary>
+    [Theory]
+    [InlineData("Board", "Board_fk_0", typeof(Board))]
+    [InlineData("BoardComment", "BoardComment_fk_1", typeof(BoardComment))]
+    public async Task TheWriter_ReferencesTheAccountNickname_OnUpdateCascade(string table, string constraint, Type entity)
+    {
+        await using NpgsqlConnection connection = await database.OpenAsync(Ct);
+        await using var command = new NpgsqlCommand(
+            """
+            SELECT con.conrelid::regclass::text, con.confrelid::regclass::text, con.confupdtype::text, con.confdeltype::text,
+                   (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[1]),
+                   (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.confrelid AND a.attnum = con.confkey[1])
+            FROM pg_constraint con
+            WHERE con.contype = 'f' AND con.conname = @name AND array_length(con.conkey, 1) = 1
+            """, connection);
+        command.Parameters.AddWithValue("name", constraint);
+        await using var reader = await command.ExecuteReaderAsync(Ct);
+        Assert.True(await reader.ReadAsync(Ct), $"no single-column foreign key named {constraint}");
+        Assert.Equal(table, reader.GetString(0).Trim('"'));
+        Assert.Equal("Account", reader.GetString(1).Trim('"'));
+        Assert.Equal("c", reader.GetString(2)); // ON UPDATE CASCADE
+        Assert.Equal("a", reader.GetString(3)); // ON DELETE NO ACTION (accounts are soft-deleted)
+        Assert.Equal("Writer", reader.GetString(4));
+        Assert.Equal("Nickname", reader.GetString(5));
+
+        await using ApplicationDbContext db = CreateContext();
+        IForeignKey fk = Assert.Single(db.Model.FindEntityType(entity)!.GetForeignKeys(), f => f.PrincipalEntityType.ClrType == typeof(Account));
+        Assert.Equal(["Writer"], fk.Properties.Select(p => p.Name));
+        Assert.Equal(["Nickname"], fk.PrincipalKey.Properties.Select(p => p.Name));
+        Assert.Equal(constraint, fk.GetConstraintName());
+    }
+
     /// <summary>Every unique index the model declares exists in the database (a duplicate would otherwise pass the model and fail at runtime).</summary>
     [Fact]
     public async Task EveryUniqueIndexInTheModel_ExistsInTheDatabase()

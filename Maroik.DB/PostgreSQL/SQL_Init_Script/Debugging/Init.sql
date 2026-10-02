@@ -2790,6 +2790,14 @@ ALTER TABLE ONLY public."Asset"
 
 
 --
+-- Name: Board Board_fk_0; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Board"
+    ADD CONSTRAINT "Board_fk_0" FOREIGN KEY ("Writer") REFERENCES public."Account"("Nickname") ON UPDATE CASCADE;
+
+
+--
 -- Name: BoardAttachedFile BoardAttachedFile_fk_0; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2803,6 +2811,14 @@ ALTER TABLE ONLY public."BoardAttachedFile"
 
 ALTER TABLE ONLY public."BoardComment"
     ADD CONSTRAINT "BoardComment_fk_0" FOREIGN KEY ("BoardId") REFERENCES public."Board"("Id");
+
+
+--
+-- Name: BoardComment BoardComment_fk_1; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BoardComment"
+    ADD CONSTRAINT "BoardComment_fk_1" FOREIGN KEY ("Writer") REFERENCES public."Account"("Nickname") ON UPDATE CASCADE;
 
 
 --

@@ -188,6 +188,7 @@ public class ForumControllerWriteEditTests(MaroikWebApplicationFactory factory)
                 Created = DateTime.UtcNow,
                 Updated = DateTime.UtcNow
             };
+            TestAccounts.EnsureNickname(db, board.Writer);
             db.Boards.Add(board);
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
             boardId = board.Id;

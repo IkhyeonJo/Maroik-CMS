@@ -49,6 +49,28 @@ public class AccountRepository(ApplicationDbContext context)
         MustChangePassword = a.MustChangePassword
     };
 
+    /// <summary>
+    /// Writes every column of <paramref name="domain"/>. <c>Nickname</c> is the principal key of <c>Board_fk_0</c> /
+    /// <c>BoardComment_fk_1</c>, which EF Core refuses to change on a tracked row, so the nickname is written first by its own
+    /// UPDATE — when it changed (the replaced unconfirmed registration) the database cascades it to the posts' and comments'
+    /// <c>Writer</c> — and the rest of the row then goes through the generic full-row update.
+    /// </summary>
+    public override async Task UpdateEntityAsync(Account domain, CancellationToken ct = default)
+    {
+        string email = domain.Email.Value;
+        string nickname = domain.Nickname;
+        await Set
+            .Where(e => e.Email == email)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.Nickname, nickname), ct);
+
+        // A row this context already tracks may still hold the old nickname; drop it so the generic update reloads the row
+        // (it overwrites every column of the reloaded row anyway).
+        if (Set.Local.FirstOrDefault(e => e.Email == email) is { } tracked)
+            Context.Entry(tracked).State = EntityState.Detached;
+
+        await base.UpdateEntityAsync(domain, ct);
+    }
+
     /// <inheritdoc />
     public Task<List<Account>> GetAllAsync(CancellationToken ct = default)
         => QueryAllAsync(ct: ct);

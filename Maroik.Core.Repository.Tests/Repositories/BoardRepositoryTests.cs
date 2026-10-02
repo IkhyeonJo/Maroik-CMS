@@ -39,6 +39,7 @@ public sealed class BoardRepositoryTests(DatabaseFixture database) : RepositoryT
     /// <summary>Inserts <paramref name="boards"/>, saves, clears the change tracker, and returns the rows with their generated ids.</summary>
     private async Task<OrmBoard[]> SeedAsync(params OrmBoard[] boards)
     {
+        await EnsureNicknamesAsync([.. boards.Select(b => b.Writer)]);
         await Context.Boards.AddRangeAsync(boards);
         await Context.SaveChangesAsync();
         Context.ChangeTracker.Clear();
@@ -128,6 +129,7 @@ public sealed class BoardRepositoryTests(DatabaseFixture database) : RepositoryT
     public async Task WriteBoardAsync_AddsBoardToDatabase()
     {
         string writer = Unique("writer");
+        await EnsureNicknamesAsync(writer);
         var board = Board.Reconstitute(
             id: 0, type: BoardTypes.FreeForum, title: "New Post", content: "Post content",
             writer: writer, created: DateTime.UtcNow, updated: DateTime.UtcNow,
@@ -146,6 +148,7 @@ public sealed class BoardRepositoryTests(DatabaseFixture database) : RepositoryT
     [Fact]
     public async Task WriteBoardAsync_Throws_WhenTypeIsNotAllowed()
     {
+        await EnsureNicknamesAsync(Unique("writer"));
         var board = Board.Reconstitute(
             id: 0, type: "Announcement", title: "Nope", content: "x",
             writer: Unique("writer"), created: DateTime.UtcNow, updated: DateTime.UtcNow,
@@ -269,6 +272,7 @@ public sealed class BoardRepositoryTests(DatabaseFixture database) : RepositoryT
         const int writerCount = 5;
         OrmBoard[] seeded = await SeedAsync(MakeBoard("Hot post"));
         long boardId = seeded[0].Id;
+        await EnsureNicknamesAsync([.. Enumerable.Range(0, writerCount).Select(i => $"Writer{i}{Token}")]);
 
         ApplicationDbContext[] contexts = [.. Enumerable.Range(0, writerCount).Select(_ => NewDbContext())];
 
@@ -281,7 +285,7 @@ public sealed class BoardRepositoryTests(DatabaseFixture database) : RepositoryT
             await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
             _ = (await boardRepo.FindActiveByIdForUpdateAsync(boardId, TestContext.Current.CancellationToken))!;
             List<BoardComment> existing = await commentRepo.GetByBoardIdOrderedAsync(boardId, TestContext.Current.CancellationToken);
-            BoardComment comment = BoardComment.Create(boardId, existing.Count, "/upload/avatar.jpg", $"Writer{i}", "Hi", DateTime.UtcNow).Value;
+            BoardComment comment = BoardComment.Create(boardId, existing.Count, "/upload/avatar.jpg", $"Writer{i}{Token}", "Hi", DateTime.UtcNow).Value;
             await commentRepo.CreateAsync(comment, TestContext.Current.CancellationToken);
             await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
         }));

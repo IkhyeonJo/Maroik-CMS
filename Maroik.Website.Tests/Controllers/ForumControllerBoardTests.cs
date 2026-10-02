@@ -58,6 +58,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
             Created = DateTime.UtcNow,
             Updated = DateTime.UtcNow
         };
+        TestAccounts.EnsureNickname(db, board.Writer);
         db.Boards.Add(board);
         db.SaveChanges();
         return board.Id;
@@ -78,6 +79,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
             Order = 0,
             Created = DateTime.UtcNow
         };
+        TestAccounts.EnsureNickname(db, comment.Writer);
         db.BoardComments.Add(comment);
         db.SaveChanges();
         return comment.Id;

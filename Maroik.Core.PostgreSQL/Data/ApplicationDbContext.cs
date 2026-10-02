@@ -206,6 +206,12 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Writer)
                 .HasMaxLength(255)
                 .HasComment("Writer");
+
+            entity.HasOne(d => d.WriterNavigation).WithMany(p => p.Boards)
+                .HasPrincipalKey(p => p.Nickname)
+                .HasForeignKey(d => d.Writer)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("Board_fk_0");
         });
 
         modelBuilder.Entity<BoardAttachedFile>(entity =>
@@ -263,6 +269,12 @@ public partial class ApplicationDbContext : DbContext
                 .HasForeignKey(d => d.BoardId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("BoardComment_fk_0");
+
+            entity.HasOne(d => d.WriterNavigation).WithMany(p => p.BoardComments)
+                .HasPrincipalKey(p => p.Nickname)
+                .HasForeignKey(d => d.Writer)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("BoardComment_fk_1");
         });
 
         modelBuilder.Entity<Calendar>(entity =>

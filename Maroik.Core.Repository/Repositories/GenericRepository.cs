@@ -101,7 +101,7 @@ public abstract class GenericRepository<TDomain, TEntity>(ApplicationDbContext c
     }
 
     /// <inheritdoc />
-    public async Task UpdateEntityAsync(TDomain domain, CancellationToken ct = default)
+    public virtual async Task UpdateEntityAsync(TDomain domain, CancellationToken ct = default)
     {
         var newEntity = ToEntity(domain);
         // ToEntity always builds a brand-new instance that this context has never seen, so it starts

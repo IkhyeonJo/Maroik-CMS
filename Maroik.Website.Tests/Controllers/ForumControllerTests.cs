@@ -164,6 +164,7 @@ public class ForumControllerTests(MaroikWebApplicationFactory factory)
                 Deleted = false,
                 Locked = false
             };
+            TestAccounts.EnsureNickname(db, board.Writer);
             db.Boards.Add(board);
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
             boardId = board.Id;

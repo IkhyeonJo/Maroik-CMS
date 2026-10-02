@@ -223,7 +223,8 @@ test-collection parallelism is off (`xunit.runner.json`).
 Because every test starts from the seed (menu/category rows plus the admin and demo accounts), a test must not assume an
 empty table: insert under keys unique to the test (`RepositoryTestBase.UniqueEmail`
 / `Unique`, or `EnsureAccountsAsync` / `EnsureAssetsAsync` / `InsertCalendarAsync` /
-`InsertCalendarEventAsync` for FK parents) and scope "list/count" assertions to the
+`InsertCalendarEventAsync` for FK parents, and `EnsureNicknamesAsync` for a `Board` / `BoardComment`
+`Writer`, which `Board_fk_0` / `BoardComment_fk_1` point at `Account.Nickname`) and scope "list/count" assertions to the
 rows or account the test itself created. Real CHECK / FK / composite-PK behaviour is
 now exercised (e.g. `FixedIncome_DepositDayMonth_check`,
 `CalendarEventReminder_Method_check`, `Board_Type_check`).
