@@ -306,7 +306,7 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         h.calendarOptions[0].eventClick({ el, event: otherEvent({ id: "77" }) });
         h.$("#viewOtherCalendarEventPopup").trigger("click");
     };
-    /** An accepted event reply for a timed UTC â†’ Asia/Seoul event, with `overrides` merged in. */
+    /** An accepted event reply for a timed UTC → Asia/Seoul event, with `overrides` merged in. */
     const reply = (overrides: Record<string, unknown> = {}) => makeCalendarEventPayload({
         allDay: false, displayStartDate: "2024-05-01 10:30:00", displayEndDate: "2024-05-01 11:45:00",
         startDateTimeZoneIanaId: "UTC", endDateTimeZoneIanaId: "Asia/Seoul", location: "Room 1", ...overrides,

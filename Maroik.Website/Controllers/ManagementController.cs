@@ -51,7 +51,7 @@ public class ManagementController : Controller
     private readonly IDistributedCache _cache;
     /// <summary>Server settings (upload size cap).</summary>
     private readonly IOptions<ServerSetting> _serverSettings;
-    /// <summary>Resource-key â†’ localized text delegate handed to the mappers and the Excel export.</summary>
+    /// <summary>Resource-key → localized text delegate handed to the mappers and the Excel export.</summary>
     private readonly Func<string, string> _localize;
 
     /// <summary>Initializes a new instance of <see cref="ManagementController"/> with the supplied dependencies.</summary>

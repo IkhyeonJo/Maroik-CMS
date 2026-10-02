@@ -30,7 +30,7 @@ public class AccountBookController : Controller
     private readonly IExpenditureService _expenditureService;
     /// <summary>Builds the asset / income / expenditure Excel exports.</summary>
     private readonly IExcelExportService _excelExportService;
-    /// <summary>Resource-key â†’ localized text delegate handed to the mappers and the Excel export.</summary>
+    /// <summary>Resource-key → localized text delegate handed to the mappers and the Excel export.</summary>
     private readonly Func<string, string> _localize;
 
     /// <summary>Initializes a new instance of <see cref="AccountBookController"/> with the supplied dependencies.</summary>
