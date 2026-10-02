@@ -715,19 +715,29 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(sentFile(h, which).file).not.toBeInstanceOf(h.win.File);
         });
 
-        it.each(["create", "edit"])("%s: once a submit has finished (accepted or refused) its file is not sent again", (which) => {
-            for (const answer of [{ result: true, message: "ok" }, { result: false, error: "no" }]) {
-                const h = ready(which);
-                spyModal(h);
-                choose(h, which, { size: 10, name: "first.zip" });
-                const first = sentFile(h, which);
-                expect((first.file as File).name).toBe("first.zip");
-                first.call.success!(answer);
-                first.call.complete?.();
+        it.each(["create", "edit"])("%s: once a submit is accepted its file is not sent again", (which) => {
+            const h = ready(which);
+            spyModal(h);
+            choose(h, which, { size: 10, name: "first.zip" });
+            const first = sentFile(h, which);
+            expect((first.file as File).name).toBe("first.zip");
+            first.call.success!({ result: true, message: "ok" });
+            first.call.complete?.();
 
-                expect(sentFile(h, which).file).not.toBeInstanceOf(h.win.File);
-                expect((h.$(`#${which}CalendarEventAttachment`)[0] as HTMLInputElement).value).toBe("");
-            }
+            expect(sentFile(h, which).file).not.toBeInstanceOf(h.win.File);
+            expect((h.$(`#${which}CalendarEventAttachment`)[0] as HTMLInputElement).value).toBe("");
+        });
+
+        it.each(["create", "edit"])("%s: after a refused submit the form keeps its file, so correcting the form and resubmitting sends it again", (which) => {
+            const h = ready(which);
+            spyModal(h);
+            choose(h, which, { size: 10, name: "first.zip" });
+            const first = sentFile(h, which);
+            first.call.success!({ result: false, error: "Title is too long." });
+            first.call.complete?.();
+
+            expect(h.toastr.error).toHaveBeenCalledWith("Title is too long.");
+            expect((sentFile(h, which).file as File).name).toBe("first.zip");
         });
 
         it("opening the create-event modal (drag-select or 'add event') starts without the file chosen for an earlier event", () => {
