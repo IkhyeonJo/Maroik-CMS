@@ -41,14 +41,14 @@ public class ExcelExportService : IExcelExportService
             localize(nameof(AssetOutputViewModel.Deleted))
         };
 
-        var rows = ordered.Select(item => (IEnumerable<string>)
+        var rows = ordered.Select(item => (IEnumerable<XlsxCell>)
         [
             item.ProductName ?? "",
             localize(item.Item ?? ""),
-            item.Amount.TrimTrailingZeros(),
+            XlsxCell.Number(item.Amount),
             item.MonetaryUnit ?? "",
-            item.Created.ConvertTimeByTimeZoneIanaId(timeZoneIanaId).ToString(CultureInfo.InvariantCulture),
-            item.Updated.ConvertTimeByTimeZoneIanaId(timeZoneIanaId).ToString(CultureInfo.InvariantCulture),
+            Timestamp(item.Created.ConvertTimeByTimeZoneIanaId(timeZoneIanaId)),
+            Timestamp(item.Updated.ConvertTimeByTimeZoneIanaId(timeZoneIanaId)),
             item.Note ?? "",
             item.Deleted.ToString()
         ]);
@@ -81,16 +81,16 @@ public class ExcelExportService : IExcelExportService
             localize(nameof(IncomeOutputViewModel.Note))
         };
 
-        var rows = ordered.Select(item => (IEnumerable<string>)
+        var rows = ordered.Select(item => (IEnumerable<XlsxCell>)
         [
             localize(item.MainClass ?? ""),
             localize(item.SubClass ?? ""),
             item.Content ?? "",
-            item.Amount.TrimTrailingZeros(),
+            XlsxCell.Number(item.Amount),
             currencyByProduct.GetValueOrDefault(item.DepositMyAssetProductName ?? "", ""),
             item.DepositMyAssetProductName ?? "",
-            item.Created.ConvertTimeByTimeZoneIanaId(timeZoneIanaId).ToString(CultureInfo.InvariantCulture),
-            item.Updated.ConvertTimeByTimeZoneIanaId(timeZoneIanaId).ToString(CultureInfo.InvariantCulture),
+            Timestamp(item.Created.ConvertTimeByTimeZoneIanaId(timeZoneIanaId)),
+            Timestamp(item.Updated.ConvertTimeByTimeZoneIanaId(timeZoneIanaId)),
             item.Note ?? ""
         ]);
 
@@ -123,18 +123,18 @@ public class ExcelExportService : IExcelExportService
             localize(nameof(ExpenditureOutputViewModel.Updated))
         };
 
-        var rows = ordered.Select(item => (IEnumerable<string>)
+        var rows = ordered.Select(item => (IEnumerable<XlsxCell>)
         [
             localize(item.MainClass ?? ""),
             localize(item.SubClass ?? ""),
             item.Content ?? "",
-            item.Amount.TrimTrailingZeros(),
+            XlsxCell.Number(item.Amount),
             currencyByProduct.GetValueOrDefault(item.PaymentMethod ?? "", ""),
             item.PaymentMethod ?? "",
             item.Note ?? "",
             item.MyDepositAsset ?? "",
-            item.Created.ConvertTimeByTimeZoneIanaId(timeZoneIanaId).ToString(CultureInfo.InvariantCulture),
-            item.Updated.ConvertTimeByTimeZoneIanaId(timeZoneIanaId).ToString(CultureInfo.InvariantCulture)
+            Timestamp(item.Created.ConvertTimeByTimeZoneIanaId(timeZoneIanaId)),
+            Timestamp(item.Updated.ConvertTimeByTimeZoneIanaId(timeZoneIanaId))
         ]);
 
         return BuildExcel(headers, rows);
@@ -173,20 +173,20 @@ public class ExcelExportService : IExcelExportService
             localize(nameof(FixedIncomeOutputViewModel.Expired))
         };
 
-        var rows = ordered.Select(item => (IEnumerable<string>)
+        var rows = ordered.Select(item => (IEnumerable<XlsxCell>)
         [
             item.MainClass ?? "",
             item.SubClass ?? "",
             item.Content ?? "",
-            item.Amount.TrimTrailingZeros(),
+            XlsxCell.Number(item.Amount),
             item.MonetaryUnit ?? "",
             item.DepositMonth.ToString(),
             item.DepositDay.ToString(),
             item.MaturityDate ?? "",
             item.Note ?? "",
             item.DepositMyAssetProductName ?? "",
-            item.Created.ToString(CultureInfo.InvariantCulture),
-            item.Updated.ToString(CultureInfo.InvariantCulture),
+            Timestamp(item.Created),
+            Timestamp(item.Updated),
             item.Noticed.ToString(),
             item.Expired.ToString()
         ]);
@@ -228,20 +228,20 @@ public class ExcelExportService : IExcelExportService
             localize(nameof(FixedExpenditureOutputViewModel.Expired))
         };
 
-        var rows = ordered.Select(item => (IEnumerable<string>)
+        var rows = ordered.Select(item => (IEnumerable<XlsxCell>)
         [
             item.MainClass ?? "",
             item.SubClass ?? "",
             item.Content ?? "",
-            item.Amount.TrimTrailingZeros(),
+            XlsxCell.Number(item.Amount),
             item.MonetaryUnit ?? "",
             item.PaymentMethod ?? "",
             item.MyDepositAsset ?? "",
             item.DepositMonth.ToString(),
             item.DepositDay.ToString(),
             item.MaturityDate ?? "",
-            item.Created.ToString(CultureInfo.InvariantCulture),
-            item.Updated.ToString(CultureInfo.InvariantCulture),
+            Timestamp(item.Created),
+            Timestamp(item.Updated),
             item.Note ?? "",
             item.Noticed.ToString(),
             item.Expired.ToString()
@@ -282,7 +282,7 @@ public class ExcelExportService : IExcelExportService
             localize(nameof(AccountOutputViewModel.Deleted))
         };
 
-        var rows = ordered.Select(item => (IEnumerable<string>)
+        var rows = ordered.Select(item => (IEnumerable<XlsxCell>)
         [
             item.Email ?? "",
             item.Nickname ?? "",
@@ -293,8 +293,8 @@ public class ExcelExportService : IExcelExportService
             item.LoginAttempt.ToString(),
             item.EmailConfirmed.ToString(),
             item.AgreedServiceTerms.ToString(),
-            item.Created.ToString(CultureInfo.InvariantCulture),
-            item.Updated.ToString(CultureInfo.InvariantCulture),
+            Timestamp(item.Created),
+            Timestamp(item.Updated),
             item.Message ?? "",
             item.Deleted.ToString()
         ]);
@@ -309,17 +309,17 @@ public class ExcelExportService : IExcelExportService
         Func<string, string> localize)
     {
         var rows = categories
-            .Select(c => (IEnumerable<string>)
+            .Select(c => (IEnumerable<XlsxCell>)
             [
                 c.Id.ToString(), "", c.Name ?? "", c.DisplayName ?? "",
                 c.IconPath ?? "", c.Controller ?? "", c.Action ?? "", c.Role ?? "", c.Order.ToString()
             ])
-            .Concat(subCategories.Select(s => (IEnumerable<string>)
+            .Concat(subCategories.Select(s => (IEnumerable<XlsxCell>)
             [
                 s.Id.ToString(), s.CategoryId.ToString(), s.Name ?? "", s.DisplayName ?? "",
                 s.IconPath ?? "", "", s.Action ?? "", s.Role ?? "", s.Order.ToString()
             ]))
-            .OrderByDescending(r => long.Parse(r.First()));
+            .OrderByDescending(r => long.Parse(r.First().Text));
 
         var headers = new[]
         {
@@ -339,9 +339,9 @@ public class ExcelExportService : IExcelExportService
 
     /// <summary>
     /// Writes a single-sheet ("Sheet1") workbook: one header row, then one row per entry of
-    /// <paramref name="rows"/>, every cell as a string. Returns the stream rewound to position 0.
+    /// <paramref name="rows"/>, each cell as a number or a string as the <see cref="XlsxCell"/> says. Returns the stream rewound to position 0.
     /// </summary>
-    private static MemoryStream BuildExcel(IEnumerable<string> headers, IEnumerable<IEnumerable<string>> rows)
+    private static MemoryStream BuildExcel(IEnumerable<string> headers, IEnumerable<IEnumerable<XlsxCell>> rows)
     {
         var stream = new MemoryStream();
 
@@ -370,8 +370,8 @@ public class ExcelExportService : IExcelExportService
             foreach (var rowValues in rows)
             {
                 var dataRow = new Row();
-                foreach (string value in rowValues)
-                    dataRow.Append(StringCell(value));
+                foreach (XlsxCell value in rowValues)
+                    dataRow.Append(value.IsNumber ? NumberCell(value.Text) : StringCell(value.Text));
                 sheetData.Append(dataRow);
             }
 
@@ -380,6 +380,29 @@ public class ExcelExportService : IExcelExportService
 
         stream.Position = 0;
         return stream;
+    }
+
+    /// <summary>A number-typed cell holding the invariant-culture <paramref name="value"/>, so Excel can sum and sort it.</summary>
+    private static Cell NumberCell(string value) => new()
+    {
+        CellValue = new CellValue(value),
+        DataType = CellValues.Number
+    };
+
+    /// <summary>The one text format every exported timestamp uses, whatever the server or viewer culture.</summary>
+    private static string Timestamp(DateTime value) => value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// One exported cell: text, or a number written in invariant-culture notation (amounts — with every
+    /// stored decimal kept, so the sheet totals exactly what the account book does).
+    /// </summary>
+    private readonly record struct XlsxCell(string Text, bool IsNumber)
+    {
+        /// <summary>A text cell.</summary>
+        public static implicit operator XlsxCell(string text) => new(text, false);
+
+        /// <summary>A numeric cell holding <paramref name="value"/>.</summary>
+        public static XlsxCell Number(decimal value) => new(value.TrimTrailingZeros(), true);
     }
 
     /// <summary>A string-typed cell holding <paramref name="value"/> with XML-illegal characters removed.</summary>

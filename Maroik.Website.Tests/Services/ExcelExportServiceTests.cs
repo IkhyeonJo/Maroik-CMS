@@ -2,7 +2,6 @@ using System.Globalization;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Domain.Localization;
 using Maroik.Website.Services;
 
 namespace Maroik.Website.Tests.Services;
@@ -35,6 +34,109 @@ public class ExcelExportServiceTests
             .. sheetData.Elements<Row>()
                 .Select(row => row.Elements<Cell>().Select(c => c.CellValue?.Text ?? "").ToList())
         ];
+    }
+
+    /// <summary>Reads every row of the first worksheet as (cell text, cell data type) pairs.</summary>
+    private static List<List<(string Text, CellValues? Type)>> ReadTypedRows(MemoryStream stream)
+    {
+        stream.Position = 0;
+        using var document = SpreadsheetDocument.Open(stream, false);
+        var sheetData = document.WorkbookPart!.WorksheetParts.First().Worksheet?.Elements<SheetData>().First() ?? [];
+        return
+        [
+            .. sheetData.Elements<Row>()
+                .Select(row => row.Elements<Cell>().Select(c => (c.CellValue?.Text ?? "", c.DataType?.Value)).ToList())
+        ];
+    }
+
+    /// <summary>
+    /// Asserts <paramref name="cell"/> is a numeric cell (so Excel can sum and sort it) whose invariant-culture
+    /// value is exactly <paramref name="expected"/>.
+    /// </summary>
+    private static void AssertNumberCell(decimal expected, (string Text, CellValues? Type) cell)
+    {
+        Assert.Equal(CellValues.Number, cell.Type);
+        Assert.Equal(expected, decimal.Parse(cell.Text, NumberStyles.Number, CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>A timestamp shared by the date-format tests: 2025-06-10 00:00:05 UTC (09:00:05 in Asia/Seoul).</summary>
+    private static readonly DateTime _stamp = new(2025, 6, 10, 0, 0, 5, DateTimeKind.Utc);
+
+    // ── Cell types and date format ───────────────────────────────────────────
+
+    /// <summary>Every export writes its amount as a numeric cell holding the stored value, all four decimals kept.</summary>
+    [Fact]
+    public void EveryFinanceExport_WritesTheAmountAsANumberCell()
+    {
+        const decimal amount = 1234.5678m;
+
+        AssertNumberCell(amount, ReadTypedRows(_sut.CreateAssetExcel(
+            [new() { ProductName = "Cash", Item = "x", Amount = amount, Note = "" }], _identity, "UTC"))[1][2]);
+        AssertNumberCell(amount, ReadTypedRows(_sut.CreateIncomeExcel(
+            [new() { Content = "salary", Amount = amount }], [], _identity, "UTC"))[1][3]);
+        AssertNumberCell(amount, ReadTypedRows(_sut.CreateExpenditureExcel(
+            [new() { Content = "lunch", Amount = amount }], [], _identity, "UTC"))[1][3]);
+        AssertNumberCell(amount, ReadTypedRows(_sut.CreateFixedIncomeExcel(
+            [new() { Content = "salary", Amount = amount, MaturityDate = new DateTime(2030, 12, 31), DepositMonth = 1, DepositDay = 1 }],
+            [], _identity, "UTC", 7))[1][3]);
+        AssertNumberCell(amount, ReadTypedRows(_sut.CreateFixedExpenditureExcel(
+            [new() { Content = "rent", Amount = amount, MaturityDate = new DateTime(2030, 12, 31), DepositMonth = 1, DepositDay = 1 }],
+            [], _identity, "UTC", 7))[1][3]);
+    }
+
+    /// <summary>A negative amount and a whole amount are numbers too, written without a thousands separator.</summary>
+    [Theory]
+    [InlineData("-0.0001")]
+    [InlineData("1000000.0000")]
+    public void CreateAssetExcel_WritesAnyAmountAsAParsableNumber(string amount)
+    {
+        decimal value = decimal.Parse(amount, CultureInfo.InvariantCulture);
+
+        var cell = ReadTypedRows(_sut.CreateAssetExcel(
+            [new() { ProductName = "Cash", Item = "x", Amount = value, Note = "" }], _identity, "UTC"))[1][2];
+
+        AssertNumberCell(value, cell);
+        Assert.DoesNotContain(",", cell.Text);
+    }
+
+    /// <summary>The columns that are not amounts stay text cells.</summary>
+    [Fact]
+    public void CreateAssetExcel_KeepsTheOtherColumnsAsText()
+    {
+        var row = ReadTypedRows(_sut.CreateAssetExcel(
+            [new() { ProductName = "Cash", Item = "x", Amount = 1m, Note = "n", Created = _stamp, Updated = _stamp }], _identity, "UTC"))[1];
+
+        Assert.All(row.Where((_, i) => i != 2), cell => Assert.Equal(CellValues.String, cell.Type));
+    }
+
+    /// <summary>Every export writes Created/Updated as "yyyy-MM-dd HH:mm:ss" in the viewer's time zone.</summary>
+    [Fact]
+    public void EveryExport_WritesCreatedAndUpdated_AsIsoDateTime()
+    {
+        const string expected = "2025-06-10 09:00:05";
+        const string tz = "Asia/Seoul";
+
+        var asset = ReadRows(_sut.CreateAssetExcel(
+            [new() { ProductName = "Cash", Item = "x", Amount = 1m, Note = "", Created = _stamp, Updated = _stamp }], _identity, tz))[1];
+        var income = ReadRows(_sut.CreateIncomeExcel(
+            [new() { Content = "salary", Amount = 1m, Created = _stamp, Updated = _stamp }], [], _identity, tz))[1];
+        var expenditure = ReadRows(_sut.CreateExpenditureExcel(
+            [new() { Content = "lunch", Amount = 1m, Created = _stamp, Updated = _stamp }], [], _identity, tz))[1];
+        var fixedIncome = ReadRows(_sut.CreateFixedIncomeExcel(
+            [new() { Content = "salary", Amount = 1m, MaturityDate = new DateTime(2030, 12, 31), DepositMonth = 1, DepositDay = 1, Created = _stamp, Updated = _stamp }],
+            [], _identity, tz, 7))[1];
+        var fixedExpenditure = ReadRows(_sut.CreateFixedExpenditureExcel(
+            [new() { Content = "rent", Amount = 1m, MaturityDate = new DateTime(2030, 12, 31), DepositMonth = 1, DepositDay = 1, Created = _stamp, Updated = _stamp }],
+            [], _identity, tz, 7))[1];
+        var account = ReadRows(_sut.CreateAccountExcel(
+            [new() { Email = "a@example.com", Created = _stamp, Updated = _stamp }], _identity, tz))[1];
+
+        Assert.Equal([expected, expected], [asset[4], asset[5]]);
+        Assert.Equal([expected, expected], [income[6], income[7]]);
+        Assert.Equal([expected, expected], [expenditure[8], expenditure[9]]);
+        Assert.Equal([expected, expected], [fixedIncome[10], fixedIncome[11]]);
+        Assert.Equal([expected, expected], [fixedExpenditure[10], fixedExpenditure[11]]);
+        Assert.Equal([expected, expected], [account[9], account[10]]);
     }
 
     // ── CreateAssetExcel ──────────────────────────────────────────────────────
@@ -92,11 +194,9 @@ public class ExcelExportServiceTests
 
         var row = ReadRows(_sut.CreateAssetExcel(items, _identity, "Asia/Seoul"))[1];
 
-        Assert.Equal(created.ConvertTimeByTimeZoneIanaId("Asia/Seoul").ToString(CultureInfo.InvariantCulture), row[4]);
-        Assert.Equal(updated.ConvertTimeByTimeZoneIanaId("Asia/Seoul").ToString(CultureInfo.InvariantCulture), row[5]);
         // Asia/Seoul is UTC+9 with no daylight saving: 00:00 UTC -> 09:00, 15:00 UTC -> next-day 00:00.
-        Assert.Contains("09:00:00", row[4]);
-        Assert.Contains("00:00:00", row[5]);
+        Assert.Equal("2025-06-10 09:00:00", row[4]);
+        Assert.Equal("2025-06-11 00:00:00", row[5]);
     }
 
     /// <summary>Create asset excel renders note and deleted flag.</summary>
@@ -425,8 +525,7 @@ public class ExcelExportServiceTests
 
         var row = ReadRows(_sut.CreateAccountExcel(items, _identity, "Asia/Seoul"))[1];
 
-        Assert.Equal(created.ConvertTimeByTimeZoneIanaId("Asia/Seoul").ToString(CultureInfo.InvariantCulture), row[9]);
-        Assert.Contains("09:00:00", row[9]);
+        Assert.Equal("2025-06-10 09:00:00", row[9]);
     }
 
     /// <summary>Create account excel renders boolean and numeric fields as strings.</summary>
