@@ -20,10 +20,20 @@ namespace Maroik.Core.Service.Services;
 /// (<c>AttachmentContentService.PrepareHtmlForDisplayAsync</c>) re-adds the specific
 /// <c>data-file</c>/<c>data-contenttype</c> attributes it needs after sanitization. The one widening
 /// is the <c>class</c> attribute, which the default list omits and Summernote output relies on.
+/// The CSS property allow-list is also narrowed: the positioning / stacking / opacity properties
+/// are removed so a post cannot overlay the rest of the page (CSP does not stop that).
 /// </para>
 /// </remarks>
 public class HtmlContentSanitizerService : IHtmlContentSanitizerService
 {
+    /// <summary>
+    /// Inline-style properties that let stored content leave its own box and stack above the page
+    /// (a full-screen invisible link or a fake login overlay). The default allow-list includes them;
+    /// Summernote never emits them.
+    /// </summary>
+    private static readonly string[] OverlayCssProperties =
+        ["position", "top", "left", "right", "bottom", "z-index", "opacity"];
+
     /// <summary>The one shared, pre-configured sanitizer used by every <see cref="Sanitize"/> call.</summary>
     private readonly HtmlSanitizer _sanitizer;
 
@@ -41,6 +51,11 @@ public class HtmlContentSanitizerService : IHtmlContentSanitizerService
         _sanitizer.AllowedSchemes.Add("https");
 
         _sanitizer.AllowedAttributes.Add("class");
+
+        foreach (string property in OverlayCssProperties)
+        {
+            _sanitizer.AllowedCssProperties.Remove(property);
+        }
     }
 
     /// <inheritdoc />
