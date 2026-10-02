@@ -394,15 +394,31 @@ public class ExcelExportService : IExcelExportService
 
     /// <summary>
     /// One exported cell: text, or a number written in invariant-culture notation (amounts — with every
-    /// stored decimal kept, so the sheet totals exactly what the account book does).
+    /// stored decimal kept, so the sheet totals exactly what the account book does; an amount Excel cannot hold
+    /// exactly stays text).
     /// </summary>
     private readonly record struct XlsxCell(string Text, bool IsNumber)
     {
         /// <summary>A text cell.</summary>
         public static implicit operator XlsxCell(string text) => new(text, false);
 
-        /// <summary>A numeric cell holding <paramref name="value"/>.</summary>
-        public static XlsxCell Number(decimal value) => new(value.TrimTrailingZeros(), true);
+        /// <summary>
+        /// A numeric cell holding <paramref name="value"/>, or a text cell holding it exactly when it has more
+        /// significant digits than Excel keeps for a number (<see cref="ExcelSignificantDigits"/>): Excel would
+        /// otherwise round it silently.
+        /// </summary>
+        public static XlsxCell Number(decimal value)
+        {
+            string text = value.TrimTrailingZeros();
+            return new(text, SignificantDigits(text) <= ExcelSignificantDigits);
+        }
+
+        /// <summary>Excel stores a number as a double and keeps 15 significant digits of it.</summary>
+        private const int ExcelSignificantDigits = 15;
+
+        /// <summary>Digits of an invariant-culture decimal <paramref name="text"/>, leading and trailing zeros not counted.</summary>
+        private static int SignificantDigits(string text) =>
+            text.Where(char.IsAsciiDigit).SkipWhile(d => d == '0').Reverse().SkipWhile(d => d == '0').Count();
     }
 
     /// <summary>A string-typed cell holding <paramref name="value"/> with XML-illegal characters removed.</summary>

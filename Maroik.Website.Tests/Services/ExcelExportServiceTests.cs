@@ -99,6 +99,35 @@ public class ExcelExportServiceTests
         Assert.DoesNotContain(",", cell.Text);
     }
 
+    /// <summary>
+    /// Excel holds a number to 15 significant digits only. An amount with up to 15 (leading and trailing zeros not
+    /// counted) is still a numeric cell; a longer one — numeric(20,4) allows 20 — is written as text holding the exact
+    /// stored value, so the sheet never shows a silently rounded amount.
+    /// </summary>
+    [Theory]
+    [InlineData("12345678901.2345", true)]
+    [InlineData("1234567890123456", false)]
+    [InlineData("123456789012.3456", false)]
+    [InlineData("-9999999999999999.9999", false)]
+    [InlineData("1234567890123450000", true)]
+    public void CreateAssetExcel_WritesAnAmountBeyondExcelsPrecisionAsExactText(string amount, bool asNumber)
+    {
+        decimal value = decimal.Parse(amount, CultureInfo.InvariantCulture);
+
+        var cell = ReadTypedRows(_sut.CreateAssetExcel(
+            [new() { ProductName = "Cash", Item = "x", Amount = value, Note = "" }], _identity, "UTC"))[1][2];
+
+        if (asNumber)
+        {
+            AssertNumberCell(value, cell);
+        }
+        else
+        {
+            Assert.Equal(CellValues.String, cell.Type);
+            Assert.Equal(amount, cell.Text);
+        }
+    }
+
     /// <summary>The columns that are not amounts stay text cells.</summary>
     [Fact]
     public void CreateAssetExcel_KeepsTheOtherColumnsAsText()
