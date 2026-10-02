@@ -1,6 +1,7 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Website.Extensions;
+using Maroik.Website.Models.ViewModels.Calendar;
 using Moq;
 
 namespace Maroik.Website.Tests.Extensions;
@@ -210,8 +211,8 @@ public class CalendarEventViewModelExtensionsTests
     }
 
     /// <summary>
-    /// The detail carries the attachment's description as the service returned it; the file itself is not
-    /// part of the detail (it is streamed by the download action).
+    /// The detail describes the attachment by name, extension and size only — its storage path stays on the server, and the file
+    /// itself is not part of the detail (it is streamed by the download action).
     /// </summary>
     [Fact]
     public async Task GetCalendarEventDetailViewModelAsync_DescribesTheAttachment()
@@ -226,7 +227,10 @@ public class CalendarEventViewModelExtensionsTests
             [MakeCalendar(1)], "UTC", 100, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
-        Assert.Same(attachment, result.CalendarEventAttachedFile);
+        CalendarEventAttachedFileOutputViewModel file = Assert.IsType<CalendarEventAttachedFileOutputViewModel>(result.CalendarEventAttachedFile);
+        Assert.Equal("report", file.Name);
+        Assert.Equal(".zip", file.Extension);
+        Assert.Equal(3, file.Size);
     }
 
     /// <summary>Passes cancellation token through to the service.</summary>
