@@ -106,6 +106,12 @@ public partial class Account
     /// <summary>Assets owned by this account (Asset.AccountEmail).</summary>
     public virtual ICollection<Asset> Assets { get; set; } = new List<Asset>();
 
+    /// <summary>Comments written by this account (BoardComment.Writer → Nickname).</summary>
+    public virtual ICollection<BoardComment> BoardComments { get; set; } = new List<BoardComment>();
+
+    /// <summary>Posts written by this account (Board.Writer → Nickname).</summary>
+    public virtual ICollection<Board> Boards { get; set; } = new List<Board>();
+
     /// <summary>Calendars owned by this account (Calendar.AccountEmail).</summary>
     public virtual ICollection<Calendar> Calendars { get; set; } = new List<Calendar>();
 

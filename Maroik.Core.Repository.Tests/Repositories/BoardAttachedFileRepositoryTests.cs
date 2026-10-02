@@ -43,6 +43,7 @@ public sealed class BoardAttachedFileRepositoryTests(DatabaseFixture database) :
             Locked = false,
             Noticed = false
         })];
+        await EnsureNicknamesAsync(Unique("writer"));
         await Context.Boards.AddRangeAsync(boards);
         await Context.SaveChangesAsync();
         Context.ChangeTracker.Clear();

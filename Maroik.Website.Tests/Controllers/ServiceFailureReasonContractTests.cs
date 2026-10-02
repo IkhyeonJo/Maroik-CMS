@@ -64,6 +64,7 @@ public class ServiceFailureReasonContractTests(MaroikWebApplicationFactory facto
             Type = type, Title = $"seed-{Guid.NewGuid():N}"[..30], Content = "Body", Writer = writer,
             Created = DateTime.UtcNow, Updated = DateTime.UtcNow, View = 0, Deleted = false, Locked = locked
         };
+        TestAccounts.EnsureNickname(db, board.Writer);
         db.Boards.Add(board);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         return board.Id;

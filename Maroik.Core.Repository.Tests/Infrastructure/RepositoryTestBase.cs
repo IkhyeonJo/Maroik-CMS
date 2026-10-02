@@ -86,6 +86,46 @@ public abstract class RepositoryTestBase : IClassFixture<DatabaseFixture>, IAsyn
     }
 
     /// <summary>
+    /// Inserts an <c>Account</c> row (under a random e-mail) for each nickname no account holds yet, so a test can write a
+    /// <c>Board</c> / <c>BoardComment</c> under that <c>Writer</c> — <c>Board_fk_0</c> / <c>BoardComment_fk_1</c> point the writer
+    /// at <c>Account.Nickname</c>. Null/empty names are skipped.
+    /// </summary>
+    protected async Task EnsureNicknamesAsync(params string?[] nicknames)
+    {
+        List<string> wanted = [.. nicknames.Where(n => !string.IsNullOrEmpty(n)).Select(n => n!).Distinct()];
+        List<string> existing = await Context.Accounts.AsNoTracking()
+            .Where(a => wanted.Contains(a.Nickname))
+            .Select(a => a.Nickname)
+            .ToListAsync();
+
+        List<OrmAccount> toAdd = [.. wanted
+            .Where(n => !existing.Contains(n))
+            .Select(n => new OrmAccount
+            {
+                Email = $"writer-{Guid.NewGuid():N}@example.com",
+                Nickname = n,
+                HashedPassword = "$2a$13$placeholder",
+                AvatarImagePath = "/upload/Management/Profile/default-avatar.jpg",
+                Role = "User",
+                TimeZoneIanaId = "UTC",
+                Deleted = false,
+                Locked = false,
+                EmailConfirmed = true,
+                AgreedServiceTerms = true,
+                LoginAttempt = 0,
+                SecurityStamp = "stamp",
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+            })];
+
+        if (toAdd.Count == 0) return;
+
+        await Context.Accounts.AddRangeAsync(toAdd);
+        await Context.SaveChangesAsync();
+        Context.ChangeTracker.Clear();
+    }
+
+    /// <summary>
     /// Ensures an <c>Account</c> and an <c>Asset</c> row exist for each given product name, so
     /// tests can satisfy the composite <c>(ProductName, AccountEmail)</c> foreign keys the finance
     /// tables carry (<c>Income_fk_0</c>, <c>Expenditure_fk_0/1</c>, <c>FixedIncome_fk_0</c>,

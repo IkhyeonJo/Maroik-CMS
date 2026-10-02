@@ -68,4 +68,7 @@ public partial class Board
 
     /// <summary>Comments on this post (soft-deleted ones included).</summary>
     public virtual ICollection<BoardComment> BoardComments { get; set; } = new List<BoardComment>();
+
+    /// <summary>The account that wrote this post (Writer → Account.Nickname).</summary>
+    public virtual Account WriterNavigation { get; set; } = null!;
 }

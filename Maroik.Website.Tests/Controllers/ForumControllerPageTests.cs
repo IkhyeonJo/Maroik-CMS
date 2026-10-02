@@ -38,6 +38,7 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
             Locked = locked, Noticed = noticed, Deleted = deleted, View = 0,
             Created = created ?? DateTime.UtcNow, Updated = created ?? DateTime.UtcNow
         };
+        TestAccounts.EnsureNickname(db, board.Writer);
         db.Boards.Add(board);
         db.SaveChanges();
         return board.Id;
@@ -48,6 +49,7 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        TestAccounts.EnsureNickname(db, writer);
         db.BoardComments.Add(new BoardComment
         {
             BoardId = boardId, Writer = writer, AvatarImagePath = "/upload/Management/Profile/default-avatar.jpg",

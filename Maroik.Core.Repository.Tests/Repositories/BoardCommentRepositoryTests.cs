@@ -45,6 +45,7 @@ public sealed class BoardCommentRepositoryTests(DatabaseFixture database) : Repo
             Locked = false,
             Noticed = false
         };
+        await EnsureNicknamesAsync(board.Writer);
         await Context.Boards.AddAsync(board);
         await Context.SaveChangesAsync();
         Context.ChangeTracker.Clear();
@@ -54,6 +55,7 @@ public sealed class BoardCommentRepositoryTests(DatabaseFixture database) : Repo
     /// <summary>Inserts <paramref name="comments"/>, saves, and clears the change tracker so later reads hit the database.</summary>
     private async Task SeedAsync(params OrmBoardComment[] comments)
     {
+        await EnsureNicknamesAsync([.. comments.Select(c => c.Writer)]);
         await Context.BoardComments.AddRangeAsync(comments);
         await Context.SaveChangesAsync();
         Context.ChangeTracker.Clear();
@@ -282,6 +284,7 @@ public sealed class BoardCommentRepositoryTests(DatabaseFixture database) : Repo
     public async Task CreateAsync_AddsCommentToDatabase()
     {
         long boardId = await SeedBoardAsync();
+        await EnsureNicknamesAsync("Alice" + Token);
 
         var comment = BoardComment.Reconstitute(
             id: 0, boardId: boardId, order: 1, avatarImagePath: "/upload/alice.jpg",
@@ -300,6 +303,7 @@ public sealed class BoardCommentRepositoryTests(DatabaseFixture database) : Repo
     [Fact]
     public async Task CreateAsync_Throws_WhenParentBoardDoesNotExist()
     {
+        await EnsureNicknamesAsync("Ghost" + Token);
         var comment = BoardComment.Reconstitute(
             id: 0, boardId: long.MaxValue, order: 0, avatarImagePath: "/x",
             writer: "Ghost" + Token, content: "orphan", created: DateTime.UtcNow, deleted: false);
