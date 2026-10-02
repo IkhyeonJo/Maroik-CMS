@@ -10,6 +10,7 @@ using Maroik.Website.Mappings;
 using Maroik.Website.Models.ViewModels.Calendar;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
 
 namespace Maroik.Website.Controllers;
@@ -25,6 +26,9 @@ public class CalendarController(
     IRsaService rsa,
     IOptions<ServerSetting> serverSettings) : Controller
 {
+    /// <summary>Shared extension-to-MIME-type lookup for attachment downloads (safe for concurrent reads).</summary>
+    private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
+
     #region Calendar
 
     #region Create
@@ -370,6 +374,38 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to check other calendar event existence for id {CalendarEventId}", id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
+    }
+
+    /// <summary>
+    /// Streams the attachment of calendar event <paramref name="calendarEventId"/>. The event's calendar is
+    /// checked again for the caller (the event dialog is not a gate: this endpoint is reachable on its own),
+    /// and the file is streamed from file storage rather than embedded in the event detail.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequiredHttpPostAccess(Role = Role.Admin)]
+    [RequiredHttpPostAccess(Role = Role.User)]
+    [RequiredHttpPostAccess(Role = Role.Anonymous)]
+    public async Task<IActionResult> DownloadCalendarEventAttachedFile(long calendarEventId)
+    {
+        try
+        {
+            // ViewBag.LoggedInAccount is never null itself, so an actually-anonymous viewer is identified by Role.
+            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse? viewer = loggedInAccount.Role == Role.Anonymous ? null : loggedInAccount;
+            (ServiceResult result, AttachmentDownload? file) = await calendarService.OpenCalendarEventAttachedFileAsync(
+                calendarEventId, viewer, HttpContext.RequestAborted);
+            if (!result.Success)
+                return Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+
+            string contentType = _contentTypeProvider.TryGetContentType(file!.FileName, out string? type) ? type : "application/octet-stream";
+            return File(file.Content, contentType, file.FileName);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to download the attachment of calendar event {CalendarEventId}", calendarEventId);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }

@@ -15,8 +15,8 @@
  *     because anonymous visitors don't see those.
  *   • Toggling an "other calendars" checkbox reloads the visible events
  *     (`RefreshCalendarEvents`).
- *   • Inline images and the attachment are base64 payloads turned into object
- *     URLs client-side.
+ *   • Inline images are base64 payloads turned into object URLs client-side;
+ *     the attachment is fetched on click from `DownloadCalendarEventAttachedFile`.
  *
  * The reminder lead-time bounds only feed the (disabled) inputs' `max`
  * attribute here — the authoritative rules live in `CalendarReminderPolicy`.
@@ -81,7 +81,7 @@
     // as Array.from({length:96}) in several places.
     const reminderTimeIntervals = JSON.parse(($("#reminderTimeIntervals").val() as string) || "[]");
 
-    /** base64 -> Blob, for turning the server-embedded image / attachment payloads into object URLs. */
+    /** base64 -> Blob, for turning the server-embedded inline-image payloads into object URLs. */
     function base64ToBlob(base64: string, mime: string) {
         const byteCharacters = atob(base64);
         const byteNumbers = new Array(byteCharacters.length);
@@ -340,7 +340,7 @@
                                     ReleaseObjectUrlsOnLoad($viewCalendarEventDescription.next(".note-editor")[0]);
                                     $viewCalendarEventDescription.summernote("disable");
 
-                                    // Attachment: show the link (base64 kept in `data-*` for the
+                                    // Attachment: show the link (the event id kept in `data-*` for the
                                     // download handler at the bottom of the file) + a KB size.
                                     $divViewCalendarEventAttachedFile.hide();
 
@@ -348,8 +348,7 @@
                                         $divViewCalendarEventAttachedFile.show();
 
                                         $aViewCalendarEventAttachedFile.attr("href", "#");
-                                        $aViewCalendarEventAttachedFile.attr("data-file", data.calendarEvent.calendarEventAttachedFileBase64Data);
-                                        $aViewCalendarEventAttachedFile.attr("data-contenttype", data.calendarEvent.calendarEventAttachedFileContentType);
+                                        $aViewCalendarEventAttachedFile.attr("data-calendareventid", data.calendarEvent.id);
                                         $aViewCalendarEventAttachedFile.attr("data-name", `${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension}`);
 
                                         $aViewCalendarEventAttachedFile.text(`${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension}`);
@@ -626,27 +625,47 @@
         });
     });
 
-    // Attachment download: base64 -> Blob -> a throwaway `<a download>` that is
-    // clicked and cleaned up. (Bound once at load; the link's `data-*` payload is
-    // filled when the view modal opens.)
-    $aViewCalendarEventAttachedFile.off("click").on("click", function(event) {
+    /**
+     * Attachment download link: the file is not embedded in the event reply. It is requested from a
+     * POST action that checks the event's calendar is visible to the caller again and streams the file;
+     * a refusal comes back as JSON `{ result, error }` instead of a file.
+     */
+    function DownloadCalendarEventAttachedFile(this: HTMLElement, event: JQuery.TriggeredEvent) {
         event.preventDefault();
-        let base64Data = $(this).attr("data-file");
-        let contentType = $(this).attr("data-contenttype");
+        let calendarEventId = $(this).attr("data-calendareventid");
         let name = $(this).attr("data-name");
-
-        if (base64Data && contentType) {
-            let blob = base64ToBlob(base64Data, contentType);
-            let url = URL.createObjectURL(blob);
-            let a = document.createElement("a");
-            try {
-                a.href = url;
-                a.download = name!;
-                a.click();
-            } finally {
-                setTimeout(() => URL.revokeObjectURL(url), 100);
-                a.remove();
-            }
+        if (!calendarEventId) {
+            return;
         }
-    });
+
+        $.ajax({
+            url: "/Calendar/DownloadCalendarEventAttachedFile",
+            type: "POST",
+            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            data: { calendarEventId: calendarEventId },
+            xhrFields: { responseType: "blob" },
+            success: function(data: Blob) {
+                if (data.type.indexOf("application/json") === 0) {
+                    data.text().then(function(text) {
+                        toastr.error(JSON.parse(text).error);
+                    });
+                    return;
+                }
+
+                let url = URL.createObjectURL(data);
+                let a = document.createElement("a");
+                try {
+                    a.href = url;
+                    a.download = name!;
+                    a.click();
+                } finally {
+                    // Revoke after a tick so the download has started; drop the <a>.
+                    setTimeout(() => URL.revokeObjectURL(url), 100);
+                    a.remove();
+                }
+            }
+        });
+    }
+
+    $aViewCalendarEventAttachedFile.off("click").on("click", DownloadCalendarEventAttachedFile);
 })();

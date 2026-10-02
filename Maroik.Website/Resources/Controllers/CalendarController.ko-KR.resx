@@ -264,6 +264,9 @@
   <data name="The calendar event could not be found." xml:space="preserve">
     <value>달력 이벤트를 찾을 수 없습니다.</value>
   </data>
+  <data name="The attached file could not be found." xml:space="preserve">
+    <value>첨부파일을 찾을 수 없습니다.</value>
+  </data>
   <data name="Time-zone ID cannot be empty." xml:space="preserve">
     <value>시간대 ID는 비워둘 수 없습니다.</value>
   </data>

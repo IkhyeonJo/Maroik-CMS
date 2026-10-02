@@ -114,21 +114,4 @@ public sealed class CalendarEventAttachedFileRepositoryTests(DatabaseFixture dat
         Assert.Equal("updated.pdf", updated.Name);
         Assert.Equal(9999, updated.Size);
     }
-
-    // -- DeleteByCalendarEventIdAsync ---------------------------------------
-
-    /// <summary>Verifies that <c>DeleteByCalendarEventIdAsync</c> removes only the target event's files.</summary>
-    [Fact]
-    public async Task DeleteByCalendarEventIdAsync_RemovesFilesByEventId()
-    {
-        long removeEvent = await InsertCalendarEventAsync();
-        long keepEvent = await InsertCalendarEventAsync();
-        await SeedAsync(MakeFile(removeEvent, "x.pdf"), MakeFile(removeEvent, "y.pdf"), MakeFile(keepEvent, "z.pdf"));
-
-        await Sut.DeleteByCalendarEventIdAsync(removeEvent, TestContext.Current.CancellationToken);
-        Context.ChangeTracker.Clear();
-
-        Assert.False(await Context.CalendarEventAttachedFiles.AnyAsync(f => f.CalendarEventId == removeEvent, TestContext.Current.CancellationToken));
-        Assert.True(await Context.CalendarEventAttachedFiles.AnyAsync(f => f.CalendarEventId == keepEvent, TestContext.Current.CancellationToken));
-    }
 }

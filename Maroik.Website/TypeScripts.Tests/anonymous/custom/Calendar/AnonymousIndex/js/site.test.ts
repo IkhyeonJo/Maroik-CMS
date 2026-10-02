@@ -395,19 +395,55 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         expect(revoke).toHaveBeenCalledWith("blob:live");
     });
 
-    it("the attachment download's temporary object URL is released shortly after the click", () => {
+    it("an attachment shows its name and a rounded KB size with thousands separators, and its link names the event — not the file's bytes", () => {
+        const h = load();
+        open(h);
+        h.lastAjax().success!(reply({ id: 77, calendarEventAttachedFile: { name: "report", extension: ".zip", size: 2_048_000 } }));
+        expect(h.$("#aViewCalendarEventAttachedFile").text()).toBe("report.zip");
+        expect(h.$("#aViewCalendarEventAttachedFile").attr("data-name")).toBe("report.zip");
+        expect(h.$("#aViewCalendarEventAttachedFile").attr("data-calendareventid")).toBe("77");
+        expect(h.$("#aViewCalendarEventAttachedFile").attr("data-file")).toBeUndefined();
+        expect(h.$("#spanViewCalendarEventAttachedFile").text()).toBe("2,000KB");
+        expect((h.$("#divViewCalendarEventAttachedFile")[0] as HTMLElement).style.display).not.toBe("none");
+    });
+
+    /** The page with an attachment link for event 77 named "report.zip". */
+    const withAttachment = () => {
+        const h = load();
+        h.$("#aViewCalendarEventAttachedFile").attr({ "data-calendareventid": "77", "data-name": "report.zip" });
+        return h;
+    };
+
+    it("clicking the attachment link asks the download endpoint for the event's attachment as a blob", () => {
+        const h = withAttachment();
+        const ev = h.$.Event("click");
+        h.$("#aViewCalendarEventAttachedFile").trigger(ev);
+
+        expect(ev.isDefaultPrevented()).toBe(true);
+        const call = h.lastAjax() as any;
+        expect(call.url).toBe("/Calendar/DownloadCalendarEventAttachedFile");
+        expect(call.type).toBe("POST");
+        expect(call.data).toEqual({ calendarEventId: "77" });
+        expect(call.headers).toEqual({ RequestVerificationToken: "tok" });
+        expect(call.xhrFields).toEqual({ responseType: "blob" });
+    });
+
+    it("the returned file is saved under the attachment's name, and its object URL released shortly after", () => {
         const click = vi.spyOn(window.HTMLAnchorElement.prototype, "click").mockImplementation(function() { /* jsdom cannot navigate */
         });
         try {
-            const h = load();
-            h.$("#aViewCalendarEventAttachedFile").attr({ "data-file": btoa("payload"), "data-contenttype": "application/zip", "data-name": "report.zip" });
+            const h = withAttachment();
+            (h.win as any).URL.createObjectURL = () => "blob:attachment";
             const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+            h.$("#aViewCalendarEventAttachedFile").trigger("click");
             vi.useFakeTimers();
             try {
-                h.$("#aViewCalendarEventAttachedFile").trigger("click");
+                h.respond(0, new h.win.Blob(["zip-bytes"], { type: "application/zip" }));
+                expect(click).toHaveBeenCalledTimes(1);
+                expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("report.zip");
                 expect(revoke).not.toHaveBeenCalled();
                 vi.advanceTimersByTime(100);
-                expect(revoke).toHaveBeenCalledTimes(1);
+                expect(revoke).toHaveBeenCalledWith("blob:attachment");
             } finally {
                 vi.useRealTimers();
             }
@@ -416,34 +452,20 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         }
     });
 
-    it("an attachment shows its name and a rounded KB size with thousands separators; none hides the block", () => {
-        const h = load();
-        open(h);
-        h.lastAjax().success!(reply({
-            calendarEventAttachedFile: { name: "report", extension: ".zip", size: 2_048_000 },
-            calendarEventAttachedFileBase64Data: btoa("x"), calendarEventAttachedFileContentType: "application/zip",
-        }));
-        expect(h.$("#aViewCalendarEventAttachedFile").text()).toBe("report.zip");
-        expect(h.$("#aViewCalendarEventAttachedFile").attr("data-name")).toBe("report.zip");
-        expect(h.$("#spanViewCalendarEventAttachedFile").text()).toBe("2,000KB");
-        expect((h.$("#divViewCalendarEventAttachedFile")[0] as HTMLElement).style.display).not.toBe("none");
-    });
-
-    it("clicking the attachment link downloads the file under its name", () => {
-        const click = vi.spyOn(window.HTMLAnchorElement.prototype, "click").mockImplementation(function() { /* jsdom cannot navigate */
+    it("a refusal is shown as the server's error and nothing is saved; a link without an event id does nothing", async () => {
+        const click = vi.spyOn(window.HTMLAnchorElement.prototype, "click").mockImplementation(function() { /* noop */
         });
         try {
-            const h = load();
-            h.$("#aViewCalendarEventAttachedFile").attr({ "data-file": btoa("payload"), "data-contenttype": "application/zip", "data-name": "report.zip" });
-            const ev = h.$.Event("click");
-            h.$("#aViewCalendarEventAttachedFile").trigger(ev);
-            expect(ev.isDefaultPrevented()).toBe(true);
-            expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("report.zip");
-
-            click.mockClear();
-            h.$("#aViewCalendarEventAttachedFile").removeAttr("data-file");
+            const h = withAttachment();
             h.$("#aViewCalendarEventAttachedFile").trigger("click");
+            h.respond(0, new h.win.Blob([JSON.stringify({ result: false, error: "The calendar event could not be found." })], { type: "application/json; charset=utf-8" }));
+            await vi.waitFor(() => expect(h.toastr.error).toHaveBeenCalledWith("The calendar event could not be found."));
             expect(click).not.toHaveBeenCalled();
+
+            const without = load();
+            const before = without.ajaxCalls.length;
+            without.$("#aViewCalendarEventAttachedFile").trigger("click");
+            expect(without.ajaxCalls).toHaveLength(before);
         } finally {
             click.mockRestore();
         }

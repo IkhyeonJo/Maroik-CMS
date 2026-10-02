@@ -151,7 +151,7 @@
     const reminderTimeIntervals = JSON.parse(($("#reminderTimeIntervals").val() as string) || "[]");
     const defaultBeforeAt = ($("#defaultReminderTimeOfDay").val() as string) || "09:00";
 
-    /** base64 -> Blob, for turning server-embedded image / attachment payloads into object URLs. */
+    /** base64 -> Blob, for turning server-embedded inline-image payloads into object URLs. */
     function base64ToBlob(base64: string, mime: string) {
         const byteCharacters = atob(base64);
         const byteNumbers = new Array(byteCharacters.length);
@@ -780,8 +780,7 @@
                                     $divEditCalendarEventAttachedFile.show();
 
                                     $aEditCalendarEventAttachedFile.attr("href", "#");
-                                    $aEditCalendarEventAttachedFile.attr("data-file", data.calendarEvent.calendarEventAttachedFileBase64Data);
-                                    $aEditCalendarEventAttachedFile.attr("data-contenttype", data.calendarEvent.calendarEventAttachedFileContentType);
+                                    $aEditCalendarEventAttachedFile.attr("data-calendareventid", data.calendarEvent.id);
                                     $aEditCalendarEventAttachedFile.attr("data-name", `${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension}`);
 
                                     $aEditCalendarEventAttachedFile.text(`${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension}`);
@@ -2477,27 +2476,47 @@
         $(this).css("color", "");
     });
 
-    // Attachment download from the edit-event modal: base64 -> Blob -> a
-    // throwaway `<a download>` that is clicked and cleaned up. (The link's
-    // `data-*` payload is filled when the edit modal opens.)
-    $aEditCalendarEventAttachedFile.off("click").on("click", function(event) {
+    /**
+     * Attachment download link: the file is not embedded in the event reply. It is requested from a
+     * POST action that checks the event's calendar is visible to the caller again and streams the file;
+     * a refusal comes back as JSON `{ result, error }` instead of a file.
+     */
+    function DownloadCalendarEventAttachedFile(this: HTMLElement, event: JQuery.TriggeredEvent) {
         event.preventDefault();
-        let base64Data = $(this).attr("data-file");
-        let contentType = $(this).attr("data-contenttype");
+        let calendarEventId = $(this).attr("data-calendareventid");
         let name = $(this).attr("data-name");
-
-        if (base64Data && contentType) {
-            let blob = base64ToBlob(base64Data, contentType);
-            let url = URL.createObjectURL(blob);
-            let a = document.createElement("a");
-            try {
-                a.href = url;
-                a.download = name!;
-                a.click();
-            } finally {
-                setTimeout(() => URL.revokeObjectURL(url), 100);
-                a.remove();
-            }
+        if (!calendarEventId) {
+            return;
         }
-    });
+
+        $.ajax({
+            url: "/Calendar/DownloadCalendarEventAttachedFile",
+            type: "POST",
+            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            data: { calendarEventId: calendarEventId },
+            xhrFields: { responseType: "blob" },
+            success: function(data: Blob) {
+                if (data.type.indexOf("application/json") === 0) {
+                    data.text().then(function(text) {
+                        toastr.error(JSON.parse(text).error);
+                    });
+                    return;
+                }
+
+                let url = URL.createObjectURL(data);
+                let a = document.createElement("a");
+                try {
+                    a.href = url;
+                    a.download = name!;
+                    a.click();
+                } finally {
+                    // Revoke after a tick so the download has started; drop the <a>.
+                    setTimeout(() => URL.revokeObjectURL(url), 100);
+                    a.remove();
+                }
+            }
+        });
+    }
+
+    $aEditCalendarEventAttachedFile.off("click").on("click", DownloadCalendarEventAttachedFile);
 })();

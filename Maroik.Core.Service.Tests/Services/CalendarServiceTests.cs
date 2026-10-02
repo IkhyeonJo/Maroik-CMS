@@ -774,7 +774,6 @@ public class CalendarServiceTests
         _eventRepo.Setup(r => r.FindByIdForUpdateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(MakeCalendarEvent(id: 1, calendarId: 1, title: "Old"));
         _eventRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<CalendarEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        _eventFileRepo.Setup(r => r.DeleteByCalendarEventIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _reminderRepo.Setup(r => r.DeleteByCalendarEventIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
@@ -794,7 +793,6 @@ public class CalendarServiceTests
         _eventRepo.Setup(r => r.FindByIdForUpdateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(MakeCalendarEvent(id: 1, calendarId: 1, title: "Old"));
         _eventRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<CalendarEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        _eventFileRepo.Setup(r => r.DeleteByCalendarEventIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _reminderRepo.Setup(r => r.DeleteByCalendarEventIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _fileClient.Setup(f => f.UploadAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -818,7 +816,6 @@ public class CalendarServiceTests
         _eventRepo.Setup(r => r.FindByIdForUpdateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(MakeCalendarEvent(id: 1, calendarId: 1, title: "Old"));
         _eventRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<CalendarEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        _eventFileRepo.Setup(r => r.DeleteByCalendarEventIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _reminderRepo.Setup(r => r.DeleteByCalendarEventIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _fileClient.Setup(f => f.UploadAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
@@ -846,7 +843,6 @@ public class CalendarServiceTests
         _eventRepo.Setup(r => r.FindByIdForUpdateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(MakeCalendarEvent(id: 1, calendarId: 1, title: "Old"));
         _eventRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<CalendarEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        _eventFileRepo.Setup(r => r.DeleteByCalendarEventIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _reminderRepo.Setup(r => r.DeleteByCalendarEventIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
@@ -862,6 +858,152 @@ public class CalendarServiceTests
         Assert.Contains("range", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // -- UpdateCalendarEventAsync: the attachment (same four states as a board post's edit) ---------------
+
+    /// <summary>Arranges event 1 in the caller's calendar 1 whose current attachment is <paramref name="previous"/>, with uploads succeeding.</summary>
+    private void SetupEditableEventWithAttachment(CalendarEventAttachedFile? previous)
+    {
+        _calendarRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([MakeCalendar(id: 1)]);
+        _eventRepo.Setup(r => r.FindByIdForUpdateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeCalendarEvent(id: 1, calendarId: 1, title: "Old"));
+        _eventFileRepo.Setup(r => r.FindByCalendarEventIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(previous);
+        _fileClient.Setup(f => f.UploadAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+    }
+
+    /// <summary>Edits event 1 as user@example.com from the "UserIndex" page with <paramref name="file"/>.</summary>
+    private Task<ServiceResult> EditEventAsync(AttachedFileDto? file) => CreateSut().UpdateCalendarEventAsync(
+        new CalendarEventRequest { Id = 1, CalendarId = 1, Title = "New Title" }, "user@example.com", "UserIndex", [], file, TestContext.Current.CancellationToken);
+
+    /// <summary>A zip named <paramref name="fileName"/> (2 bytes).</summary>
+    private static AttachedFileDto Zip(string fileName = "new.zip") =>
+        new() { Bytes = [1, 2], ContentType = "application/zip", FileName = fileName, Size = 2 };
+
+    /// <summary>The attachment an edit starts from: record 77 of event 1.</summary>
+    private static CalendarEventAttachedFile PreviousAttachment() =>
+        CalendarEventAttachedFile.Reconstitute(77, 1, 10, "old", ".txt", "upload/old.txt");
+
+    /// <summary>Replace: uploading a new file overwrites the SAME attachment row (same id) with the new file's metadata.</summary>
+    [Fact]
+    public async Task UpdateCalendarEventAsync_ReplacesTheExistingAttachmentRecord_WhenANewFileIsUploaded()
+    {
+        SetupEditableEventWithAttachment(PreviousAttachment());
+
+        ServiceResult result = await EditEventAsync(Zip());
+
+        Assert.True(result.Success);
+        _fileClient.Verify(f => f.UploadAsync(It.IsAny<byte[]>(), "application/zip", It.Is<string>(p => p.StartsWith("upload/Calendar/UserIndex/calendarEventAttachedFiles/1/") && p.EndsWith(".zip")), "https://files.example.com", It.IsAny<CancellationToken>()), Times.Once);
+        _eventFileRepo.Verify(r => r.UpdateEntityAsync(
+            It.Is<CalendarEventAttachedFile>(f => f.Id == 77 && f.CalendarEventId == 1 && f.Name == "new" && f.Extension == ".zip" && f.Size == 2
+                && f.Path.StartsWith("upload/Calendar/UserIndex/calendarEventAttachedFiles/1/") && f.Path.EndsWith(".zip")),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _eventFileRepo.Verify(r => r.CreateAsync(It.IsAny<CalendarEventAttachedFile>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>Clear: submitting the edit without a file empties the existing attachment record; nothing is uploaded (this is how an attachment is removed).</summary>
+    [Fact]
+    public async Task UpdateCalendarEventAsync_ClearsTheExistingAttachmentRecord_WhenNoFileIsSubmitted()
+    {
+        SetupEditableEventWithAttachment(PreviousAttachment());
+
+        ServiceResult result = await EditEventAsync(null);
+
+        Assert.True(result.Success);
+        _eventFileRepo.Verify(r => r.UpdateEntityAsync(
+            It.Is<CalendarEventAttachedFile>(f => f.Id == 77 && f.CalendarEventId == 1 && f.Size == 0 && f.Name == "" && f.Path == ""),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _eventFileRepo.Verify(r => r.CreateAsync(It.IsAny<CalendarEventAttachedFile>(), It.IsAny<CancellationToken>()), Times.Never);
+        _fileClient.Verify(f => f.UploadAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>Add: an event that had no attachment gets a new record for the uploaded file.</summary>
+    [Fact]
+    public async Task UpdateCalendarEventAsync_CreatesAnAttachmentRecord_WhenTheEventHadNone()
+    {
+        SetupEditableEventWithAttachment(previous: null);
+
+        ServiceResult result = await EditEventAsync(Zip());
+
+        Assert.True(result.Success);
+        _eventFileRepo.Verify(r => r.CreateAsync(It.Is<CalendarEventAttachedFile>(f => f.CalendarEventId == 1 && f.Name == "new"), It.IsAny<CancellationToken>()), Times.Once);
+        _eventFileRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<CalendarEventAttachedFile>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>No previous attachment and no new file: the attachment table is not touched at all.</summary>
+    [Fact]
+    public async Task UpdateCalendarEventAsync_LeavesAttachmentsAlone_WhenThereWasNoneAndNoneIsSubmitted()
+    {
+        SetupEditableEventWithAttachment(previous: null);
+
+        ServiceResult result = await EditEventAsync(null);
+
+        Assert.True(result.Success);
+        _eventFileRepo.Verify(r => r.CreateAsync(It.IsAny<CalendarEventAttachedFile>(), It.IsAny<CancellationToken>()), Times.Never);
+        _eventFileRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<CalendarEventAttachedFile>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A failed upload while REPLACING rolls everything back: the old record must not be overwritten to point at a missing file.</summary>
+    [Fact]
+    public async Task UpdateCalendarEventAsync_RollsBackWithoutTouchingTheRecord_WhenReplacingAndTheUploadFails()
+    {
+        SetupEditableEventWithAttachment(PreviousAttachment());
+        _fileClient.Setup(f => f.UploadAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        ServiceResult result = await EditEventAsync(Zip());
+
+        Assert.False(result.Success);
+        Assert.Equal("CalendarEvent.AttachmentUploadFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
+        _eventFileRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<CalendarEventAttachedFile>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A record the domain rejects (over-long name) is refused BEFORE uploading, for replace and add alike, so no orphan file is left.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UpdateCalendarEventAsync_RejectsAnOverlongFileName_BeforeUploading(bool hadPreviousAttachment)
+    {
+        SetupEditableEventWithAttachment(hadPreviousAttachment ? PreviousAttachment() : null);
+
+        ServiceResult result = await EditEventAsync(Zip(new string('n', 256) + ".zip"));
+
+        Assert.False(result.Success);
+        Assert.Equal("CalendarEventAttachedFile.NameTooLong", result.ErrorCode);
+        _fileClient.Verify(f => f.UploadAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _eventFileRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<CalendarEventAttachedFile>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // -- GetCalendarEventAttachedFileAsync ------------------------------------
+
+    /// <summary>A stored attachment is described by its record.</summary>
+    [Fact]
+    public async Task GetCalendarEventAttachedFileAsync_DescribesAStoredAttachment()
+    {
+        _eventFileRepo.Setup(r => r.FindByCalendarEventIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(PreviousAttachment());
+
+        CalendarEventAttachedFileDto? file = await CreateSut().GetCalendarEventAttachedFileAsync(1, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(file);
+        Assert.Equal("old", file.Name);
+        Assert.Equal(".txt", file.Extension);
+    }
+
+    /// <summary>The record an edit emptied (no name, no path) means "no attachment", exactly like a missing record.</summary>
+    [Fact]
+    public async Task GetCalendarEventAttachedFileAsync_ReturnsNull_ForTheClearedRecord()
+    {
+        _eventFileRepo.Setup(r => r.FindByCalendarEventIdAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CalendarEventAttachedFile.Reconstitute(77, 1, 0, "", "", ""));
+
+        Assert.Null(await CreateSut().GetCalendarEventAttachedFileAsync(1, TestContext.Current.CancellationToken));
     }
 
     /// <summary>Verifies that <c>UpdateCalendarEventAsync</c> returns fail and does not mutate when the
@@ -1478,19 +1620,6 @@ public class CalendarServiceTests
         SummernoteUploadResult actual = await CreateSut().UploadSummernoteImageAsync(file, "7", TestContext.Current.CancellationToken);
 
         Assert.Same(expected, actual);
-    }
-
-    /// <summary>The file download is delegated to the shared attachment service.</summary>
-    [Fact]
-    public async Task DownloadFileAsync_DelegatesToTheAttachmentService()
-    {
-        _attachmentContent.Setup(a => a.DownloadFileAsync("/upload/x.png", It.IsAny<CancellationToken>())).ReturnsAsync([
-            .. "\t\t"u8
-        ]);
-
-        byte[]? bytes = await CreateSut().DownloadFileAsync("/upload/x.png", TestContext.Current.CancellationToken);
-
-        Assert.Equal("\t\t"u8.ToArray(), bytes);
     }
 
     /// <summary>A shared-calendar row that cannot become a subscription (a non-positive calendar id) is refused, and the transaction rolls back.</summary>

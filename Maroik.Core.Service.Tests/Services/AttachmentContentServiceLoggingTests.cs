@@ -46,17 +46,6 @@ public class AttachmentContentServiceLoggingTests
         Assert.Contains($"CorrelationId={activity.Id}", record.Message);
     }
 
-    /// <summary>A failed attachment download.</summary>
-    [Fact]
-    public async Task DownloadFileAsync_LogsTheFailureOnce_WithPathAndCorrelationId()
-    {
-        using var activity = new Activity("request").Start();
-
-        Assert.Null(await CreateSut().DownloadFileAsync("upload/a.zip", TestContext.Current.CancellationToken));
-
-        AssertLoggedOnce("upload/a.zip", activity);
-    }
-
     /// <summary>A failed attachment open.</summary>
     [Fact]
     public async Task OpenFileAsync_LogsTheFailureOnce_WithPathAndCorrelationId()

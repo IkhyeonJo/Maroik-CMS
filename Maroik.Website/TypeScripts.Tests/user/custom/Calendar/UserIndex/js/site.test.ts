@@ -238,6 +238,72 @@ describe("user/Calendar/UserIndex", () => {
         expect(h.$("#editCalendarEventStatus").val()).toBe("Confirmed");
     });
 
+    describe.each(["#aViewCalendarEventAttachedFile"])("the attachment link %s", (link) => {
+        /** The page with the link naming event 77's attachment "report.zip". */
+        const withAttachment = () => {
+            const h = loadSite("user", "Calendar", "UserIndex", fixture());
+            h.$(link).attr({ "data-calendareventid": "77", "data-name": "report.zip" });
+            return h;
+        };
+
+        it("asks the download endpoint for the event's attachment as a blob", () => {
+            const h = withAttachment();
+            const ev = h.$.Event("click");
+            h.$(link).trigger(ev);
+
+            expect(ev.isDefaultPrevented()).toBe(true);
+            const call = h.lastAjax() as any;
+            expect(call.url).toBe("/Calendar/DownloadCalendarEventAttachedFile");
+            expect(call.type).toBe("POST");
+            expect(call.data).toEqual({ calendarEventId: "77" });
+            expect(call.headers).toEqual({ RequestVerificationToken: "tok" });
+            expect(call.xhrFields).toEqual({ responseType: "blob" });
+        });
+
+        it("saves the returned file under the attachment's name and releases its object URL shortly after", () => {
+            const click = vi.spyOn(window.HTMLAnchorElement.prototype, "click").mockImplementation(function() { /* jsdom cannot navigate */
+            });
+            try {
+                const h = withAttachment();
+                (h.win as any).URL.createObjectURL = () => "blob:attachment";
+                const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+                h.$(link).trigger("click");
+                vi.useFakeTimers();
+                try {
+                    h.respond(0, new h.win.Blob(["zip-bytes"], { type: "application/zip" }));
+                    expect(click).toHaveBeenCalledTimes(1);
+                    expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("report.zip");
+                    expect(revoke).not.toHaveBeenCalled();
+                    vi.advanceTimersByTime(100);
+                    expect(revoke).toHaveBeenCalledWith("blob:attachment");
+                } finally {
+                    vi.useRealTimers();
+                }
+            } finally {
+                click.mockRestore();
+            }
+        });
+
+        it("shows a refusal as the server's error and saves nothing; without an event id it does nothing", async () => {
+            const click = vi.spyOn(window.HTMLAnchorElement.prototype, "click").mockImplementation(function() { /* noop */
+            });
+            try {
+                const h = withAttachment();
+                h.$(link).trigger("click");
+                h.respond(0, new h.win.Blob([JSON.stringify({ result: false, error: "The calendar event could not be found." })], { type: "application/json; charset=utf-8" }));
+                await vi.waitFor(() => expect(h.toastr.error).toHaveBeenCalledWith("The calendar event could not be found."));
+                expect(click).not.toHaveBeenCalled();
+
+                const without = loadSite("user", "Calendar", "UserIndex", fixture());
+                const before = without.ajaxCalls.length;
+                without.$(link).trigger("click");
+                expect(without.ajaxCalls).toHaveLength(before);
+            } finally {
+                click.mockRestore();
+            }
+        });
+    });
+
     /** Drives the "click an 'Other' event -> click 'view' in its popup" flow via `eventClick`. */
     function openViewPopup(h: ReturnType<typeof loadSite>): void {
         const eventEl = h.win.document.createElement("div");
@@ -646,11 +712,14 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
         it("shows the attached file and rebuilds inline images", () => {
             const h = setup();
             openView(h, {
-                calendarEventAttachedFile: attachment, calendarEventAttachedFileBase64Data: "QUJD", calendarEventAttachedFileContentType: "application/pdf",
+                calendarEventAttachedFile: attachment,
                 description: `<img data-file="${png}" data-contenttype="image/png" alt="">`
             });
             expect(display(h, "#divViewCalendarEventAttachedFile")).not.toBe("none");
             expect(h.$("#aViewCalendarEventAttachedFile").text()).toBe("spec.pdf");
+            expect(h.$("#aViewCalendarEventAttachedFile").attr("data-name")).toBe("spec.pdf");
+            expect(h.$("#aViewCalendarEventAttachedFile").attr("data-calendareventid")).toBe("55");
+            expect(h.$("#aViewCalendarEventAttachedFile").attr("data-file")).toBeUndefined();
             expect(h.$("#spanViewCalendarEventAttachedFile").text()).toBe("2,441KB");
             const code = h.summernoteCalls.filter((c) => (c.el as HTMLElement | undefined)?.id === "viewCalendarEventDescription" && c.args[0] === "code").pop();
             expect(String(code!.args[1])).toContain("src=\"blob:fake\"");
@@ -667,30 +736,6 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
             (img[event] as () => void)();
 
             expect(revoke).toHaveBeenCalledWith("blob:live");
-        });
-
-        it("clicking the attached-file link downloads it through a temporary object URL, released shortly after; a link without data does nothing", () => {
-            const h = setup();
-            vi.useFakeTimers();
-            try {
-                const clicked: HTMLAnchorElement[] = [];
-                (h.win as any).HTMLAnchorElement.prototype.click = function(this: HTMLAnchorElement) {
-                    clicked.push(this);
-                };
-                h.$("#aViewCalendarEventAttachedFile").trigger("click");
-                expect(clicked).toHaveLength(0);
-
-                h.$("#aViewCalendarEventAttachedFile").attr({ "data-file": "QUJD", "data-contenttype": "application/pdf", "data-name": "spec.pdf" });
-                const ev = h.$.Event("click");
-                h.$("#aViewCalendarEventAttachedFile").trigger(ev);
-                expect(ev.isDefaultPrevented()).toBe(true);
-                expect(clicked).toHaveLength(1);
-                expect(clicked[0].download).toBe("spec.pdf");
-                vi.advanceTimersByTime(100);
-                expect((h.win as any).URL.revokeObjectURL).toHaveBeenCalledWith("blob:fake");
-            } finally {
-                vi.useRealTimers();
-            }
         });
 
         it("a view of a shared event whose calendar list is refused still opens with the rest filled in", () => {

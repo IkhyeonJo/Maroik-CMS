@@ -8,7 +8,4 @@ public interface ICalendarEventAttachedFileRepository : IGenericRepository<Calen
 {
     /// <summary>Returns the file attached to the given calendar event, or null if none exists.</summary>
     Task<CalendarEventAttachedFile?> FindByCalendarEventIdAsync(long calendarEventId, CancellationToken ct = default);
-
-    /// <summary>Deletes the attached file for the given calendar event, if any.</summary>
-    Task DeleteByCalendarEventIdAsync(long calendarEventId, CancellationToken ct = default);
 }

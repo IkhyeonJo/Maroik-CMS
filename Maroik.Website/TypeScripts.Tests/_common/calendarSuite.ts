@@ -1202,18 +1202,15 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             expect(h.$(".divEditEventNotificationAllDayUncheckedRow")).toHaveLength(0);
         });
 
-        it("an attached file shows its link, a comma-grouped size in KB and the download data", () => {
+        it("an attached file shows its link, a comma-grouped size in KB and the event it is downloaded for — not the file's bytes", () => {
             const h = setup();
-            openEdit(h, {
-                calendarEventAttachedFile: attachment,
-                calendarEventAttachedFileBase64Data: "QUJD",
-                calendarEventAttachedFileContentType: "application/pdf"
-            });
+            openEdit(h, { calendarEventAttachedFile: attachment });
             expect(display(h, "#divEditCalendarEventAttachedFile")).not.toBe("none");
             expect(h.$("#aEditCalendarEventAttachedFile").text()).toBe("spec.pdf");
             expect(h.$("#aEditCalendarEventAttachedFile").attr("data-name")).toBe("spec.pdf");
-            expect(h.$("#aEditCalendarEventAttachedFile").attr("data-file")).toBe("QUJD");
-            expect(h.$("#aEditCalendarEventAttachedFile").attr("data-contenttype")).toBe("application/pdf");
+            expect(h.$("#aEditCalendarEventAttachedFile").attr("data-calendareventid")).toBe("55");
+            expect(h.$("#aEditCalendarEventAttachedFile").attr("data-file")).toBeUndefined();
+            expect(h.$("#aEditCalendarEventAttachedFile").attr("data-contenttype")).toBeUndefined();
             expect(h.$("#spanEditCalendarEventAttachedFile").text()).toBe("2,441KB");
         });
 
@@ -1355,18 +1352,31 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             expect(h.toastr.error).toHaveBeenCalledWith("no events for you"); // the reload's own message, not the (successful) edit reply's
         });
 
-        it("clicking the attached-file link downloads it through a temporary object URL and revokes that URL shortly after", () => {
+        it("clicking the attached-file link asks the download endpoint for that event's attachment as a blob", () => {
             const h = setup();
+            openEdit(h, { calendarEventAttachedFile: attachment });
+            const ev = h.$.Event("click");
+            h.$("#aEditCalendarEventAttachedFile").trigger(ev);
+            expect(ev.isDefaultPrevented()).toBe(true);
+            const call = h.lastAjax() as any;
+            expect(call.url).toBe("/Calendar/DownloadCalendarEventAttachedFile");
+            expect(call.type).toBe("POST");
+            expect(call.data).toEqual({ calendarEventId: "55" });
+            expect(call.headers).toEqual({ RequestVerificationToken: "tok" });
+            expect(call.xhrFields).toEqual({ responseType: "blob" });
+        });
+
+        it("the returned file is saved under the attachment's name through a temporary object URL, revoked shortly after", () => {
+            const h = setup();
+            openEdit(h, { calendarEventAttachedFile: attachment });
+            const clicked: HTMLAnchorElement[] = [];
+            (h.win as any).HTMLAnchorElement.prototype.click = function(this: HTMLAnchorElement) {
+                clicked.push(this);
+            };
+            h.$("#aEditCalendarEventAttachedFile").trigger("click");
             vi.useFakeTimers();
             try {
-                const clicked: HTMLAnchorElement[] = [];
-                (h.win as any).HTMLAnchorElement.prototype.click = function(this: HTMLAnchorElement) {
-                    clicked.push(this);
-                };
-                h.$("#aEditCalendarEventAttachedFile").attr({ "data-file": "QUJD", "data-contenttype": "application/pdf", "data-name": "spec.pdf" });
-                const ev = h.$.Event("click");
-                h.$("#aEditCalendarEventAttachedFile").trigger(ev);
-                expect(ev.isDefaultPrevented()).toBe(true);
+                h.respond(0, new h.win.Blob(["pdf-bytes"], { type: "application/pdf" }));
                 expect(clicked).toHaveLength(1);
                 expect(clicked[0].download).toBe("spec.pdf");
                 expect(clicked[0].href).toBe("blob:fake");
@@ -1378,14 +1388,24 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             }
         });
 
-        it("a link with no stored file data downloads nothing", () => {
+        it("a refused download is shown as the server's error and nothing is saved", async () => {
             const h = setup();
+            openEdit(h, { calendarEventAttachedFile: attachment });
             const clicked: unknown[] = [];
             (h.win as any).HTMLAnchorElement.prototype.click = function() {
                 clicked.push(this);
             };
             h.$("#aEditCalendarEventAttachedFile").trigger("click");
+            h.respond(0, new h.win.Blob([JSON.stringify({ result: false, error: "The calendar event could not be found." })], { type: "application/json; charset=utf-8" }));
+            await vi.waitFor(() => expect(h.toastr.error).toHaveBeenCalledWith("The calendar event could not be found."));
             expect(clicked).toHaveLength(0);
+        });
+
+        it("a link that names no event requests nothing", () => {
+            const h = setup();
+            const before = h.ajaxCalls.length;
+            h.$("#aEditCalendarEventAttachedFile").trigger("click");
+            expect(h.ajaxCalls).toHaveLength(before);
         });
 
         it("the calendar menu icon toggles the menu, a click outside or on a menu link hides it, and 'create calendar' opens its dialog", () => {

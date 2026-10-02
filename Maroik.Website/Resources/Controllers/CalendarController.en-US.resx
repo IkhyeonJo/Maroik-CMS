@@ -264,6 +264,9 @@
   <data name="The calendar event could not be found." xml:space="preserve">
     <value>The calendar event could not be found.</value>
   </data>
+  <data name="The attached file could not be found." xml:space="preserve">
+    <value>The attached file could not be found.</value>
+  </data>
   <data name="Time-zone ID cannot be empty." xml:space="preserve">
     <value>Time-zone ID cannot be empty.</value>
   </data>

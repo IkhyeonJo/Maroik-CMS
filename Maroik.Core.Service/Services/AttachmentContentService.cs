@@ -74,20 +74,6 @@ public class AttachmentContentService(
     }
 
     /// <inheritdoc />
-    public async Task<byte[]?> DownloadFileAsync(string filePath, CancellationToken ct = default)
-    {
-        try
-        {
-            return await fileClient.DownloadAsync(filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to download file {FilePath}. CorrelationId={CorrelationId}", filePath, Activity.Current?.Id);
-            return null;
-        }
-    }
-
-    /// <inheritdoc />
     public async Task<Stream?> OpenFileAsync(string filePath, CancellationToken ct = default)
     {
         try
@@ -120,7 +106,7 @@ public class AttachmentContentService(
                 // this <img> tag rather than leave its patch untouched: a null patch here would leave
                 // the plaintext storage path sitting in `alt` (it's only ever re-encrypted by the
                 // NewAlt patch above), exposing internal storage layout to the client. Remove: true
-                // is the same graceful-degradation contract as DownloadFileAsync, minus the leak.
+                // is the same graceful-degradation contract as OpenFileAsync, minus the leak.
                 logger.LogError(ex, "Failed to download image {FilePath} while preparing HTML for display. CorrelationId={CorrelationId}", alt, Activity.Current?.Id);
                 return new HtmlImgPatch(Remove: true);
             }

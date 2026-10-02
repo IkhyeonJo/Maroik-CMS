@@ -65,6 +65,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         (Role.User, "/Calendar/GetOtherCalendars", false),
         (Role.User, "/Calendar/IsCalendarEventExists?id=1", false),
         (Role.User, "/Calendar/IsOtherCalendarEventExists?id=1", false),
+        (Role.User, "/Calendar/DownloadCalendarEventAttachedFile?calendarEventId=1", false),
         (Role.User, "/Calendar/GetBrowseCalendarsOfInterest", false),
         (Role.User, "/Calendar/DeleteCalendarEvent?id=1", false),
         (Role.User, "/Calendar/GetCalendarEvents", true),

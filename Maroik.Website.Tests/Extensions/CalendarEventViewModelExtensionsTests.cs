@@ -132,25 +132,6 @@ public class CalendarEventViewModelExtensionsTests
         Assert.Equal("Asia/Seoul", result[0].StartDateTimeZoneIanaId);
     }
 
-    /// <summary>An attachment whose extension has no known media type is served as a generic binary download.</summary>
-    [Theory]
-    [InlineData("attachments/file.unknownext")]
-    [InlineData("attachments/noextension")]
-    public async Task GetCalendarEventDetailViewModelAsync_FallsBackToOctetStream_ForAnUnknownFileType(string path)
-    {
-        SetUpDetailEvent(MakeEvent(100, calendarId: 1, "Trip"));
-        _calendarService
-            .Setup(s => s.GetCalendarEventAttachedFileAsync(100, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CalendarEventAttachedFileDto { Id = 1, CalendarEventId = 100, Path = path });
-        _calendarService.Setup(s => s.DownloadFileAsync(path, It.IsAny<CancellationToken>())).ReturnsAsync([9]);
-
-        var result = await _calendarService.Object.GetCalendarEventDetailViewModelAsync(
-            [MakeCalendar(1)], "UTC", 100, TestContext.Current.CancellationToken);
-
-        Assert.Equal("application/octet-stream", result!.CalendarEventAttachedFileContentType);
-        Assert.Equal(Convert.ToBase64String([9]), result.CalendarEventAttachedFileBase64Data);
-    }
-
     /// <summary>Passes cancellation token through to the service.</summary>
     [Fact]
     public async Task PassesCancellationTokenThroughToTheService()
@@ -228,24 +209,24 @@ public class CalendarEventViewModelExtensionsTests
         Assert.Equal("<p>desc</p>", result.Description);
     }
 
-    /// <summary>Populates attachment base64 data and content type when the file downloads successfully.</summary>
+    /// <summary>
+    /// The detail carries the attachment's description as the service returned it; the file itself is not
+    /// part of the detail (it is streamed by the download action).
+    /// </summary>
     [Fact]
-    public async Task GetCalendarEventDetailViewModelAsync_PopulatesAttachedFileData_WhenFileDownloadSucceeds()
+    public async Task GetCalendarEventDetailViewModelAsync_DescribesTheAttachment()
     {
         SetUpDetailEvent(MakeEvent(100, calendarId: 1, "Trip"));
+        var attachment = new CalendarEventAttachedFileDto { Id = 1, CalendarEventId = 100, Name = "report", Extension = ".zip", Size = 3, Path = "attachments/report.zip" };
         _calendarService
             .Setup(s => s.GetCalendarEventAttachedFileAsync(100, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CalendarEventAttachedFileDto { Id = 1, CalendarEventId = 100, Path = "attachments/file.png" });
-        _calendarService
-            .Setup(s => s.DownloadFileAsync("attachments/file.png", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([1, 2, 3]);
+            .ReturnsAsync(attachment);
 
         var result = await _calendarService.Object.GetCalendarEventDetailViewModelAsync(
             [MakeCalendar(1)], "UTC", 100, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
-        Assert.Equal(Convert.ToBase64String([1, 2, 3]), result.CalendarEventAttachedFileBase64Data);
-        Assert.Equal("image/png", result.CalendarEventAttachedFileContentType);
+        Assert.Same(attachment, result.CalendarEventAttachedFile);
     }
 
     /// <summary>Passes cancellation token through to the service.</summary>
