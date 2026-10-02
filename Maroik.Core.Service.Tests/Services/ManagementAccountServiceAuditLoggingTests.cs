@@ -149,6 +149,7 @@ public class ManagementAccountServiceAuditLoggingTests
             "NewPass1!", Actor, TestContext.Current.CancellationToken);
 
         Assert.Equal("ManagementAccount.UpdateFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         Assert.Contains("Account.PasswordEmpty", Only(LogLevel.Error, "Admin password reset failed").Message);

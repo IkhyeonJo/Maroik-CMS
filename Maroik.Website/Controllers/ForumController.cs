@@ -82,7 +82,7 @@ public class ForumController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled exception in forum action");
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -124,7 +124,7 @@ public class ForumController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled exception in forum action");
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -419,7 +419,7 @@ public class ForumController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to download the attachment of free-forum post {BoardId}", boardId);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -454,7 +454,7 @@ public class ForumController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled exception in forum action");
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -502,7 +502,7 @@ public class ForumController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled exception in forum action");
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -538,7 +538,7 @@ public class ForumController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled exception in forum action");
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -570,7 +570,7 @@ public class ForumController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled exception in forum action");
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion

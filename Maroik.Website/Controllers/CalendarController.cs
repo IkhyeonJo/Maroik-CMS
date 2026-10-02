@@ -60,7 +60,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create calendar for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -98,7 +98,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create calendar event for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -268,7 +268,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to check calendar existence for id {CalendarId}", id);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -288,7 +288,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get calendars for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -313,7 +313,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get other calendars for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -339,7 +339,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to check calendar event existence for id {CalendarEventId}", id);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -370,7 +370,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to check other calendar event existence for id {CalendarEventId}", id);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -435,7 +435,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get calendar events for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -455,7 +455,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get calendar shareds for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -475,7 +475,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get browse calendars of interest for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -507,7 +507,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to update calendar for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -545,7 +545,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to update calendar event for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -571,7 +571,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to update calendar shared records for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -605,7 +605,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to update other calendar for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -632,7 +632,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to delete calendar for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -654,7 +654,7 @@ public class CalendarController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to delete calendar event {CalendarEventId}", id);
-            return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 

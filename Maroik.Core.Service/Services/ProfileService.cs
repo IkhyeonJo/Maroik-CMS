@@ -63,7 +63,7 @@ public class ProfileService(
         catch (Exception e)
         {
             logger.LogError(e, "Failed to update avatar for {Email}", email);
-            return ServiceResult.Failure("Profile.UpdateAvatarFailed", "Input is invalid");
+            return ServiceResult.Failure("Profile.UpdateAvatarFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -87,7 +87,7 @@ public class ProfileService(
         catch (Exception e)
         {
             logger.LogError(e, "Failed to update timezone for {Email}", email);
-            return ServiceResult.Failure("Profile.UpdateTimezoneFailed", "Input is invalid");
+            return ServiceResult.Failure("Profile.UpdateTimezoneFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -125,7 +125,7 @@ public class ProfileService(
                 // The policy above already refused a blank password, so an empty hash here is a
                 // hasher fault, not user input.
                 logger.LogError("Password change failed for {Email}: {ErrorCode}", email, changeResult.FirstError.Code);
-                return await unitOfWork.FailAsync(ServiceResult.Failure("Profile.UpdatePasswordFailed", "Input is invalid"), ct);
+                return await unitOfWork.FailAsync(ServiceResult.Failure("Profile.UpdatePasswordFailed", ServiceResult.TemporaryErrorKey), ct);
             }
 
             await accountRepository.UpdatePasswordAsync(
@@ -138,7 +138,7 @@ public class ProfileService(
         {
             logger.LogError(e, "Failed to update password for {Email}", email);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("Profile.UpdatePasswordFailed", "Input is invalid");
+            return ServiceResult.Failure("Profile.UpdatePasswordFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -193,7 +193,7 @@ public class ProfileService(
                     return ServiceResult.Failure("Profile.ScanUnavailable", "scan-unavailable");
                 case FileUploadResult.Failed:
                     logger.LogError("Avatar upload failed: file storage refused the upload for {Email}", email);
-                    return ServiceResult.Failure("Profile.UploadAvatarFailed", "Input is invalid");
+                    return ServiceResult.Failure("Profile.UploadAvatarFailed", ServiceResult.TemporaryErrorKey);
             }
 
             ServiceResult updated = await UpdateAvatarAsync(email, $"/{AvatarStorageDirectory}/{avatarFile}", ct);
@@ -204,7 +204,7 @@ public class ProfileService(
         catch (Exception e)
         {
             logger.LogError(e, "Failed to upload and update avatar for {Email}", email);
-            return ServiceResult.Failure("Profile.UploadAvatarFailed", "Input is invalid");
+            return ServiceResult.Failure("Profile.UploadAvatarFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 

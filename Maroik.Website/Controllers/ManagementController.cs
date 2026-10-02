@@ -160,6 +160,7 @@ public class ManagementController : Controller
                 "scan-unavailable" => Ok(new { result = false, errorMessage = _localizer["The file could not be scanned for viruses. Please try again later."].Value }),
                 "svg-not-allowed" => Ok(new { result = false, errorMessage = _localizer["SVG format is not allowed"].Value }),
                 "invalid-image" => Ok(new { result = false, errorMessage = _localizer["Invalid image file"].Value }),
+                ServiceResult.TemporaryErrorKey => Ok(new { result = false, errorMessage = _localizer[ServiceResult.TemporaryErrorKey].Value }),
                 _ => Ok(new { result = false, errorMessage = _localizer["Input is invalid"].Value })
             };
         }
@@ -247,7 +248,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to update password for account {AccountEmail}", email);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -309,7 +310,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create account {AccountEmail}", accountInputViewModel.Email);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -361,7 +362,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to check account existence for email {AccountEmail}", email);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -415,7 +416,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to update account {AccountEmail}", accountInputViewModel.Email);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -439,7 +440,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete account {AccountEmail}", accountInputViewModel.Email);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -500,7 +501,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create menu category {CategoryName}", menuInputViewModel.Name);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -536,7 +537,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create menu sub-category {SubCategoryName}", menuInputViewModel.Name);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -624,7 +625,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to check category existence for id {CategoryId}", id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -657,7 +658,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to check sub-category existence for id {SubCategoryId}", id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -698,7 +699,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to update menu category {CategoryId}", menuInputViewModel.Id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -735,7 +736,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to update menu sub-category {SubCategoryId}", menuInputViewModel.Id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -776,7 +777,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete menu category {CategoryId}", menuInputViewModel.Id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -814,7 +815,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete menu sub-category {SubCategoryId}", menuInputViewModel.Id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -888,7 +889,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to write private note board {Title}", boardInputViewModel.Title);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -933,7 +934,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to write private note comment on board {BoardId}", boardCommentInputViewModel.BoardId);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -1248,7 +1249,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to download the attachment of private note {BoardId}", boardId);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -1275,7 +1276,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to check private note board existence for id {BoardId}", id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -1324,7 +1325,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to edit private note board {BoardId}", boardInputViewModel.Id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -1365,7 +1366,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete private note board {BoardId}", boardInputViewModel.Id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -1400,7 +1401,7 @@ public class ManagementController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete private note comment {CommentId}", id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 

@@ -202,6 +202,13 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
             void prefix;
         });
 
+        it.each([["Create"], ["Update"]])("%s: a server fault's temporary-error message is toasted exactly as sent", (verb) => {
+            const h = load();
+            h.$(`#form${verb === "Create" ? "Create" : "Edit"}${N}`).trigger("submit");
+            h.ajaxCalls.find((a) => a.url === `/${c.controller}/${verb}${N}`)!.success!({ result: false, error: "A temporary error occurred. Please try again later." });
+            expect(h.toastr.error).toHaveBeenCalledWith("A temporary error occurred. Please try again later.");
+        });
+
         it.each([["Create"], ["Update"]])("%s: a refusal is toasted and the grid is not reloaded", (verb) => {
             const h = load();
             h.$(`#form${verb === "Create" ? "Create" : "Edit"}${N}`).trigger("submit");

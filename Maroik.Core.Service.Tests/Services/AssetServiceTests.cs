@@ -98,6 +98,7 @@ public class AssetServiceTests
 
         Assert.False(result.Success);
         Assert.Equal("Asset.CreateFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
     }
 
     /// <summary>An over-long product name is now a validation error before it reaches the database.</summary>
@@ -253,6 +254,7 @@ public class AssetServiceTests
         ServiceResult result = await sut.UpdateAsync("user@example.com", ValidRequest("NewName"), "OldName", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
+        Assert.Equal("Input is invalid", result.ErrorKey); // a request that matches nothing is not a server fault
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -422,6 +424,7 @@ public class AssetServiceTests
         ServiceResult result = await CreateSut().UpdateAsync("user@example.com", ValidRequest(), "MyBank", TestContext.Current.CancellationToken);
 
         Assert.Equal("Asset.UpdateFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -438,6 +441,7 @@ public class AssetServiceTests
         ServiceResult result = await CreateSut().DeleteAsync("user@example.com", "MyBank", TestContext.Current.CancellationToken);
 
         Assert.Equal("Asset.DeleteFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);

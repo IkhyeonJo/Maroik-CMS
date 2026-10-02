@@ -240,6 +240,14 @@ function describeBoardScript(c: BoardScriptConfig): void {
             expect(h.navigations.at(-1)).toBe(c.listUrl);
         });
 
+        it("write / edit: a server fault's temporary-error message is toasted exactly as sent", () => {
+            const h = load();
+            h.$("#formWriteBoard").trigger("submit");
+            h.respond(0, { result: false, error: "A temporary error occurred. Please try again later." });
+            expect(h.toastr.error).toHaveBeenCalledWith("A temporary error occurred. Please try again later.");
+            expect(h.navigations).toHaveLength(0);
+        });
+
         it("write: a refusal is toasted and the loading overlay is hidden", () => {
             const h = load();
             h.$("#loading").show();

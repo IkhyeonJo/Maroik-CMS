@@ -552,4 +552,7 @@
   <data name="Role must be Admin, User or Anonymous." xml:space="preserve">
     <value>Role must be Admin, User or Anonymous.</value>
   </data>
+  <data name="A temporary error occurred. Please try again later." xml:space="preserve">
+    <value>A temporary error occurred. Please try again later.</value>
+  </data>
 </root>

@@ -552,4 +552,7 @@
   <data name="Role must be Admin, User or Anonymous." xml:space="preserve">
     <value>역할은 Admin, User, Anonymous 중 하나여야 합니다.</value>
   </data>
+  <data name="A temporary error occurred. Please try again later." xml:space="preserve">
+    <value>일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</value>
+  </data>
 </root>

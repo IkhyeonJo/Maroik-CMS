@@ -1,3 +1,4 @@
+using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Contract.Misc.Settings;
@@ -84,6 +85,7 @@ public class ProfileServiceAuditLoggingTests
 
         Assert.False(result.Success);
         Assert.Equal("Profile.UpdatePasswordFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _accountRepo.Verify(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(),
             It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);

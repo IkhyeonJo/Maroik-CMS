@@ -393,4 +393,7 @@
   <data name="Unknown income main class." xml:space="preserve">
     <value>알 수 없는 수입 대분류입니다.</value>
   </data>
+  <data name="A temporary error occurred. Please try again later." xml:space="preserve">
+    <value>일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</value>
+  </data>
 </root>

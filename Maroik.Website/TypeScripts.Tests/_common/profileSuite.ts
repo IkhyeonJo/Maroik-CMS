@@ -63,6 +63,10 @@ export function describeProfileScript(area: "admin" | "user"): void {
             h.respond(0, { result: false, errorMessage: "virus found" });
             expect(h.win.alert).toHaveBeenCalledWith("virus found");
             expect(h.navigations.at(-1)).toBe("/Management/Profile");
+
+            choose(h, 10, "image/png");
+            h.respond(0, { result: false, errorMessage: "A temporary error occurred. Please try again later." });
+            expect(h.win.alert).toHaveBeenCalledWith("A temporary error occurred. Please try again later.");
         });
 
         it("selecting nothing is reported with the 'attach a file' message", () => {

@@ -112,7 +112,7 @@ public class ManagementAccountService(
         catch (Exception e)
         {
             logger.LogError(e, "Failed to create account for {Email}", request.Email);
-            return ServiceResult.Failure("ManagementAccount.CreateFailed", "Input is invalid");
+            return ServiceResult.Failure("ManagementAccount.CreateFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -162,7 +162,7 @@ public class ManagementAccountService(
                     // a hasher fault, not admin input.
                     await unitOfWork.RollbackAsync(ct);
                     logger.LogError("Admin password reset failed for {Email} by admin {Admin}: {ErrorCode}", account.Email.Value, actorEmail, resetResult.FirstError.Code);
-                    return ServiceResult.Failure("ManagementAccount.UpdateFailed", "Input is invalid");
+                    return ServiceResult.Failure("ManagementAccount.UpdateFailed", ServiceResult.TemporaryErrorKey);
                 }
             }
 
@@ -184,7 +184,7 @@ public class ManagementAccountService(
         {
             logger.LogError(e, "Failed to update account for {Email}", request.Email);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("ManagementAccount.UpdateFailed", "Input is invalid");
+            return ServiceResult.Failure("ManagementAccount.UpdateFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -266,7 +266,7 @@ public class ManagementAccountService(
         {
             logger.LogError(e, "Failed to delete account for {Email}", email);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("ManagementAccount.DeleteFailed", "Input is invalid");
+            return ServiceResult.Failure("ManagementAccount.DeleteFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 }

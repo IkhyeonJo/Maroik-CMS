@@ -303,4 +303,7 @@
   <data name="The attached file could not be found." xml:space="preserve">
     <value>The attached file could not be found.</value>
   </data>
+  <data name="A temporary error occurred. Please try again later." xml:space="preserve">
+    <value>A temporary error occurred. Please try again later.</value>
+  </data>
 </root>

@@ -197,6 +197,7 @@ public class AttachmentContentServiceTests
         var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _fileClient.Verify(f => f.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

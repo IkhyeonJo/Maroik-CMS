@@ -393,4 +393,7 @@
   <data name="Unknown income main class." xml:space="preserve">
     <value>Unknown income main class.</value>
   </data>
+  <data name="A temporary error occurred. Please try again later." xml:space="preserve">
+    <value>A temporary error occurred. Please try again later.</value>
+  </data>
 </root>
