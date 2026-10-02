@@ -493,7 +493,7 @@ public class ManagementController : Controller
                 Order = menuInputViewModel.Order
             }, AdminEmail, HttpContext.RequestAborted);
             if (!createCatResult.Success)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = _localizer[createCatResult.ErrorKey, createCatResult.ErrorArgs].ToPlainString() });
             await _cache.InvalidateNavigationMenuCacheAsync();
             return Json(new { result = true, message = _localizer["Successfully created the category"].Value });
         }
@@ -529,7 +529,7 @@ public class ManagementController : Controller
                 Order = menuInputViewModel.Order
             }, AdminEmail, HttpContext.RequestAborted);
             if (!createSubCatResult.Success)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = _localizer[createSubCatResult.ErrorKey, createSubCatResult.ErrorArgs].ToPlainString() });
             await _cache.InvalidateNavigationMenuCacheAsync();
             return Json(new { result = true, message = _localizer["Successfully created the subCategory"].Value });
         }
@@ -691,7 +691,7 @@ public class ManagementController : Controller
                 Order = menuInputViewModel.Order
             }, AdminEmail, HttpContext.RequestAborted);
             if (!updateCatResult.Success)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = _localizer[updateCatResult.ErrorKey, updateCatResult.ErrorArgs].ToPlainString() });
             await _cache.InvalidateNavigationMenuCacheAsync();
             return Json(new { result = true, message = _localizer["Successfully updated the category"].Value });
         }
@@ -728,7 +728,7 @@ public class ManagementController : Controller
                 Order = menuInputViewModel.Order
             }, AdminEmail, HttpContext.RequestAborted);
             if (!updateSubCatResult.Success)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = _localizer[updateSubCatResult.ErrorKey, updateSubCatResult.ErrorArgs].ToPlainString() });
             await _cache.InvalidateNavigationMenuCacheAsync();
             return Json(new { result = true, message = _localizer["Successfully updated the subCategory"].Value });
         }
@@ -769,7 +769,7 @@ public class ManagementController : Controller
                 Order = menuInputViewModel.Order
             }, AdminEmail, HttpContext.RequestAborted);
             if (!deleteCatResult.Success)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = _localizer[deleteCatResult.ErrorKey, deleteCatResult.ErrorArgs].ToPlainString() });
             await _cache.InvalidateNavigationMenuCacheAsync();
             return Json(new { result = true, message = _localizer["Successfully deleted the category"].Value });
         }
@@ -807,7 +807,7 @@ public class ManagementController : Controller
             }, AdminEmail, HttpContext.RequestAborted);
 
             if (!deleteSubCatResult.Success)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = _localizer[deleteSubCatResult.ErrorKey, deleteSubCatResult.ErrorArgs].ToPlainString() });
             await _cache.InvalidateNavigationMenuCacheAsync();
             return Json(new { result = true, message = _localizer["Successfully deleted the subCategory"].Value });
         }
@@ -883,7 +883,7 @@ public class ManagementController : Controller
             ServiceResult result = await _boardService.WriteBoardAsync(boardRequest, loggedInAccount.Role == Role.Admin, attachedFile, HttpContext.RequestAborted);
             return result.Success
                 ? Json(new { result = true, message = _localizer["The board has been successfully created."].Value })
-                : Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
@@ -928,7 +928,7 @@ public class ManagementController : Controller
             ServiceResult result = await _boardService.WriteCommentAsync(commentRequest, loggedInAccount.Nickname!, requiredType: BoardTypes.PrivateNote, ct: HttpContext.RequestAborted);
             return result.Success
                 ? Json(new { result = true, boardId = boardCommentInputViewModel.BoardId, page = boardCommentInputViewModel.DetailCurrentPage })
-                : Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
@@ -1319,7 +1319,7 @@ public class ManagementController : Controller
             ServiceResult result = await _boardService.EditBoardAsync(boardRequest, loggedInAccount.Nickname!, loggedInAccount.Role == Role.Admin, attachedFile, HttpContext.RequestAborted);
             return result.Success
                 ? Json(new { result = true, message = _localizer["The board has been successfully updated."].Value })
-                : Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
