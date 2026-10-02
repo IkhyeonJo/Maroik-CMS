@@ -36,6 +36,22 @@ public class CalendarViewModelMapperTests
         EndDateTimeZoneIanaId = endTz
     };
 
+    // -- ToDisplayViewModel: an attachment ------------------------------------
+
+    /// <summary>An attachment is described to the client by its name, extension and size; its id, event id and storage path are not carried over.</summary>
+    [Fact]
+    public void ToDisplayViewModel_DescribesAnAttachment_ByNameExtensionAndSizeOnly()
+    {
+        var dto = new CalendarEventAttachedFileDto { Id = 7, CalendarEventId = 9, Name = "report", Extension = ".zip", Size = 2048, Path = "upload/Calendar/x/report.zip" };
+
+        CalendarEventAttachedFileOutputViewModel vm = dto.ToDisplayViewModel();
+
+        Assert.Equal("report", vm.Name);
+        Assert.Equal(".zip", vm.Extension);
+        Assert.Equal(2048, vm.Size);
+        Assert.Equal(["Extension", "Name", "Size"], typeof(CalendarEventAttachedFileOutputViewModel).GetProperties().Select(p => p.Name).Order());
+    }
+
     // -- ToDisplayViewModel: all-day events -----------------------------------
 
     /// <summary>To display view model all day for grid end date is midnight of day after local end.</summary>

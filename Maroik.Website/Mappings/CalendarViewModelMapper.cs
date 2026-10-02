@@ -106,6 +106,20 @@ public static class CalendarViewModelMapper
         }
     }
 
+    extension(CalendarEventAttachedFileDto file)
+    {
+        /// <summary>
+        /// Projects an attachment to what the event detail shows the client — name, extension and size. Its storage path is left out:
+        /// the file is served by the download action, never located by the client.
+        /// </summary>
+        public CalendarEventAttachedFileOutputViewModel ToDisplayViewModel() => new()
+        {
+            Name = file.Name,
+            Extension = file.Extension,
+            Size = file.Size
+        };
+    }
+
     extension(IEnumerable<CalendarEventReminderDto> reminders)
     {
         /// <summary>

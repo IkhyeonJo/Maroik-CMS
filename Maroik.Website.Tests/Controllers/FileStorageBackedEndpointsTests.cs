@@ -503,11 +503,31 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         new() { { new StringContent(calendarEventId.ToString()), "calendarEventId" } };
 
     /// <summary>
-    /// The event detail reply describes the attachment (name, size) but no longer carries the file: nothing is
-    /// read from file storage and no file bytes are embedded.
+    /// Asserts an event detail reply describes the attachment by name, extension and size only: neither the file's bytes nor its storage
+    /// path (as a <c>path</c> property or anywhere in the body — its GUID segment included, should the slashes be escaped) reach the client.
+    /// </summary>
+    private static void AssertDescribesTheAttachmentOnly(string body, string storagePath, byte[] bytes)
+    {
+        using JsonDocument doc = JsonDocument.Parse(body);
+        Assert.True(doc.RootElement.GetProperty("result").GetBoolean());
+        JsonElement calendarEvent = doc.RootElement.GetProperty("calendarEvent");
+        JsonElement file = calendarEvent.GetProperty("calendarEventAttachedFile");
+        Assert.Equal("payload", file.GetProperty("name").GetString());
+        Assert.Equal(".zip", file.GetProperty("extension").GetString());
+        Assert.Equal(bytes.Length, file.GetProperty("size").GetInt64());
+        Assert.False(file.TryGetProperty("path", out _));
+        Assert.False(calendarEvent.TryGetProperty("calendarEventAttachedFileBase64Data", out _));
+        Assert.DoesNotContain(storagePath, body);
+        Assert.DoesNotContain(Path.GetFileNameWithoutExtension(storagePath), body);
+        Assert.DoesNotContain(Convert.ToBase64String(bytes), body);
+    }
+
+    /// <summary>
+    /// The event detail reply describes the attachment (name, extension, size) without its storage path, and no longer carries the file:
+    /// nothing is read from file storage and no file bytes are embedded.
     /// </summary>
     [Fact]
-    public async Task IsCalendarEventExists_DescribesTheAttachment_WithoutFetchingOrEmbeddingTheFile()
+    public async Task IsCalendarEventExists_DescribesTheAttachment_WithoutItsPathOrItsBytes()
     {
         using var host = CreateHost();
         string email = "storage-cal-detail@test.com";
@@ -521,12 +541,31 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
         string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        Assert.True(doc.RootElement.GetProperty("result").GetBoolean());
-        JsonElement file = doc.RootElement.GetProperty("calendarEvent").GetProperty("calendarEventAttachedFile");
-        Assert.Equal("payload", file.GetProperty("name").GetString());
-        Assert.False(doc.RootElement.GetProperty("calendarEvent").TryGetProperty("calendarEventAttachedFileBase64Data", out _));
-        Assert.DoesNotContain(Convert.ToBase64String(bytes), body);
+        AssertDescribesTheAttachmentOnly(body, path, bytes);
+        Assert.DoesNotContain(path, host.Files.FetchedPaths);
+    }
+
+    /// <summary>
+    /// The shared-event detail reply — here to an anonymous visitor, on a calendar shared with anonymous visitors — describes the
+    /// attachment without its storage path or bytes either.
+    /// </summary>
+    [Fact]
+    public async Task IsOtherCalendarEventExists_DescribesTheAttachment_WithoutItsPathOrItsBytes_ToAnAnonymousVisitor()
+    {
+        using var host = CreateHost();
+        string email = "storage-cal-other-detail@test.com";
+        await LoginAsync(host, email);
+        string path = $"upload/Calendar/UserIndex/calendarEventAttachedFiles/{Guid.NewGuid():N}.zip";
+        byte[] bytes = [.. "shared-attachment-bytes"u8];
+        host.Files.Seed(path, bytes);
+        long eventId = await SeedCalendarEventWithAttachmentAsync(email, path, bytes.Length, sharedWithAnonymous: true);
+        var anonymous = await AuthenticatedSessionHelper.AnonymousAsync(host.Client, TestContext.Current.CancellationToken);
+
+        using var request = anonymous.BuildFormPostRequest("/Calendar/IsOtherCalendarEventExists", new MultipartFormDataContent { { new StringContent(eventId.ToString()), "id" } });
+        var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
+        string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        AssertDescribesTheAttachmentOnly(body, path, bytes);
         Assert.DoesNotContain(path, host.Files.FetchedPaths);
     }
 

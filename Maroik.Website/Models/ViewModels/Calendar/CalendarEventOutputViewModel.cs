@@ -49,7 +49,7 @@ public class CalendarEventOutputViewModel
     public string? Description { get; set; }
 
     /// <summary>Metadata for the file attached to this event (null when no file is attached).</summary>
-    public CalendarEventAttachedFileDto? CalendarEventAttachedFile { get; set; }
+    public CalendarEventAttachedFileOutputViewModel? CalendarEventAttachedFile { get; set; }
 
     /// <summary>All calendars available to the user, used to populate the calendar selector when editing this event.</summary>
     public List<CalendarResponse> Calendars { get; set; } = [];

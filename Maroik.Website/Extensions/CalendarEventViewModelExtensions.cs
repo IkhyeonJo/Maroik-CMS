@@ -74,7 +74,7 @@ public static class CalendarEventViewModelExtensions
             (calendarEvent.Description, _) = await calendarService.PrepareHtmlForDisplayAsync(tempCalendarEvent.Description ?? "", ct);
             calendarEvent.Location = tempCalendarEvent.Location;
             calendarEvent.Status = tempCalendarEvent.Status;
-            calendarEvent.CalendarEventAttachedFile = await calendarService.GetCalendarEventAttachedFileAsync(tempCalendarEvent.Id, ct);
+            calendarEvent.CalendarEventAttachedFile = (await calendarService.GetCalendarEventAttachedFileAsync(tempCalendarEvent.Id, ct))?.ToDisplayViewModel();
 
             calendarEvent.Calendars =
                 [.. calendarList.Select(x => new CalendarResponse { Id = x.Id, Name = x.Name }).OrderBy(x => x.Name)];
