@@ -68,6 +68,10 @@ Files and content
   and always-on Swagger UI are intended.
 - Editing a post, private note or calendar event without choosing a new file removes the existing
   attachment (pinned by tests such as `EditBoardAsync_ClearsTheExistingAttachmentRecord_WhenNoFileIsSubmitted`).
+- The same holds when an admin clears the lock on someone else's FreeForum post (the
+  `adminClearingSomeoneElsesLock` path of `BoardService.EditBoardAsync`): `HandleAttachmentAsync` still runs, so
+  a request without a file removes the writer's attachment (pinned by
+  `EditBoardAsync_AdminNonOwner_ClearingALockWithoutAFile_ClearsTheWritersAttachmentRecord`).
 - Inline images in post / event bodies are fetched and embedded as base64 on every view
   (`PrepareHtmlForDisplayAsync`). Keep that rendering path.
 

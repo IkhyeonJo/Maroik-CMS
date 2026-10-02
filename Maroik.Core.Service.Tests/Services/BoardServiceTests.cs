@@ -618,6 +618,31 @@ public class BoardServiceTests
         Assert.Equal("Test Content", savedBoard.Content);
     }
 
+    /// <summary>
+    /// Intended (see CLAUDE.md, "Files and content"): an admin clearing the lock on someone else's
+    /// free-forum post goes through the same attachment handling as any edit, so a request without a
+    /// file empties the writer's existing attachment record, exactly as an owner's edit would.
+    /// </summary>
+    [Fact]
+    public async Task EditBoardAsync_AdminNonOwner_ClearingALockWithoutAFile_ClearsTheWritersAttachmentRecord()
+    {
+        _boardRepo.Setup(r => r.FindActiveByIdForUpdateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeBoard(writer: "Alice", locked: true));
+        _boardRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Board>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _attachedFileRepo.Setup(r => r.FindByBoardIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BoardAttachedFile.Reconstitute(77, 1, 10, "alices", ".txt", "/upload/alices.txt"));
+
+        ServiceResult result = await CreateSut().EditBoardAsync(
+            new BoardRequest { Id = 1, Type = BoardTypes.FreeForum, Title = "Test Title", Content = "Test Content", Locked = false },
+            "Bob", isAdmin: true, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _attachedFileRepo.Verify(r => r.UpdateEntityAsync(
+            It.Is<BoardAttachedFile>(f => f.Id == 77 && f.BoardId == 1 && f.Size == 0 && f.Name == "" && f.Extension == "" && f.Path == ""),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     /// <summary>An admin who is not the writer and does not clear an existing lock is still rejected.</summary>
     [Fact]
     public async Task EditBoardAsync_AdminNonOwner_ReturnsFail_WhenNotClearingALock()
