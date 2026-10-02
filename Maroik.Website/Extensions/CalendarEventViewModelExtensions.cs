@@ -2,7 +2,6 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Website.Mappings;
 using Maroik.Website.Models.ViewModels.Calendar;
-using Microsoft.AspNetCore.StaticFiles;
 
 namespace Maroik.Website.Extensions;
 
@@ -13,12 +12,6 @@ namespace Maroik.Website.Extensions;
 /// </summary>
 public static class CalendarEventViewModelExtensions
 {
-    /// <summary>
-    /// Shared extension-to-MIME-type lookup. Its constructor builds a ~400-entry default map;
-    /// instantiating it per request is wasted work, and the type is documented as safe for concurrent reads.
-    /// </summary>
-    private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
-
     extension(ICalendarService calendarService)
     {
         /// <summary>
@@ -82,18 +75,6 @@ public static class CalendarEventViewModelExtensions
             calendarEvent.Location = tempCalendarEvent.Location;
             calendarEvent.Status = tempCalendarEvent.Status;
             calendarEvent.CalendarEventAttachedFile = await calendarService.GetCalendarEventAttachedFileAsync(tempCalendarEvent.Id, ct);
-
-            if (!string.IsNullOrEmpty(calendarEvent.CalendarEventAttachedFile?.Path))
-            {
-                byte[]? fileData = await calendarService.DownloadFileAsync(calendarEvent.CalendarEventAttachedFile.Path, ct);
-                if (fileData != null)
-                {
-                    if (!_contentTypeProvider.TryGetContentType(calendarEvent.CalendarEventAttachedFile.Path, out string? contentType))
-                        contentType = "application/octet-stream";
-                    calendarEvent.CalendarEventAttachedFileBase64Data = Convert.ToBase64String(fileData);
-                    calendarEvent.CalendarEventAttachedFileContentType = contentType;
-                }
-            }
 
             calendarEvent.Calendars =
                 [.. calendarList.Select(x => new CalendarResponse { Id = x.Id, Name = x.Name }).OrderBy(x => x.Name)];

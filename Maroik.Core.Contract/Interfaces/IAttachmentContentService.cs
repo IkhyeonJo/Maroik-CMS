@@ -20,12 +20,6 @@ public interface IAttachmentContentService
     Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string area, string subArea, CancellationToken ct = default);
 
     /// <summary>
-    /// Downloads a file from file storage. Returns <see langword="null"/> (and logs) on failure
-    /// instead of throwing, so callers can treat a missing/unreachable file as absent content.
-    /// </summary>
-    Task<byte[]?> DownloadFileAsync(string filePath, CancellationToken ct = default);
-
-    /// <summary>
     /// Opens a stored file as a stream from file storage. Returns <see langword="null"/> (and logs)
     /// when it cannot be opened, so a caller can report the failure instead of crashing.
     /// </summary>

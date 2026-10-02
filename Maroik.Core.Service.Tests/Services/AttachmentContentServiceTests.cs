@@ -264,32 +264,6 @@ public class AttachmentContentServiceTests
         _imageValidator.Verify(v => v.StripMetadata(It.IsAny<byte[]>()), Times.Never);
     }
 
-    // -- DownloadFileAsync ---------------------------------------------------------
-
-    /// <summary>Verifies that downloaded bytes are returned as-is on success.</summary>
-    [Fact]
-    public async Task DownloadFileAsync_ReturnsBytes_WhenSuccessful()
-    {
-        byte[] data = [1, 2, 3];
-        _fileClient.Setup(f => f.DownloadAsync("path", It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(data);
-
-        var result = await CreateSut().DownloadFileAsync("path", TestContext.Current.CancellationToken);
-
-        Assert.Equal(data, result);
-    }
-
-    /// <summary>Verifies that a file-client failure is swallowed (and logged) rather than thrown.</summary>
-    [Fact]
-    public async Task DownloadFileAsync_ReturnsNull_WhenFileClientThrows()
-    {
-        _fileClient.Setup(f => f.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("boom"));
-
-        var result = await CreateSut().DownloadFileAsync("path", TestContext.Current.CancellationToken);
-
-        Assert.Null(result);
-    }
-
     // -- OpenFileAsync -------------------------------------------------------------
 
     /// <summary>The stream the file client opened is handed back unread.</summary>

@@ -51,12 +51,6 @@ public class CalendarEventOutputViewModel
     /// <summary>Metadata for the file attached to this event (null when no file is attached).</summary>
     public CalendarEventAttachedFileDto? CalendarEventAttachedFile { get; set; }
 
-    /// <summary>Base64-encoded bytes of the attached file, used for inline preview or download link generation.</summary>
-    public string? CalendarEventAttachedFileBase64Data { get; set; }
-
-    /// <summary>MIME type of the attached file (e.g. "application/zip"), used for data-URI embedding.</summary>
-    public string? CalendarEventAttachedFileContentType { get; set; }
-
     /// <summary>All calendars available to the user, used to populate the calendar selector when editing this event.</summary>
     public List<CalendarResponse> Calendars { get; set; } = [];
 

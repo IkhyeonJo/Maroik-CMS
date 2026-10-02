@@ -1,6 +1,7 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Settings;
+using Maroik.Core.Domain.Account;
 using Maroik.Core.Domain.Calendar;
 using Maroik.Core.Domain.ValueObjects;
 using Maroik.Core.Service.Extensions;
@@ -81,7 +82,8 @@ public class CalendarService(
     public async Task<CalendarEventAttachedFileDto?> GetCalendarEventAttachedFileAsync(long calendarEventId, CancellationToken ct = default)
     {
         CalendarEventAttachedFile? file = await calendarEventAttachedFileRepository.FindByCalendarEventIdAsync(calendarEventId, ct);
-        return file == null ? null : CalendarEventAttachedFileMapper.ToResponse(file);
+        // The record an edit emptied (see HandleAttachmentAsync) stands for "no attachment".
+        return file == null || string.IsNullOrEmpty(file.Name) ? null : CalendarEventAttachedFileMapper.ToResponse(file);
     }
 
     /// <inheritdoc />
@@ -614,16 +616,12 @@ public class CalendarService(
             existing.Reassign(request.CalendarId, request.RecurrenceId, utcNow);
             await calendarEventRepository.UpdateEntityAsync(existing, ct);
 
-            // Replace attachment: delete existing record then optionally upload and re-create.
-            await calendarEventAttachedFileRepository.DeleteByCalendarEventIdAsync(existing.Id, ct);
-            if (attachedFile != null)
+            CalendarEventAttachedFile? previous = await calendarEventAttachedFileRepository.FindByCalendarEventIdAsync(existing.Id, ct);
+            ServiceResult attachmentResult = await HandleAttachmentAsync(roleIndex, existing.Id, previous, attachedFile, ct);
+            if (!attachmentResult.Success)
             {
-                var attachmentResult = await SaveEventAttachmentAsync(roleIndex, existing.Id, attachedFile, ct);
-                if (!attachmentResult.Success)
-                {
-                    await unitOfWork.RollbackAsync(ct);
-                    return attachmentResult;
-                }
+                await unitOfWork.RollbackAsync(ct);
+                return attachmentResult;
             }
 
             // Replace reminders: delete all existing then re-create from the updated list.
@@ -694,9 +692,8 @@ public class CalendarService(
 
     /// <summary>
     /// Uploads <paramref name="attachedFile"/> to file storage and creates its
-    /// <see cref="CalendarEventAttachedFile"/> record for <paramref name="calendarEventId"/>.
-    /// Used by both create and update (the caller is responsible for deleting any prior
-    /// attachment record before calling this on update).
+    /// <see cref="CalendarEventAttachedFile"/> record for <paramref name="calendarEventId"/>, an event that has
+    /// no attachment record yet (a new event, or the "add" case of <see cref="HandleAttachmentAsync"/>).
     /// </summary>
     private async Task<ServiceResult> SaveEventAttachmentAsync(string roleIndex, long calendarEventId, AttachedFileDto attachedFile, CancellationToken ct)
     {
@@ -714,6 +711,51 @@ public class CalendarService(
             return ServiceResult.Failure("CalendarEvent.AttachmentUploadFailed", ServiceResult.TemporaryErrorKey);
 
         await calendarEventAttachedFileRepository.CreateAsync(fileResult.Value, ct);
+        return ServiceResult.Ok();
+    }
+
+    /// <summary>
+    /// Handles the four possible attachment states when editing an event, the same way a board post's edit
+    /// does: replace (previous + new), clear (previous only), add (new only), or no-op (neither).
+    /// Returns a failed <see cref="ServiceResult"/> when a required upload or validation fails, so the caller
+    /// can roll back instead of persisting a record for a file that was never saved.
+    /// </summary>
+    private async Task<ServiceResult> HandleAttachmentAsync(string roleIndex, long calendarEventId,
+        CalendarEventAttachedFile? previous, AttachedFileDto? newFile, CancellationToken ct)
+    {
+        if (previous != null && newFile != null)
+        {
+            // Replace: upload the new file and overwrite the existing attachment record.
+            string filePath = BuildEventFilePath(roleIndex, calendarEventId, newFile.FileName);
+            var fileResult = CalendarEventAttachedFile.Create(previous.CalendarEventId, newFile.Size,
+                Path.GetFileNameWithoutExtension(newFile.FileName),
+                Path.GetExtension(newFile.FileName),
+                filePath.Replace('\\', '/'));
+            if (fileResult.IsError) return ServiceResult.FromError(fileResult.FirstError);
+
+            // Validated first, uploaded second: a rejected record must not leave an orphaned file.
+            bool uploaded = await fileClient.UploadAsync(newFile.Bytes, newFile.ContentType, filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
+            if (!uploaded) return ServiceResult.Failure("CalendarEvent.AttachmentUploadFailed", ServiceResult.TemporaryErrorKey);
+
+            await calendarEventAttachedFileRepository.UpdateEntityAsync(
+                CalendarEventAttachedFile.Reconstitute(previous.Id, fileResult.Value.CalendarEventId, fileResult.Value.Size,
+                    fileResult.Value.Name, fileResult.Value.Extension, fileResult.Value.Path), ct);
+        }
+        else if (previous != null)
+        {
+            // Clear: zero-out the attachment record without uploading anything. Name/Path are intentionally
+            // empty here as an empty-attachment sentinel, not user-submitted data, so Reconstitute (not Create,
+            // which would reject an empty name/path) is correct.
+            await calendarEventAttachedFileRepository.UpdateEntityAsync(
+                CalendarEventAttachedFile.Reconstitute(previous.Id, previous.CalendarEventId, 0, "", "", ""), ct);
+        }
+        else if (newFile != null)
+        {
+            // Add: upload and create a new attachment record for an event that had none before.
+            return await SaveEventAttachmentAsync(roleIndex, calendarEventId, newFile, ct);
+        }
+        // previous == null && newFile == null: nothing to do.
+
         return ServiceResult.Ok();
     }
 
@@ -743,8 +785,34 @@ public class CalendarService(
         => attachmentContent.UploadSummernoteImageAsync(file, "Calendar", roleIndex, ct);
 
     /// <inheritdoc />
-    public Task<byte[]?> DownloadFileAsync(string filePath, CancellationToken ct = default)
-        => attachmentContent.DownloadFileAsync(filePath, ct);
+    public async Task<(ServiceResult Result, AttachmentDownload? File)> OpenCalendarEventAttachedFileAsync(
+        long calendarEventId, AccountResponse? viewer, CancellationToken ct = default)
+    {
+        // The same visibility rule as the event detail, checked again here: the download endpoint is
+        // reachable without going through the detail dialog.
+        HashSet<long> visibleCalendarIds = [.. (await GetVisibleOtherCalendarsAsync(viewer, ct)).Select(c => c.Id)];
+        if (viewer != null)
+            visibleCalendarIds.UnionWith((await calendarRepository.GetByAccountEmailAsync(viewer.Email!, ct)).Select(c => c.Id));
+
+        CalendarEvent? calendarEvent = await calendarEventRepository.FindByIdAsync(calendarEventId, ct);
+        if (calendarEvent == null || !visibleCalendarIds.Contains(calendarEvent.CalendarId))
+        {
+            logger.LogWarning("Attachment download refused: calendar event {CalendarEventId} is missing or not visible to {Viewer}",
+                calendarEventId, viewer?.Email ?? Role.Anonymous);
+            return (ServiceResult.NotFound("CalendarEvent.NotFound", "The calendar event could not be found."), null);
+        }
+
+        CalendarEventAttachedFile? attachedFile = await calendarEventAttachedFileRepository.FindByCalendarEventIdAsync(calendarEventId, ct);
+        if (attachedFile == null || string.IsNullOrEmpty(attachedFile.Path))
+            return (ServiceResult.NotFound("CalendarEvent.AttachedFileNotFound", "The attached file could not be found."), null);
+
+        // OpenFileAsync logs its own failure (with the storage path) where it happens.
+        Stream? content = await attachmentContent.OpenFileAsync(attachedFile.Path, ct);
+        if (content == null)
+            return (ServiceResult.Failure("CalendarEvent.AttachedFileUnavailable", ServiceResult.TemporaryErrorKey), null);
+
+        return (ServiceResult.Ok(), new AttachmentDownload(content, $"{attachedFile.Name}{attachedFile.Extension}"));
+    }
 
     /// <inheritdoc />
     public Task<(string Html, bool HasImages)> PrepareHtmlForDisplayAsync(string html, CancellationToken ct = default)

@@ -109,8 +109,15 @@ public interface ICalendarService
     /// <summary>Validates and stores an image uploaded from the Summernote editor inside a calendar event description.</summary>
     Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string roleIndex, CancellationToken ct = default);
 
-    /// <summary>Downloads the raw bytes of a stored file by its server-side path.</summary>
-    Task<byte[]?> DownloadFileAsync(string filePath, CancellationToken ct = default);
+    /// <summary>
+    /// Opens the attachment of calendar event <paramref name="calendarEventId"/> for <paramref name="viewer"/>
+    /// (null for an anonymous visitor). The event must exist and belong to a calendar the viewer may see —
+    /// their own or a still-shared one they subscribe to, or for an anonymous visitor one shared with
+    /// anonymous visitors; otherwise nothing is opened and the result says why. On success the file is
+    /// streamed from file storage.
+    /// </summary>
+    Task<(ServiceResult Result, AttachmentDownload? File)> OpenCalendarEventAttachedFileAsync(
+        long calendarEventId, AccountResponse? viewer, CancellationToken ct = default);
 
     /// <summary>
     /// Prepares HTML content for display by downloading each inline Summernote image,

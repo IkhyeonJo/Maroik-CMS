@@ -468,6 +468,256 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         Assert.Equal("A temporary error occurred. Please try again later.", doc.RootElement.GetProperty("error").GetString());
     }
 
+    // -- calendar event attachments ------------------------------------------------------------------
+
+    /// <summary>
+    /// Adds a calendar owned by <paramref name="email"/> (optionally shared) holding one event with an attachment
+    /// "payload.zip" stored at <paramref name="path"/>; returns the event's id.
+    /// </summary>
+    private async Task<long> SeedCalendarEventWithAttachmentAsync(string email, string path, long size, bool sharedWithAnonymous = false)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var calendar = new Calendar
+        {
+            AccountEmail = email, Name = $"WithFile-{Guid.NewGuid():N}", TimeZoneIanaId = "UTC", HtmlColorCode = "#3788d8",
+            Created = DateTime.UtcNow, Updated = DateTime.UtcNow
+        };
+        db.Calendars.Add(calendar);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        db.CalendarShareds.Add(new CalendarShared { CalendarId = calendar.Id, User = sharedWithAnonymous, Anonymous = sharedWithAnonymous });
+        var calendarEvent = new CalendarEvent
+        {
+            CalendarId = calendar.Id, Title = "WithFile", Status = "Busy", StartDate = DateTime.UtcNow, EndDate = DateTime.UtcNow.AddHours(1),
+            Created = DateTime.UtcNow, Updated = DateTime.UtcNow
+        };
+        db.CalendarEvents.Add(calendarEvent);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        db.CalendarEventAttachedFiles.Add(new CalendarEventAttachedFile { CalendarEventId = calendarEvent.Id, Size = size, Name = "payload", Extension = ".zip", Path = path });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return calendarEvent.Id;
+    }
+
+    /// <summary>A form posting <paramref name="calendarEventId"/> to the calendar-event download action.</summary>
+    private static MultipartFormDataContent CalendarEventIdForm(long calendarEventId) =>
+        new() { { new StringContent(calendarEventId.ToString()), "calendarEventId" } };
+
+    /// <summary>
+    /// The event detail reply describes the attachment (name, size) but no longer carries the file: nothing is
+    /// read from file storage and no file bytes are embedded.
+    /// </summary>
+    [Fact]
+    public async Task IsCalendarEventExists_DescribesTheAttachment_WithoutFetchingOrEmbeddingTheFile()
+    {
+        using var host = CreateHost();
+        string email = "storage-cal-detail@test.com";
+        var session = await LoginAsync(host, email);
+        string path = $"upload/Calendar/UserIndex/calendarEventAttachedFiles/{Guid.NewGuid():N}.zip";
+        byte[] bytes = [.. "calendar-attachment-bytes"u8];
+        host.Files.Seed(path, bytes);
+        long eventId = await SeedCalendarEventWithAttachmentAsync(email, path, bytes.Length);
+
+        using var request = session.BuildFormPostRequest("/Calendar/IsCalendarEventExists", new MultipartFormDataContent { { new StringContent(eventId.ToString()), "id" } });
+        var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
+        string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        using JsonDocument doc = JsonDocument.Parse(body);
+        Assert.True(doc.RootElement.GetProperty("result").GetBoolean());
+        JsonElement file = doc.RootElement.GetProperty("calendarEvent").GetProperty("calendarEventAttachedFile");
+        Assert.Equal("payload", file.GetProperty("name").GetString());
+        Assert.False(doc.RootElement.GetProperty("calendarEvent").TryGetProperty("calendarEventAttachedFileBase64Data", out _));
+        Assert.DoesNotContain(Convert.ToBase64String(bytes), body);
+        Assert.DoesNotContain(path, host.Files.FetchedPaths);
+    }
+
+    /// <summary>The download action streams the stored attachment to the owner of the event's calendar, named for the browser.</summary>
+    [Fact]
+    public async Task DownloadCalendarEventAttachedFile_StreamsTheAttachment_ToTheOwnerOfTheCalendar()
+    {
+        using var host = CreateHost();
+        string email = "storage-cal-dl-owner@test.com";
+        var session = await LoginAsync(host, email);
+        string path = $"upload/Calendar/UserIndex/calendarEventAttachedFiles/{Guid.NewGuid():N}.zip";
+        byte[] bytes = [.. "calendar-attachment-bytes"u8];
+        host.Files.Seed(path, bytes);
+        long eventId = await SeedCalendarEventWithAttachmentAsync(email, path, bytes.Length);
+
+        using var request = session.BuildFormPostRequest("/Calendar/DownloadCalendarEventAttachedFile", CalendarEventIdForm(eventId));
+        var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/x-zip-compressed", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("payload.zip", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName);
+        Assert.Equal(bytes, await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>An anonymous visitor may download the attachment of an event in a calendar shared with anonymous visitors.</summary>
+    [Fact]
+    public async Task DownloadCalendarEventAttachedFile_IsAllowedForAnAnonymousVisitor_OnAnAnonymouslySharedCalendar()
+    {
+        using var host = CreateHost();
+        string email = "storage-cal-dl-anon-owner@test.com";
+        await LoginAsync(host, email);
+        string path = $"upload/Calendar/UserIndex/calendarEventAttachedFiles/{Guid.NewGuid():N}.zip";
+        host.Files.Seed(path, [1, 2, 3]);
+        long eventId = await SeedCalendarEventWithAttachmentAsync(email, path, 3, sharedWithAnonymous: true);
+        var anonymous = await AuthenticatedSessionHelper.AnonymousAsync(host.Client, TestContext.Current.CancellationToken);
+
+        using var request = anonymous.BuildFormPostRequest("/Calendar/DownloadCalendarEventAttachedFile", CalendarEventIdForm(eventId));
+        var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal([1, 2, 3], await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>
+    /// The calendar's visibility is checked again on download: another account cannot fetch the attachment of an
+    /// event in a private calendar, nor can an anonymous visitor; nothing is read from storage.
+    /// </summary>
+    [Fact]
+    public async Task DownloadCalendarEventAttachedFile_RefusesAViewerWhoMayNotSeeTheCalendar()
+    {
+        using var host = CreateHost();
+        string ownerEmail = "storage-cal-dl-private-owner@test.com";
+        await LoginAsync(host, ownerEmail);
+        var stranger = await LoginAsync(host, "storage-cal-dl-stranger@test.com");
+        var anonymous = await AuthenticatedSessionHelper.AnonymousAsync(host.Client, TestContext.Current.CancellationToken);
+        string path = $"upload/Calendar/UserIndex/calendarEventAttachedFiles/{Guid.NewGuid():N}.zip";
+        host.Files.Seed(path, [1]);
+        long eventId = await SeedCalendarEventWithAttachmentAsync(ownerEmail, path, 1);
+
+        using var strangerRequest = stranger.BuildFormPostRequest("/Calendar/DownloadCalendarEventAttachedFile", CalendarEventIdForm(eventId));
+        using JsonDocument strangerDoc = await PostAsync(host, strangerRequest);
+        using var anonymousRequest = anonymous.BuildFormPostRequest("/Calendar/DownloadCalendarEventAttachedFile", CalendarEventIdForm(eventId));
+        using JsonDocument anonymousDoc = await PostAsync(host, anonymousRequest);
+
+        foreach (JsonDocument doc in new[] { strangerDoc, anonymousDoc })
+        {
+            Assert.False(doc.RootElement.GetProperty("result").GetBoolean());
+            Assert.Equal("The calendar event could not be found.", doc.RootElement.GetProperty("error").GetString());
+        }
+        Assert.Empty(host.Files.FetchedPaths);
+    }
+
+    /// <summary>A stored attachment that file storage cannot hand out is reported as a failed download, not served.</summary>
+    [Fact]
+    public async Task DownloadCalendarEventAttachedFile_ReportsAFailure_WhenStorageCannotHandOutTheFile()
+    {
+        using var host = CreateHost();
+        string email = "storage-cal-dl-down@test.com";
+        var session = await LoginAsync(host, email);
+        host.Files.ThrowOnDownload = true;
+        long eventId = await SeedCalendarEventWithAttachmentAsync(email, $"upload/Calendar/UserIndex/calendarEventAttachedFiles/{Guid.NewGuid():N}.zip", 10);
+
+        using var request = session.BuildFormPostRequest("/Calendar/DownloadCalendarEventAttachedFile", CalendarEventIdForm(eventId));
+        using JsonDocument doc = await PostAsync(host, request);
+
+        Assert.False(doc.RootElement.GetProperty("result").GetBoolean());
+        Assert.Equal("A temporary error occurred. Please try again later.", doc.RootElement.GetProperty("error").GetString());
+    }
+
+    /// <summary>The update-event form for <paramref name="eventId"/> in <paramref name="calendarId"/>, plus <paramref name="file"/> as its attachment when given.</summary>
+    private static MultipartFormDataContent UpdateEventForm(long eventId, long calendarId, (string Name, byte[] Bytes)? file)
+    {
+        var form = new MultipartFormDataContent();
+        foreach (var (name, value) in new[]
+                 {
+                     ("Id", eventId.ToString()), ("CalendarId", calendarId.ToString()), ("Title", "Edited"), ("AllDay", "false"),
+                     ("StartDate", "2024-05-01 10:00"), ("EndDate", "2024-05-01 11:00"), ("StartDateTimeZoneIanaId", "UTC"),
+                     ("EndDateTimeZoneIanaId", "UTC"), ("Status", "Busy"), ("SerializedCalendarReminders", "[]"),
+                 })
+            form.Add(new StringContent(value), name);
+        if (file is { } f)
+        {
+            var part = new ByteArrayContent(f.Bytes);
+            part.Headers.ContentType = new MediaTypeHeaderValue("application/zip");
+            form.Add(part, "CalendarEventUploadedFile", f.Name);
+        }
+        return form;
+    }
+
+    /// <summary>The attachment rows of <paramref name="eventId"/>, read straight from the database.</summary>
+    private async Task<List<CalendarEventAttachedFile>> AttachmentRowsAsync(long eventId)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return await db.CalendarEventAttachedFiles.AsNoTracking().Where(f => f.CalendarEventId == eventId).ToListAsync(TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>The calendar <paramref name="eventId"/> belongs to.</summary>
+    private async Task<long> CalendarOfAsync(long eventId)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return (await db.CalendarEvents.AsNoTracking().SingleAsync(e => e.Id == eventId, TestContext.Current.CancellationToken)).CalendarId;
+    }
+
+    /// <summary>
+    /// Editing an event with a new file overwrites its attachment row in place (same id, like a board post's edit), and the
+    /// new file is what the download action then serves.
+    /// </summary>
+    [Fact]
+    public async Task UpdateCalendarEvent_WithANewFile_ReplacesTheSameAttachmentRow()
+    {
+        using var host = CreateHost();
+        string email = "storage-cal-edit-replace@test.com";
+        var session = await LoginAsync(host, email);
+        string oldPath = $"upload/Calendar/UserIndex/calendarEventAttachedFiles/{Guid.NewGuid():N}.zip";
+        host.Files.Seed(oldPath, [1]);
+        long eventId = await SeedCalendarEventWithAttachmentAsync(email, oldPath, 1);
+        long rowId = Assert.Single(await AttachmentRowsAsync(eventId)).Id;
+        byte[] bytes = [.. "replacement-bytes"u8];
+
+        using var request = session.BuildFormPostRequest("/Calendar/UpdateCalendarEvent", UpdateEventForm(eventId, await CalendarOfAsync(eventId), ("new.zip", bytes)));
+        using JsonDocument doc = await PostAsync(host, request);
+
+        Assert.True(doc.RootElement.GetProperty("result").GetBoolean());
+        CalendarEventAttachedFile row = Assert.Single(await AttachmentRowsAsync(eventId));
+        Assert.Equal(rowId, row.Id);
+        Assert.Equal("new", row.Name);
+        Assert.Equal(bytes.Length, row.Size);
+        Assert.StartsWith($"upload/Calendar/UserIndex/calendarEventAttachedFiles/{eventId}/", row.Path);
+
+        using var download = session.BuildFormPostRequest("/Calendar/DownloadCalendarEventAttachedFile", CalendarEventIdForm(eventId));
+        var response = await host.Client.SendAsync(download, TestContext.Current.CancellationToken);
+        Assert.Equal(bytes, await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>
+    /// Editing an event without choosing a file empties its attachment row in place (the board posts' sentinel), and the
+    /// event then reads as having no attachment: the detail reports none and the download action refuses.
+    /// </summary>
+    [Fact]
+    public async Task UpdateCalendarEvent_WithoutAFile_ClearsTheSameAttachmentRow()
+    {
+        using var host = CreateHost();
+        string email = "storage-cal-edit-clear@test.com";
+        var session = await LoginAsync(host, email);
+        string path = $"upload/Calendar/UserIndex/calendarEventAttachedFiles/{Guid.NewGuid():N}.zip";
+        host.Files.Seed(path, [1]);
+        long eventId = await SeedCalendarEventWithAttachmentAsync(email, path, 1);
+        long rowId = Assert.Single(await AttachmentRowsAsync(eventId)).Id;
+
+        using var request = session.BuildFormPostRequest("/Calendar/UpdateCalendarEvent", UpdateEventForm(eventId, await CalendarOfAsync(eventId), null));
+        using JsonDocument doc = await PostAsync(host, request);
+
+        Assert.True(doc.RootElement.GetProperty("result").GetBoolean());
+        CalendarEventAttachedFile row = Assert.Single(await AttachmentRowsAsync(eventId));
+        Assert.Equal(rowId, row.Id);
+        Assert.Equal("", row.Name);
+        Assert.Equal("", row.Path);
+        Assert.Equal(0, row.Size);
+
+        using var detailRequest = session.BuildFormPostRequest("/Calendar/IsCalendarEventExists", new MultipartFormDataContent { { new StringContent(eventId.ToString()), "id" } });
+        using JsonDocument detail = await PostAsync(host, detailRequest);
+        Assert.Equal(JsonValueKind.Null, detail.RootElement.GetProperty("calendarEvent").GetProperty("calendarEventAttachedFile").ValueKind);
+
+        using var download = session.BuildFormPostRequest("/Calendar/DownloadCalendarEventAttachedFile", CalendarEventIdForm(eventId));
+        using JsonDocument refused = await PostAsync(host, download);
+        Assert.False(refused.RootElement.GetProperty("result").GetBoolean());
+        Assert.Equal("The attached file could not be found.", refused.RootElement.GetProperty("error").GetString());
+    }
+
     /// <summary>An avatar / editor image over the configured size limit is refused with the size message, and nothing is stored.</summary>
     [Theory]
     [InlineData("/Management/UpdateProfileAvatar", "ProfileAvatarFiles")]
