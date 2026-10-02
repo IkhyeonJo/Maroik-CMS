@@ -77,7 +77,7 @@ public class ForumController(
             ServiceResult result = await boardService.WriteBoardAsync(boardRequest, loggedInAccount.Role == Role.Admin, attachedFile, ct);
             return result.Success
                 ? Json(new { result = true, message = localizer["The board has been successfully created."].Value })
-                : Json(new { result = false, error = localizer["Input is invalid"].Value });
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
@@ -119,7 +119,7 @@ public class ForumController(
             ServiceResult result = await boardService.WriteCommentAsync(commentRequest, isAdmin: loggedInAccount.Role == Role.Admin, requiredType: BoardTypes.FreeForum, ct: ct);
             return result.Success
                 ? Json(new { result = true, boardId = boardCommentInputViewModel.BoardId, page = boardCommentInputViewModel.DetailCurrentPage })
-                : Json(new { result = false, error = localizer["Input is invalid"].Value });
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
@@ -497,7 +497,7 @@ public class ForumController(
             ServiceResult result = await boardService.EditBoardAsync(boardRequest, loggedInAccount.Nickname!, loggedInAccount.Role == Role.Admin, attachedFile, ct);
             return result.Success
                 ? Json(new { result = true, message = localizer["The board has been successfully updated."].Value })
-                : Json(new { result = false, error = localizer["Input is invalid"].Value });
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {

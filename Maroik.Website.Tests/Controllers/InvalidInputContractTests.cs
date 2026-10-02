@@ -101,7 +101,10 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
         Id = id, CategoryId = categoryId, Name = name, DisplayName = name, IconPath = "/icons/test.png", Controller = "", Action = "Index", Role = Role.User, Order = 500
     };
 
-    /// <summary>A menu write the database refuses (an over-long name, a sub-category of a category that is not there) answers with the generic message.</summary>
+    /// <summary>
+    /// A menu write the domain refuses (an over-long name) answers with that rule; one only the database refuses
+    /// (a sub-category of a category that is not there) answers with the generic message.
+    /// </summary>
     [Fact]
     public async Task MenuWrites_TheDatabaseRefuses_AreAnsweredWithTheGenericMessage()
     {
@@ -117,11 +120,10 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
         string createTooLong = await Post("/Management/CreateCategory", Category(new string('n', 5000)));
         string createSubOfMissing = await Post("/Management/CreateSubCategory", SubCategory(name, 987654321));
 
-        Assert.All([createTooLong, createSubOfMissing], b =>
-        {
-            Assert.False(JsonDocument.Parse(b).RootElement.GetProperty("result").GetBoolean());
-            Assert.Contains(Invalid, b);
-        });
+        Assert.False(JsonDocument.Parse(createTooLong).RootElement.GetProperty("result").GetBoolean());
+        Assert.Equal("'Name' must be 255 characters or fewer.", JsonDocument.Parse(createTooLong).RootElement.GetProperty("error").GetString());
+        Assert.False(JsonDocument.Parse(createSubOfMissing).RootElement.GetProperty("result").GetBoolean());
+        Assert.Contains(Invalid, createSubOfMissing);
         return;
 
         // Posts body as JSON as the admin, asserts 200, and returns the response body.
