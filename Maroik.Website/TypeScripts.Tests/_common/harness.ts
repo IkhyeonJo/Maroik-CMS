@@ -7,7 +7,8 @@
  *      for every vendored plugin the scripts touch (tabs / datepicker / summernote /
  *      modal / tooltip / validation), and stubs for the `toastr`, `MvcGrid`,
  *      `FullCalendar`, `moment` globals,
- *   3. captures `$.ajax` calls (and lets the test drive their `success` callbacks),
+ *   3. captures `$.ajax` calls (and lets the test drive their `success` callbacks, or replay
+ *      a call through jQuery's real ajax pipeline against a canned HTTP reply),
  *   4. runs the compiled `wwwroot/{area}/custom/{feature}/{page}/js/site.js` in the
  *      window scope (the file is the IIFE-wrapped port, so it self-executes).
  *
@@ -51,6 +52,14 @@ export interface SiteHandle {
     /** invoke the `success` of the captured ajax call `indexFromEnd` places before the last (0 = the last) with `data` */
     respond(indexFromEnd: number, data: unknown): void;
 
+    /**
+     * Replays the captured ajax call `indexFromEnd` places before the last through jQuery's REAL
+     * `$.ajax` (response-type inference and converters included) against a fake XHR answering
+     * HTTP 200 with `body` as `contentType`. Unlike {@link respond}, this shows which callback
+     * (`success` / `error`) a real browser would reach for that reply.
+     */
+    respondOverHttp(indexFromEnd: number, body: string, contentType: string): void;
+
     /** last captured ajax call */
     lastAjax(): AjaxCall;
 
@@ -77,6 +86,51 @@ function bindJquery(win: any): JQueryStatic {
     const mod: any = jqueryImport as any;
     const $ = typeof mod === "function" && !mod.fn ? mod(win) : mod;
     return $ as JQueryStatic;
+}
+
+/** jQuery's real `$.ajax`, kept before {@link loadSite} replaces it with a capturing stub. */
+const realAjax: JQueryStatic["ajax"] = bindJquery(window).ajax;
+
+/**
+ * Builds a minimal `XMLHttpRequest` stand-in for jQuery's xhr transport that answers HTTP 200 with
+ * `body` as `contentType`. Like a browser, it hands back a Blob in `response` when the caller set
+ * `responseType = "blob"`, and refuses to read `responseText` for a non-text response type.
+ */
+function fakeXhrFactory(win: any, body: string, contentType: string): () => XMLHttpRequest {
+    return () => {
+        const xhr: any = {
+            responseType: "",
+            readyState: 0,
+            status: 0,
+            statusText: "",
+            response: null,
+            onload: null,
+            onerror: null,
+            onabort: null,
+            ontimeout: null,
+            open() { /* nothing to connect */ },
+            setRequestHeader() { /* headers are not inspected here */ },
+            overrideMimeType() { /* not used by the scripts */ },
+            abort() { /* never aborted */ },
+            getAllResponseHeaders: () => `content-type: ${contentType}\r\n`,
+            get responseText() {
+                if (xhr.responseType !== "" && xhr.responseType !== "text") {
+                    throw new win.DOMException("responseText is only available for a text response", "InvalidStateError");
+                }
+                return body;
+            },
+            send() {
+                void Promise.resolve().then(() => {
+                    xhr.readyState = 4;
+                    xhr.status = 200;
+                    xhr.statusText = "OK";
+                    xhr.response = xhr.responseType === "blob" ? new win.Blob([body], { type: contentType }) : body;
+                    xhr.onload?.();
+                });
+            },
+        };
+        return xhr as XMLHttpRequest;
+    };
 }
 
 /** Resets the document to `fixtureHtml`, installs the stubs, runs the compiled page script and returns a {@link SiteHandle}. */
@@ -270,6 +324,10 @@ export function loadSite(
         respond(indexFromEnd, data) {
             const call = ajaxCalls[ajaxCalls.length - 1 - indexFromEnd];
             call?.success?.(data);
+        },
+        respondOverHttp(indexFromEnd, body, contentType) {
+            const call = ajaxCalls[ajaxCalls.length - 1 - indexFromEnd];
+            void realAjax({ ...(call as any), xhr: fakeXhrFactory(win, body, contentType) });
         },
         lastAjax: () => ajaxCalls[ajaxCalls.length - 1],
         toastr,

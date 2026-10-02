@@ -167,7 +167,7 @@ describe("Forum/FreeForum (anonymous) — navigation, images and attachments", (
         try {
             const h = withAttachment();
             h.$("#aDetailBoardAttachedFile").trigger("click");
-            h.respond(0, new h.win.Blob([JSON.stringify({ result: false, error: "The post could not be found." })], { type: "application/json; charset=utf-8" }));
+            h.respondOverHttp(0, JSON.stringify({ result: false, error: "The post could not be found." }), "application/json; charset=utf-8");
             await vi.waitFor(() => expect(h.toastr.error).toHaveBeenCalledWith("The post could not be found."));
             expect(click).not.toHaveBeenCalled();
 
