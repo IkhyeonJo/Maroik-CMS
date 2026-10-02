@@ -1,5 +1,6 @@
 using Maroik.Core.PostgreSQL.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using OrmAccount = Maroik.Core.PostgreSQL.Models.Account;
 using OrmAsset = Maroik.Core.PostgreSQL.Models.Asset;
 using OrmCalendar = Maroik.Core.PostgreSQL.Models.Calendar;
@@ -217,11 +218,15 @@ public abstract class RepositoryTestBase : IClassFixture<DatabaseFixture>, IAsyn
         return calendarEvent.Id;
     }
 
-    /// <summary>Creates an additional context on the same database; it is disposed with the test.</summary>
-    protected ApplicationDbContext NewDbContext()
+    /// <summary>
+    /// Creates an additional context on the same database, with any <paramref name="interceptors"/> attached
+    /// (e.g. to record the SQL a repository call sends); it is disposed with the test.
+    /// </summary>
+    protected ApplicationDbContext NewDbContext(params IInterceptor[] interceptors)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseNpgsql(_database.ConnectionString)
+            .AddInterceptors(interceptors)
             .Options;
         var context = new ApplicationDbContext(options);
         _contexts.Add(context);
