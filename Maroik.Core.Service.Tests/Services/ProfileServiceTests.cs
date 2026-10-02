@@ -193,6 +193,43 @@ public class ProfileServiceTests
             It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// The avatar is stored as the validator's metadata-free re-encoding, never as the uploaded bytes, so a
+    /// phone photo's EXIF (GPS position, camera, capture time) is not published to other users.
+    /// </summary>
+    [Fact]
+    public async Task UploadAndUpdateAvatarAsync_StoresTheMetadataFreeImage_NotTheUploadedBytes()
+    {
+        var account = ActiveAccount();
+        byte[] uploadedBytes = [0xFF, 0xD8, 0xFF, 0xE1, 0x45, 0x78, 0x69, 0x66];
+        byte[] strippedBytes = [0xFF, 0xD8, 0xFF, 0xDB];
+        _imageValidator.Setup(v => v.IsValidImage(uploadedBytes)).Returns(true);
+        _imageValidator.Setup(v => v.IsSvg(uploadedBytes)).Returns(false);
+        _imageValidator.Setup(v => v.StripMetadata(uploadedBytes)).Returns(strippedBytes);
+        byte[]? stored = null;
+        _fileClient.Setup(c => c.UploadWithResultAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<byte[], string, string, string, CancellationToken>((bytes, _, _, _, _) => stored = bytes)
+            .ReturnsAsync(FileUploadResult.Stored);
+        _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _accountRepo.Setup(r => r.UpdateAvatarPathAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        ServiceResult result = await CreateSut().UploadAndUpdateAvatarAsync(account.Email.Value, uploadedBytes, ".jpg", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal(strippedBytes, stored);
+    }
+
+    /// <summary>A refused image is never re-encoded: the decoder only sees bytes the validator accepted.</summary>
+    [Fact]
+    public async Task UploadAndUpdateAvatarAsync_DoesNotReencode_AnImageThatFailedValidation()
+    {
+        _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(false);
+
+        await CreateSut().UploadAndUpdateAvatarAsync("user@example.com", [1, 2, 3], ".png", TestContext.Current.CancellationToken);
+
+        _imageValidator.Verify(v => v.StripMetadata(It.IsAny<byte[]>()), Times.Never);
+    }
+
     /// <summary>A storage upload failure returns a failure result and never updates the account.</summary>
     [Fact]
     public async Task UploadAndUpdateAvatarAsync_ReturnsFailure_WhenStorageUploadFails()

@@ -29,6 +29,9 @@ public sealed class FakeFileClient : IFileClient
     /// <summary>The content type of the last upload to <paramref name="path"/>, or null.</summary>
     public string? ContentTypeOf(string path) => _files.TryGetValue(path, out var f) ? f.ContentType : null;
 
+    /// <summary>The bytes stored under <paramref name="path"/>, or <see langword="null"/> when nothing is.</summary>
+    public byte[]? BytesOf(string path) => _files.TryGetValue(path, out var f) ? f.Bytes : null;
+
     /// <summary>Puts a file into storage without recording an upload.</summary>
     public void Seed(string path, byte[] bytes) => _files[path] = (bytes, "application/octet-stream");
 

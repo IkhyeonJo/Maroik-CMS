@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using ImageMagick;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Domain.Account;
@@ -26,6 +27,29 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
     /// <summary>A valid 1×1 PNG.</summary>
     private static readonly byte[] _png = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+
+    /// <summary>A 16×8 phone-style JPEG whose EXIF carries a GPS position and a camera model.</summary>
+    private static byte[] GpsTaggedJpeg()
+    {
+        using var image = new MagickImage(MagickColors.Red, 16, 8);
+        var exif = new ExifProfile();
+        exif.SetValue(ExifTag.GPSLatitudeRef, "N");
+        exif.SetValue(ExifTag.GPSLatitude, [new Rational(37, 1), new Rational(33, 1), new Rational(59, 1)]);
+        exif.SetValue(ExifTag.Model, "SecretPhone 15");
+        image.SetProfile(exif);
+        image.Format = MagickFormat.Jpeg;
+        return image.ToByteArray();
+    }
+
+    /// <summary>Asserts <paramref name="bytes"/> are a JPEG with no EXIF left in them.</summary>
+    private static void AssertJpegWithoutExif(byte[]? bytes)
+    {
+        Assert.NotNull(bytes);
+        using var image = new MagickImage(bytes);
+        Assert.Equal(MagickFormat.Jpeg, image.Format);
+        Assert.Null(image.GetExifProfile());
+        Assert.DoesNotContain("SecretPhone", System.Text.Encoding.ASCII.GetString(bytes));
+    }
 
     /// <summary>A derived test host whose file client is <see cref="Files"/>, with its HTTP client.</summary>
     private sealed record Host(WebApplicationFactory<Program> Factory, HttpClient Client, FakeFileClient Files) : IDisposable
@@ -131,6 +155,20 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         }
     }
 
+    /// <summary>A phone photo's EXIF (GPS position, camera model) is removed before the avatar is stored.</summary>
+    [Fact]
+    public async Task UpdateProfileAvatar_StoresAPhoneJpeg_WithoutItsExif()
+    {
+        using var host = CreateHost();
+        var session = await LoginAsync(host, "storage-avatar-exif@test.com");
+        using var request = session.BuildFormPostRequest("/Management/UpdateProfileAvatar", FileForm("ProfileAvatarFiles", "me.jpg", GpsTaggedJpeg(), "image/jpeg"));
+
+        using JsonDocument doc = await PostAsync(host, request);
+
+        Assert.True(doc.RootElement.GetProperty("result").GetBoolean());
+        AssertJpegWithoutExif(host.Files.BytesOf(Assert.Single(host.Files.UploadedPaths)));
+    }
+
     // -- the editor's inline images --------------------------------------------------------------------
 
     /// <summary>Each editor endpoint stores a real PNG under its own area and returns the bytes plus an encrypted (not raw) storage path.</summary>
@@ -151,11 +189,34 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         string stored = Assert.Single(host.Files.UploadedPaths);
         Assert.StartsWith(expectedFolder, stored);
         var file = doc.RootElement.GetProperty("file");
-        Assert.Equal(_png, Convert.FromBase64String(file.GetProperty("fileContents").GetString()!));
+        // The editor gets the stored (re-encoded, metadata-free) image, which is still the same 1×1 PNG.
+        byte[] returned = Convert.FromBase64String(file.GetProperty("fileContents").GetString()!);
+        Assert.Equal(host.Files.BytesOf(stored), returned);
+        using (var image = new MagickImage(returned))
+            Assert.Equal((MagickFormat.Png, 1u, 1u), (image.Format, image.Width, image.Height));
         Assert.Equal("image/png", file.GetProperty("contentType").GetString());
         string token = doc.RootElement.GetProperty("filePath").GetString()!;
         Assert.NotEmpty(token);
         Assert.DoesNotContain("upload/", token); // the client only ever sees an opaque RSA token
+    }
+
+    /// <summary>
+    /// An editor image's EXIF (GPS position, camera model) is removed before it is stored, and the editor is
+    /// handed the stored, metadata-free bytes — the same ones every reader of the post later receives.
+    /// </summary>
+    [Fact]
+    public async Task UploadImageFile_StoresAPhoneJpeg_WithoutItsExif_AndReturnsTheStoredBytes()
+    {
+        using var host = CreateHost();
+        var session = await LoginAsync(host, "storage-editor-exif@test.com");
+        using var request = session.BuildFormPostRequest("/Forum/UploadImageFile", FileForm("summernoteImageFile", "pic.jpg", GpsTaggedJpeg(), "image/jpeg"));
+
+        using JsonDocument doc = await PostAsync(host, request);
+
+        Assert.True(doc.RootElement.GetProperty("result").GetBoolean());
+        byte[]? stored = host.Files.BytesOf(Assert.Single(host.Files.UploadedPaths));
+        AssertJpegWithoutExif(stored);
+        Assert.Equal(stored, Convert.FromBase64String(doc.RootElement.GetProperty("file").GetProperty("fileContents").GetString()!));
     }
 
     /// <summary>A file that is not a real image, or a failed storage write, is refused and reported without a path.</summary>

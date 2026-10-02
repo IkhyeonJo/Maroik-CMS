@@ -44,12 +44,7 @@ public class ImageValidatorService(ILogger<ImageValidatorService> logger) : IIma
         if (bytes is not { Length: > 0 })
             return false;
 
-        MagickFormat format;
-        if (bytes.AsSpan().StartsWith(_pngSignature))
-            format = MagickFormat.Png;
-        else if (bytes.AsSpan().StartsWith(_jpegSignature))
-            format = MagickFormat.Jpeg;
-        else
+        if (DetectFormat(bytes) is not { } format)
             return false;
 
         try
@@ -74,5 +69,31 @@ public class ImageValidatorService(ILogger<ImageValidatorService> logger) : IIma
 
         string head = System.Text.Encoding.UTF8.GetString(bytes, 0, Math.Min(bytes.Length, SvgSniffLength));
         return head.Contains("<svg", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <c>AutoOrient</c> runs before <c>Strip</c>: once the EXIF Orientation tag is gone a viewer can no
+    /// longer turn a sideways phone photo upright, so the rotation is baked into the pixels first.
+    /// </remarks>
+    public byte[] StripMetadata(byte[] bytes)
+    {
+        MagickFormat format = DetectFormat(bytes)
+            ?? throw new ArgumentException("Only a JPEG or PNG image can be re-encoded.", nameof(bytes));
+
+        using var image = new MagickImage(new MemoryStream(bytes), new MagickReadSettings { Format = format });
+        image.AutoOrient();
+        image.Strip();
+        return image.ToByteArray(format);
+    }
+
+    /// <summary>The format named by the file's magic bytes: PNG, JPEG, or <see langword="null"/> for anything else.</summary>
+    private static MagickFormat? DetectFormat(byte[] bytes)
+    {
+        if (bytes.AsSpan().StartsWith(_pngSignature))
+            return MagickFormat.Png;
+        if (bytes.AsSpan().StartsWith(_jpegSignature))
+            return MagickFormat.Jpeg;
+        return null;
     }
 }

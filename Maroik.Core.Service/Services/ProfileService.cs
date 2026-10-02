@@ -170,11 +170,15 @@ public class ProfileService(
                 return ServiceResult.Validation("Profile.InvalidImage", "invalid-image");
             }
 
+            // Re-encode without metadata: a phone photo's EXIF (GPS position, camera, capture time)
+            // must not be published with the avatar.
+            byte[] storedBytes = imageValidator.StripMetadata(imageBytes);
+
             string avatarFile = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
             // Store through the file-storage service (shared volume, ClamAV-scanned there) instead of
             // this replica's local wwwroot, so a multi-replica deployment stays consistent.
             FileUploadResult uploaded = await fileClient.UploadWithResultAsync(
-                imageBytes, ContentTypeForExtension(extension),
+                storedBytes, ContentTypeForExtension(extension),
                 $"{AvatarStorageDirectory}/{avatarFile}", settings.Value.FileStorageBaseUrl ?? "", ct);
 
             // Tell the caller WHY the file was refused, so the user is not told "invalid input" for a

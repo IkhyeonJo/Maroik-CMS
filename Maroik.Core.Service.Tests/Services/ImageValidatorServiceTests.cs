@@ -1,4 +1,5 @@
 using ImageMagick;
+using ImageMagick.Drawing;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
@@ -152,5 +153,114 @@ public class ImageValidatorServiceTests
         Assert.False(_sut.IsValidImage([0x00, 0x01, 0x02, 0x03]));
 
         Assert.Empty(_logger.Collector.GetSnapshot());
+    }
+
+    // -- StripMetadata ----------------------------------------------------------
+
+    /// <summary>
+    /// A <paramref name="width"/> x <paramref name="height"/> image whose left half is red and right half blue,
+    /// carrying the given EXIF profile and encoded as <paramref name="format"/>.
+    /// </summary>
+    private static byte[] EncodeWithExif(MagickFormat format, uint width, uint height, IExifProfile exif)
+    {
+        using var image = new MagickImage(MagickColors.Red, width, height);
+        new Drawables().FillColor(MagickColors.Blue).Rectangle(width / 2.0, 0, width, height).Draw(image);
+        image.SetProfile(exif);
+        // ImageMagick writes the Orientation tag from this property, not from the profile's own value.
+        image.Orientation = (OrientationType)(exif.GetValue(ExifTag.Orientation)?.Value ?? 1);
+        image.Format = format;
+        return image.ToByteArray();
+    }
+
+    /// <summary>An EXIF profile holding a GPS position (Seoul), a camera model and the given orientation.</summary>
+    private static ExifProfile GpsExif(ushort orientation = 1)
+    {
+        var exif = new ExifProfile();
+        exif.SetValue(ExifTag.GPSLatitudeRef, "N");
+        exif.SetValue(ExifTag.GPSLatitude, [new Rational(37, 1), new Rational(33, 1), new Rational(59, 1)]);
+        exif.SetValue(ExifTag.GPSLongitudeRef, "E");
+        exif.SetValue(ExifTag.GPSLongitude, [new Rational(126, 1), new Rational(58, 1), new Rational(41, 1)]);
+        exif.SetValue(ExifTag.Model, "SecretPhone 15");
+        exif.SetValue(ExifTag.Orientation, orientation);
+        return exif;
+    }
+
+    /// <summary>Decodes <paramref name="bytes"/> without any format hint.</summary>
+    private static MagickImage Decode(byte[] bytes) => new(bytes);
+
+    /// <summary>
+    /// A phone JPEG with a GPS position is stored without its EXIF: neither the profile nor the coordinates
+    /// or camera model survive, and it is still a JPEG.
+    /// </summary>
+    [Fact]
+    public void StripMetadata_RemovesGpsExif_FromAJpeg()
+    {
+        byte[] original = EncodeWithExif(MagickFormat.Jpeg, 40, 20, GpsExif());
+        using (var before = Decode(original))
+            Assert.NotNull(before.GetExifProfile()); // the fixture really carries EXIF
+
+        byte[] stripped = _sut.StripMetadata(original);
+
+        using var after = Decode(stripped);
+        Assert.Equal(MagickFormat.Jpeg, after.Format);
+        Assert.Null(after.GetExifProfile());
+        Assert.Equal(-1, System.Text.Encoding.ASCII.GetString(stripped).IndexOf("SecretPhone", StringComparison.Ordinal));
+        Assert.Equal(-1, System.Text.Encoding.ASCII.GetString(stripped).IndexOf("Exif", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// A photo taken sideways (EXIF Orientation 6 = "rotate 90° clockwise to display") is rotated into its
+    /// display orientation before the tag is dropped, so it does not show up sideways once the EXIF is gone.
+    /// </summary>
+    [Fact]
+    public void StripMetadata_AppliesTheExifOrientation_BeforeDroppingIt()
+    {
+        // 40x20, left half red / right half blue, to be shown rotated 90° clockwise.
+        byte[] original = EncodeWithExif(MagickFormat.Jpeg, 40, 20, GpsExif(orientation: 6));
+        using (var before = Decode(original))
+            Assert.Equal(OrientationType.RightTop, before.Orientation); // the fixture really is tagged sideways
+
+        using var after = Decode(_sut.StripMetadata(original));
+
+        Assert.Equal(20u, after.Width);
+        Assert.Equal(40u, after.Height);
+        Assert.Equal(OrientationType.Undefined, after.Orientation);
+        // Rotated clockwise, the original left (red) half is now the top half and the right (blue) half the bottom.
+        using var pixels = after.GetPixels();
+        IMagickColor<byte> top = pixels.GetPixel(10, 5).ToColor()!;
+        IMagickColor<byte> bottom = pixels.GetPixel(10, 35).ToColor()!;
+        Assert.True(top.R > 200 && top.B < 60, $"top should be red, was {top}");
+        Assert.True(bottom.B > 200 && bottom.R < 60, $"bottom should be blue, was {bottom}");
+    }
+
+    /// <summary>A PNG stays a PNG of the same size, with its EXIF and text chunks removed.</summary>
+    [Fact]
+    public void StripMetadata_KeepsAPngAPng_WithoutMetadata()
+    {
+        byte[] original;
+        using (var image = new MagickImage(MagickColors.Red, 8, 6))
+        {
+            image.SetProfile(GpsExif());
+            image.SetAttribute("Comment", "taken at home");
+            image.Format = MagickFormat.Png;
+            original = image.ToByteArray();
+        }
+
+        byte[] stripped = _sut.StripMetadata(original);
+
+        using var after = Decode(stripped);
+        Assert.Equal(MagickFormat.Png, after.Format);
+        Assert.Equal(8u, after.Width);
+        Assert.Equal(6u, after.Height);
+        Assert.Null(after.GetExifProfile());
+        Assert.Null(after.GetAttribute("Comment"));
+        Assert.True(_sut.IsValidImage(stripped));
+    }
+
+    /// <summary>Only an image that passed <see cref="ImageValidatorService.IsValidImage"/> may be re-encoded.</summary>
+    [Fact]
+    public void StripMetadata_Throws_ForBytesThatAreNotAJpegOrPng()
+    {
+        Assert.Throws<ArgumentException>(() => _sut.StripMetadata(Encode(MagickFormat.Gif)));
     }
 }
