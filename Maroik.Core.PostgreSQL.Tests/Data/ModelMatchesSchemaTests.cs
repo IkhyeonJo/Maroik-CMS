@@ -221,6 +221,84 @@ public abstract class ModelMatchesSchemaTests(SchemaDatabaseFixture database)
     }
 
     /// <summary>
+    /// Every unique constraint / unique index of the database (primary keys aside) is a unique index of the model under the same name and
+    /// columns, as a scaffold of the schema produces it. Expression indexes (e.g. <c>lower("Nickname")</c>) are left out: EF Core cannot model
+    /// them, and the scaffolder skips them too.
+    /// </summary>
+    [Fact]
+    public async Task EveryDatabaseUniqueIndex_IsAUniqueIndexOfTheModel()
+    {
+        await using ApplicationDbContext db = CreateContext();
+        await using NpgsqlConnection connection = await database.OpenAsync(Ct);
+        await using var command = new NpgsqlCommand(
+            """
+            SELECT t.relname, i.relname,
+                   (SELECT string_agg(a.attname, ',' ORDER BY k.ord) FROM unnest(x.indkey) WITH ORDINALITY k(attnum, ord) JOIN pg_attribute a ON a.attrelid = x.indrelid AND a.attnum = k.attnum)
+            FROM pg_index x
+            JOIN pg_class i ON i.oid = x.indexrelid
+            JOIN pg_class t ON t.oid = x.indrelid
+            WHERE t.relnamespace = 'public'::regnamespace AND x.indisunique AND NOT x.indisprimary AND x.indexprs IS NULL
+            """, connection);
+        await using var reader = await command.ExecuteReaderAsync(Ct);
+        List<string> real = [];
+        while (await reader.ReadAsync(Ct)) real.Add($"{reader.GetString(0)}.{reader.GetString(1)}({reader.GetString(2)})");
+
+        HashSet<string> modelled =
+        [
+            .. from e in db.Model.GetEntityTypes()
+               let store = StoreObjectIdentifier.Table(e.GetTableName()!, e.GetSchema())
+               from i in e.GetIndexes()
+               where i.IsUnique
+               select $"{e.GetTableName()}.{i.GetDatabaseName()}({string.Join(',', i.Properties.Select(p => p.GetColumnName(store)!))})"
+        ];
+        List<string> missing = [.. real.Where(key => !modelled.Contains(key))];
+
+        Assert.True(missing.Count == 0, "unique indexes in the database but not in the model: " + string.Join(", ", missing));
+    }
+
+    /// <summary>
+    /// Every column default reaches the model the way a scaffold of the schema writes it: the database's own default expression, verbatim,
+    /// as <c>HasDefaultValueSql</c> — except a default equal to the CLR default (<c>false</c> for a <c>bool</c>), which the scaffolder leaves out
+    /// — and never as a constant <c>HasDefaultValue</c>. Identity / sequence defaults are the key's value generation, not a column default.
+    /// </summary>
+    [Fact]
+    public async Task EveryColumnDefault_IsInTheModelAsTheScaffoldWritesIt()
+    {
+        await using ApplicationDbContext db = CreateContext();
+        await using NpgsqlConnection connection = await database.OpenAsync(Ct);
+        await using var command = new NpgsqlCommand(
+            """
+            SELECT c.table_name, c.column_name, c.column_default
+            FROM information_schema.columns c
+            WHERE c.table_schema = 'public' AND c.column_default IS NOT NULL AND c.column_default NOT LIKE 'nextval(%'
+            """, connection);
+        await using var reader = await command.ExecuteReaderAsync(Ct);
+        Dictionary<(string Table, string Column), string> defaults = [];
+        while (await reader.ReadAsync(Ct)) defaults[(reader.GetString(0), reader.GetString(1))] = reader.GetString(2);
+
+        List<string> wrong = [];
+        foreach (IEntityType entity in db.Model.GetEntityTypes())
+        {
+            var store = StoreObjectIdentifier.Table(entity.GetTableName()!, entity.GetSchema());
+            foreach (IProperty property in entity.GetProperties())
+            {
+                string column = property.GetColumnName(store)!;
+                string where = $"{entity.GetTableName()}.{column}";
+                if (property.TryGetDefaultValue(out object? constant))
+                    wrong.Add($"{where}: constant default {constant ?? "null"} (the scaffold writes HasDefaultValueSql)");
+
+                string? expected = defaults.GetValueOrDefault((entity.GetTableName()!, column));
+                if (expected == "false") expected = null; // the CLR default of a bool: scaffolded without a default
+                string? actual = property.GetDefaultValueSql();
+                if (actual != expected)
+                    wrong.Add($"{where}: model default SQL {actual ?? "none"}, database {expected ?? "none"}");
+            }
+        }
+
+        Assert.True(wrong.Count == 0, string.Join("; ", wrong));
+    }
+
+    /// <summary>
     /// Every foreign-key constraint of the database is a relationship of the model (same table, columns and referenced table): a
     /// constraint added to the init scripts without its navigation would leave the model unaware of it.
     /// </summary>
