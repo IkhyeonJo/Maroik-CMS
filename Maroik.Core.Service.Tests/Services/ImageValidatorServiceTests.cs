@@ -1,5 +1,6 @@
 using ImageMagick;
 using ImageMagick.Drawing;
+using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
@@ -199,7 +200,7 @@ public class ImageValidatorServiceTests
         using (var before = Decode(original))
             Assert.NotNull(before.GetExifProfile()); // the fixture really carries EXIF
 
-        byte[] stripped = _sut.StripMetadata(original);
+        byte[] stripped = _sut.StripMetadata(original).Bytes;
 
         using var after = Decode(stripped);
         Assert.Equal(MagickFormat.Jpeg, after.Format);
@@ -220,7 +221,7 @@ public class ImageValidatorServiceTests
         using (var before = Decode(original))
             Assert.Equal(OrientationType.RightTop, before.Orientation); // the fixture really is tagged sideways
 
-        using var after = Decode(_sut.StripMetadata(original));
+        using var after = Decode(_sut.StripMetadata(original).Bytes);
 
         Assert.Equal(20u, after.Width);
         Assert.Equal(40u, after.Height);
@@ -246,7 +247,7 @@ public class ImageValidatorServiceTests
             original = image.ToByteArray();
         }
 
-        byte[] stripped = _sut.StripMetadata(original);
+        byte[] stripped = _sut.StripMetadata(original).Bytes;
 
         using var after = Decode(stripped);
         Assert.Equal(MagickFormat.Png, after.Format);
@@ -255,6 +256,21 @@ public class ImageValidatorServiceTests
         Assert.Null(after.GetExifProfile());
         Assert.Null(after.GetAttribute("Comment"));
         Assert.True(_sut.IsValidImage(stripped));
+    }
+
+    /// <summary>
+    /// The re-encoded image comes with the extension and content type of the format it actually is (by its content),
+    /// so a caller stores it under the right name whatever the upload called it.
+    /// </summary>
+    [Theory]
+    [InlineData(nameof(MagickFormat.Jpeg), ".jpg", "image/jpeg")]
+    [InlineData(nameof(MagickFormat.Png), ".png", "image/png")]
+    public void StripMetadata_ReportsTheFormatTheImageActuallyIs(string format, string extension, string contentType)
+    {
+        StrippedImage stripped = _sut.StripMetadata(Encode(Enum.Parse<MagickFormat>(format)));
+
+        Assert.Equal(extension, stripped.Extension);
+        Assert.Equal(contentType, stripped.ContentType);
     }
 
     /// <summary>Only an image that passed <see cref="ImageValidatorService.IsValidImage"/> may be re-encoded.</summary>

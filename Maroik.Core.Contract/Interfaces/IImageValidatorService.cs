@@ -1,3 +1,5 @@
+using Maroik.Core.Contract.Dtos;
+
 namespace Maroik.Core.Contract.Interfaces;
 
 /// <summary>
@@ -18,7 +20,9 @@ public interface IImageValidatorService
     /// Re-encodes an image that <see cref="IsValidImage"/> accepted into the same format (JPEG or PNG) without
     /// its metadata — EXIF (GPS position, camera, capture time), XMP, IPTC, comments — after first turning
     /// it upright by its EXIF orientation, so the pixels still display the way they did with the tag.
+    /// The result carries the extension and content type of that format (decided by the bytes, never by the
+    /// upload's file name), for the caller to store the image under.
     /// Throws <see cref="ArgumentException"/> for bytes that are not a JPEG or PNG.
     /// </summary>
-    byte[] StripMetadata(byte[] bytes);
+    StrippedImage StripMetadata(byte[] bytes);
 }

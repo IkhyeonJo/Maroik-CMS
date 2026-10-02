@@ -31,7 +31,7 @@ public class ProfileServiceAuditLoggingTests
     /// <summary>Mock <c>IFileClient</c> injected into the system under test.</summary>
     private readonly Mock<IFileClient> _fileClient = new();
     /// <summary>Mock <c>IImageValidatorService</c> injected into the system under test.</summary>
-    private readonly Mock<IImageValidatorService> _imageValidator = new();
+    private readonly Mock<IImageValidatorService> _imageValidator = ImageValidatorMock.Create();
     /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     /// <summary>Captures the log entries the system under test writes.</summary>

@@ -1,4 +1,5 @@
 using ImageMagick;
+using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -76,7 +77,7 @@ public class ImageValidatorService(ILogger<ImageValidatorService> logger) : IIma
     /// <c>AutoOrient</c> runs before <c>Strip</c>: once the EXIF Orientation tag is gone a viewer can no
     /// longer turn a sideways phone photo upright, so the rotation is baked into the pixels first.
     /// </remarks>
-    public byte[] StripMetadata(byte[] bytes)
+    public StrippedImage StripMetadata(byte[] bytes)
     {
         MagickFormat format = DetectFormat(bytes)
             ?? throw new ArgumentException("Only a JPEG or PNG image can be re-encoded.", nameof(bytes));
@@ -84,7 +85,9 @@ public class ImageValidatorService(ILogger<ImageValidatorService> logger) : IIma
         using var image = new MagickImage(new MemoryStream(bytes), new MagickReadSettings { Format = format });
         image.AutoOrient();
         image.Strip();
-        return image.ToByteArray(format);
+        return format == MagickFormat.Png
+            ? new StrippedImage(image.ToByteArray(format), ".png", "image/png")
+            : new StrippedImage(image.ToByteArray(format), ".jpg", "image/jpeg");
     }
 
     /// <summary>The format named by the file's magic bytes: PNG, JPEG, or <see langword="null"/> for anything else.</summary>

@@ -21,7 +21,7 @@ public class AttachmentContentServiceTests
     /// <summary>Mock <c>IRsaService</c> injected into the system under test.</summary>
     private readonly Mock<IRsaService> _rsa = new();
     /// <summary>Mock <c>IImageValidatorService</c> injected into the system under test.</summary>
-    private readonly Mock<IImageValidatorService> _imageValidator = new();
+    private readonly Mock<IImageValidatorService> _imageValidator = ImageValidatorMock.Create();
     /// <summary>Mock <c>IHtmlContentSanitizerService</c> injected into the system under test.</summary>
     private readonly Mock<IHtmlContentSanitizerService> _htmlSanitizer = new();
     /// <summary>Mock <c>IHtmlParserService</c> injected into the system under test.</summary>
@@ -209,7 +209,7 @@ public class AttachmentContentServiceTests
     public async Task UploadSummernoteImageAsync_ReturnsTheUploadedBytes_WithoutDownloadingThemBack()
     {
         _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(true);
-        _imageValidator.Setup(v => v.StripMetadata(It.IsAny<byte[]>())).Returns<byte[]>(bytes => bytes);
+        _imageValidator.Setup(v => v.StripMetadata(It.IsAny<byte[]>())).Returns<byte[]>(bytes => new StrippedImage(bytes, ".png", "image/png"));
         string? storedPath = null;
         _fileClient.Setup(f => f.UploadAsync(
             It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -237,7 +237,7 @@ public class AttachmentContentServiceTests
         byte[] uploadedBytes = [0xFF, 0xD8, 0xFF, 0xE1, 0x45, 0x78, 0x69, 0x66];
         byte[] strippedBytes = [0xFF, 0xD8, 0xFF, 0xDB];
         _imageValidator.Setup(v => v.IsValidImage(uploadedBytes)).Returns(true);
-        _imageValidator.Setup(v => v.StripMetadata(uploadedBytes)).Returns(strippedBytes);
+        _imageValidator.Setup(v => v.StripMetadata(uploadedBytes)).Returns(new StrippedImage(strippedBytes, ".jpg", "image/jpeg"));
         byte[]? stored = null;
         _fileClient.Setup(f => f.UploadAsync(
             It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -250,6 +250,32 @@ public class AttachmentContentServiceTests
         Assert.True(result.Success);
         Assert.Equal(strippedBytes, stored);
         Assert.Equal(strippedBytes, result.FileBytes);
+    }
+
+    /// <summary>
+    /// An editor image is stored, uploaded and handed back under the format it actually is: a JPEG uploaded as
+    /// "photo.png" / image/png is kept as a .jpg with image/jpeg, never under the name it claimed.
+    /// </summary>
+    [Fact]
+    public async Task UploadSummernoteImageAsync_StoresTheImageUnderTheFormatItActuallyIs()
+    {
+        byte[] jpeg = [0xFF, 0xD8, 0xFF, 0xDB];
+        _imageValidator.Setup(v => v.IsValidImage(jpeg)).Returns(true);
+        string? storedPath = null;
+        string? storedType = null;
+        _fileClient.Setup(f => f.UploadAsync(
+            It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<byte[], string, string, string, CancellationToken>((_, type, path, _, _) => (storedType, storedPath) = (type, path))
+            .ReturnsAsync(true);
+        var file = new AttachedFileDto { Bytes = jpeg, ContentType = "image/png", FileName = "photo.png" };
+
+        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.EndsWith(".jpg", storedPath);
+        Assert.Equal("image/jpeg", storedType);
+        Assert.Equal("image/jpeg", result.ContentType);
+        Assert.EndsWith(".jpg", result.FileName);
     }
 
     /// <summary>A refused editor image is never re-encoded: the decoder only sees bytes the validator accepted.</summary>
