@@ -569,6 +569,7 @@ public class IncomeServiceTests
         ServiceResult result = await CreateSut().CreateAsync(Email, ValidRequest(), TestContext.Current.CancellationToken);
 
         Assert.Equal("Income.Unexpected", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -628,6 +629,7 @@ public class IncomeServiceTests
         ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ValidRequest()), TestContext.Current.CancellationToken);
 
         Assert.Equal("Income.Unexpected", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -657,6 +659,7 @@ public class IncomeServiceTests
         ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
 
         Assert.Equal("Income.Unexpected", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

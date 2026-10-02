@@ -676,7 +676,7 @@ public class CalendarService(
 
     /// <summary>Generic failure returned (after logging) when a calendar write throws unexpectedly.</summary>
     private static ServiceResult UnexpectedFailure => ServiceResult.Failure(
-        "Calendar.Unexpected", "The operation could not be completed. Please try again.");
+        "Calendar.Unexpected", ServiceResult.TemporaryErrorKey);
 
     /// <summary>
     /// Builds the remote storage path for a calendar event attachment

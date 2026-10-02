@@ -262,7 +262,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             using JsonDocument doc = JsonDocument.Parse(json);
             if (doc.RootElement.GetProperty("result").GetBoolean()) failures.Add($"{url}: reported success");
             if (json.Contains(Secret)) failures.Add($"{url}: leaked the exception text");
-            if (!json.Contains(Temporary) && !json.Contains("could not be completed")) failures.Add($"{url}: unexpected message ({json})");
+            if (!json.Contains(Temporary)) failures.Add($"{url}: unexpected message ({json})");
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));

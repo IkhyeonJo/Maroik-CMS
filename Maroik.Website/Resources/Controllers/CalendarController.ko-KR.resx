@@ -264,9 +264,6 @@
   <data name="The calendar event could not be found." xml:space="preserve">
     <value>달력 이벤트를 찾을 수 없습니다.</value>
   </data>
-  <data name="The operation could not be completed. Please try again." xml:space="preserve">
-    <value>작업을 완료할 수 없습니다. 다시 시도해 주십시오.</value>
-  </data>
   <data name="Time-zone ID cannot be empty." xml:space="preserve">
     <value>시간대 ID는 비워둘 수 없습니다.</value>
   </data>
