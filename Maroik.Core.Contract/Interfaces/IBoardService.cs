@@ -99,9 +99,10 @@ public interface IBoardService
 
     /// <summary>
     /// Validates and stores an image uploaded from the Summernote editor.
-    /// Returns the stored file data so the editor can render an inline preview.
+    /// Returns the stored file data so the editor can render an inline preview. <paramref name="actorEmail"/> is the
+    /// signed-in account uploading it, recorded when the image is refused.
     /// </summary>
-    Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string area, string boardType, CancellationToken ct = default);
+    Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string area, string boardType, string actorEmail, CancellationToken ct = default);
 
     /// <summary>
     /// Opens the attachment of post <paramref name="boardId"/> for <paramref name="viewer"/> (null for

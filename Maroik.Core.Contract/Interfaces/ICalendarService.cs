@@ -106,8 +106,11 @@ public interface ICalendarService
     /// <summary>Deletes a calendar event and its associated reminders and attachment.</summary>
     Task<ServiceResult> DeleteCalendarEventAsync(long calendarEventId, string email, CancellationToken ct = default);
 
-    /// <summary>Validates and stores an image uploaded from the Summernote editor inside a calendar event description.</summary>
-    Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string roleIndex, CancellationToken ct = default);
+    /// <summary>
+    /// Validates and stores an image uploaded from the Summernote editor inside a calendar event description.
+    /// <paramref name="actorEmail"/> is the signed-in account uploading it, recorded when the image is refused.
+    /// </summary>
+    Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string roleIndex, string actorEmail, CancellationToken ct = default);
 
     /// <summary>
     /// Opens the attachment of calendar event <paramref name="calendarEventId"/> for <paramref name="viewer"/>

@@ -493,8 +493,8 @@ public class BoardService(
     }
 
     /// <inheritdoc />
-    public Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string area, string boardType, CancellationToken ct = default)
-        => attachmentContent.UploadSummernoteImageAsync(file, area, boardType, ct);
+    public Task<SummernoteUploadResult> UploadSummernoteImageAsync(AttachedFileDto file, string area, string boardType, string actorEmail, CancellationToken ct = default)
+        => attachmentContent.UploadSummernoteImageAsync(file, area, boardType, actorEmail, ct);
 
     /// <inheritdoc />
     public async Task<(ServiceResult Result, AttachmentDownload? File)> OpenAttachedFileAsync(
