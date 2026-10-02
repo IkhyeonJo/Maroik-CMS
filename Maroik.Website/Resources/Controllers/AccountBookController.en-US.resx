@@ -423,9 +423,6 @@
   <data name="The income record could not be found." xml:space="preserve">
     <value>The income record could not be found.</value>
   </data>
-  <data name="The operation could not be completed. Please try again." xml:space="preserve">
-    <value>The operation could not be completed. Please try again.</value>
-  </data>
   <data name="The selected asset could not be found." xml:space="preserve">
     <value>The selected asset could not be found.</value>
   </data>

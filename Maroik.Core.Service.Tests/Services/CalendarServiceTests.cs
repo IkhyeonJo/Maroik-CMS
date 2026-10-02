@@ -214,6 +214,7 @@ public class CalendarServiceTests
 
         Assert.False(result.Success);
         Assert.Equal("Calendar.Unexpected", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -1138,6 +1139,7 @@ public class CalendarServiceTests
 
         Assert.False(result.Success);
         Assert.Equal("Calendar.Unexpected", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _unitOfWork.Verify(u => u.BeginAsync(It.IsAny<CancellationToken>()), Times.Exactly(3));
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Exactly(3));
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -1153,6 +1155,7 @@ public class CalendarServiceTests
 
         Assert.False(result.Success);
         Assert.Equal("Calendar.Unexpected", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _unitOfWork.Verify(u => u.BeginAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -1197,6 +1200,7 @@ public class CalendarServiceTests
             new CalendarRequest { Id = 1, Name = "Work", TimeZoneIanaId = "UTC", HtmlColorCode = "#3788d8" }, TestContext.Current.CancellationToken);
 
         Assert.Equal("Calendar.Unexpected", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -1212,6 +1216,7 @@ public class CalendarServiceTests
         ServiceResult result = await CreateSut().DeleteCalendarAsync("user@example.com", new CalendarRequest { Id = 1 }, TestContext.Current.CancellationToken);
 
         Assert.Equal("Calendar.Unexpected", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -1248,6 +1253,7 @@ public class CalendarServiceTests
             new CalendarRequest { Name = "Nick", TimeZoneIanaId = "UTC", HtmlColorCode = "#3788d8" }, TestContext.Current.CancellationToken);
 
         Assert.Equal("Calendar.Unexpected", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -1455,6 +1461,7 @@ public class CalendarServiceTests
         ServiceResult result = await CreateSut().DeleteCalendarEventAsync(1, "user@example.com", TestContext.Current.CancellationToken);
 
         Assert.Equal("Calendar.Unexpected", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

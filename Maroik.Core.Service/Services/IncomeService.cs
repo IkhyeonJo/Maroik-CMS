@@ -183,7 +183,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
 
     /// <summary>Generic failure returned (after logging) when a write throws unexpectedly.</summary>
     private static ServiceResult UnexpectedFailure => ServiceResult.Failure(
-        "Income.Unexpected", "The operation could not be completed. Please try again.");
+        "Income.Unexpected", ServiceResult.TemporaryErrorKey);
 
     /// <summary>
     /// Reverts <paramref name="toRevert"/>'s asset impact and applies <paramref name="toApply"/>'s asset impact.
