@@ -644,6 +644,9 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             data: { calendarEventId: calendarEventId },
             xhrFields: { responseType: "blob" },
+            // Without a declared dataType jQuery infers "json" from a refusal's Content-Type and fails to
+            // parse the Blob (parsererror -> the layout's ajaxError redirect); "binary" hands back the Blob as is.
+            dataType: "binary",
             success: function(data: Blob) {
                 if (data.type.indexOf("application/json") === 0) {
                     data.text().then(function(text) {

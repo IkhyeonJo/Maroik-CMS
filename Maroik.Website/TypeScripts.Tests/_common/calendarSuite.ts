@@ -1396,7 +1396,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
                 clicked.push(this);
             };
             h.$("#aEditCalendarEventAttachedFile").trigger("click");
-            h.respond(0, new h.win.Blob([JSON.stringify({ result: false, error: "The calendar event could not be found." })], { type: "application/json; charset=utf-8" }));
+            h.respondOverHttp(0, JSON.stringify({ result: false, error: "The calendar event could not be found." }), "application/json; charset=utf-8");
             await vi.waitFor(() => expect(h.toastr.error).toHaveBeenCalledWith("The calendar event could not be found."));
             expect(clicked).toHaveLength(0);
         });
