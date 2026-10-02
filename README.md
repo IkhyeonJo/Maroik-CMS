@@ -78,9 +78,9 @@ This repository is a portfolio snapshot of Maroik. The original Maroik repositor
 - Cross-Origin Resource Sharing (CORS)
 
 ### Frontend
-- AdminLTE 3
-- Bootstrap 5.3
-- jQuery 3.7
+- AdminLTE 3.1.0
+- Bootstrap 4.6.0
+- jQuery 3.6.0
 - HTML5/CSS3
 - JavaScript ES2024
 - TypeScript 7.0
@@ -92,10 +92,14 @@ This repository is a portfolio snapshot of Maroik. The original Maroik repositor
   - Unit-tested with Vitest + jsdom in `Maroik.Website/TypeScripts.Tests/` (one `*.test.ts` per script, exercising the compiled `site.js`).
   - Details: `Maroik.Website/TypeScripts/README.md`.
 - NonfactorGrid
-- Chart.js 4.4
-- Font Awesome 6
-- DataTables
-- SweetAlert2
+- Chart.js 2.9.4
+- Font Awesome 5.15.3
+- Summernote 0.8.18
+- FullCalendar 5.5.1
+- jQuery UI 1.12.1
+- jquery-confirm 3.3.4
+- toastr 2.1.4
+- Moment.js 2.30.1
 
 ### Development Tools
 - Visual Studio
