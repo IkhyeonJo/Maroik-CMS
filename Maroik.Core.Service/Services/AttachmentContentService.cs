@@ -55,18 +55,22 @@ public class AttachmentContentService(
         if (imageValidator.IsSvg(file.Bytes) || !imageValidator.IsValidImage(file.Bytes))
             return SummernoteUploadResult.Fail("Invalid image file.");
 
+        // Re-encode without metadata: a phone photo's EXIF (GPS position, camera, capture time) must
+        // not reach the readers of the post or shared calendar.
+        byte[] storedBytes = imageValidator.StripMetadata(file.Bytes);
+
         // Use a GUID-based file name to avoid collisions and prevent path traversal via the original name.
         string imageFile = $"{Guid.NewGuid():N}{ext}";
         // A storage key, not a local path: always "/"-separated, whatever OS this runs on.
         string filePath = $"upload/{area}/{subArea}/summernote/images/{imageFile}";
 
-        bool uploaded = await fileClient.UploadAsync(file.Bytes, file.ContentType, filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
+        bool uploaded = await fileClient.UploadAsync(storedBytes, file.ContentType, filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
         if (!uploaded)
             return SummernoteUploadResult.Fail("Input is invalid");
 
         // File storage only reports success once it has stored the bytes as sent, so the editor gets
         // the bytes already in hand instead of a second round trip to read them back.
-        return SummernoteUploadResult.Ok(file.Bytes, file.ContentType, imageFile, filePath);
+        return SummernoteUploadResult.Ok(storedBytes, file.ContentType, imageFile, filePath);
     }
 
     /// <inheritdoc />

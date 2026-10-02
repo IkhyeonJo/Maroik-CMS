@@ -208,6 +208,7 @@ public class AttachmentContentServiceTests
     public async Task UploadSummernoteImageAsync_ReturnsTheUploadedBytes_WithoutDownloadingThemBack()
     {
         _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(true);
+        _imageValidator.Setup(v => v.StripMetadata(It.IsAny<byte[]>())).Returns<byte[]>(bytes => bytes);
         string? storedPath = null;
         _fileClient.Setup(f => f.UploadAsync(
             It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -222,6 +223,44 @@ public class AttachmentContentServiceTests
         Assert.Equal("image/png", result.ContentType);
         Assert.Equal(storedPath, result.FilePath);
         _fileClient.Verify(f => f.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// The editor image is stored — and handed back to the editor — as the validator's metadata-free
+    /// re-encoding, so the EXIF of a phone photo (GPS position, camera, capture time) never reaches the
+    /// readers of the post or shared calendar.
+    /// </summary>
+    [Fact]
+    public async Task UploadSummernoteImageAsync_StoresAndReturnsTheMetadataFreeImage_NotTheUploadedBytes()
+    {
+        byte[] uploadedBytes = [0xFF, 0xD8, 0xFF, 0xE1, 0x45, 0x78, 0x69, 0x66];
+        byte[] strippedBytes = [0xFF, 0xD8, 0xFF, 0xDB];
+        _imageValidator.Setup(v => v.IsValidImage(uploadedBytes)).Returns(true);
+        _imageValidator.Setup(v => v.StripMetadata(uploadedBytes)).Returns(strippedBytes);
+        byte[]? stored = null;
+        _fileClient.Setup(f => f.UploadAsync(
+            It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<byte[], string, string, string, CancellationToken>((bytes, _, _, _, _) => stored = bytes)
+            .ReturnsAsync(true);
+        var file = new AttachedFileDto { Bytes = uploadedBytes, ContentType = "image/jpeg", FileName = "photo.jpg" };
+
+        var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal(strippedBytes, stored);
+        Assert.Equal(strippedBytes, result.FileBytes);
+    }
+
+    /// <summary>A refused editor image is never re-encoded: the decoder only sees bytes the validator accepted.</summary>
+    [Fact]
+    public async Task UploadSummernoteImageAsync_DoesNotReencode_AnImageThatFailedValidation()
+    {
+        _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(false);
+        var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = "image/png", FileName = "x.png" };
+
+        await CreateSut().UploadSummernoteImageAsync(file, "board", "post", TestContext.Current.CancellationToken);
+
+        _imageValidator.Verify(v => v.StripMetadata(It.IsAny<byte[]>()), Times.Never);
     }
 
     // -- DownloadFileAsync ---------------------------------------------------------
