@@ -29,7 +29,7 @@ public class ProfileServiceTests
     /// <summary>Mock <c>IFileClient</c> injected into the system under test.</summary>
     private readonly Mock<IFileClient> _fileClient = new();
     /// <summary>Mock <c>IImageValidatorService</c> injected into the system under test.</summary>
-    private readonly Mock<IImageValidatorService> _imageValidator = new();
+    private readonly Mock<IImageValidatorService> _imageValidator = ImageValidatorMock.Create();
     /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     /// <summary>Settings with a local file-storage URL.</summary>
@@ -205,7 +205,7 @@ public class ProfileServiceTests
         byte[] strippedBytes = [0xFF, 0xD8, 0xFF, 0xDB];
         _imageValidator.Setup(v => v.IsValidImage(uploadedBytes)).Returns(true);
         _imageValidator.Setup(v => v.IsSvg(uploadedBytes)).Returns(false);
-        _imageValidator.Setup(v => v.StripMetadata(uploadedBytes)).Returns(strippedBytes);
+        _imageValidator.Setup(v => v.StripMetadata(uploadedBytes)).Returns(new StrippedImage(strippedBytes, ".jpg", "image/jpeg"));
         byte[]? stored = null;
         _fileClient.Setup(c => c.UploadWithResultAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback<byte[], string, string, string, CancellationToken>((bytes, _, _, _, _) => stored = bytes)
@@ -601,22 +601,34 @@ public class ProfileServiceTests
         _fileClient.Verify(c => c.UploadWithResultAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    /// <summary>The stored MIME type follows the (case-insensitive) extension.</summary>
+    /// <summary>
+    /// The avatar is stored under the format it actually is (by content), whatever allowed extension it was uploaded
+    /// with: its storage name, its MIME type and the account's avatar path all carry that format's extension.
+    /// </summary>
     [Theory]
-    [InlineData(".jpg", "image/jpeg")]
-    [InlineData(".JPEG", "image/jpeg")]
-    [InlineData(".png", "image/png")]
-    [InlineData(".PNG", "image/png")]
-    public async Task UploadAndUpdateAvatarAsync_UploadsWithTheMimeTypeOfTheExtension(string extension, string expectedContentType)
+    [InlineData(".jpg", false, ".jpg", "image/jpeg")]
+    [InlineData(".JPEG", false, ".jpg", "image/jpeg")]
+    [InlineData(".png", false, ".jpg", "image/jpeg")]
+    [InlineData(".png", true, ".png", "image/png")]
+    [InlineData(".PNG", true, ".png", "image/png")]
+    [InlineData(".jpg", true, ".png", "image/png")]
+    public async Task UploadAndUpdateAvatarAsync_StoresTheAvatarUnderTheFormatItActuallyIs(
+        string uploadedExtension, bool pngContent, string storedExtension, string storedContentType)
     {
+        byte[] bytes = pngContent ? [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00] : [0xFF, 0xD8, 0xFF, 0xDB];
         _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(true);
         _fileClient.Setup(c => c.UploadWithResultAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(FileUploadResult.Stored);
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ActiveAccount());
+        _accountRepo.Setup(r => r.UpdateAvatarPathAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
-        await CreateSut().UploadAndUpdateAvatarAsync("user@example.com", [1, 2, 3], extension, TestContext.Current.CancellationToken);
+        await CreateSut().UploadAndUpdateAvatarAsync("user@example.com", bytes, uploadedExtension, TestContext.Current.CancellationToken);
 
-        _fileClient.Verify(c => c.UploadWithResultAsync(It.IsAny<byte[]>(), expectedContentType, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        _fileClient.Verify(c => c.UploadWithResultAsync(
+            It.IsAny<byte[]>(), storedContentType, It.Is<string>(p => p.EndsWith(storedExtension)),
+            It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        _accountRepo.Verify(r => r.UpdateAvatarPathAsync(
+            It.IsAny<string>(), It.Is<string>(p => p.EndsWith(storedExtension)), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     /// <summary>An unexpected failure while validating/storing the avatar is caught and reported generically.</summary>

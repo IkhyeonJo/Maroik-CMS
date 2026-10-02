@@ -172,13 +172,14 @@ public class ProfileService(
 
             // Re-encode without metadata: a phone photo's EXIF (GPS position, camera, capture time)
             // must not be published with the avatar.
-            byte[] storedBytes = imageValidator.StripMetadata(imageBytes);
+            StrippedImage stored = imageValidator.StripMetadata(imageBytes);
 
-            string avatarFile = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+            // Named after the format the image actually is, not the extension it was uploaded with.
+            string avatarFile = $"{Guid.NewGuid():N}{stored.Extension}";
             // Store through the file-storage service (shared volume, ClamAV-scanned there) instead of
             // this replica's local wwwroot, so a multi-replica deployment stays consistent.
             FileUploadResult uploaded = await fileClient.UploadWithResultAsync(
-                storedBytes, ContentTypeForExtension(extension),
+                stored.Bytes, stored.ContentType,
                 $"{AvatarStorageDirectory}/{avatarFile}", settings.Value.FileStorageBaseUrl ?? "", ct);
 
             // Tell the caller WHY the file was refused, so the user is not told "invalid input" for a
@@ -223,13 +224,6 @@ public class ProfileService(
             return null;
         }
     }
-
-    /// <summary>
-    /// Maps an avatar file extension to its image MIME type. Only reached after <see cref="ImageUploadPolicy.IsAllowedExtension"/>
-    /// has accepted the extension (.jpg / .jpeg / .png), so anything that is not PNG is JPEG.
-    /// </summary>
-    private static string ContentTypeForExtension(string extension) =>
-        extension.Equals(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
 
     /// <summary>Unlocked lookup of an account by email.</summary>
     private Task<Account?> FindByEmailAsync(string email, CancellationToken ct = default)

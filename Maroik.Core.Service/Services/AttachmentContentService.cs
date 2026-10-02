@@ -57,20 +57,21 @@ public class AttachmentContentService(
 
         // Re-encode without metadata: a phone photo's EXIF (GPS position, camera, capture time) must
         // not reach the readers of the post or shared calendar.
-        byte[] storedBytes = imageValidator.StripMetadata(file.Bytes);
+        StrippedImage stored = imageValidator.StripMetadata(file.Bytes);
 
         // Use a GUID-based file name to avoid collisions and prevent path traversal via the original name.
-        string imageFile = $"{Guid.NewGuid():N}{ext}";
+        // Named and typed after the format the image actually is, not the name / type the upload claimed.
+        string imageFile = $"{Guid.NewGuid():N}{stored.Extension}";
         // A storage key, not a local path: always "/"-separated, whatever OS this runs on.
         string filePath = $"upload/{area}/{subArea}/summernote/images/{imageFile}";
 
-        bool uploaded = await fileClient.UploadAsync(storedBytes, file.ContentType, filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
+        bool uploaded = await fileClient.UploadAsync(stored.Bytes, stored.ContentType, filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
         if (!uploaded)
             return SummernoteUploadResult.Fail(ServiceResult.TemporaryErrorKey);
 
         // File storage only reports success once it has stored the bytes as sent, so the editor gets
         // the bytes already in hand instead of a second round trip to read them back.
-        return SummernoteUploadResult.Ok(storedBytes, file.ContentType, imageFile, filePath);
+        return SummernoteUploadResult.Ok(stored.Bytes, stored.ContentType, imageFile, filePath);
     }
 
     /// <inheritdoc />
