@@ -1814,12 +1814,11 @@
                 data: formData,
                 contentType: false,
                 processData: false,
-                complete: function() {
-                    // Accepted or refused, the file has been sent: it must not go out again.
-                    ResetCreateCalendarEventAttachment();
-                },
                 success: function(data) {
                     if (data.result) {
+                        // Accepted: the file has been stored and must not go out with the next submit. A refused
+                        // submit keeps it, since the form still shows it and editing without a file clears the attachment.
+                        ResetCreateCalendarEventAttachment();
 
                         calendar.removeAllEvents();
 
@@ -2055,12 +2054,11 @@
                 data: formData,
                 contentType: false,
                 processData: false,
-                complete: function() {
-                    // Accepted or refused, the file has been sent: it must not go out again.
-                    ResetEditCalendarEventAttachment();
-                },
                 success: function(data) {
                     if (data.result) {
+                        // Accepted: the file has been stored and must not go out with the next submit. A refused
+                        // submit keeps it, since the form still shows it and editing without a file clears the attachment.
+                        ResetEditCalendarEventAttachment();
 
                         calendar.removeAllEvents();
 
