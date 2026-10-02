@@ -110,6 +110,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Locked).HasComment("Locked");
             entity.Property(e => e.LoginAttempt).HasComment("LoginAttempt");
             entity.Property(e => e.Message).HasComment("Message");
+            entity.Property(e => e.MustChangePassword).HasComment("Forces a password change on next login (set by an admin password override)");
             entity.Property(e => e.Nickname)
                 .HasMaxLength(255)
                 .HasComment("Nickname");
@@ -119,6 +120,9 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(255)
                 .HasDefaultValueSql("'User'::character varying")
                 .HasComment("Role (Admin or User)");
+            entity.Property(e => e.SecurityStamp)
+                .HasDefaultValueSql("(gen_random_uuid())::text")
+                .HasComment("Opaque value that changes on every password change; invalidates other open sessions");
             entity.Property(e => e.TimeZoneIanaId)
                 .HasMaxLength(255)
                 .HasDefaultValueSql("'UTC'::character varying")
@@ -127,13 +131,6 @@ public partial class ApplicationDbContext : DbContext
                 .HasDefaultValueSql("now()")
                 .HasComment("Updated")
                 .HasColumnType("timestamp without time zone");
-            entity.Property(e => e.SecurityStamp)
-                .HasDefaultValueSql("gen_random_uuid()")
-                .HasComment("Opaque value that changes on every password change; invalidates other open sessions");
-            entity.Property(e => e.MustChangePassword)
-                .HasDefaultValue(false)
-                .HasComment("Forces a password change on next login (set by an admin password override)");
-
         });
 
         modelBuilder.Entity<Asset>(entity =>
@@ -282,6 +279,8 @@ public partial class ApplicationDbContext : DbContext
             entity.HasKey(e => e.Id).HasName("Calendar_pk");
 
             entity.ToTable("Calendar", tb => tb.HasComment("Calendar"));
+
+            entity.HasIndex(e => new { e.AccountEmail, e.Name }, "Calendar_AccountEmail_Name_unique").IsUnique();
 
             entity.HasIndex(e => e.AccountEmail, "Calendar_index_0");
 
