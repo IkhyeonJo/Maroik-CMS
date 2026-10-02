@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Core.PostgreSQL.Models;
@@ -130,6 +131,28 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
 
         // Unlike Forum's IsBoardExists, a PrivateNote is only visible to its own writer.
         Assert.Contains("\"result\":false", json);
+    }
+
+    /// <summary>
+    /// Verifies a successful reply carries only the id the delete flow needs — never the stored
+    /// content, whose <c>&lt;img alt&gt;</c> holds the decrypted plain storage path.
+    /// </summary>
+    [Fact]
+    public async Task IsBoardExists_OwnBoard_RepliesWithOnlyTheBoardId()
+    {
+        var session = await LoginAsUserAsync();
+        long boardId = SeedBoard(writer: session.Nickname);
+
+        using var request = session.BuildJsonPostRequest($"/Management/IsBoardExists?id={boardId}");
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        using var doc = JsonDocument.Parse(json);
+        Assert.True(doc.RootElement.GetProperty("result").GetBoolean());
+        JsonElement board = doc.RootElement.GetProperty("privateNoteBoard");
+        Assert.Equal(["id"], board.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(boardId, board.GetProperty("id").GetInt64());
+        Assert.DoesNotContain("content", json, StringComparison.OrdinalIgnoreCase);
     }
 
     // -- EditPrivateNoteBoard ------------------------------------------------------------

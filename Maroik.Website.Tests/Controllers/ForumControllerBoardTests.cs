@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Core.PostgreSQL.Models;
@@ -165,6 +166,31 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Contains("\"result\":true", json);
+    }
+
+    /// <summary>
+    /// Verifies a successful reply carries only the id the delete flow needs — never the stored
+    /// content, whose <c>&lt;img alt&gt;</c> holds the decrypted plain storage path — for both an
+    /// unlocked post and a locked post its writer checks.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task IsBoardExists_Success_RepliesWithOnlyTheBoardId(bool locked)
+    {
+        var session = await LoginAsUserAsync();
+        long boardId = SeedBoard(writer: session.Nickname, locked: locked);
+
+        using var request = session.BuildJsonPostRequest($"/Forum/IsBoardExists?id={boardId}");
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        using var doc = JsonDocument.Parse(json);
+        Assert.True(doc.RootElement.GetProperty("result").GetBoolean());
+        JsonElement board = doc.RootElement.GetProperty("freeBoard");
+        Assert.Equal(["id"], board.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(boardId, board.GetProperty("id").GetInt64());
+        Assert.DoesNotContain("content", json, StringComparison.OrdinalIgnoreCase);
     }
 
     // -- DeleteBoard ----------------------------------------------------------------
