@@ -74,6 +74,12 @@ Files and content
   `EditBoardAsync_AdminNonOwner_ClearingALockWithoutAFile_ClearsTheWritersAttachmentRecord`).
 - Inline images in post / event bodies are fetched and embedded as base64 on every view
   (`PrepareHtmlForDisplayAsync`). Keep that rendering path.
+- Replacing or clearing an attachment (post, private note, calendar event) only rewrites its database
+  record; the old file stays in Maroik.FileStorage, as does a file uploaded by a write whose transaction
+  later rolls back. There is no delete API on purpose — do not add one or a cleanup job.
+- `BoardOutputViewModel.BoardAttachedFilePath` (Forum and Management) is populated by the controllers but
+  not rendered by any view. Keep it; do not remove it, and do not render the storage path in a view or
+  JSON response.
 
 Calendar
 - `GetCalendarEvents` loads every event of the selected calendars at once and the client pages through
