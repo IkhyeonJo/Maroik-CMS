@@ -2,6 +2,7 @@ using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using OrmAccount = Maroik.Core.PostgreSQL.Models.Account;
 
 namespace Maroik.Core.Repository.Tests.Repositories;
@@ -375,6 +376,51 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
         Assert.NotNull(result);
         Assert.Equal(Role.Admin, result.Role.Value);
         Assert.Equal("Asia/Seoul", result.TimeZone.Value);
+    }
+
+    /// <summary>
+    /// An account write that keeps the nickname (a login, a message, a lock ...) sends exactly one UPDATE: the separate
+    /// nickname UPDATE (which the <c>Board_fk_0</c> / <c>BoardComment_fk_1</c> cascade needs) is only for an actual change.
+    /// </summary>
+    [Fact]
+    public async Task UpdateEntityAsync_SendsOneUpdate_WhenTheNicknameIsUnchanged()
+    {
+        string email = UniqueEmail("steady");
+        string nickname = Unique("Steady");
+        await SeedAsync(NewAccount(email, nickname));
+
+        var recorder = new CommandRecorder();
+        var repository = new AccountRepository(NewDbContext(recorder));
+        Account account = (await repository.FindByEmailAsync(email, TestContext.Current.CancellationToken))!;
+        account.SetMessage("Hello", DateTime.UtcNow);
+        recorder.Commands.Clear();
+
+        await repository.UpdateEntityAsync(account, TestContext.Current.CancellationToken);
+
+        Assert.Single(recorder.Commands, c => c.TrimStart().StartsWith("UPDATE", StringComparison.OrdinalIgnoreCase));
+        Account? stored = await Sut.FindByEmailAsync(email, TestContext.Current.CancellationToken);
+        Assert.Equal("Hello", stored!.Message);
+        Assert.Equal(nickname, stored.Nickname);
+    }
+
+    /// <summary>Records the text of every SQL command a context sends.</summary>
+    private sealed class CommandRecorder : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            System.Data.Common.DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
+        }
+
+        public override ValueTask<InterceptionResult<System.Data.Common.DbDataReader>> ReaderExecutingAsync(
+            System.Data.Common.DbCommand command, CommandEventData eventData, InterceptionResult<System.Data.Common.DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
     }
 
     /// <summary>Verifies that <c>UpdateEntityAsync</c> throws, rather than silently no-op'ing, when the row no longer exists.</summary>
