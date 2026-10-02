@@ -121,7 +121,7 @@ Consequences that apply to every change — C# under `Maroik.Core.*` / `Maroik.W
   the thing under test. Assert the concrete result (value, status code, message, persisted row, request body, DOM).
 - **Prefer real collaborators over mocks** where the behaviour is about PostgreSQL, RabbitMQ, SMTP or HTTP: use the
   Testcontainers / in-process fakes already in the test projects (see "Tests that need Docker").
-- **Do not lower a gate to make a change pass.** CI enforces line >= 80 % / branch >= 65 %, the architecture tests, and the
+- **Do not lower a gate to make a change pass.** The bar is line >= 80 % / branch >= 65 % coverage, the architecture tests, and the
   client-script tests against freshly compiled `wwwroot/**/site.js`. A change that needs an exemption gets a discussion, not a quiet skip.
 - **Done means the suite is green** (`dotnet test` for the touched projects, `npm test` for scripts), the build has zero warnings,
   and the tests for the change are in the same commit as the change.
@@ -203,11 +203,6 @@ don't leave them for later or treat them as optional:
   changed behavior in a source project **or in a `.ts` file** gets corresponding tests
   added in its `.Tests` project in the same change, not deferred.
 
-## Branches
-
-- `main` — production. No test suite / CI, but carries real security fixes.
-- `refactor-code` — the DDD + Clean Architecture rewrite (current work).
-
 ## Aggregate model
 
 Every domain type persisted independently through its own `I*Repository`
@@ -225,13 +220,13 @@ are plain IDs, not object references), the same criterion applied to
 `Maroik.Core.Repository.Tests` runs entirely against a real PostgreSQL 17 database
 (Testcontainers) — there is no EF Core InMemory provider. One container is shared by
 the whole assembly (`Infrastructure/PostgresContainerFixture`, an xUnit v3 assembly
-fixture); it loads the real production schema **and seed data** from
+fixture); it loads the real schema **and seed data** from
 `Maroik.DB/PostgreSQL/SQL_Init_Script/Debugging/Init.sql` into a template database,
 and each test class gets its own throwaway DB cloned from that template
-(`DatabaseFixture` + `RepositoryTestBase`). Docker must be available (CI's
-`ubuntu-latest` has it); test-collection parallelism is off (`xunit.runner.json`).
+(`DatabaseFixture` + `RepositoryTestBase`). Docker must be available;
+test-collection parallelism is off (`xunit.runner.json`).
 
-Because every test starts from the full seed (~19k rows), a test must not assume an
+Because every test starts from the seed (menu/category rows plus the admin and demo accounts), a test must not assume an
 empty table: insert under keys unique to the test (`RepositoryTestBase.UniqueEmail`
 / `Unique`, or `EnsureAccountsAsync` / `EnsureAssetsAsync` / `InsertCalendarAsync` /
 `InsertCalendarEventAsync` for FK parents, and `EnsureNicknamesAsync` for a `Board` / `BoardComment`
@@ -243,7 +238,7 @@ now exercised (e.g. `FixedIncome_DepositDayMonth_check`,
 ## Tests that need Docker
 
 Besides `Maroik.Core.Repository.Tests` (PostgreSQL) the following start throwaway containers with Testcontainers, so Docker must
-be available (CI's `ubuntu-latest` has it): `Maroik.Core.PostgreSQL.Tests` (PostgreSQL 17, both init scripts — the EF model must match
+be available: `Maroik.Core.PostgreSQL.Tests` (PostgreSQL 17, the init script — the EF model must match
 the real schema), `Maroik.Website.Tests` and `Maroik.E2E.Tests` (PostgreSQL 17), `Maroik.Core.Client.Tests` and
 `Maroik.Worker.Tests` (RabbitMQ 4; the mail path uses an in-process SMTP server, `FakeSmtpServer`). Prefer these real services over
 mocks when a test is about how the code behaves against PostgreSQL / RabbitMQ.
@@ -270,7 +265,7 @@ The layering / ArchNet rules are enforced by NetArchTest-based `*ArchitectureTes
 classes in each `*.Tests` project's `Architecture/` folder, plus the solution-wide
 `SolutionLayeringArchitectureTests` (in `Maroik.Core.Contract.Tests`) that validates
 the `.csproj` project- and package-reference graph itself. They run under
-`dotnet test` in CI, so a violation fails the build. Keep them green; extend them
+`dotnet test`, so a violation fails the test run. Keep them green; extend them
 when the layer model changes.
 
 **Every project — including a new one — must be registered in `Maroik.sln` under the matching solution folder** (`src`
