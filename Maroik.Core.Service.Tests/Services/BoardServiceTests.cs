@@ -366,6 +366,7 @@ public class BoardServiceTests
             new BoardRequest { Type = BoardTypes.FreeForum, Title = "Test Title", Writer = "Alice" }, false, null, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -948,6 +949,7 @@ public class BoardServiceTests
         ServiceResult result = await sut.IncrementBoardViewAsync(1, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
     }
 
     // -- EditBoardAsync: the four attachment states ------------------------------
@@ -1099,6 +1101,7 @@ public class BoardServiceTests
         ServiceResult result = await CreateSut().EditBoardAsync(EditRequest(), "Alice", false, null, TestContext.Current.CancellationToken);
 
         Assert.Equal("Board.EditFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -1139,6 +1142,7 @@ public class BoardServiceTests
         ServiceResult result = await CreateSut().DeleteBoardAsync(1, BoardTypes.FreeForum, "Alice", false, TestContext.Current.CancellationToken);
 
         Assert.Equal("Board.DeleteFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -1183,6 +1187,7 @@ public class BoardServiceTests
             new BoardCommentRequest { BoardId = 1, Writer = "Bob", Content = "Hi" }, ct: TestContext.Current.CancellationToken);
 
         Assert.Equal("Board.WriteCommentFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -1233,6 +1238,7 @@ public class BoardServiceTests
         ServiceResult result = await CreateSut().DeleteCommentAsync(1, "Alice", false, ct: TestContext.Current.CancellationToken);
 
         Assert.Equal("Board.DeleteCommentFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

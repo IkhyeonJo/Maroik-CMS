@@ -294,6 +294,13 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             created(h2).success!({ result: false, error: "nope" });
             expect(h2.toastr.error).toHaveBeenCalledWith("nope");
             expect(eventCalls(h2)).toHaveLength(0);
+
+            // A server fault is answered with the temporary-error message, which is shown exactly as sent.
+            const h3 = build({ body: withRows(timedRows) });
+            setDates(h3);
+            submit(h3);
+            created(h3).success!({ result: false, error: "A temporary error occurred. Please try again later." });
+            expect(h3.toastr.error).toHaveBeenCalledWith("A temporary error occurred. Please try again later.");
         });
     });
 

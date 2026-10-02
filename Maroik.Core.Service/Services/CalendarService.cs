@@ -434,7 +434,7 @@ public class CalendarService(
         {
             logger.LogError(ex, "Failed to update other-calendar subscriptions for account {AccountEmail}", email);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("Calendar.UpdateOtherCalendarsFailed", "Input is invalid");
+            return ServiceResult.Failure("Calendar.UpdateOtherCalendarsFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -493,12 +493,12 @@ public class CalendarService(
             {
                 logger.LogError(ex, "Failed to update calendar shared settings");
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.Failure("Calendar.UpdateSharedFailed", "Input is invalid");
+                return ServiceResult.Failure("Calendar.UpdateSharedFailed", ServiceResult.TemporaryErrorKey);
             }
         }
 
         logger.LogError("Failed to update calendar shared settings after {Retries} retries", SharedRaceRetryLimit);
-        return ServiceResult.Failure("Calendar.UpdateSharedFailed", "Input is invalid");
+        return ServiceResult.Failure("Calendar.UpdateSharedFailed", ServiceResult.TemporaryErrorKey);
     }
 
     /// <inheritdoc />
@@ -561,7 +561,7 @@ public class CalendarService(
         {
             logger.LogError(ex, "Failed to create calendar event for calendar {CalendarId} and account {AccountEmail}", request.CalendarId, email);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("CalendarEvent.CreateFailed", "Input is invalid");
+            return ServiceResult.Failure("CalendarEvent.CreateFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -642,7 +642,7 @@ public class CalendarService(
         {
             logger.LogError(ex, "Failed to update calendar event {EventId} for account {AccountEmail}", request.Id, email);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("CalendarEvent.UpdateFailed", "Input is invalid");
+            return ServiceResult.Failure("CalendarEvent.UpdateFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -711,7 +711,7 @@ public class CalendarService(
         // Validated first, uploaded second: a record the domain rejects must not leave an orphaned file.
         bool uploaded = await fileClient.UploadAsync(attachedFile.Bytes, attachedFile.ContentType, filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
         if (!uploaded)
-            return ServiceResult.Failure("CalendarEvent.AttachmentUploadFailed", "Input is invalid");
+            return ServiceResult.Failure("CalendarEvent.AttachmentUploadFailed", ServiceResult.TemporaryErrorKey);
 
         await calendarEventAttachedFileRepository.CreateAsync(fileResult.Value, ct);
         return ServiceResult.Ok();

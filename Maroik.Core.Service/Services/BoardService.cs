@@ -164,7 +164,7 @@ public class BoardService(
         {
             logger.LogError(e, "Failed to write board post (Type={Type})", request.Type);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("Board.WriteFailed", "Input is invalid");
+            return ServiceResult.Failure("Board.WriteFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -253,7 +253,7 @@ public class BoardService(
         {
             logger.LogError(e, "Failed to edit board post {BoardId}", request.Id);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("Board.EditFailed", "Input is invalid");
+            return ServiceResult.Failure("Board.EditFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -295,7 +295,7 @@ public class BoardService(
         {
             logger.LogError(e, "Failed to delete board post {BoardId}", boardId);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("Board.DeleteFailed", "Input is invalid");
+            return ServiceResult.Failure("Board.DeleteFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -355,7 +355,7 @@ public class BoardService(
         {
             logger.LogError(e, "Failed to write comment on board {BoardId}", request.BoardId);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("Board.WriteCommentFailed", "Input is invalid");
+            return ServiceResult.Failure("Board.WriteCommentFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -370,7 +370,7 @@ public class BoardService(
         catch (Exception e)
         {
             logger.LogError(e, "Failed to increment view count for board {BoardId}", boardId);
-            return ServiceResult.Failure("Board.IncrementViewFailed", "Input is invalid");
+            return ServiceResult.Failure("Board.IncrementViewFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -432,7 +432,7 @@ public class BoardService(
         {
             logger.LogError(e, "Failed to delete comment {CommentId}", commentId);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("Board.DeleteCommentFailed", "Input is invalid");
+            return ServiceResult.Failure("Board.DeleteCommentFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -517,7 +517,7 @@ public class BoardService(
         // OpenFileAsync logs its own failure (with the storage path) where it happens.
         Stream? content = await attachmentContent.OpenFileAsync(attachedFile.Path, ct);
         if (content == null)
-            return (ServiceResult.Failure("Board.AttachedFileUnavailable", "Input is invalid"), null);
+            return (ServiceResult.Failure("Board.AttachedFileUnavailable", ServiceResult.TemporaryErrorKey), null);
 
         return (ServiceResult.Ok(), new AttachmentDownload(content, $"{attachedFile.Name}{attachedFile.Extension}"));
     }

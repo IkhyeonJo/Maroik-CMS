@@ -588,6 +588,7 @@ public class ManagementAccountServiceTests
         ServiceResult result = await CreateSut().CreateAccountAsync(NewAccountRequest(), Actor, TestContext.Current.CancellationToken);
 
         Assert.Equal("ManagementAccount.CreateFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
     }
 
@@ -626,6 +627,7 @@ public class ManagementAccountServiceTests
         ServiceResult result = await CreateSut().UpdateAccountAsync(new AdminUpdateAccountRequest { Email = "user@example.com" }, null, Actor, TestContext.Current.CancellationToken);
 
         Assert.Equal("ManagementAccount.UpdateFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -640,6 +642,7 @@ public class ManagementAccountServiceTests
         ServiceResult result = await CreateSut().DeleteAccountAsync("user@example.com", Actor, TestContext.Current.CancellationToken);
 
         Assert.Equal("ManagementAccount.DeleteFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

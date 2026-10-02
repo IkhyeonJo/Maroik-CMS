@@ -34,6 +34,13 @@ public enum ServiceErrorType
 /// </summary>
 public class ServiceResult
 {
+    /// <summary>
+    /// The message key of a <see cref="ServiceErrorType.Failure"/> the user cannot fix by changing the input — a
+    /// database, file-storage or other server-side fault. Kept apart from "Input is invalid" so the user is told
+    /// to try again later rather than to correct what they entered.
+    /// </summary>
+    public const string TemporaryErrorKey = "A temporary error occurred. Please try again later.";
+
     /// <summary>True when the operation completed successfully.</summary>
     public bool Success { get; private init; }
 

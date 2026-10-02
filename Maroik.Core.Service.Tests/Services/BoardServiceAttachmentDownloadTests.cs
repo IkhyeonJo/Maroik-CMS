@@ -134,6 +134,7 @@ public class BoardServiceAttachmentDownloadTests
         var (result, file) = await CreateSut().OpenAttachedFileAsync(7, BoardTypes.FreeForum, null, TestContext.Current.CancellationToken);
 
         Assert.Equal("Board.AttachedFileUnavailable", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.Equal(ServiceErrorType.Failure, result.ErrorType);
         Assert.Null(file);
     }

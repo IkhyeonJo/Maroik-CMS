@@ -172,7 +172,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         Assert.False(JsonDocument.Parse(json).RootElement.GetProperty("result").GetBoolean());
-        Assert.Contains("Input is invalid", json);
+        Assert.Contains("A temporary error occurred. Please try again later.", json);
         Assert.DoesNotContain(DatabaseSecret, json);
     }
 }

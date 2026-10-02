@@ -87,7 +87,7 @@ public class AssetService(
             // Every other write in this class turns an unexpected failure into a result; without this
             // one, a database error other than a duplicate key escaped as an unhandled 500.
             logger.LogError(e, "Failed to create asset {ProductName} for account {AccountEmail}", request.ProductName, accountEmail);
-            return ServiceResult.Failure("Asset.CreateFailed", "Input is invalid");
+            return ServiceResult.Failure("Asset.CreateFailed", ServiceResult.TemporaryErrorKey);
         }
 
         return ServiceResult.Ok();
@@ -152,7 +152,7 @@ public class AssetService(
         {
             logger.LogError(ex, "Failed to update asset {OriginalProductName} for account {AccountEmail}", originalProductName, accountEmail);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("Asset.UpdateFailed", "Input is invalid");
+            return ServiceResult.Failure("Asset.UpdateFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -185,7 +185,7 @@ public class AssetService(
         {
             logger.LogError(ex, "Failed to delete asset {ProductName} for account {AccountEmail}", productName, accountEmail);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("Asset.DeleteFailed", "Input is invalid");
+            return ServiceResult.Failure("Asset.DeleteFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 

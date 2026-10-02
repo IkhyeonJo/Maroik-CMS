@@ -103,7 +103,7 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
 
     /// <summary>
     /// A menu write the domain refuses (an over-long name) answers with that rule; one only the database refuses
-    /// (a sub-category of a category that is not there) answers with the generic message.
+    /// (a sub-category of a category that is not there) answers with the temporary-error message.
     /// </summary>
     [Fact]
     public async Task MenuWrites_TheDatabaseRefuses_AreAnsweredWithTheGenericMessage()
@@ -123,7 +123,7 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
         Assert.False(JsonDocument.Parse(createTooLong).RootElement.GetProperty("result").GetBoolean());
         Assert.Equal("'Name' must be 255 characters or fewer.", JsonDocument.Parse(createTooLong).RootElement.GetProperty("error").GetString());
         Assert.False(JsonDocument.Parse(createSubOfMissing).RootElement.GetProperty("result").GetBoolean());
-        Assert.Contains(Invalid, createSubOfMissing);
+        Assert.Equal("A temporary error occurred. Please try again later.", JsonDocument.Parse(createSubOfMissing).RootElement.GetProperty("error").GetString());
         return;
 
         // Posts body as JSON as the admin, asserts 200, and returns the response body.

@@ -137,7 +137,7 @@ public class AccountBookController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to check asset existence for product {ProductName}", productName);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -303,7 +303,7 @@ public class AccountBookController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to check income existence for id {IncomeId}", id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -498,7 +498,7 @@ public class AccountBookController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to check expenditure existence for id {ExpenditureId}", id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 

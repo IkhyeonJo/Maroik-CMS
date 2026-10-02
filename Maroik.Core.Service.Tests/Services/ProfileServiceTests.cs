@@ -244,6 +244,7 @@ public class ProfileServiceTests
 
         Assert.False(result.Success);
         Assert.Equal("Profile.UploadAvatarFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _accountRepo.Verify(r => r.UpdateAvatarPathAsync(
             It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
         _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -520,6 +521,7 @@ public class ProfileServiceTests
         ServiceResult result = await CreateSut().UpdateAvatarAsync("user@example.com", "/a.png", TestContext.Current.CancellationToken);
 
         Assert.Equal("Profile.UpdateAvatarFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
     }
 
@@ -545,6 +547,7 @@ public class ProfileServiceTests
         ServiceResult result = await CreateSut().UpdateTimeZoneAsync("user@example.com", "UTC", TestContext.Current.CancellationToken);
 
         Assert.Equal("Profile.UpdateTimezoneFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
     }
 
@@ -577,6 +580,7 @@ public class ProfileServiceTests
         ServiceResult result = await CreateSut().UpdatePasswordAsync("user@example.com", "current", "NewPass1!", TestContext.Current.CancellationToken);
 
         Assert.Equal("Profile.UpdatePasswordFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -624,6 +628,7 @@ public class ProfileServiceTests
         ServiceResult result = await CreateSut().UploadAndUpdateAvatarAsync("user@example.com", [1, 2, 3], ".png", TestContext.Current.CancellationToken);
 
         Assert.Equal("Profile.UploadAvatarFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
     }
 }

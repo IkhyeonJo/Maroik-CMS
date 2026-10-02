@@ -22,6 +22,9 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
     /// <summary>Message of every exception the broken services throw; it must never reach the response.</summary>
     private const string Secret = "boom-secret-detail-do-not-leak";
 
+    /// <summary>The message a server-side fault is answered with: not "Input is invalid", which would send the user to fix their input.</summary>
+    private const string Temporary = "A temporary error occurred. Please try again later.";
+
     /// <summary>The services replaced by always-throwing proxies in <see cref="CreateBrokenHost"/>.</summary>
     private static readonly Type[] _brokenServices =
     [
@@ -90,7 +93,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
 
     /// <summary>
     /// A service failure inside a JSON action becomes the generic failure result (HTTP 200, <c>result:false</c>,
-    /// "Input is invalid"), without leaking the exception text. One derived host serves every endpoint (each
+    /// "A temporary error occurred. Please try again later."), without leaking the exception text. One derived host serves every endpoint (each
     /// extra host costs seconds of start-up), so failures are collected and reported together.
     /// </summary>
     [Fact]
@@ -115,8 +118,37 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             if (response.StatusCode != System.Net.HttpStatusCode.OK) { failures.Add($"{url}: HTTP {(int)response.StatusCode}"); continue; }
             using JsonDocument doc = JsonDocument.Parse(json);
             if (doc.RootElement.GetProperty("result").GetBoolean()) failures.Add($"{url}: reported success");
-            if (!json.Contains("Input is invalid")) failures.Add($"{url}: not the generic message ({json})");
+            if (!json.Contains(Temporary)) failures.Add($"{url}: not the generic message ({json})");
             if (json.Contains(Secret)) failures.Add($"{url}: leaked the exception text");
+        }
+
+        Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
+    }
+
+    /// <summary>Each controller's resx pair carries the temporary-error message in Korean too.</summary>
+    [Fact]
+    public async Task AServiceFailure_IsReportedInKorean_ToAKoreanBrowser()
+    {
+        await using var host = CreateBrokenHost();
+        var client = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false
+        });
+        var session = await AuthenticatedSessionHelper.LoginAsync(host, client, "failure-contract-korean@test.com", "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
+
+        List<string> failures = [];
+        foreach (string url in new[]
+        {
+            "/Calendar/IsCalendarExists?id=1", "/Forum/IsBoardExists?id=1", "/Management/IsBoardExists?id=1",
+            "/Notice/IsFixedIncomeExists?id=1", "/AccountBook/IsIncomeExists?id=1",
+        })
+        {
+            using var request = session.BuildJsonPostRequest(url);
+            request.Headers.AcceptLanguage.ParseAdd("ko-KR");
+            var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+            using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            string? error = doc.RootElement.GetProperty("error").GetString();
+            if (error != "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.") failures.Add($"{url}: {error}");
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
@@ -230,15 +262,15 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             using JsonDocument doc = JsonDocument.Parse(json);
             if (doc.RootElement.GetProperty("result").GetBoolean()) failures.Add($"{url}: reported success");
             if (json.Contains(Secret)) failures.Add($"{url}: leaked the exception text");
-            if (!json.Contains("Input is invalid") && !json.Contains("could not be completed")) failures.Add($"{url}: unexpected message ({json})");
+            if (!json.Contains(Temporary) && !json.Contains("could not be completed")) failures.Add($"{url}: unexpected message ({json})");
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
     }
 
     /// <summary>
-    /// Two endpoints answer a failing service in their own way (not the shared generic message): account creation says
-    /// the input is invalid, the default-currency change reports a bare <c>result:false</c>. Neither leaks the exception.
+    /// Account creation answers a failing service with the temporary-error message, the default-currency change with a bare
+    /// <c>result:false</c>. Neither leaks the exception.
     /// </summary>
     [Fact]
     public async Task AServiceFailure_InCreateAccountAndDefaultMonetary_ReportsFailure_WithoutLeakingTheException()
@@ -258,7 +290,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         });
         using var monetary = user.BuildJsonPostRequest("/Dashboard/UserUpdateDefaultMonetary", new { DefaultMonetaryUnit = "USD" });
 
-        foreach (var (request, expectedMessage) in new[] { (create, "Input is invalid"), (monetary, "") })
+        foreach (var (request, expectedMessage) in new[] { (create, Temporary), (monetary, "") })
         {
             var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
             string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
@@ -372,7 +404,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             if (response.StatusCode != System.Net.HttpStatusCode.OK) { failures.Add($"{url}: HTTP {(int)response.StatusCode}"); continue; }
             using JsonDocument doc = JsonDocument.Parse(json);
             if (doc.RootElement.GetProperty("result").GetBoolean()) failures.Add($"{url}: reported success");
-            if (!json.Contains("Input is invalid")) failures.Add($"{url}: unexpected message ({json})");
+            if (!json.Contains(Temporary)) failures.Add($"{url}: unexpected message ({json})");
             if (json.Contains(Secret)) failures.Add($"{url}: leaked the exception text");
         }
 

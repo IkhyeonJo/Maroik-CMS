@@ -96,7 +96,7 @@ public class NoticeController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create fixed-income record");
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -165,7 +165,7 @@ public class NoticeController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to check fixed-income existence for id {FixedIncomeId}", id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -236,7 +236,7 @@ public class NoticeController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to update fixed-income record {FixedIncomeId}", fixedIncomeInputViewModel.Id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -260,7 +260,7 @@ public class NoticeController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete fixed-income record {FixedIncomeId}", fixedIncomeInputViewModel.Id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -326,7 +326,7 @@ public class NoticeController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create fixed-expenditure record");
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -396,7 +396,7 @@ public class NoticeController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to check fixed-expenditure existence for id {FixedExpenditureId}", id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -468,7 +468,7 @@ public class NoticeController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to update fixed-expenditure record {FixedExpenditureId}", fixedExpenditureInputViewModel.Id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -492,7 +492,7 @@ public class NoticeController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete fixed-expenditure record {FixedExpenditureId}", fixedExpenditureInputViewModel.Id);
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion

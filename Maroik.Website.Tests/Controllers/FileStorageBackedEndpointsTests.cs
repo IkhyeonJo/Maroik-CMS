@@ -140,7 +140,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         baseHost.Files.Outcome = FileUploadResult.ScanUnavailable;
         Assert.Equal("The file could not be scanned for viruses. Please try again later.", await Send(FileForm("ProfileAvatarFiles", "me.png", _png, "image/png"), baseHost));
         baseHost.Files.Outcome = FileUploadResult.Failed;
-        Assert.Equal("Input is invalid", await Send(FileForm("ProfileAvatarFiles", "me.png", _png, "image/png"), baseHost));
+        Assert.Equal("A temporary error occurred. Please try again later.", await Send(FileForm("ProfileAvatarFiles", "me.png", _png, "image/png"), baseHost));
 
         Assert.Empty(baseHost.Files.UploadedPaths);
         return;
@@ -234,6 +234,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         using var failing = session.BuildFormPostRequest("/Forum/UploadImageFile", FileForm("summernoteImageFile", "pic.png", _png, "image/png"));
         using JsonDocument failDoc = await PostAsync(host, failing);
         Assert.False(failDoc.RootElement.GetProperty("result").GetBoolean());
+        Assert.Equal("A temporary error occurred. Please try again later.", Error(failDoc));
         Assert.False(failDoc.RootElement.TryGetProperty("filePath", out _));
     }
 
@@ -416,7 +417,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         using JsonDocument doc = await PostAsync(host, request);
 
         Assert.False(doc.RootElement.GetProperty("result").GetBoolean());
-        Assert.Equal("Input is invalid", doc.RootElement.GetProperty("error").GetString());
+        Assert.Equal("A temporary error occurred. Please try again later.", doc.RootElement.GetProperty("error").GetString());
     }
 
     /// <summary>An avatar / editor image over the configured size limit is refused with the size message, and nothing is stored.</summary>

@@ -222,6 +222,7 @@ public class MenuServiceTests
         ServiceResult result = await sut.CreateCategoryAsync(new CategoryRequest { Name = "Bad" }, Actor, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
     }
 
     // -- UpdateCategoryAsync --------------------------------------------------
@@ -265,6 +266,7 @@ public class MenuServiceTests
 
         Assert.False(result.Success);
         Assert.Equal("Menu.UpdateCategoryFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -310,6 +312,7 @@ public class MenuServiceTests
         ServiceResult result = await sut.DeleteCategoryAsync(new CategoryRequest { Id = 1 }, Actor, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
     }
 
     // -- CreateSubCategoryAsync -----------------------------------------------
@@ -336,6 +339,7 @@ public class MenuServiceTests
         ServiceResult result = await sut.CreateSubCategoryAsync(new SubCategoryRequest { Name = "Bad" }, Actor, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
     }
 
     // -- UpdateSubCategoryAsync -----------------------------------------------
@@ -379,6 +383,7 @@ public class MenuServiceTests
 
         Assert.False(result.Success);
         Assert.Equal("Menu.UpdateSubCategoryFailed", result.ErrorCode);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -422,6 +427,7 @@ public class MenuServiceTests
         ServiceResult result = await sut.DeleteSubCategoryAsync(new SubCategoryRequest { Id = 1 }, Actor, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
+        Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
     }
 
     // -- Field policy is enforced at the service boundary ---------------------------------

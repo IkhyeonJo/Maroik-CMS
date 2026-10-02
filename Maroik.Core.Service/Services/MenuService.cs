@@ -96,7 +96,7 @@ public class MenuService(
         catch (Exception e)
         {
             logger.LogError(e, "Failed to create category {Name}", request.Name);
-            return ServiceResult.Failure("Menu.CreateCategoryFailed", "Input is invalid");
+            return ServiceResult.Failure("Menu.CreateCategoryFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -128,7 +128,7 @@ public class MenuService(
         {
             logger.LogError(e, "Failed to update category {Name}", request.Name);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("Menu.UpdateCategoryFailed", "Input is invalid");
+            return ServiceResult.Failure("Menu.UpdateCategoryFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -144,7 +144,7 @@ public class MenuService(
         catch (Exception e)
         {
             logger.LogError(e, "Failed to delete category {Name}", request.Name);
-            return ServiceResult.Failure("Menu.DeleteCategoryFailed", "Input is invalid");
+            return ServiceResult.Failure("Menu.DeleteCategoryFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -165,7 +165,7 @@ public class MenuService(
         catch (Exception e)
         {
             logger.LogError(e, "Failed to create sub-category {Name}", request.Name);
-            return ServiceResult.Failure("Menu.CreateSubCategoryFailed", "Input is invalid");
+            return ServiceResult.Failure("Menu.CreateSubCategoryFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -195,7 +195,7 @@ public class MenuService(
         {
             logger.LogError(e, "Failed to update sub-category {Name}", request.Name);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("Menu.UpdateSubCategoryFailed", "Input is invalid");
+            return ServiceResult.Failure("Menu.UpdateSubCategoryFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 
@@ -211,7 +211,7 @@ public class MenuService(
         catch (Exception e)
         {
             logger.LogError(e, "Failed to delete sub-category {Name}", request.Name);
-            return ServiceResult.Failure("Menu.DeleteSubCategoryFailed", "Input is invalid");
+            return ServiceResult.Failure("Menu.DeleteSubCategoryFailed", ServiceResult.TemporaryErrorKey);
         }
     }
 }
