@@ -13,8 +13,8 @@ public class TimeZoneCatalogService : ITimeZoneCatalogService
     public IReadOnlyList<TimeZoneOptionDto> GetTimeZoneOptions() => _timeZoneOptions.Value;
 
     /// <summary>
-    /// Lists every system time zone under its IANA ID â€” the zone's own ID when it already is one, else
-    /// its Windows ID converted to IANA â€” skipping zones with no IANA equivalent.
+    /// Lists every system time zone under its IANA ID — the zone's own ID when it already is one, else
+    /// its Windows ID converted to IANA — skipping zones with no IANA equivalent.
     /// </summary>
     private static List<TimeZoneOptionDto> BuildTimeZoneOptions()
     {

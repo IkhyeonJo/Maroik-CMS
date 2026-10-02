@@ -5,7 +5,7 @@ import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
 import { loadSite, hidden, antiForgery, hiddenByStyle, fireNative } from "@tests/_common/harness";
 
 // wwwroot/user/custom/AccountBook/Expenditure/js/site.js
-/** Main class â†’ sub-classes, as the page publishes it. */
+/** Main class → sub-classes, as the page publishes it. */
 const subClassMap = { Living: ["Food", "Rent"], Transfer: ["ToSavings"] };
 /** Sub-classes that need a deposit (transfer target) asset. */
 const depositAssetSubClasses = ["ToSavings"];

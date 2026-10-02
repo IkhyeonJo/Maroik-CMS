@@ -5,7 +5,7 @@ import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
 import { loadSite, hidden, antiForgery } from "@tests/_common/harness";
 
 // wwwroot/user/custom/Notice/FixedIncome/js/site.js
-/** Main class â†’ sub-classes, as the page publishes it. */
+/** Main class → sub-classes, as the page publishes it. */
 const subClassMap = { Labor: ["Salary"] };
 /** Last selectable deposit day per month (a month missing here gets no day options). */
 const maxDepositDayByMonth = { "2": "28", "1": "31" };
