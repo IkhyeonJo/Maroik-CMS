@@ -1257,7 +1257,10 @@ public class ManagementController : Controller
 
     #region IsBoardExists
 
-    /// <summary>Checks that a private note with the given ID exists and belongs to the caller, returning it when so.</summary>
+    /// <summary>
+    /// Checks that a private note with the given ID exists and belongs to the caller, returning its id
+    /// when so — never its content, which holds decrypted plain storage paths.
+    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequiredHttpPostAccess(Role = Role.Admin)]
@@ -1271,7 +1274,7 @@ public class ManagementController : Controller
 
             return board == null || board.Deleted || board.Writer != nickname
                 ? Json(new { result = false, error = _localizer["Input is invalid"].Value })
-                : Json(new { result = true, PrivateNoteBoard = board });
+                : Json(new { result = true, PrivateNoteBoard = new { id = board.Id } });
         }
         catch (Exception ex)
         {

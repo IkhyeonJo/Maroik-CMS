@@ -425,7 +425,8 @@ public class ForumController(
 
     /// <summary>
     /// Checks that a free-forum post still exists and is visible to the caller (a locked post only to its
-    /// author or an admin). Called by the client before confirming a delete.
+    /// author or an admin). Called by the client before confirming a delete. The reply carries only the
+    /// post's id: the stored content holds decrypted plain storage paths that never go to the client.
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -441,7 +442,7 @@ public class ForumController(
 
             if (!board.Locked)
             {
-                return Json(new { result = true, freeBoard = board });
+                return Json(new { result = true, freeBoard = new { id = board.Id } });
             }
 
             // Re-fetched from the database by ViewBagPopulatorFilter on every request.
@@ -449,7 +450,7 @@ public class ForumController(
             if (!loggedInAccount.IsOwnerOrAdmin(board.Writer))
                 return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
-            return Json(new { result = true, freeBoard = board });
+            return Json(new { result = true, freeBoard = new { id = board.Id } });
         }
         catch (Exception ex)
         {
