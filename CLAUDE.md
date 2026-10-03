@@ -90,8 +90,8 @@ Accounts
 Finance
 - An asset's currency label can be edited at any time (e.g. "원" → "KRW"). Never reject a currency
   change, whatever the existing balance looks like.
-- A transfer-type expenditure (deposit / investment / public pension / debt repayment) requires its payment
-  method and its deposit asset to carry the same currency label, on create and on update. Relabelling only one
+- A transfer-type expenditure (deposit / investment / public pension / debt repayment), one-off or fixed,
+  requires its payment method and its deposit asset to carry the same currency label, on create and on update. Relabelling only one
   of the two assets therefore makes editing an older transfer fail — intended.
 - A negative amount typed into an income / expenditure (one-off or fixed) is stored as its absolute value
   (`Math.Abs`).
@@ -115,8 +115,11 @@ Files and content
 - Replacing or clearing an attachment (post, private note, calendar event) only rewrites its database
   record; the old file stays in Maroik.FileStorage, as does a file uploaded by a write whose transaction
   later rolls back. There is no delete API on purpose — do not add one or a cleanup job.
-- `HtmlContentSanitizerService` keeps its allow-list breadth (Ganss defaults plus `class`, URL schemes narrowed
-  to http/https, no `data-*`). Do not raise its breadth again.
+- `HtmlContentSanitizerService` starts from the Ganss defaults plus `class` and narrows only three things: URL
+  schemes to http/https, no `data-*` attributes, and no `position` / `top` / `left` / `right` / `bottom` /
+  `z-index` / `opacity` in inline styles (so a post cannot overlay the page). The rest of the default breadth —
+  the `name` attribute, form elements (`form`, `input`, `button`, `select`, `textarea`) — is kept on purpose. Do
+  not raise it again.
 - An administrator cannot clear someone else's post lock from the UI (the edit page is owner-only); only a direct
   POST to the edit endpoint can.
 - `BoardOutputViewModel.BoardAttachedFilePath` (Forum and Management) is populated by the controllers but
