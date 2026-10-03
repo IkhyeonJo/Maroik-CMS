@@ -103,6 +103,11 @@ public partial class Account
     /// </summary>
     public bool MustChangePassword { get; set; }
 
+    /// <summary>
+    /// LoginBlockedUntil
+    /// </summary>
+    public DateTime? LoginBlockedUntil { get; set; }
+
     /// <summary>Assets owned by this account (Asset.AccountEmail).</summary>
     public virtual ICollection<Asset> Assets { get; set; } = new List<Asset>();
 

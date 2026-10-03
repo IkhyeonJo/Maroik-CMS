@@ -68,13 +68,15 @@ Authorization and navigation
   `//…` or `/\…` path, so no layout renders it. No extra validation is wanted.
 
 Accounts
-- A failed-login lockout is permanent until the user resets the password or an admin unlocks the
-  account. It only refuses new logins: sessions already signed in keep working, so guessing wrong on purpose
-  cannot throw the owner out. An administrator locking an unlocked account (`Account.LockAndEndSessions`)
-  also replaces the security stamp and so ends the account's sessions. A successful password reset always unlocks the account, including an admin-imposed lock, and signs
-  the user in straight away (fresh session id, new security stamp) unless the account has not accepted the
-  service terms. This does not weaken the lockout: the reset needs the single-use mailed token, not a guessed
-  password. Admin sanctions use `AdminResetPassword` + `MustChangePassword`, not `Locked`.
+- Failed logins never lock an account. They hold new logins off for a wait that grows by stage and ends by
+  itself (`LoginThrottlePolicy`: every `ServerSetting.MaxLoginAttempt` failures move to the next stage — 1, 5,
+  15, then at most 60 minutes); attempts during the wait are refused before the password is checked and do not
+  extend it, and sessions already signed in keep working. So guessing wrong on purpose can delay an account's
+  next login but never throw its owner out. `Locked` is the administrator's lock only: locking an unlocked
+  account (`Account.LockAndEndSessions`) replaces the security stamp and so ends the account's sessions.
+- A successful password reset always unlocks the account, including an admin-imposed lock, ends any login
+  wait, and signs the user in straight away (fresh session id, new security stamp) unless the account has not
+  accepted the service terms. Admin sanctions use `AdminResetPassword` + `MustChangePassword`, not `Locked`.
 - Registration and password-reset tokens are stored in the database as plain values (they expire after
   24 hours). The admin account grid intentionally shows and searches `HashedPassword`,
   `RegistrationToken` and `ResetPasswordToken`. Its Excel export (`ExcelExportService.CreateAccountExcel`)

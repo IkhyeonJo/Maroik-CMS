@@ -111,6 +111,9 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.LoginAttempt).HasComment("LoginAttempt");
             entity.Property(e => e.Message).HasComment("Message");
             entity.Property(e => e.MustChangePassword).HasComment("Forces a password change on next login (set by an admin password override)");
+            entity.Property(e => e.LoginBlockedUntil)
+                .HasComment("Until when new logins are held off after failed attempts; NULL when they are not")
+                .HasColumnType("timestamp without time zone");
             entity.Property(e => e.Nickname)
                 .HasMaxLength(255)
                 .HasComment("Nickname");

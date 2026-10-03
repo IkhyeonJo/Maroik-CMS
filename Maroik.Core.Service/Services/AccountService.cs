@@ -95,6 +95,16 @@ public class AccountService(
                 return LoginResult.Fail("Your Account is Locked, Please reset your password by clicking Forgot password Button");
             }
 
+            // Logins held off after failed attempts (LoginThrottlePolicy) are refused the same way — before the
+            // password is looked at, and without a write, so attempts made during the wait neither confirm a
+            // guess nor extend the wait. The wait ends by itself; a password reset ends it at once.
+            if (account.IsLoginBlocked(utcNow))
+            {
+                await unitOfWork.RollbackAsync(ct);
+                logger.LogWarning("Login refused: too many failed attempts for {Email} (held off until {BlockedUntil})", email, account.LoginBlockedUntil);
+                return LoginResult.Fail("Too many failed sign-in attempts. Please try again later or reset your password.");
+            }
+
             // For every other state the password is verified FIRST. The remaining account-state
             // messages below (deleted / unconfirmed / terms) are only disclosed to a caller that has
             // proven it owns the account, so a wrong password cannot be used to probe what state the
@@ -105,8 +115,8 @@ public class AccountService(
                 await accountRepository.UpdateEntityAsync(account, ct);
                 await unitOfWork.CommitAsync(ct);
                 logger.LogWarning("Login failed: wrong password for {Email} (failed attempts: {LoginAttempts})", email, account.LoginAttempt);
-                if (account.Locked)
-                    logger.LogWarning("Account {Email} locked after {LoginAttempts} failed login attempts", email, account.LoginAttempt);
+                if (account.IsLoginBlocked(utcNow))
+                    logger.LogWarning("Logins held off for {Email} until {BlockedUntil} after {LoginAttempts} failed attempts", email, account.LoginBlockedUntil, account.LoginAttempt);
                 return LoginResult.Fail(genericLoginError);
             }
 

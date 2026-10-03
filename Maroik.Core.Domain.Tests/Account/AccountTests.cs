@@ -370,46 +370,85 @@ public class AccountTests
 
         Assert.Equal(2, account.LoginAttempt);
         Assert.False(account.Locked);
+        Assert.False(account.IsLoginBlocked(Now));
     }
 
-    /// <summary>Record login failure locks account, when max attempts reached.</summary>
+    /// <summary>
+    /// Reaching the step holds new logins off for the policy's wait and no longer locks the account: the block
+    /// ends by itself, and the security stamp (so every open session) is left alone.
+    /// </summary>
     [Fact]
-    public void RecordLoginFailure_LocksAccount_WhenMaxAttemptsReached()
+    public void RecordLoginFailure_BlocksLoginsForAWhile_InsteadOfLocking_WhenTheStepIsReached()
     {
         var account = ValidAccount();
+        string stamp = account.SecurityStamp;
 
-        account.RecordLoginFailure(maxAttempts: 3, Now);
-        account.RecordLoginFailure(maxAttempts: 3, Now);
-        account.RecordLoginFailure(maxAttempts: 3, Now);
+        for (int i = 0; i < 3; i++)
+            account.RecordLoginFailure(maxAttempts: 3, Now);
 
         Assert.Equal(3, account.LoginAttempt);
-        Assert.True(account.Locked);
+        Assert.False(account.Locked);
+        Assert.Equal(Now.AddMinutes(1), account.LoginBlockedUntil);
+        Assert.True(account.IsLoginBlocked(Now.AddSeconds(59)));
+        Assert.False(account.IsLoginBlocked(Now.AddMinutes(1)));
+        Assert.Equal(stamp, account.SecurityStamp);
     }
 
-    /// <summary>Record login failure locks account, when counter exceeds max.</summary>
+    /// <summary>Every further failure restarts the wait from its own time, at the stage the count has reached.</summary>
     [Fact]
-    public void RecordLoginFailure_LocksAccount_WhenCounterExceedsMax()
+    public void RecordLoginFailure_RestartsTheWait_AtTheReachedStage()
     {
         var account = ValidAccount();
+        for (int i = 0; i < 5; i++)
+            account.RecordLoginFailure(maxAttempts: 3, Now);
 
-        account.RecordLoginFailure(maxAttempts: 2, Now);
-        account.RecordLoginFailure(maxAttempts: 2, Now);
-        account.RecordLoginFailure(maxAttempts: 2, Now);
+        account.RecordLoginFailure(maxAttempts: 3, Now.AddHours(1));
 
-        Assert.True(account.Locked);
+        Assert.Equal(6, account.LoginAttempt);
+        Assert.Equal(Now.AddHours(1).AddMinutes(5), account.LoginBlockedUntil);
     }
 
-    /// <summary>Reset login attempt sets counter to zero.</summary>
+    /// <summary>A successful login clears both the counter and the wait.</summary>
     [Fact]
-    public void ResetLoginAttempt_SetsCounterToZero()
+    public void ResetLoginAttempt_SetsCounterToZero_AndEndsTheWait()
     {
         var account = ValidAccount();
-        account.RecordLoginFailure(maxAttempts: 5, Now);
-        account.RecordLoginFailure(maxAttempts: 5, Now);
+        for (int i = 0; i < 3; i++)
+            account.RecordLoginFailure(maxAttempts: 3, Now);
 
         account.ResetLoginAttempt(Now);
 
         Assert.Equal(0, account.LoginAttempt);
+        Assert.Null(account.LoginBlockedUntil);
+        Assert.False(account.IsLoginBlocked(Now));
+    }
+
+    /// <summary>An unlock (an admin saving the account unlocked, or a password reset) also ends the wait.</summary>
+    [Fact]
+    public void Unlock_EndsTheWait()
+    {
+        var account = ValidAccount();
+        for (int i = 0; i < 3; i++)
+            account.RecordLoginFailure(maxAttempts: 3, Now);
+
+        account.Unlock(Now);
+
+        Assert.Null(account.LoginBlockedUntil);
+        Assert.False(account.IsLoginBlocked(Now));
+    }
+
+    /// <summary>A reconstituted account keeps the stored wait.</summary>
+    [Fact]
+    public void Reconstitute_KeepsTheStoredWait()
+    {
+        DateTime until = Now.AddMinutes(15);
+
+        var account = Maroik.Core.Domain.Account.Account.Reconstitute(
+            "user@example.com", "$2a$13$hash", "User", null, Role.User, "UTC", null, false, 9, true, true,
+            null, null, Now, Now, null, false, "stamp", false, loginBlockedUntil: until);
+
+        Assert.Equal(until, account.LoginBlockedUntil);
+        Assert.True(account.IsLoginBlocked(Now));
     }
 
     // -- Lock / Unlock --------------------------------------------------------
@@ -424,20 +463,6 @@ public class AccountTests
 
         Assert.True(account.Locked);
         Assert.Equal("spam", account.Message);
-    }
-
-    /// <summary>A lock from failed logins keeps the security stamp: it refuses new logins but ends no session.</summary>
-    [Fact]
-    public void RecordLoginFailure_LockingTheAccount_KeepsTheSecurityStamp()
-    {
-        var account = ValidAccount();
-        string stamp = account.SecurityStamp;
-
-        for (int i = 0; i < 3; i++)
-            account.RecordLoginFailure(maxAttempts: 3, Now);
-
-        Assert.True(account.Locked);
-        Assert.Equal(stamp, account.SecurityStamp);
     }
 
     /// <summary>An administrator's lock also replaces the security stamp, which ends every open session.</summary>
