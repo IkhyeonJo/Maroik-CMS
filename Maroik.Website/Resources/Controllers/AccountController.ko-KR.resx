@@ -195,18 +195,6 @@
   <data name="Your Account is Deleted. Please contact the administrator." xml:space="preserve">
     <value>삭제된 계정입니다. 관리자에게 문의해 주세요.</value>
   </data>
-  <data name="Too many failed sign-in attempts. Please try again later or reset your password." xml:space="preserve">
-    <value>로그인 실패가 너무 많습니다. 잠시 후 다시 시도하거나 비밀번호를 재설정해 주세요.</value>
-  </data>
-  <data name="Maroik sign-in alert" xml:space="preserve">
-    <value>Maroik 로그인 알림</value>
-  </data>
-  <data name="Several sign-ins to your account failed" xml:space="preserve">
-    <value>계정 로그인이 여러 번 실패했습니다</value>
-  </data>
-  <data name="New sign-ins to your account are paused for a while. If this was not you, reset your password from the link below." xml:space="preserve">
-    <value>잠시 동안 계정의 새 로그인이 제한됩니다. 본인이 아니라면 아래 링크에서 비밀번호를 재설정해 주세요.</value>
-  </data>
   <data name="Your Account is Locked, Please reset your password by clicking Forgot password Button" xml:space="preserve">
     <value>계정이 잠겼습니다. '비밀번호 찾기' 버튼을 통해 비밀번호를 초기화해주시길 바랍니다.</value>
   </data>

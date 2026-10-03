@@ -13,6 +13,9 @@ namespace Maroik.Core.Domain.Account;
 /// </summary>
 public sealed class Account : AggregateRoot<string>
 {
+    /// <summary>Admin-facing note set on an account when it is locked out after too many failed login attempts.</summary>
+    private const string AccountLockedMessage = "This account is locked";
+
     /// <summary>
     /// Relative path stored in <see cref="AvatarImagePath"/> for an account that has not uploaded
     /// its own avatar. Single source of truth for the value the persistence and presentation layers
@@ -85,69 +88,6 @@ public sealed class Account : AggregateRoot<string>
     /// </summary>
     public bool MustChangePassword { get; private set; }
 
-    /// <summary>
-    /// Until when new logins are held off after failed attempts (<see cref="LoginThrottlePolicy"/>), or
-    /// <see langword="null"/> when they are not. Cleared by a successful login, a password reset and an unlock.
-    /// </summary>
-    public DateTime? LoginBlockedUntil { get; private set; }
-
-    /// <summary>
-    /// Opaque value every trusted-device cookie of this account carries (<see cref="TrustedDevicePolicy"/>). Replacing
-    /// it stops every device of the account from being trusted at once.
-    /// </summary>
-    public string DeviceStamp { get; private set; } = "";
-
-    /// <summary>Consecutive failed logins made from trusted devices (see <see cref="TrustedDevicePolicy.MaxFailedAttempts"/>).</summary>
-    public long TrustedDeviceLoginAttempt { get; private set; }
-
-    /// <summary>
-    /// True when a device cookie carrying <paramref name="deviceStamp"/>, issued at <paramref name="issuedAt"/>, still
-    /// makes its browser a trusted device of this account at <paramref name="utcNow"/>.
-    /// </summary>
-    public bool TrustsDevice(string? deviceStamp, DateTime issuedAt, DateTime utcNow) =>
-        TokensMatch(DeviceStamp, deviceStamp)
-        && issuedAt <= utcNow
-        && utcNow - issuedAt < TrustedDevicePolicy.Lifetime;
-
-    /// <summary>
-    /// Records a failed login made from a trusted device. At <see cref="TrustedDevicePolicy.MaxFailedAttempts"/> such
-    /// failures every device stops being trusted (a new <see cref="DeviceStamp"/>); returns whether that happened.
-    /// The account's own wait (<see cref="LoginBlockedUntil"/>) is not touched.
-    /// </summary>
-    public bool RecordTrustedDeviceLoginFailure(DateTime utcNow)
-    {
-        TrustedDeviceLoginAttempt++;
-        Updated = utcNow;
-        if (TrustedDeviceLoginAttempt < TrustedDevicePolicy.MaxFailedAttempts)
-            return false;
-
-        DeviceStamp = GenerateSecurityStamp();
-        TrustedDeviceLoginAttempt = 0;
-        return true;
-    }
-
-    /// <summary>When the owner was last mailed that sign-ins to the account failed, or <see langword="null"/> if never.</summary>
-    public DateTime? LastLoginAlertAt { get; private set; }
-
-    /// <summary>
-    /// Whether to mail the owner now that sign-ins failed: true when this failure started the first wait
-    /// (<paramref name="maxAttempts"/> consecutive failures) and no alert went out within
-    /// <see cref="LoginThrottlePolicy.AlertInterval"/>; it then records <paramref name="utcNow"/> as the alert's time.
-    /// </summary>
-    public bool TakeLoginAlert(int maxAttempts, DateTime utcNow)
-    {
-        if (LoginAttempt != Math.Max(1, maxAttempts))
-            return false;
-        if (LastLoginAlertAt is { } last && utcNow - last < LoginThrottlePolicy.AlertInterval)
-            return false;
-
-        LastLoginAlertAt = utcNow;
-        return true;
-    }
-
-    /// <summary>True while <see cref="LoginBlockedUntil"/> is still ahead of <paramref name="utcNow"/>.</summary>
-    public bool IsLoginBlocked(DateTime utcNow) => LoginBlockedUntil > utcNow;
-
     /// <summary>Generates a fresh, unpredictable security stamp value.</summary>
     private static string GenerateSecurityStamp() => Guid.NewGuid().ToString("N");
 
@@ -188,7 +128,6 @@ public sealed class Account : AggregateRoot<string>
         RegistrationToken = registrationToken;
         AgreedServiceTerms = agreedServiceTerms;
         SecurityStamp = GenerateSecurityStamp();
-        DeviceStamp = GenerateSecurityStamp();
         Created = utcNow;
         Updated = utcNow;
     }
@@ -249,11 +188,7 @@ public sealed class Account : AggregateRoot<string>
         string? message,
         bool deleted,
         string securityStamp,
-        bool mustChangePassword,
-        DateTime? loginBlockedUntil = null,
-        string deviceStamp = "",
-        long trustedDeviceLoginAttempt = 0,
-        DateTime? lastLoginAlertAt = null)
+        bool mustChangePassword)
     {
         return new Account(
             Email.FromTrustedSource(email),
@@ -274,13 +209,7 @@ public sealed class Account : AggregateRoot<string>
             message,
             deleted,
             securityStamp,
-            mustChangePassword)
-        {
-            LoginBlockedUntil = loginBlockedUntil,
-            DeviceStamp = deviceStamp,
-            TrustedDeviceLoginAttempt = trustedDeviceLoginAttempt,
-            LastLoginAlertAt = lastLoginAlertAt
-        };
+            mustChangePassword);
     }
 
     /// <summary>
@@ -384,24 +313,20 @@ public sealed class Account : AggregateRoot<string>
     }
 
     /// <summary>
-    /// Increments the failed-login counter and, once it reaches a stage of <see cref="LoginThrottlePolicy"/>
-    /// (<paramref name="maxAttempts"/> failures per stage), holds new logins off for that stage's wait, counted from
-    /// <paramref name="utcNow"/>. The account is never locked by failures: the wait ends by itself.
+    /// Increments the failed-login counter and locks the account when <paramref name="maxAttempts"/> is reached.
     /// </summary>
     public void RecordLoginFailure(int maxAttempts, DateTime utcNow)
     {
         LoginAttempt++;
         Updated = utcNow;
-        if (LoginThrottlePolicy.DelayAfter(LoginAttempt, maxAttempts) is { } delay)
-            LoginBlockedUntil = utcNow + delay;
+        if (LoginAttempt >= maxAttempts)
+            Lock(utcNow, AccountLockedMessage);
     }
 
-    /// <summary>Resets the failed-login counter to zero and ends any wait (called after a successful login).</summary>
+    /// <summary>Resets the failed-login counter to zero (called after a successful login).</summary>
     public void ResetLoginAttempt(DateTime utcNow)
     {
         LoginAttempt = 0;
-        LoginBlockedUntil = null;
-        TrustedDeviceLoginAttempt = 0;
         Updated = utcNow;
     }
 
@@ -432,7 +357,6 @@ public sealed class Account : AggregateRoot<string>
     {
         Locked = false;
         LoginAttempt = 0;
-        LoginBlockedUntil = null;
         Message = null;
         Updated = utcNow;
     }

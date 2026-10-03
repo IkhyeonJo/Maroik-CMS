@@ -111,18 +111,6 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.LoginAttempt).HasComment("LoginAttempt");
             entity.Property(e => e.Message).HasComment("Message");
             entity.Property(e => e.MustChangePassword).HasComment("Forces a password change on next login (set by an admin password override)");
-            entity.Property(e => e.DeviceStamp)
-                .HasDefaultValueSql("(gen_random_uuid())::text")
-                .HasComment("Opaque value every trusted-device cookie of the account carries; replacing it untrusts every device");
-            entity.Property(e => e.TrustedDeviceLoginAttempt)
-                .HasDefaultValueSql("0")
-                .HasComment("Consecutive failed logins made from trusted devices");
-            entity.Property(e => e.LastLoginAlertAt)
-                .HasComment("When the owner was last mailed that sign-ins to the account failed; NULL if never")
-                .HasColumnType("timestamp without time zone");
-            entity.Property(e => e.LoginBlockedUntil)
-                .HasComment("Until when new logins are held off after failed attempts; NULL when they are not")
-                .HasColumnType("timestamp without time zone");
             entity.Property(e => e.Nickname)
                 .HasMaxLength(255)
                 .HasComment("Nickname");
