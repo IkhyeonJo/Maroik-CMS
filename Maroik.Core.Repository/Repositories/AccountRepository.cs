@@ -23,8 +23,7 @@ public class AccountRepository(ApplicationDbContext context)
         e.DefaultMonetaryUnit, e.Locked, e.LoginAttempt, e.EmailConfirmed,
         e.AgreedServiceTerms, e.RegistrationToken, e.ResetPasswordToken,
         e.Created, e.Updated, e.Message, e.Deleted,
-        e.SecurityStamp, e.MustChangePassword, e.LoginBlockedUntil, e.DeviceStamp, e.TrustedDeviceLoginAttempt,
-        e.LastLoginAlertAt);
+        e.SecurityStamp, e.MustChangePassword);
 
     /// <summary>Maps an <see cref="Account"/> domain aggregate to its <see cref="OrmAccount"/> persistence representation.</summary>
     protected override OrmAccount ToEntity(Account a) => new()
@@ -47,11 +46,7 @@ public class AccountRepository(ApplicationDbContext context)
         Message = a.Message,
         Deleted = a.Deleted,
         SecurityStamp = a.SecurityStamp,
-        MustChangePassword = a.MustChangePassword,
-        LoginBlockedUntil = a.LoginBlockedUntil,
-        DeviceStamp = a.DeviceStamp,
-        TrustedDeviceLoginAttempt = a.TrustedDeviceLoginAttempt,
-        LastLoginAlertAt = a.LastLoginAlertAt
+        MustChangePassword = a.MustChangePassword
     };
 
     /// <summary>

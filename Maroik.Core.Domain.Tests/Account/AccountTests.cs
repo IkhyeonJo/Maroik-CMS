@@ -370,225 +370,46 @@ public class AccountTests
 
         Assert.Equal(2, account.LoginAttempt);
         Assert.False(account.Locked);
-        Assert.False(account.IsLoginBlocked(Now));
     }
 
-    /// <summary>
-    /// Reaching the step holds new logins off for the policy's wait and no longer locks the account: the block
-    /// ends by itself, and the security stamp (so every open session) is left alone.
-    /// </summary>
+    /// <summary>Record login failure locks account, when max attempts reached.</summary>
     [Fact]
-    public void RecordLoginFailure_BlocksLoginsForAWhile_InsteadOfLocking_WhenTheStepIsReached()
+    public void RecordLoginFailure_LocksAccount_WhenMaxAttemptsReached()
     {
         var account = ValidAccount();
-        string stamp = account.SecurityStamp;
 
-        for (int i = 0; i < 3; i++)
-            account.RecordLoginFailure(maxAttempts: 3, Now);
+        account.RecordLoginFailure(maxAttempts: 3, Now);
+        account.RecordLoginFailure(maxAttempts: 3, Now);
+        account.RecordLoginFailure(maxAttempts: 3, Now);
 
         Assert.Equal(3, account.LoginAttempt);
-        Assert.False(account.Locked);
-        Assert.Equal(Now.AddMinutes(1), account.LoginBlockedUntil);
-        Assert.True(account.IsLoginBlocked(Now.AddSeconds(59)));
-        Assert.False(account.IsLoginBlocked(Now.AddMinutes(1)));
-        Assert.Equal(stamp, account.SecurityStamp);
+        Assert.True(account.Locked);
     }
 
-    /// <summary>Every further failure restarts the wait from its own time, at the stage the count has reached.</summary>
+    /// <summary>Record login failure locks account, when counter exceeds max.</summary>
     [Fact]
-    public void RecordLoginFailure_RestartsTheWait_AtTheReachedStage()
+    public void RecordLoginFailure_LocksAccount_WhenCounterExceedsMax()
     {
         var account = ValidAccount();
-        for (int i = 0; i < 5; i++)
-            account.RecordLoginFailure(maxAttempts: 3, Now);
 
-        account.RecordLoginFailure(maxAttempts: 3, Now.AddHours(1));
+        account.RecordLoginFailure(maxAttempts: 2, Now);
+        account.RecordLoginFailure(maxAttempts: 2, Now);
+        account.RecordLoginFailure(maxAttempts: 2, Now);
 
-        Assert.Equal(6, account.LoginAttempt);
-        Assert.Equal(Now.AddHours(1).AddMinutes(5), account.LoginBlockedUntil);
+        Assert.True(account.Locked);
     }
 
-    /// <summary>A successful login clears both the counter and the wait.</summary>
+    /// <summary>Reset login attempt sets counter to zero.</summary>
     [Fact]
-    public void ResetLoginAttempt_SetsCounterToZero_AndEndsTheWait()
+    public void ResetLoginAttempt_SetsCounterToZero()
     {
         var account = ValidAccount();
-        for (int i = 0; i < 3; i++)
-            account.RecordLoginFailure(maxAttempts: 3, Now);
+        account.RecordLoginFailure(maxAttempts: 5, Now);
+        account.RecordLoginFailure(maxAttempts: 5, Now);
 
         account.ResetLoginAttempt(Now);
 
         Assert.Equal(0, account.LoginAttempt);
-        Assert.Null(account.LoginBlockedUntil);
-        Assert.False(account.IsLoginBlocked(Now));
-    }
-
-    /// <summary>An unlock (an admin saving the account unlocked, or a password reset) also ends the wait.</summary>
-    [Fact]
-    public void Unlock_EndsTheWait()
-    {
-        var account = ValidAccount();
-        for (int i = 0; i < 3; i++)
-            account.RecordLoginFailure(maxAttempts: 3, Now);
-
-        account.Unlock(Now);
-
-        Assert.Null(account.LoginBlockedUntil);
-        Assert.False(account.IsLoginBlocked(Now));
-    }
-
-    /// <summary>A reconstituted account keeps the stored wait.</summary>
-    [Fact]
-    public void Reconstitute_KeepsTheStoredWait()
-    {
-        DateTime until = Now.AddMinutes(15);
-
-        var account = Maroik.Core.Domain.Account.Account.Reconstitute(
-            "user@example.com", "$2a$13$hash", "User", null, Role.User, "UTC", null, false, 9, true, true,
-            null, null, Now, Now, null, false, "stamp", false, loginBlockedUntil: until);
-
-        Assert.Equal(until, account.LoginBlockedUntil);
-        Assert.True(account.IsLoginBlocked(Now));
-    }
-
-    // -- Login alert -------------------------------------------------------------
-
-    /// <summary>The failure that starts the first wait asks for an alert, once, and records when.</summary>
-    [Fact]
-    public void TakeLoginAlert_IsTrue_WhenTheFirstWaitStarts_AndRecordsIt()
-    {
-        var account = ValidAccount();
-        for (int i = 0; i < 3; i++)
-            account.RecordLoginFailure(maxAttempts: 3, Now);
-
-        Assert.True(account.TakeLoginAlert(maxAttempts: 3, Now));
-        Assert.Equal(Now, account.LastLoginAlertAt);
-        Assert.False(account.TakeLoginAlert(maxAttempts: 3, Now));
-    }
-
-    /// <summary>Failures before the first wait, and the later stages, ask for no alert.</summary>
-    [Theory]
-    [InlineData(2)]
-    [InlineData(6)]
-    [InlineData(9)]
-    public void TakeLoginAlert_IsFalse_OutsideTheStartOfTheFirstWait(int failures)
-    {
-        var account = ValidAccount();
-        for (int i = 0; i < failures; i++)
-            account.RecordLoginFailure(maxAttempts: 3, Now);
-
-        Assert.False(account.TakeLoginAlert(maxAttempts: 3, Now));
-        Assert.Null(account.LastLoginAlertAt);
-    }
-
-    /// <summary>
-    /// A new run of failures (after a successful login reset the count) alerts again only once the alert interval has
-    /// passed since the last alert, so failed logins cannot flood the owner's mailbox.
-    /// </summary>
-    [Fact]
-    public void TakeLoginAlert_AlertsAgain_OnlyAfterTheAlertInterval()
-    {
-        var account = ValidAccount();
-        for (int i = 0; i < 3; i++)
-            account.RecordLoginFailure(maxAttempts: 3, Now);
-        Assert.True(account.TakeLoginAlert(maxAttempts: 3, Now));
-
-        account.ResetLoginAttempt(Now);
-        for (int i = 0; i < 3; i++)
-            account.RecordLoginFailure(maxAttempts: 3, Now.AddHours(23));
-        Assert.False(account.TakeLoginAlert(maxAttempts: 3, Now.AddHours(23)));
-
-        account.ResetLoginAttempt(Now);
-        DateTime later = Now + LoginThrottlePolicy.AlertInterval;
-        for (int i = 0; i < 3; i++)
-            account.RecordLoginFailure(maxAttempts: 3, later);
-        Assert.True(account.TakeLoginAlert(maxAttempts: 3, later));
-        Assert.Equal(later, account.LastLoginAlertAt);
-    }
-
-    // -- Trusted devices --------------------------------------------------------
-
-    /// <summary>A trusted device of <paramref name="failures"/> prior trusted failures, with device stamp "device-stamp".</summary>
-    private static Maroik.Core.Domain.Account.Account WithDevice(long failures = 0) =>
-        Maroik.Core.Domain.Account.Account.Reconstitute(
-            "user@example.com", "$2a$13$hash", "User", null, Role.User, "UTC", null, false, 0, true, true,
-            null, null, Now, Now, null, false, "stamp", false, deviceStamp: "device-stamp", trustedDeviceLoginAttempt: failures);
-
-    /// <summary>A new account gets its own non-empty device stamp, as it gets a security stamp.</summary>
-    [Fact]
-    public void Create_GivesTheAccountADeviceStamp()
-    {
-        var account = ValidAccount();
-
-        Assert.False(string.IsNullOrEmpty(account.DeviceStamp));
-        Assert.NotEqual(ValidAccount().DeviceStamp, account.DeviceStamp);
-    }
-
-    /// <summary>A cookie with the account's stamp, issued within the lifetime, makes its browser trusted.</summary>
-    [Fact]
-    public void TrustsDevice_ForTheCurrentStamp_WithinTheLifetime()
-    {
-        var account = WithDevice();
-
-        Assert.True(account.TrustsDevice("device-stamp", Now, Now));
-        Assert.True(account.TrustsDevice("device-stamp", Now, Now + TrustedDevicePolicy.Lifetime - TimeSpan.FromSeconds(1)));
-    }
-
-    /// <summary>A cookie with another stamp, none, an expired one or one dated in the future is not trusted.</summary>
-    [Theory]
-    [InlineData("other-stamp", 0)]
-    [InlineData("", 0)]
-    [InlineData(null, 0)]
-    [InlineData("device-stamp", 180)]
-    [InlineData("device-stamp", -1)]
-    public void TrustsDevice_IsFalse_ForAnotherStamp_OrOutsideTheLifetime(string? stamp, int daysSinceIssue)
-    {
-        var account = WithDevice();
-
-        Assert.False(account.TrustsDevice(stamp, Now, Now.AddDays(daysSinceIssue)));
-    }
-
-    /// <summary>An account without a device stamp trusts no device, even one carrying an empty stamp.</summary>
-    [Fact]
-    public void TrustsDevice_IsFalse_WhenTheAccountHasNoDeviceStamp()
-    {
-        var account = Maroik.Core.Domain.Account.Account.Reconstitute(
-            "user@example.com", "$2a$13$hash", "User", null, Role.User, "UTC", null, false, 0, true, true,
-            null, null, Now, Now, null, false, "stamp", false);
-
-        Assert.False(account.TrustsDevice("", Now, Now));
-    }
-
-    /// <summary>
-    /// Failed logins from a trusted device are counted apart from the account's own; at the limit every device stops
-    /// being trusted (new stamp) and the count starts over. The account's own counter and wait are left alone.
-    /// </summary>
-    [Fact]
-    public void RecordTrustedDeviceLoginFailure_RevokesEveryDevice_AtTheLimit()
-    {
-        var account = WithDevice(failures: TrustedDevicePolicy.MaxFailedAttempts - 2);
-
-        Assert.False(account.RecordTrustedDeviceLoginFailure(Now));
-        Assert.Equal(TrustedDevicePolicy.MaxFailedAttempts - 1, account.TrustedDeviceLoginAttempt);
-        Assert.True(account.TrustsDevice("device-stamp", Now, Now));
-
-        Assert.True(account.RecordTrustedDeviceLoginFailure(Now));
-        Assert.False(account.TrustsDevice("device-stamp", Now, Now));
-        Assert.False(string.IsNullOrEmpty(account.DeviceStamp));
-        Assert.Equal(0, account.TrustedDeviceLoginAttempt);
-        Assert.Equal(0, account.LoginAttempt);
-        Assert.Null(account.LoginBlockedUntil);
-    }
-
-    /// <summary>A successful login also starts the trusted-device count over.</summary>
-    [Fact]
-    public void ResetLoginAttempt_StartsTheTrustedDeviceCountOver()
-    {
-        var account = WithDevice(failures: 3);
-
-        account.ResetLoginAttempt(Now);
-
-        Assert.Equal(0, account.TrustedDeviceLoginAttempt);
     }
 
     // -- Lock / Unlock --------------------------------------------------------
@@ -603,6 +424,20 @@ public class AccountTests
 
         Assert.True(account.Locked);
         Assert.Equal("spam", account.Message);
+    }
+
+    /// <summary>A lock from failed logins keeps the security stamp: it refuses new logins but ends no session.</summary>
+    [Fact]
+    public void RecordLoginFailure_LockingTheAccount_KeepsTheSecurityStamp()
+    {
+        var account = ValidAccount();
+        string stamp = account.SecurityStamp;
+
+        for (int i = 0; i < 3; i++)
+            account.RecordLoginFailure(maxAttempts: 3, Now);
+
+        Assert.True(account.Locked);
+        Assert.Equal(stamp, account.SecurityStamp);
     }
 
     /// <summary>An administrator's lock also replaces the security stamp, which ends every open session.</summary>

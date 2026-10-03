@@ -137,7 +137,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
         var sut = CreateSut();
 
-        LoginResult result = await sut.LoginAsync("missing@example.com", "any", null, null, TestContext.Current.CancellationToken);
+        LoginResult result = await sut.LoginAsync("missing@example.com", "any", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Contains("wrong", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
@@ -153,7 +153,7 @@ public class AccountServiceTests
         _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(true);
         var sut = CreateSut();
 
-        LoginResult result = await sut.LoginAsync(account.Email.Value, "correct", null, null, TestContext.Current.CancellationToken);
+        LoginResult result = await sut.LoginAsync(account.Email.Value, "correct", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Contains("Deleted", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
@@ -169,7 +169,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
-        LoginResult result = await sut.LoginAsync(account.Email.Value, "wrong", null, null, TestContext.Current.CancellationToken);
+        LoginResult result = await sut.LoginAsync(account.Email.Value, "wrong", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Contains("wrong", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
@@ -191,7 +191,7 @@ public class AccountServiceTests
         _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(passwordIsCorrect);
         var sut = CreateSut();
 
-        LoginResult result = await sut.LoginAsync(account.Email.Value, "whatever", null, null, TestContext.Current.CancellationToken);
+        LoginResult result = await sut.LoginAsync(account.Email.Value, "whatever", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Contains("Locked", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
@@ -212,7 +212,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
-        LoginResult result = await sut.LoginAsync(account.Email.Value, "wrong", null, null, TestContext.Current.CancellationToken);
+        LoginResult result = await sut.LoginAsync(account.Email.Value, "wrong", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Contains("wrong", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
@@ -223,234 +223,26 @@ public class AccountServiceTests
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    /// <summary>
-    /// The failure that reaches the configured step holds new logins off for a while instead of locking the
-    /// account. The reply is still the generic error, so this attempt does not reveal the account exists.
-    /// </summary>
+    /// <summary>Verifies that <c>LoginAsync</c> locks the account when the failed attempt reaches max login attempts.</summary>
     [Fact]
-    public async Task LoginAsync_HoldsLoginsOff_InsteadOfLocking_WhenTheStepIsReached()
+    public async Task LoginAsync_LocksAccount_WhenMaxLoginAttemptsReached()
     {
         var account = ActiveAccount(loginAttempt: _settings.Value.MaxLoginAttempt - 1);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
         _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        var sut = CreateSut();
 
-        LoginResult result = await CreateSut().LoginAsync(account.Email.Value, "wrong", null, null, TestContext.Current.CancellationToken);
+        LoginResult result = await sut.LoginAsync(account.Email.Value, "wrong", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
+        // The wrong-password response is always the generic error — it must not reveal that this
+        // failed attempt just locked the account (that would enumerate valid emails). The account
+        // is still locked in persisted state; the user learns that on their next attempt.
         Assert.Contains("wrong", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
         _accountRepo.Verify(r => r.UpdateEntityAsync(
-            It.Is<Account>(a => !a.Locked && a.LoginAttempt == _settings.Value.MaxLoginAttempt && a.LoginBlockedUntil > Now),
-            It.IsAny<CancellationToken>()), Times.Once);
+            It.Is<Account>(a => a.Locked && a.LoginAttempt == _settings.Value.MaxLoginAttempt), It.IsAny<CancellationToken>()), Times.Once);
     }
-
-    /// <summary>
-    /// While logins are held off, any attempt — right password or wrong — is refused with the "too many attempts"
-    /// reply before the password is even verified, and nothing is written: the guessing pauses, and the wait is
-    /// not extended by the attempts made during it.
-    /// </summary>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task LoginAsync_RefusesWithoutVerifyingThePassword_WhileLoginsAreHeldOff(bool passwordIsCorrect)
-    {
-        var account = BlockedAccount(until: Now.AddMinutes(1));
-        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
-        _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(passwordIsCorrect);
-
-        LoginResult result = await CreateSut().LoginAsync(account.Email.Value, "whatever", null, null, TestContext.Current.CancellationToken);
-
-        Assert.False(result.Success);
-        Assert.Equal("Too many failed sign-in attempts. Please try again later or reset your password.", result.ErrorKey);
-        _passwordService.Verify(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
-        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    /// <summary>Once the wait is over, the right password signs in and clears the counter and the wait.</summary>
-    [Fact]
-    public async Task LoginAsync_SignsIn_OnceTheWaitIsOver()
-    {
-        var account = BlockedAccount(until: Now);
-        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
-        _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(true);
-        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-
-        LoginResult result = await CreateSut().LoginAsync(account.Email.Value, "right", null, null, TestContext.Current.CancellationToken);
-
-        Assert.True(result.Success);
-        Assert.Equal(0, account.LoginAttempt);
-        Assert.Null(account.LoginBlockedUntil);
-    }
-
-    // -- Login alert -------------------------------------------------------------
-
-    /// <summary>The localized alert the tests hand to LoginAsync.</summary>
-    private static readonly EmailTemplate _loginAlert = new() { Subject = "alert-subject", Title = "t", Content0 = "c0", Content1 = "c1" };
-
-    /// <summary>Arranges the alert body to render and records, in <paramref name="steps"/>, the commit and the publish.</summary>
-    private List<string> RecordCommitAndPublish(List<SendEmailMessage> published)
-    {
-        var steps = new List<string>();
-        _mailClient.Setup(m => m.GetMailLoginAlertBody("t", "c0", "c1", It.IsAny<string>())).Returns("alert-body");
-        _unitOfWork.Setup(u => u.CommitAsync(It.IsAny<CancellationToken>())).Callback(() => steps.Add("commit")).Returns(Task.CompletedTask);
-        _emailPublisher.Setup(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()))
-            .Callback<SendEmailMessage, CancellationToken>((m, _) => { steps.Add("publish"); published.Add(m); })
-            .Returns(Task.CompletedTask);
-        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
-        return steps;
-    }
-
-    /// <summary>
-    /// The wrong password that starts the account's first wait mails the owner the alert — after the commit, so the
-    /// row lock is not held while the queue is reached — and records when, so the next one waits a day.
-    /// </summary>
-    [Fact]
-    public async Task LoginAsync_MailsTheOwnerTheAlert_AfterTheCommit_WhenTheFirstWaitStarts()
-    {
-        var account = ActiveAccount(loginAttempt: _settings.Value.MaxLoginAttempt - 1);
-        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
-        var published = new List<SendEmailMessage>();
-        List<string> steps = RecordCommitAndPublish(published);
-
-        LoginResult result = await CreateSut().LoginAsync(account.Email.Value, "wrong", null, _loginAlert, TestContext.Current.CancellationToken);
-
-        Assert.False(result.Success);
-        SendEmailMessage mail = Assert.Single(published);
-        Assert.Equal(account.Email.Value, mail.ToEmail);
-        Assert.Equal("alert-subject", mail.Subject);
-        Assert.Equal("alert-body", mail.Body);
-        Assert.Equal(["commit", "publish"], steps);
-        Assert.Equal(Now, account.LastLoginAlertAt);
-    }
-
-    /// <summary>Other wrong passwords — before the first wait, or at a later stage — mail nothing.</summary>
-    [Theory]
-    [InlineData(0)]
-    [InlineData(1)]
-    public async Task LoginAsync_MailsNoAlert_OutsideTheStartOfTheFirstWait(int stagesPastTheFirst)
-    {
-        int before = stagesPastTheFirst == 0 ? 0 : _settings.Value.MaxLoginAttempt * 2 - 1;
-        var account = ActiveAccount(loginAttempt: before);
-        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
-        var published = new List<SendEmailMessage>();
-        RecordCommitAndPublish(published);
-
-        await CreateSut().LoginAsync(account.Email.Value, "wrong", null, _loginAlert, TestContext.Current.CancellationToken);
-
-        Assert.Empty(published);
-    }
-
-    /// <summary>A wrong password from a trusted device mails nothing: it is the owner's own device.</summary>
-    [Fact]
-    public async Task LoginAsync_MailsNoAlert_ForAWrongPasswordFromATrustedDevice()
-    {
-        var account = Account.Reconstitute("blocked@example.com", "$2a$13$placeholder", "User", null, Role.User, "UTC", null,
-            locked: false, loginAttempt: _settings.Value.MaxLoginAttempt - 1, emailConfirmed: true, agreedServiceTerms: true,
-            registrationToken: null, resetPasswordToken: null, created: Now, updated: Now, message: null, deleted: false,
-            securityStamp: "stamp", mustChangePassword: false, deviceStamp: "device-stamp");
-        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
-        var published = new List<SendEmailMessage>();
-        RecordCommitAndPublish(published);
-
-        await CreateSut().LoginAsync(account.Email.Value, "wrong", Claim(), _loginAlert, TestContext.Current.CancellationToken);
-
-        Assert.Empty(published);
-    }
-
-    /// <summary>A queue that cannot take the alert does not change the reply: the generic wrong-password error.</summary>
-    [Fact]
-    public async Task LoginAsync_StillAnswersTheGenericError_WhenTheAlertCannotBeQueued()
-    {
-        var account = ActiveAccount(loginAttempt: _settings.Value.MaxLoginAttempt - 1);
-        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
-        RecordCommitAndPublish([]);
-        _emailPublisher.Setup(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("RabbitMQ unreachable"));
-
-        LoginResult result = await CreateSut().LoginAsync(account.Email.Value, "wrong", null, _loginAlert, TestContext.Current.CancellationToken);
-
-        Assert.False(result.Success);
-        Assert.Contains("wrong", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>A held-off account whose trusted devices carry the stamp "device-stamp".</summary>
-    private static Account BlockedAccountWithDevice(long trustedFailures = 0) =>
-        Account.Reconstitute("blocked@example.com", "$2a$13$placeholder", "User", null, Role.User, "UTC", null,
-            locked: false, loginAttempt: 3, emailConfirmed: true, agreedServiceTerms: true, registrationToken: null,
-            resetPasswordToken: null, created: DateTime.UtcNow, updated: DateTime.UtcNow, message: null, deleted: false,
-            securityStamp: "stamp", mustChangePassword: false, loginBlockedUntil: Now.AddHours(1),
-            deviceStamp: "device-stamp", trustedDeviceLoginAttempt: trustedFailures);
-
-    /// <summary>A cookie claim for blocked@example.com with <paramref name="stamp"/>, issued a day ago.</summary>
-    private static TrustedDeviceClaim Claim(string stamp = "device-stamp", string email = "blocked@example.com") =>
-        new(email, stamp, Now.AddDays(-1));
-
-    /// <summary>
-    /// A trusted device of the account is not held off: with the right password it signs in during the wait (which
-    /// the success clears), and the account handed back carries the device stamp for the next cookie.
-    /// </summary>
-    [Fact]
-    public async Task LoginAsync_LetsATrustedDeviceIn_WhileLoginsAreHeldOff()
-    {
-        var account = BlockedAccountWithDevice();
-        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
-        _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(true);
-        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-
-        LoginResult result = await CreateSut().LoginAsync(account.Email.Value, "right", Claim(), null, TestContext.Current.CancellationToken);
-
-        Assert.True(result.Success);
-        Assert.Equal("device-stamp", result.Account!.DeviceStamp);
-        Assert.Null(account.LoginBlockedUntil);
-    }
-
-    /// <summary>
-    /// A wrong password from a trusted device is counted apart: the account's own counter and wait stay as they were
-    /// (the owner's mistakes on their own device do not extend a stranger's wait), and the reply is the generic one.
-    /// </summary>
-    [Fact]
-    public async Task LoginAsync_CountsAWrongPasswordFromATrustedDevice_Apart()
-    {
-        var account = BlockedAccountWithDevice();
-        DateTime? until = account.LoginBlockedUntil;
-        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
-        _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
-        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-
-        LoginResult result = await CreateSut().LoginAsync(account.Email.Value, "wrong", Claim(), null, TestContext.Current.CancellationToken);
-
-        Assert.False(result.Success);
-        Assert.Contains("wrong", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(1, account.TrustedDeviceLoginAttempt);
-        Assert.Equal(3, account.LoginAttempt);
-        Assert.Equal(until, account.LoginBlockedUntil);
-        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    /// <summary>A cookie issued to another account, or carrying a stamp the account no longer has, is not trusted.</summary>
-    [Theory]
-    [InlineData("device-stamp", "someone-else@example.com")]
-    [InlineData("revoked-stamp", "blocked@example.com")]
-    public async Task LoginAsync_IgnoresAClaim_ForAnotherAccountOrAnOldStamp(string stamp, string email)
-    {
-        var account = BlockedAccountWithDevice();
-        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
-        _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(true);
-
-        LoginResult result = await CreateSut().LoginAsync(account.Email.Value, "right", Claim(stamp, email), null, TestContext.Current.CancellationToken);
-
-        Assert.False(result.Success);
-        Assert.Equal("Too many failed sign-in attempts. Please try again later or reset your password.", result.ErrorKey);
-    }
-
-    /// <summary>An active account whose logins are held off until <paramref name="until"/>.</summary>
-    private static Account BlockedAccount(DateTime until) =>
-        Account.Reconstitute("blocked@example.com", "$2a$13$placeholder", "User", null, Role.User, "UTC", null,
-            locked: false, loginAttempt: 3, emailConfirmed: true, agreedServiceTerms: true, registrationToken: null,
-            resetPasswordToken: null, created: DateTime.UtcNow, updated: DateTime.UtcNow, message: null, deleted: false,
-            securityStamp: "stamp", mustChangePassword: false, loginBlockedUntil: until);
 
     /// <summary>Verifies that <c>LoginAsync</c> returns fail when email not confirmed.</summary>
     [Fact]
@@ -462,7 +254,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
-        LoginResult result = await sut.LoginAsync(account.Email.Value, "correct", null, null, TestContext.Current.CancellationToken);
+        LoginResult result = await sut.LoginAsync(account.Email.Value, "correct", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Contains("Email verification", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
@@ -478,7 +270,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
-        LoginResult result = await sut.LoginAsync(account.Email.Value, "correct", null, null, TestContext.Current.CancellationToken);
+        LoginResult result = await sut.LoginAsync(account.Email.Value, "correct", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Contains("Service Terms", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
@@ -494,7 +286,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
-        LoginResult result = await sut.LoginAsync(account.Email.Value, "correct", null, null, TestContext.Current.CancellationToken);
+        LoginResult result = await sut.LoginAsync(account.Email.Value, "correct", TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.NotNull(result.Account);
@@ -1383,7 +1175,7 @@ public class AccountServiceTests
             .ThrowsAsync(new InvalidOperationException("db down"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            CreateSut().LoginAsync("user@example.com", "pw", null, null, TestContext.Current.CancellationToken));
+            CreateSut().LoginAsync("user@example.com", "pw", TestContext.Current.CancellationToken));
 
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -2023,7 +1815,7 @@ public class AccountServiceTests
         const string typed = " User@Example.com\t";
         var sut = CreateSut();
 
-        await sut.LoginAsync(typed, "pw", null, null, TestContext.Current.CancellationToken);
+        await sut.LoginAsync(typed, "pw", TestContext.Current.CancellationToken);
         await sut.ForgotPasswordAsync(typed, _emailTemplate, TestContext.Current.CancellationToken);
         await sut.ResendConfirmationEmailAsync(typed, _emailTemplate, TestContext.Current.CancellationToken);
         await sut.RegisterAsync(new RegisterAccountRequest { Email = typed, PlainPassword = "weak" }, _emailTemplate, TestContext.Current.CancellationToken);

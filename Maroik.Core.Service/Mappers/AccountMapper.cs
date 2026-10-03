@@ -25,7 +25,6 @@ internal static class AccountMapper
         target.Deleted = account.Deleted;
         target.SecurityStamp = account.SecurityStamp;
         target.MustChangePassword = account.MustChangePassword;
-        target.DeviceStamp = account.DeviceStamp;
     }
 
     /// <summary>Converts an <see cref="Account"/> domain object to its corresponding <see cref="AccountResponse"/> DTO.</summary>

@@ -93,20 +93,6 @@ public class MailClientTests
         Assert.DoesNotContain("ioAccount/ConfirmEmail", body);
     }
 
-    // -- GetMailLoginAlertBody ---------------------------------------------------
-
-    /// <summary>The sign-in alert carries its texts (HTML-encoded) and a link to the forgot-password page.</summary>
-    [Fact]
-    public void GetMailLoginAlertBody_ContainsTheTexts_AndLinksToTheForgotPasswordPage()
-    {
-        string body = _sut.GetMailLoginAlertBody("Alert <b>title</b>", "Paused", "Copy the link", "https://example.com/");
-
-        Assert.Contains("Alert &lt;b&gt;title&lt;/b&gt;", body);
-        Assert.Contains("Paused", body);
-        Assert.Contains("Copy the link", body);
-        Assert.Contains("href='https://example.com/Account/ForgotPassword'", body);
-    }
-
     // -- GetMailResetPasswordBody ---------------------------------------------
 
     /// <summary>Verifies that <c>GetMailResetPasswordBody</c> contains title and contents.</summary>

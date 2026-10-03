@@ -101,8 +101,7 @@ try
     builder.Services.AddApplicationServices();
     builder.Services
         .AddScoped<Maroik.Website.Contracts.IExcelExportService, Maroik.Website.Services.ExcelExportService>()
-        .AddScoped<Maroik.Website.Contracts.ISessionService, Maroik.Website.Services.SessionService>()
-        .AddSingleton<Maroik.Website.Contracts.ITrustedDeviceCookie, Maroik.Website.Services.TrustedDeviceCookie>();
+        .AddScoped<Maroik.Website.Contracts.ISessionService, Maroik.Website.Services.SessionService>();
 
     // Registered here (before Build()) so it goes through DI like the other services. ConfigureKestrel
     // below must also run before Build() - the service collection becomes read-only once Build() runs.

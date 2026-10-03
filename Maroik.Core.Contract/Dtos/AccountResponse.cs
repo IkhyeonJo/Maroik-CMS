@@ -59,7 +59,4 @@ public class AccountResponse
 
     /// <summary>When true, the account must set a new password before it can do anything else.</summary>
     public bool MustChangePassword { get; set; }
-
-    /// <summary>The account's device stamp, written into the trusted-device cookie a successful sign-in issues.</summary>
-    public string? DeviceStamp { get; set; }
 }

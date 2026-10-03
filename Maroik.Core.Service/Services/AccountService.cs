@@ -51,7 +51,7 @@ public class AccountService(
     }
 
     /// <inheritdoc />
-    public async Task<LoginResult> LoginAsync(string email, string password, TrustedDeviceClaim? device, EmailTemplate? loginAlert, CancellationToken ct = default)
+    public async Task<LoginResult> LoginAsync(string email, string password, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         // Matched in the stored form: a mobile autocomplete's trailing space must not fail the login.
@@ -80,32 +80,19 @@ public class AccountService(
                 return LoginResult.Fail(genericLoginError);
             }
 
-            // An account an administrator locked is refused BEFORE the password is looked at, whatever
-            // was typed: verifying first would turn the "Locked" reply into a password oracle. Refusing up
-            // front (no verification, no counter write, no BCrypt cost) leaves the lock lifted only by a
-            // password reset or an admin. What this reveals is that the address exists and is locked;
-            // existence is already public (RegisterAsync answers "already exists").
+            // A locked account is refused BEFORE the password is looked at, whatever was typed. If the
+            // password were verified first, the lock would stop nothing: guessing could go on
+            // indefinitely, and the one correct guess would be confirmed by the "Locked" reply — a
+            // password oracle. Refusing up front ends the guessing (no verification, no counter
+            // write, no BCrypt cost) and leaves the lock lifted only by a password reset or an admin.
+            // What this reveals is that the address exists and is locked; existence is already public
+            // (RegisterAsync answers "already exists"), and anyone can lock an account with a few wrong
+            // guesses anyway, so nothing new is exposed.
             if (account.Locked)
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Login refused: account is locked for {Email}", email);
                 return LoginResult.Fail("Your Account is Locked, Please reset your password by clicking Forgot password Button");
-            }
-
-            // Logins held off after failed attempts (LoginThrottlePolicy) are refused the same way — before the
-            // password is looked at, and without a write, so attempts made during the wait neither confirm a
-            // guess nor extend the wait. The wait ends by itself; a password reset ends it at once.
-            // A browser holding a device cookie the account still trusts (TrustedDevicePolicy) is not held off:
-            // the owner keeps signing in on the devices they use, however many wrong guesses others make.
-            bool trustedDevice = device != null
-                && string.Equals(Email.NormalizeForLookup(device.Email), email, StringComparison.Ordinal)
-                && account.TrustsDevice(device.DeviceStamp, device.IssuedAt, utcNow);
-
-            if (!trustedDevice && account.IsLoginBlocked(utcNow))
-            {
-                await unitOfWork.RollbackAsync(ct);
-                logger.LogWarning("Login refused: too many failed attempts for {Email} (held off until {BlockedUntil})", email, account.LoginBlockedUntil);
-                return LoginResult.Fail("Too many failed sign-in attempts. Please try again later or reset your password.");
             }
 
             // For every other state the password is verified FIRST. The remaining account-state
@@ -114,30 +101,12 @@ public class AccountService(
             // account is in — every wrong guess returns the same generic error.
             if (!passwordService.VerifyPassword(password, account.HashedPassword))
             {
-                if (trustedDevice)
-                {
-                    // Counted apart from the account's own failures, so the owner's typos on their own device
-                    // never extend a wait; enough of them untrust every device (a stolen cookie cannot guess on).
-                    bool untrusted = account.RecordTrustedDeviceLoginFailure(utcNow);
-                    await accountRepository.UpdateEntityAsync(account, ct);
-                    await unitOfWork.CommitAsync(ct);
-                    logger.LogWarning("Login failed: wrong password for {Email} from a trusted device (failed attempts: {TrustedDeviceLoginAttempts})", email, account.TrustedDeviceLoginAttempt);
-                    if (untrusted)
-                        logger.LogWarning("All trusted devices of {Email} are no longer trusted after {MaxAttempts} failed logins from them", email, TrustedDevicePolicy.MaxFailedAttempts);
-                    return LoginResult.Fail(genericLoginError);
-                }
-
                 account.RecordLoginFailure(settings.Value.MaxLoginAttempt, utcNow);
-                bool alertOwner = loginAlert != null && account.TakeLoginAlert(settings.Value.MaxLoginAttempt, utcNow);
                 await accountRepository.UpdateEntityAsync(account, ct);
                 await unitOfWork.CommitAsync(ct);
                 logger.LogWarning("Login failed: wrong password for {Email} (failed attempts: {LoginAttempts})", email, account.LoginAttempt);
-                if (account.IsLoginBlocked(utcNow))
-                    logger.LogWarning("Logins held off for {Email} until {BlockedUntil} after {LoginAttempts} failed attempts", email, account.LoginBlockedUntil, account.LoginAttempt);
-                // After the commit, so the row lock is not held while the queue is reached. A queue that cannot
-                // take it is logged by PublishMailAsync and changes nothing in the reply.
-                if (alertOwner)
-                    await SendLoginAlertAsync(account.Email.Value, loginAlert!, ct);
+                if (account.Locked)
+                    logger.LogWarning("Account {Email} locked after {LoginAttempts} failed login attempts", email, account.LoginAttempt);
                 return LoginResult.Fail(genericLoginError);
             }
 
@@ -855,17 +824,6 @@ public class AccountService(
         }
 
         return RegisterResult.Ok(showResendEmail: true, email: account.Email.Value, repeat: repeat);
-    }
-
-    /// <summary>
-    /// Queues the "several sign-ins failed" alert (<paramref name="template"/>, linking to the forgot-password page)
-    /// to <paramref name="to"/>, the owner of the account whose first login wait just started.
-    /// </summary>
-    private async Task SendLoginAlertAsync(string to, EmailTemplate template, CancellationToken ct)
-    {
-        string body = mailClient.GetMailLoginAlertBody(template.Title, template.Content0, template.Content1, settings.Value.DomainName ?? "");
-        if (await PublishMailAsync(to, template.Subject, body, ct))
-            logger.LogInformation("Sign-in alert queued for {Email}", to);
     }
 
     /// <summary>
