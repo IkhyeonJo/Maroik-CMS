@@ -172,4 +172,21 @@ public class AccountBookViewModelMapperTests
         DateTime utc = vm.ToCreatedUtc("Asia/Seoul");
         Assert.Equal(new DateTime(2026, 1, 15, 0, 30, 0, DateTimeKind.Utc), utc);
     }
+
+    // ── PopulateTimeData ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The date/time pickers' defaults are the given instant shown in the viewer's time zone, not the machine's clock:
+    /// 2031-02-03 23:50:07 UTC is 2031-02-04 08:50:07 in Asia/Seoul.
+    /// </summary>
+    [Fact]
+    public void PopulateTimeData_UsesTheGivenInstantInTheViewersTimeZone()
+    {
+        var vm = new AccountBookPageViewModel();
+
+        vm.PopulateTimeData("Asia/Seoul", new DateTime(2031, 2, 3, 23, 50, 7, DateTimeKind.Utc));
+
+        Assert.Equal("2031-02-04", vm.CurrentDate);
+        Assert.Equal((8, 50, 7), (vm.CurrentHour, vm.CurrentMinute, vm.CurrentSecond));
+    }
 }

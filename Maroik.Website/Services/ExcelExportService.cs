@@ -17,9 +17,10 @@ namespace Maroik.Website.Services;
 /// <summary>
 /// Builds OpenXML Excel workbooks for the grids' Excel export (account book, notices, accounts, menu).
 /// Localization comes from the caller's <see cref="Func{T,TResult}"/> and timestamps are converted to the
-/// caller-supplied time zone, so this class holds no localizer or session state of its own.
+/// caller-supplied time zone, so this class holds no localizer or session state of its own. The fixed
+/// income / expenditure exports judge their notice and expiry flags against <paramref name="timeProvider"/>.
 /// </summary>
-public class ExcelExportService : IExcelExportService
+public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
 {
     /// <inheritdoc />
     public MemoryStream CreateAssetExcel(
@@ -150,7 +151,7 @@ public class ExcelExportService : IExcelExportService
     {
         var assetList = assets.ToList();
         var ordered = items
-            .ToDisplayViewModels(assetList, localize, timeZoneIanaId, noticeWindowDays)
+            .ToDisplayViewModels(assetList, localize, timeZoneIanaId, noticeWindowDays, timeProvider.GetUtcNow().UtcDateTime)
             .OrderByDescending(a => a.Expired).ThenByDescending(a => a.Noticed)
             .ThenByDescending(a => a.Unpunctuality).ThenByDescending(a => a.Created)
             .ThenByDescending(a => a.Updated).ToList();
@@ -204,7 +205,7 @@ public class ExcelExportService : IExcelExportService
     {
         var assetList = assets.ToList();
         var ordered = items
-            .ToDisplayViewModels(assetList, localize, timeZoneIanaId, noticeWindowDays)
+            .ToDisplayViewModels(assetList, localize, timeZoneIanaId, noticeWindowDays, timeProvider.GetUtcNow().UtcDateTime)
             .OrderByDescending(a => a.Expired).ThenByDescending(a => a.Noticed)
             .ThenByDescending(a => a.Unpunctuality).ThenByDescending(a => a.Created)
             .ThenByDescending(a => a.Updated).ToList();

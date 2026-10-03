@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Maroik.Website.Tests.Filters;
@@ -38,9 +39,12 @@ public class ViewBagPopulatorFilterTests
         NoticeMaturityDateDay = 7
     });
 
+    /// <summary>The clock the filter reads; set to a fixed instant far from the real one.</summary>
+    private readonly FakeTimeProvider _timeProvider = new(new DateTimeOffset(2041, 12, 31, 16, 0, 0, TimeSpan.Zero));
+
     /// <summary>The filter under test over the mocked dependencies.</summary>
     private ViewBagPopulatorFilter CreateSut() =>
-        new(_accountService.Object, _dashboardService.Object, _timeZoneCatalogService.Object, _serverSettings, _sessionService.Object);
+        new(_accountService.Object, _dashboardService.Object, _timeZoneCatalogService.Object, _serverSettings, _sessionService.Object, _timeProvider);
 
     /// <summary>An action context for a request to <paramref name="path"/>, optionally with a culture and route names.</summary>
     private static (ActionExecutingContext context, Controller controller) BuildContext(
@@ -199,6 +203,26 @@ public class ViewBagPopulatorFilterTests
         AccountResponse account = controller.ViewBag.LoggedInAccount;
         Assert.Equal("TestUser", account.Nickname);
         Assert.Equal(Role.User, account.Role);
+    }
+
+    /// <summary>
+    /// The footer's copyright year is the injected clock's year in the viewer's time zone: 2041-12-31 16:00 UTC
+    /// is already 2042 in Asia/Seoul (UTC+9).
+    /// </summary>
+    [Fact]
+    public async Task OnActionExecutionAsync_SetsCopyrightYear_FromTheClockInTheViewersTimeZone()
+    {
+        var account = new AccountResponse { Email = "user@test.com", Role = Role.User, TimeZoneIanaId = "Asia/Seoul" };
+        _sessionService.Setup(s => s.GetAccount()).Returns(account);
+        _dashboardService
+            .Setup(d => d.GetNoticeCountsAsync("user@test.com", 7, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NotificationDto());
+        var (context, controller) = BuildContext();
+        context.HttpContext.Items[Constants.HttpContextItemKeys.LoggedInAccount] = account;
+
+        await CreateSut().OnActionExecutionAsync(context, EmptyNext());
+
+        Assert.Equal(2042, (int)controller.ViewBag.CopyrightYear);
     }
 
     /// <summary>

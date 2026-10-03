@@ -59,17 +59,21 @@ public static class NoticeViewModelMapper
 
     extension(IEnumerable<FixedIncomeResponse> items)
     {
-        /// <summary>Maps all <see cref="FixedIncomeResponse"/> items to display view models.</summary>
+        /// <summary>
+        /// Maps all <see cref="FixedIncomeResponse"/> items to display view models; their notice / expiry flags are judged
+        /// against <paramref name="utcNow"/> (the request's clock reading) as a date in <paramref name="timeZoneIanaId"/>.
+        /// </summary>
         public List<FixedIncomeOutputViewModel> ToDisplayViewModels(
             IEnumerable<AssetResponse> assets,
             Func<string, string> localize,
             string timeZoneIanaId,
-            int noticeWindowDays)
+            int noticeWindowDays,
+            DateTime utcNow)
         {
             var currencyByProduct = assets
                 .GroupBy(a => a.ProductName ?? "")
                 .ToDictionary(g => g.Key, g => g.Last().MonetaryUnit);
-            var today = DateTime.UtcNow.ConvertTimeByTimeZoneIanaId(timeZoneIanaId).Date;
+            var today = utcNow.ConvertTimeByTimeZoneIanaId(timeZoneIanaId).Date;
             return
             [
                 .. items.Select(i => i.ToDisplayViewModel(currencyByProduct, localize, timeZoneIanaId, today, noticeWindowDays))
@@ -109,17 +113,21 @@ public static class NoticeViewModelMapper
 
     extension(IEnumerable<FixedExpenditureResponse> items)
     {
-        /// <summary>Maps all <see cref="FixedExpenditureResponse"/> items to display view models.</summary>
+        /// <summary>
+        /// Maps all <see cref="FixedExpenditureResponse"/> items to display view models; their notice / expiry flags are judged
+        /// against <paramref name="utcNow"/> (the request's clock reading) as a date in <paramref name="timeZoneIanaId"/>.
+        /// </summary>
         public List<FixedExpenditureOutputViewModel> ToDisplayViewModels(
             IEnumerable<AssetResponse> assets,
             Func<string, string> localize,
             string timeZoneIanaId,
-            int noticeWindowDays)
+            int noticeWindowDays,
+            DateTime utcNow)
         {
             var currencyByProduct = assets
                 .GroupBy(a => a.ProductName ?? "")
                 .ToDictionary(g => g.Key, g => g.Last().MonetaryUnit);
-            var today = DateTime.UtcNow.ConvertTimeByTimeZoneIanaId(timeZoneIanaId).Date;
+            var today = utcNow.ConvertTimeByTimeZoneIanaId(timeZoneIanaId).Date;
             return
             [
                 .. items.Select(i => i.ToDisplayViewModel(currencyByProduct, localize, timeZoneIanaId, today, noticeWindowDays))

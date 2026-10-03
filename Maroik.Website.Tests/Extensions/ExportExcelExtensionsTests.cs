@@ -10,7 +10,7 @@ public class ExportExcelExtensionsTests
     [Fact]
     public void ToExcelFileName_StartsWithPrefixAndEndsWithXlsxExtension()
     {
-        string fileName = "AccountBook".ToExcelFileName("UTC");
+        string fileName = "AccountBook".ToExcelFileName("UTC", DateTime.UtcNow);
 
         Assert.StartsWith("AccountBook-", fileName);
         Assert.EndsWith(".xlsx", fileName);
@@ -20,11 +20,23 @@ public class ExportExcelExtensionsTests
     [Fact]
     public void ToExcelFileName_MatchesTimestampPattern()
     {
-        string fileName = "Menu".ToExcelFileName("UTC");
+        string fileName = "Menu".ToExcelFileName("UTC", DateTime.UtcNow);
 
  #pragma warning disable SYSLIB1045
         Assert.Matches(new Regex(@"^Menu-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-\d{3}\.xlsx$"), fileName);
  #pragma warning restore SYSLIB1045
+    }
+
+    /// <summary>
+    /// The timestamp is the given instant (not the machine's clock) shown in the viewer's time zone, to the millisecond:
+    /// 2031-02-03 04:05:06.789 UTC is 13:05:06.789 in Asia/Seoul.
+    /// </summary>
+    [Fact]
+    public void ToExcelFileName_StampsTheGivenInstantInTheViewersTimeZone()
+    {
+        string fileName = "Menu".ToExcelFileName("Asia/Seoul", new DateTime(2031, 2, 3, 4, 5, 6, 789, DateTimeKind.Utc));
+
+        Assert.Equal("Menu-2031-02-03-13-05-06-789.xlsx", fileName);
     }
 
     /// <summary>
@@ -40,7 +52,7 @@ public class ExportExcelExtensionsTests
         char[] invalidChars = Path.GetInvalidFileNameChars();
         string prefix = "Bad" + new string(invalidChars) + "Name";
 
-        string fileName = prefix.ToExcelFileName("UTC");
+        string fileName = prefix.ToExcelFileName("UTC", DateTime.UtcNow);
 
         Assert.StartsWith("BadName-", fileName);
         foreach (char c in invalidChars)

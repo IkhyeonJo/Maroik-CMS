@@ -53,6 +53,8 @@ public class ManagementController : Controller
     private readonly IOptions<ServerSetting> _serverSettings;
     /// <summary>Resource-key → localized text delegate handed to the mappers and the Excel export.</summary>
     private readonly Func<string, string> _localize;
+    /// <summary>The clock the export file name's timestamp is read from.</summary>
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>Initializes a new instance of <see cref="ManagementController"/> with the supplied dependencies.</summary>
     public ManagementController(
@@ -67,7 +69,8 @@ public class ManagementController : Controller
         IOptions<ServerSetting> serverSettings,
         ISessionService sessionService,
         IExcelExportService excelExportService,
-        IDistributedCache cache)
+        IDistributedCache cache,
+        TimeProvider timeProvider)
     {
         _rsa = rsa;
         _sessionService = sessionService;
@@ -82,6 +85,7 @@ public class ManagementController : Controller
         _cache = cache;
         _serverSettings = serverSettings;
         _localize = key => _localizer[key].Value;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -457,7 +461,7 @@ public class ManagementController : Controller
         AccountResponse account = ViewBag.LoggedInAccount;
         var accounts = await _managementAccountService.GetAllAccountsAsync(HttpContext.RequestAborted);
         var stream = _excelExportService.CreateAccountExcel(accounts, _localize, account.TimeZoneIanaId!);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
 
@@ -833,7 +837,7 @@ public class ManagementController : Controller
         var categories = await _menuService.GetAllCategoriesAsync(HttpContext.RequestAborted);
         var subCats = await _menuService.GetAllSubCategoriesAsync(HttpContext.RequestAborted);
         var stream = _excelExportService.CreateMenuExcel(categories, subCats, _localize);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
 

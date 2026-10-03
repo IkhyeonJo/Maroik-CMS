@@ -141,11 +141,12 @@ public static class CalendarViewModelMapper
     {
         /// <summary>
         /// Fills the current-date/time fields and the time-of-day option list (<c>TimeIntervals</c>,
-        /// <c>CurrentInterval</c>) for the viewer's current local time.
+        /// <c>CurrentInterval</c>) for the viewer's current local time: <paramref name="utcNow"/> (the request's
+        /// clock reading) shown in <paramref name="timeZoneIanaId"/>.
         /// </summary>
-        public void PopulateTimeData(string timeZoneIanaId)
+        public void PopulateTimeData(string timeZoneIanaId, DateTime utcNow)
         {
-            DateTime ct = DateTime.UtcNow.ConvertTimeByTimeZoneIanaId(timeZoneIanaId);
+            DateTime ct = utcNow.ConvertTimeByTimeZoneIanaId(timeZoneIanaId);
             vm.CurrentDate = ct.ToString("yyyy-MM-dd");
             vm.CurrentHour = ct.Hour;
             vm.CurrentMinute = ct.Minute;
