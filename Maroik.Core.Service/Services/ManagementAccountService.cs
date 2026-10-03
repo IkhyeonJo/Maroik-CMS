@@ -209,8 +209,12 @@ public class ManagementAccountService(
             account.ChangeRole(roleResult.Value, utcNow);
         }
 
-        if (request.Locked)
+        // Locking an unlocked account is the admin's sanction and ends its sessions; re-saving an account that is
+        // already locked (e.g. by failed logins) keeps them, as that lock only refuses new logins.
+        if (request.Locked && account.Locked)
             account.Lock(utcNow);
+        else if (request.Locked)
+            account.LockAndEndSessions(utcNow);
         else
             account.Unlock(utcNow);
 

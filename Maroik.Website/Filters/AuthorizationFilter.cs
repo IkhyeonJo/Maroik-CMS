@@ -225,14 +225,15 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
             loggedInAccount = await accountService.GetAccountByEmailAsync(sessionAccount.Email ?? "", context.HttpContext.RequestAborted); // Re-check account state from DB so that Locked/Deleted/Role changes take effect on the next request, not only at login
 
             // SecurityStamp mismatch means the password changed (self-service, forgot-password
-            // reset, or admin override) after this session was minted — the session was captured
-            // by value at login, so it never sees the new stamp on its own.
-            if (loggedInAccount == null || loggedInAccount.Deleted || loggedInAccount.Locked ||
+            // reset, or admin override) or an administrator locked the account after this session was
+            // minted — the session was captured by value at login, so it never sees the new stamp on its
+            // own. A lock by itself does NOT end a session: a lock from failed logins only refuses new
+            // logins, or anyone who knows the address could throw its owner out by guessing wrong.
+            if (loggedInAccount == null || loggedInAccount.Deleted ||
                 loggedInAccount.SecurityStamp != sessionAccount.SecurityStamp)
             {
                 string reason = loggedInAccount == null ? "account no longer exists"
                     : loggedInAccount.Deleted ? "account is deleted"
-                    : loggedInAccount.Locked ? "account is locked"
                     : "security stamp changed";
                 logger.LogWarning("Session invalidated for {Email}: {Reason}", sessionAccount.Email, reason);
                 sessionService.RemoveAccount(); // Invalidate this session immediately

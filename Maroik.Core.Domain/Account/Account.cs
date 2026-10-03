@@ -340,6 +340,18 @@ public sealed class Account : AggregateRoot<string>
         Updated = utcNow;
     }
 
+    /// <summary>
+    /// An administrator's lock: locks the account like <see cref="Lock"/> and also replaces the
+    /// <see cref="SecurityStamp"/>, so every session the account has open ends on its next request. A lock from
+    /// failed logins (<see cref="RecordLoginFailure"/>) keeps the stamp — it only refuses new logins — so someone
+    /// who guesses wrong on purpose cannot throw the owner out of the site.
+    /// </summary>
+    public void LockAndEndSessions(DateTime utcNow)
+    {
+        Lock(utcNow);
+        SecurityStamp = GenerateSecurityStamp();
+    }
+
     /// <summary>Unlocks the account and resets the login-attempt counter.</summary>
     public void Unlock(DateTime utcNow)
     {

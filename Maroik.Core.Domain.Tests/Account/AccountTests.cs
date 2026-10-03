@@ -426,6 +426,34 @@ public class AccountTests
         Assert.Equal("spam", account.Message);
     }
 
+    /// <summary>A lock from failed logins keeps the security stamp: it refuses new logins but ends no session.</summary>
+    [Fact]
+    public void RecordLoginFailure_LockingTheAccount_KeepsTheSecurityStamp()
+    {
+        var account = ValidAccount();
+        string stamp = account.SecurityStamp;
+
+        for (int i = 0; i < 3; i++)
+            account.RecordLoginFailure(maxAttempts: 3, Now);
+
+        Assert.True(account.Locked);
+        Assert.Equal(stamp, account.SecurityStamp);
+    }
+
+    /// <summary>An administrator's lock also replaces the security stamp, which ends every open session.</summary>
+    [Fact]
+    public void LockAndEndSessions_LocksTheAccount_AndReplacesTheSecurityStamp()
+    {
+        var account = ValidAccount();
+        string stamp = account.SecurityStamp;
+
+        account.LockAndEndSessions(Now);
+
+        Assert.True(account.Locked);
+        Assert.NotEqual(stamp, account.SecurityStamp);
+        Assert.False(string.IsNullOrEmpty(account.SecurityStamp));
+    }
+
     /// <summary>Unlock sets locked false and resets attempts.</summary>
     [Fact]
     public void Unlock_SetsLockedFalseAndResetsAttempts()

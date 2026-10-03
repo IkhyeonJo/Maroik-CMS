@@ -69,7 +69,9 @@ Authorization and navigation
 
 Accounts
 - A failed-login lockout is permanent until the user resets the password or an admin unlocks the
-  account. A successful password reset always unlocks the account, including an admin-imposed lock, and signs
+  account. It only refuses new logins: sessions already signed in keep working, so guessing wrong on purpose
+  cannot throw the owner out. An administrator locking an unlocked account (`Account.LockAndEndSessions`)
+  also replaces the security stamp and so ends the account's sessions. A successful password reset always unlocks the account, including an admin-imposed lock, and signs
   the user in straight away (fresh session id, new security stamp) unless the account has not accepted the
   service terms. This does not weaken the lockout: the reset needs the single-use mailed token, not a guessed
   password. Admin sanctions use `AdminResetPassword` + `MustChangePassword`, not `Locked`.
