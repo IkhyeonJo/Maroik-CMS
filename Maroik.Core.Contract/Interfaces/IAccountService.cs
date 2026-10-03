@@ -16,8 +16,12 @@ public interface IAccountService
     /// <summary>Returns the account with the given email, or null if not found.</summary>
     Task<AccountResponse?> GetAccountByEmailAsync(string email, CancellationToken ct = default);
 
-    /// <summary>Validates credentials and returns a <see cref="LoginResult"/> indicating success or failure.</summary>
-    Task<LoginResult> LoginAsync(string email, string password, CancellationToken ct = default);
+    /// <summary>
+    /// Validates credentials and returns a <see cref="LoginResult"/> indicating success or failure. <paramref name="device"/>
+    /// is the browser's verified trusted-device cookie, if it sent one: a device the account still trusts is not held
+    /// off by the failed-login wait.
+    /// </summary>
+    Task<LoginResult> LoginAsync(string email, string password, TrustedDeviceClaim? device, CancellationToken ct = default);
 
     /// <summary>
     /// Registers <paramref name="newAccount"/> and queues a confirmation email. A new address creates the

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Website.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -90,7 +91,7 @@ public class ExceptionControllerTests(MaroikWebApplicationFactory factory)
     {
         var throwingAccountService = new Mock<IAccountService>();
         throwingAccountService
-            .Setup(a => a.LoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(a => a.LoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TrustedDeviceClaim?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("boom"));
 
         await using var factory1 = factory.WithWebHostBuilder(builder =>

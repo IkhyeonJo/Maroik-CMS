@@ -64,8 +64,11 @@ CREATE TABLE public."Account" (
     "SecurityStamp" text DEFAULT (gen_random_uuid())::text NOT NULL,
     "MustChangePassword" boolean DEFAULT false NOT NULL,
     "LoginBlockedUntil" timestamp without time zone,
+    "DeviceStamp" text DEFAULT (gen_random_uuid())::text NOT NULL,
+    "TrustedDeviceLoginAttempt" bigint DEFAULT 0 NOT NULL,
     CONSTRAINT "Account_Email_check" CHECK ((("Email")::text = lower(("Email")::text))),
     CONSTRAINT "Account_LoginAttempt_check" CHECK (("LoginAttempt" >= 0)),
+    CONSTRAINT "Account_TrustedDeviceLoginAttempt_check" CHECK (("TrustedDeviceLoginAttempt" >= 0)),
     CONSTRAINT "Account_Role_check" CHECK (((("Role")::text = 'Admin'::text) OR (("Role")::text = 'User'::text)))
 );
 
@@ -217,6 +220,20 @@ COMMENT ON COLUMN public."Account"."MustChangePassword" IS 'Forces a password ch
 --
 
 COMMENT ON COLUMN public."Account"."LoginBlockedUntil" IS 'Until when new logins are held off after failed attempts; NULL when they are not';
+
+
+--
+-- Name: COLUMN "Account"."DeviceStamp"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Account"."DeviceStamp" IS 'Opaque value every trusted-device cookie of the account carries; replacing it untrusts every device';
+
+
+--
+-- Name: COLUMN "Account"."TrustedDeviceLoginAttempt"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Account"."TrustedDeviceLoginAttempt" IS 'Consecutive failed logins made from trusted devices';
 
 
 --

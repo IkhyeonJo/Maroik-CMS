@@ -18,6 +18,7 @@ public class AccountController(
     IHtmlLocalizer<AccountController> localizer,
     IAccountService accountService,
     ISessionService sessionService,
+    ITrustedDeviceCookie trustedDeviceCookie,
     ILogger<AccountController> logger) : Controller
 {
     #region ConsentForm
@@ -51,7 +52,8 @@ public class AccountController(
 
         if (!ModelState.IsValid) return View();
 
-        var result = await accountService.LoginAsync(loginInputViewModel.Email!, loginInputViewModel.Password ?? "", ct);
+        var result = await accountService.LoginAsync(
+            loginInputViewModel.Email!, loginInputViewModel.Password ?? "", trustedDeviceCookie.Read(Request), ct);
 
         if (!result.Success)
         {
@@ -66,6 +68,8 @@ public class AccountController(
         // The new session created by RegenerateSession() above isn't the one SessionMiddleware
         // auto-commits at the end of the request, so it must be saved explicitly here.
         await HttpContext.Session.CommitAsync(ct);
+        // This browser is now a trusted device of the account: failed logins made elsewhere do not hold it off.
+        trustedDeviceCookie.Issue(Response, result.Account!.Email!, result.Account.DeviceStamp!);
 
         // AuthorizationFilter is the actual enforcement (it re-checks MustChangePassword from the
         // DB on every request); this redirect is just so a forced account lands there directly
@@ -325,6 +329,7 @@ public class AccountController(
         HttpContext.RegenerateSession();
         sessionService.SetAccount(signIn);
         await HttpContext.Session.CommitAsync(ct);
+        trustedDeviceCookie.Issue(Response, signIn.Email!, signIn.DeviceStamp!);
         logger.LogInformation("Signed in after password reset: {Email}", signIn.Email);
 
         return RedirectToAction("AnonymousIndex", "Dashboard");

@@ -451,6 +451,91 @@ public class AccountTests
         Assert.True(account.IsLoginBlocked(Now));
     }
 
+    // -- Trusted devices --------------------------------------------------------
+
+    /// <summary>A trusted device of <paramref name="failures"/> prior trusted failures, with device stamp "device-stamp".</summary>
+    private static Maroik.Core.Domain.Account.Account WithDevice(long failures = 0) =>
+        Maroik.Core.Domain.Account.Account.Reconstitute(
+            "user@example.com", "$2a$13$hash", "User", null, Role.User, "UTC", null, false, 0, true, true,
+            null, null, Now, Now, null, false, "stamp", false, deviceStamp: "device-stamp", trustedDeviceLoginAttempt: failures);
+
+    /// <summary>A new account gets its own non-empty device stamp, as it gets a security stamp.</summary>
+    [Fact]
+    public void Create_GivesTheAccountADeviceStamp()
+    {
+        var account = ValidAccount();
+
+        Assert.False(string.IsNullOrEmpty(account.DeviceStamp));
+        Assert.NotEqual(ValidAccount().DeviceStamp, account.DeviceStamp);
+    }
+
+    /// <summary>A cookie with the account's stamp, issued within the lifetime, makes its browser trusted.</summary>
+    [Fact]
+    public void TrustsDevice_ForTheCurrentStamp_WithinTheLifetime()
+    {
+        var account = WithDevice();
+
+        Assert.True(account.TrustsDevice("device-stamp", Now, Now));
+        Assert.True(account.TrustsDevice("device-stamp", Now, Now + TrustedDevicePolicy.Lifetime - TimeSpan.FromSeconds(1)));
+    }
+
+    /// <summary>A cookie with another stamp, none, an expired one or one dated in the future is not trusted.</summary>
+    [Theory]
+    [InlineData("other-stamp", 0)]
+    [InlineData("", 0)]
+    [InlineData(null, 0)]
+    [InlineData("device-stamp", 180)]
+    [InlineData("device-stamp", -1)]
+    public void TrustsDevice_IsFalse_ForAnotherStamp_OrOutsideTheLifetime(string? stamp, int daysSinceIssue)
+    {
+        var account = WithDevice();
+
+        Assert.False(account.TrustsDevice(stamp, Now, Now.AddDays(daysSinceIssue)));
+    }
+
+    /// <summary>An account without a device stamp trusts no device, even one carrying an empty stamp.</summary>
+    [Fact]
+    public void TrustsDevice_IsFalse_WhenTheAccountHasNoDeviceStamp()
+    {
+        var account = Maroik.Core.Domain.Account.Account.Reconstitute(
+            "user@example.com", "$2a$13$hash", "User", null, Role.User, "UTC", null, false, 0, true, true,
+            null, null, Now, Now, null, false, "stamp", false);
+
+        Assert.False(account.TrustsDevice("", Now, Now));
+    }
+
+    /// <summary>
+    /// Failed logins from a trusted device are counted apart from the account's own; at the limit every device stops
+    /// being trusted (new stamp) and the count starts over. The account's own counter and wait are left alone.
+    /// </summary>
+    [Fact]
+    public void RecordTrustedDeviceLoginFailure_RevokesEveryDevice_AtTheLimit()
+    {
+        var account = WithDevice(failures: TrustedDevicePolicy.MaxFailedAttempts - 2);
+
+        Assert.False(account.RecordTrustedDeviceLoginFailure(Now));
+        Assert.Equal(TrustedDevicePolicy.MaxFailedAttempts - 1, account.TrustedDeviceLoginAttempt);
+        Assert.True(account.TrustsDevice("device-stamp", Now, Now));
+
+        Assert.True(account.RecordTrustedDeviceLoginFailure(Now));
+        Assert.False(account.TrustsDevice("device-stamp", Now, Now));
+        Assert.False(string.IsNullOrEmpty(account.DeviceStamp));
+        Assert.Equal(0, account.TrustedDeviceLoginAttempt);
+        Assert.Equal(0, account.LoginAttempt);
+        Assert.Null(account.LoginBlockedUntil);
+    }
+
+    /// <summary>A successful login also starts the trusted-device count over.</summary>
+    [Fact]
+    public void ResetLoginAttempt_StartsTheTrustedDeviceCountOver()
+    {
+        var account = WithDevice(failures: 3);
+
+        account.ResetLoginAttempt(Now);
+
+        Assert.Equal(0, account.TrustedDeviceLoginAttempt);
+    }
+
     // -- Lock / Unlock --------------------------------------------------------
 
     /// <summary>Lock sets locked true and stores message.</summary>
