@@ -1,3 +1,6 @@
+using Docker.DotNet;
+using DotNet.Testcontainers.Configurations;
+using DotNet.Testcontainers.Containers;
 using Microsoft.Playwright;
 // ReSharper disable ClassNeverInstantiated.Global
 // ReSharper disable MethodHasAsyncOverload
@@ -39,6 +42,7 @@ public sealed class E2ESharedFixture : IAsyncLifetime
     /// <summary>Starts the database container and in-process server, then launches the shared browser instance.</summary>
     public async ValueTask InitializeAsync()
     {
+        await WaitForOtherTestRunsContainersAsync();
         await _database.StartAsync();
 
         _factory = new PlaywrightWebApplicationFactory(_database.ConnectionString);
@@ -46,6 +50,25 @@ public sealed class E2ESharedFixture : IAsyncLifetime
 
         _playwright = await Playwright.CreateAsync();
         _browser = await LaunchBrowserAsync(_playwright, BrowserName);
+    }
+
+    /// <summary>
+    /// Before this run starts its own containers, waits (up to a minute) until no other Testcontainers session still has
+    /// one running — typically the previous run's resource reaper, which otherwise leaves the Docker bridge a few
+    /// seconds into this run and makes the browser abort a request in flight (see <see cref="OtherTestcontainers"/>).
+    /// A run of another suite that is still going is not waited out to its end: after the minute the run proceeds
+    /// and says so on stderr.
+    /// </summary>
+    private static async Task WaitForOtherTestRunsContainersAsync()
+    {
+        using IDockerClient docker = TestcontainersSettings.OS.DockerEndpointAuthConfig
+            .GetDockerClientBuilder(ResourceReaper.DefaultSessionId).Build();
+        bool quiet = await OtherTestcontainers.WaitUntilGoneAsync(
+            docker, ResourceReaper.DefaultSessionId, TimeSpan.FromMinutes(1), TimeSpan.FromSeconds(1), CancellationToken.None);
+        if (!quiet)
+            await Console.Error.WriteLineAsync(
+                "E2E: another Testcontainers session still has containers running; starting anyway. " +
+                "A browser request may fail with net::ERR_NETWORK_CHANGED when they stop.");
     }
 
     /// <summary>
