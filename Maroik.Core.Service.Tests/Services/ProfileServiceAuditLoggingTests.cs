@@ -47,9 +47,9 @@ public class ProfileServiceAuditLoggingTests
         _fileClient.Object, _imageValidator.Object,
         Options.Create(new ServerSetting { FileStorageBaseUrl = "http://localhost:5001" }), _unitOfWork.Object, _logger, _time);
 
-    /// <summary>The persisted account for <see cref="Email"/>.</summary>
-    private static Account Existing() =>
-        Account.Reconstitute(Email, "$2a$13$placeholder", "TestUser", null, "User", "UTC", null, false, 0, true, true,
+    /// <summary>The persisted account for <see cref="Email"/>; <paramref name="locked"/> gives it a failed-login lock.</summary>
+    private static Account Existing(bool locked = false) =>
+        Account.Reconstitute(Email, "$2a$13$placeholder", "TestUser", null, "User", "UTC", null, locked, locked ? 3 : 0, true, true,
             null, null, DateTime.UtcNow, DateTime.UtcNow, null, false, "stamp", false);
 
     /// <summary>Asserts exactly one entry at <paramref name="level"/> contains <paramref name="containing"/> and names <see cref="Email"/>, and returns it.</summary>
@@ -62,9 +62,9 @@ public class ProfileServiceAuditLoggingTests
     }
 
     /// <summary>Arranges a password change from "oldpass" to "NewPass1!"; the current-password check returns <paramref name="currentPasswordMatches"/>.</summary>
-    private void SetupPasswordChange(bool currentPasswordMatches)
+    private void SetupPasswordChange(bool currentPasswordMatches, bool locked = false)
     {
-        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Existing());
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Existing(locked));
         _passwordService.Setup(p => p.VerifyPassword("oldpass", It.IsAny<string>())).Returns(currentPasswordMatches);
         _passwordService.Setup(p => p.HashPassword("NewPass1!")).Returns("$2a$13$newhash");
         _accountRepo.Setup(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(),
@@ -106,6 +106,32 @@ public class ProfileServiceAuditLoggingTests
         Assert.DoesNotContain("NewPass1!", record.Message);
         Assert.DoesNotContain("oldpass", record.Message);
         Assert.DoesNotContain("$2a$13$newhash", record.Message);
+    }
+
+    /// <summary>
+    /// A password change that lifts a failed-login lock says so in the audit trail, so an operator can tell from
+    /// the log when and how the lock ended.
+    /// </summary>
+    [Fact]
+    public async Task UpdatePassword_LogsTheLiftedLock_WhenTheAccountWasLocked()
+    {
+        SetupPasswordChange(currentPasswordMatches: true, locked: true);
+
+        await CreateSut().UpdatePasswordAsync(Email, "oldpass", "NewPass1!", TestContext.Current.CancellationToken);
+
+        Only(LogLevel.Information, "Lock lifted by a password change");
+    }
+
+    /// <summary>A password change on an account that was not locked does not claim to have lifted a lock.</summary>
+    [Fact]
+    public async Task UpdatePassword_DoesNotLogALiftedLock_WhenTheAccountWasNotLocked()
+    {
+        SetupPasswordChange(currentPasswordMatches: true);
+
+        await CreateSut().UpdatePasswordAsync(Email, "oldpass", "NewPass1!", TestContext.Current.CancellationToken);
+
+        Only(LogLevel.Information, "Password changed");
+        Assert.DoesNotContain(_logger.Collector.GetSnapshot(), r => r.Message.Contains("Lock lifted", StringComparison.Ordinal));
     }
 
     /// <summary>Verifies that a password change with a wrong current password logs a Warning without that password.</summary>

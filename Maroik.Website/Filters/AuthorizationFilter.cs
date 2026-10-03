@@ -222,7 +222,7 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
         AccountResponse? loggedInAccount = null;
         if (sessionAccount != null)
         {
-            loggedInAccount = await accountService.GetAccountByEmailAsync(sessionAccount.Email ?? "", context.HttpContext.RequestAborted); // Re-check account state from DB so that Locked/Deleted/Role changes take effect on the next request, not only at login
+            loggedInAccount = await accountService.GetAccountByEmailAsync(sessionAccount.Email ?? "", context.HttpContext.RequestAborted); // Re-check account state from DB so that Deleted/Role/SecurityStamp changes take effect on the next request, not only at login
 
             // SecurityStamp mismatch means the password changed (self-service, forgot-password
             // reset, or admin override) or an administrator locked the account after this session was
