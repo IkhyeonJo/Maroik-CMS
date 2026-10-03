@@ -76,10 +76,16 @@ public class AccountControllerTests(MaroikWebApplicationFactory factory)
         }
 
         // Simulate a fixation attacker who has already planted a known session cookie in the
-        // victim's browser before the victim ever logs in. (A plain unauthenticated visit does not
-        // get a session cookie by default — ASP.NET Core only issues one once something is written
-        // to session — so the attack precondition is reproduced directly rather than relying on that.)
-        const string attackerChosenSessionId = "attacker-fixed-session-id-0123456789abcdef";
+        // victim's browser before the victim ever logs in. It must be a cookie the site really
+        // issued — a made-up value is ignored by the session middleware (it cannot be unprotected),
+        // which would make this test pass even without the fix — so the attacker signs in to their
+        // own account and out again, leaving a valid signed-out session to plant.
+        AuthenticatedSession attacker = await AuthenticatedSessionHelper.LoginAsync(
+            factory, _client, $"fixation-attacker-{Guid.NewGuid():N}@example.com", "AttackerPassword1!", Role.User,
+            TestContext.Current.CancellationToken);
+        using (var logout = attacker.BuildJsonPostRequest("/Account/Logout"))
+            Assert.Equal(System.Net.HttpStatusCode.Redirect, (await _client.SendAsync(logout, TestContext.Current.CancellationToken)).StatusCode);
+        string attackerChosenSessionId = attacker.CookieHeader.Split(';')[0].Split('=', 2)[1];
 
         using var getRequest = new HttpRequestMessage(HttpMethod.Get, "/Account/Login");
         getRequest.Headers.Add("Cookie", $"{SessionCookieName}={attackerChosenSessionId}");
