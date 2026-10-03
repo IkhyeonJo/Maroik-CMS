@@ -84,7 +84,8 @@ public class AccountService(
             // password were verified first, the lock would stop nothing: guessing could go on
             // indefinitely, and the one correct guess would be confirmed by the "Locked" reply — a
             // password oracle. Refusing up front ends the guessing (no verification, no counter
-            // write, no BCrypt cost) and leaves the lock lifted only by a password reset or an admin.
+            // write, no BCrypt cost) and leaves the lock lifted only by a password reset, a password change from a
+            // session still signed in, or an admin.
             // What this reveals is that the address exists and is locked; existence is already public
             // (RegisterAsync answers "already exists"), and anyone can lock an account with a few wrong
             // guesses anyway, so nothing new is exposed.

@@ -119,6 +119,7 @@ public class ProfileService(
             // Let the domain method compute the new SecurityStamp / clear MustChangePassword and any
             // pending ResetPasswordToken, then persist only those columns (see UpdateAvatarAsync for
             // why the full-row write is avoided).
+            bool wasLocked = account.Locked;
             var changeResult = account.ChangePassword(passwordService.HashPassword(newPassword), timeProvider.GetUtcNow().UtcDateTime);
             if (changeResult.IsError)
             {
@@ -133,6 +134,8 @@ public class ProfileService(
                 account.Locked, account.LoginAttempt, account.Message, account.Updated, ct);
             await unitOfWork.CommitAsync(ct);
             logger.LogInformation("Password changed for {Email}", email);
+            if (wasLocked)
+                logger.LogInformation("Lock lifted by a password change for {Email}", email);
             return ServiceResult.Ok();
         }
         catch (Exception e)
