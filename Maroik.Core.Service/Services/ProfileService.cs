@@ -129,7 +129,8 @@ public class ProfileService(
             }
 
             await accountRepository.UpdatePasswordAsync(
-                email, account.HashedPassword, account.SecurityStamp, account.MustChangePassword, account.ResetPasswordToken, account.Updated, ct);
+                email, account.HashedPassword, account.SecurityStamp, account.MustChangePassword, account.ResetPasswordToken,
+                account.Locked, account.LoginAttempt, account.Message, account.Updated, ct);
             await unitOfWork.CommitAsync(ct);
             logger.LogInformation("Password changed for {Email}", email);
             return ServiceResult.Ok();

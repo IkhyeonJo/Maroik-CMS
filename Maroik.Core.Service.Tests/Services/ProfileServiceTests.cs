@@ -69,7 +69,7 @@ public class ProfileServiceTests
             updated: DateTime.UtcNow);
 
     /// <summary>A confirmed, unlocked account for <paramref name="email"/>.</summary>
-    private static Account ActiveAccount(string email = "user@example.com") =>
+    private static Account ActiveAccount(string email = "user@example.com", bool locked = false) =>
         Account.Reconstitute(
             email: email,
             hashedPassword: "$2a$13$placeholder",
@@ -78,8 +78,8 @@ public class ProfileServiceTests
             role: "User",
             timeZoneIanaId: "UTC",
             defaultMonetaryUnit: null,
-            locked: false,
-            loginAttempt: 0,
+            locked: locked,
+            loginAttempt: locked ? 3 : 0,
             emailConfirmed: true,
             agreedServiceTerms: true,
             registrationToken: null,
@@ -395,14 +395,14 @@ public class ProfileServiceTests
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _passwordService.Setup(p => p.VerifyPassword("oldpass", account.HashedPassword)).Returns(true);
         _passwordService.Setup(p => p.HashPassword("NewPass1!")).Returns("$2a$13$newhash");
-        _accountRepo.Setup(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
+        _accountRepo.Setup(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<long>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
         var sut = CreateSut();
 
         ServiceResult result = await sut.UpdatePasswordAsync(account.Email.Value, "oldpass", "NewPass1!", TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         _accountRepo.Verify(r => r.UpdatePasswordAsync(
-            account.Email.Value, "$2a$13$newhash", It.IsAny<string>(), false, null, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
+            account.Email.Value, "$2a$13$newhash", It.IsAny<string>(), false, null, It.IsAny<bool>(), It.IsAny<long>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.BeginAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -420,14 +420,34 @@ public class ProfileServiceTests
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _passwordService.Setup(p => p.VerifyPassword("oldpass", account.HashedPassword)).Returns(true);
         _passwordService.Setup(p => p.HashPassword("NewPass1!")).Returns("$2a$13$newhash");
-        _accountRepo.Setup(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
+        _accountRepo.Setup(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<long>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
         var sut = CreateSut();
 
         ServiceResult result = await sut.UpdatePasswordAsync(account.Email.Value, "oldpass", "NewPass1!", TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         _accountRepo.Verify(r => r.UpdatePasswordAsync(
-            account.Email.Value, "$2a$13$newhash", It.IsAny<string>(), false, null, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
+            account.Email.Value, "$2a$13$newhash", It.IsAny<string>(), false, null, It.IsAny<bool>(), It.IsAny<long>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// A signed-in owner whose account was locked by someone else's failed logins changes the password: the lock,
+    /// the counter and the lock message are written off with it, so the sign-in the change asks for is not refused.
+    /// </summary>
+    [Fact]
+    public async Task UpdatePasswordAsync_PersistsTheLiftedLock_WhenTheAccountWasLocked()
+    {
+        var account = ActiveAccount(locked: true);
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _passwordService.Setup(p => p.VerifyPassword("oldpass", account.HashedPassword)).Returns(true);
+        _passwordService.Setup(p => p.HashPassword("NewPass1!")).Returns("$2a$13$newhash");
+        _accountRepo.Setup(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<long>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        ServiceResult result = await CreateSut().UpdatePasswordAsync(account.Email.Value, "oldpass", "NewPass1!", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _accountRepo.Verify(r => r.UpdatePasswordAsync(
+            account.Email.Value, "$2a$13$newhash", It.IsAny<string>(), false, null, false, 0L, null, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     /// <summary>
@@ -442,7 +462,7 @@ public class ProfileServiceTests
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _passwordService.Setup(p => p.VerifyPassword("oldpass", account.HashedPassword)).Returns(true);
         _passwordService.Setup(p => p.HashPassword("NewPass1!")).Returns("$2a$13$newhash");
-        _accountRepo.Setup(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
+        _accountRepo.Setup(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<long>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
         var sut = CreateSut();
 
         await sut.UpdatePasswordAsync(account.Email.Value, "oldpass", "NewPass1!", TestContext.Current.CancellationToken);
@@ -563,7 +583,7 @@ public class ProfileServiceTests
         Assert.False(result.Success);
         Assert.Equal("Account.PasswordPolicy", result.ErrorCode);
         _passwordService.Verify(p => p.HashPassword(It.IsAny<string>()), Times.Never);
-        _accountRepo.Verify(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        _accountRepo.Verify(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<long>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -574,7 +594,7 @@ public class ProfileServiceTests
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ActiveAccount());
         _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(true);
         _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$new");
-        _accountRepo.Setup(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        _accountRepo.Setup(r => r.UpdatePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<long>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("secret detail"));
 
         ServiceResult result = await CreateSut().UpdatePasswordAsync("user@example.com", "current", "NewPass1!", TestContext.Current.CancellationToken);
