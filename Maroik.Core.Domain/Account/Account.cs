@@ -91,6 +91,41 @@ public sealed class Account : AggregateRoot<string>
     /// </summary>
     public DateTime? LoginBlockedUntil { get; private set; }
 
+    /// <summary>
+    /// Opaque value every trusted-device cookie of this account carries (<see cref="TrustedDevicePolicy"/>). Replacing
+    /// it stops every device of the account from being trusted at once.
+    /// </summary>
+    public string DeviceStamp { get; private set; } = "";
+
+    /// <summary>Consecutive failed logins made from trusted devices (see <see cref="TrustedDevicePolicy.MaxFailedAttempts"/>).</summary>
+    public long TrustedDeviceLoginAttempt { get; private set; }
+
+    /// <summary>
+    /// True when a device cookie carrying <paramref name="deviceStamp"/>, issued at <paramref name="issuedAt"/>, still
+    /// makes its browser a trusted device of this account at <paramref name="utcNow"/>.
+    /// </summary>
+    public bool TrustsDevice(string? deviceStamp, DateTime issuedAt, DateTime utcNow) =>
+        TokensMatch(DeviceStamp, deviceStamp)
+        && issuedAt <= utcNow
+        && utcNow - issuedAt < TrustedDevicePolicy.Lifetime;
+
+    /// <summary>
+    /// Records a failed login made from a trusted device. At <see cref="TrustedDevicePolicy.MaxFailedAttempts"/> such
+    /// failures every device stops being trusted (a new <see cref="DeviceStamp"/>); returns whether that happened.
+    /// The account's own wait (<see cref="LoginBlockedUntil"/>) is not touched.
+    /// </summary>
+    public bool RecordTrustedDeviceLoginFailure(DateTime utcNow)
+    {
+        TrustedDeviceLoginAttempt++;
+        Updated = utcNow;
+        if (TrustedDeviceLoginAttempt < TrustedDevicePolicy.MaxFailedAttempts)
+            return false;
+
+        DeviceStamp = GenerateSecurityStamp();
+        TrustedDeviceLoginAttempt = 0;
+        return true;
+    }
+
     /// <summary>True while <see cref="LoginBlockedUntil"/> is still ahead of <paramref name="utcNow"/>.</summary>
     public bool IsLoginBlocked(DateTime utcNow) => LoginBlockedUntil > utcNow;
 
@@ -134,6 +169,7 @@ public sealed class Account : AggregateRoot<string>
         RegistrationToken = registrationToken;
         AgreedServiceTerms = agreedServiceTerms;
         SecurityStamp = GenerateSecurityStamp();
+        DeviceStamp = GenerateSecurityStamp();
         Created = utcNow;
         Updated = utcNow;
     }
@@ -195,7 +231,9 @@ public sealed class Account : AggregateRoot<string>
         bool deleted,
         string securityStamp,
         bool mustChangePassword,
-        DateTime? loginBlockedUntil = null)
+        DateTime? loginBlockedUntil = null,
+        string deviceStamp = "",
+        long trustedDeviceLoginAttempt = 0)
     {
         return new Account(
             Email.FromTrustedSource(email),
@@ -218,7 +256,9 @@ public sealed class Account : AggregateRoot<string>
             securityStamp,
             mustChangePassword)
         {
-            LoginBlockedUntil = loginBlockedUntil
+            LoginBlockedUntil = loginBlockedUntil,
+            DeviceStamp = deviceStamp,
+            TrustedDeviceLoginAttempt = trustedDeviceLoginAttempt
         };
     }
 
@@ -340,6 +380,7 @@ public sealed class Account : AggregateRoot<string>
     {
         LoginAttempt = 0;
         LoginBlockedUntil = null;
+        TrustedDeviceLoginAttempt = 0;
         Updated = utcNow;
     }
 

@@ -108,6 +108,16 @@ public partial class Account
     /// </summary>
     public DateTime? LoginBlockedUntil { get; set; }
 
+    /// <summary>
+    /// DeviceStamp
+    /// </summary>
+    public string DeviceStamp { get; set; } = null!;
+
+    /// <summary>
+    /// TrustedDeviceLoginAttempt
+    /// </summary>
+    public long TrustedDeviceLoginAttempt { get; set; }
+
     /// <summary>Assets owned by this account (Asset.AccountEmail).</summary>
     public virtual ICollection<Asset> Assets { get; set; } = new List<Asset>();
 

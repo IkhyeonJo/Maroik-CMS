@@ -51,7 +51,7 @@ public class AccountService(
     }
 
     /// <inheritdoc />
-    public async Task<LoginResult> LoginAsync(string email, string password, CancellationToken ct = default)
+    public async Task<LoginResult> LoginAsync(string email, string password, TrustedDeviceClaim? device, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         // Matched in the stored form: a mobile autocomplete's trailing space must not fail the login.
@@ -80,14 +80,11 @@ public class AccountService(
                 return LoginResult.Fail(genericLoginError);
             }
 
-            // A locked account is refused BEFORE the password is looked at, whatever was typed. If the
-            // password were verified first, the lock would stop nothing: guessing could go on
-            // indefinitely, and the one correct guess would be confirmed by the "Locked" reply — a
-            // password oracle. Refusing up front ends the guessing (no verification, no counter
-            // write, no BCrypt cost) and leaves the lock lifted only by a password reset or an admin.
-            // What this reveals is that the address exists and is locked; existence is already public
-            // (RegisterAsync answers "already exists"), and anyone can lock an account with a few wrong
-            // guesses anyway, so nothing new is exposed.
+            // An account an administrator locked is refused BEFORE the password is looked at, whatever
+            // was typed: verifying first would turn the "Locked" reply into a password oracle. Refusing up
+            // front (no verification, no counter write, no BCrypt cost) leaves the lock lifted only by a
+            // password reset or an admin. What this reveals is that the address exists and is locked;
+            // existence is already public (RegisterAsync answers "already exists").
             if (account.Locked)
             {
                 await unitOfWork.RollbackAsync(ct);
@@ -98,7 +95,13 @@ public class AccountService(
             // Logins held off after failed attempts (LoginThrottlePolicy) are refused the same way — before the
             // password is looked at, and without a write, so attempts made during the wait neither confirm a
             // guess nor extend the wait. The wait ends by itself; a password reset ends it at once.
-            if (account.IsLoginBlocked(utcNow))
+            // A browser holding a device cookie the account still trusts (TrustedDevicePolicy) is not held off:
+            // the owner keeps signing in on the devices they use, however many wrong guesses others make.
+            bool trustedDevice = device != null
+                && string.Equals(Email.NormalizeForLookup(device.Email), email, StringComparison.Ordinal)
+                && account.TrustsDevice(device.DeviceStamp, device.IssuedAt, utcNow);
+
+            if (!trustedDevice && account.IsLoginBlocked(utcNow))
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Login refused: too many failed attempts for {Email} (held off until {BlockedUntil})", email, account.LoginBlockedUntil);
@@ -111,6 +114,19 @@ public class AccountService(
             // account is in — every wrong guess returns the same generic error.
             if (!passwordService.VerifyPassword(password, account.HashedPassword))
             {
+                if (trustedDevice)
+                {
+                    // Counted apart from the account's own failures, so the owner's typos on their own device
+                    // never extend a wait; enough of them untrust every device (a stolen cookie cannot guess on).
+                    bool untrusted = account.RecordTrustedDeviceLoginFailure(utcNow);
+                    await accountRepository.UpdateEntityAsync(account, ct);
+                    await unitOfWork.CommitAsync(ct);
+                    logger.LogWarning("Login failed: wrong password for {Email} from a trusted device (failed attempts: {TrustedDeviceLoginAttempts})", email, account.TrustedDeviceLoginAttempt);
+                    if (untrusted)
+                        logger.LogWarning("All trusted devices of {Email} are no longer trusted after {MaxAttempts} failed logins from them", email, TrustedDevicePolicy.MaxFailedAttempts);
+                    return LoginResult.Fail(genericLoginError);
+                }
+
                 account.RecordLoginFailure(settings.Value.MaxLoginAttempt, utcNow);
                 await accountRepository.UpdateEntityAsync(account, ct);
                 await unitOfWork.CommitAsync(ct);

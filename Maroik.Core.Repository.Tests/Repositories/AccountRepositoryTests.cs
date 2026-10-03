@@ -406,6 +406,31 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
     }
 
     /// <summary>
+    /// The device stamp and the trusted-device failure count are stored and read back; a row inserted without a
+    /// device stamp (as the seed does) gets one from the column default.
+    /// </summary>
+    [Fact]
+    public async Task UpdateEntityAsync_PersistsTheTrustedDeviceState()
+    {
+        string email = UniqueEmail("device");
+        await SeedAsync(NewAccount(email, Unique("Device")));
+        Account account = (await Sut.FindByEmailAsync(email, TestContext.Current.CancellationToken))!;
+        string seededStamp = account.DeviceStamp;
+        Assert.False(string.IsNullOrEmpty(seededStamp));
+
+        for (int i = 0; i < TrustedDevicePolicy.MaxFailedAttempts; i++)
+            account.RecordTrustedDeviceLoginFailure(DateTime.UtcNow);
+        account.RecordTrustedDeviceLoginFailure(DateTime.UtcNow);
+        await Sut.UpdateEntityAsync(account, TestContext.Current.CancellationToken);
+        Context.ChangeTracker.Clear();
+
+        Account stored = (await Sut.FindByEmailForUpdateAsync(email, TestContext.Current.CancellationToken))!;
+        Assert.Equal(account.DeviceStamp, stored.DeviceStamp);
+        Assert.NotEqual(seededStamp, stored.DeviceStamp);
+        Assert.Equal(1, stored.TrustedDeviceLoginAttempt);
+    }
+
+    /// <summary>
     /// An account write that keeps the nickname (a login, a message, a lock ...) sends exactly one UPDATE: the separate
     /// nickname UPDATE (which the <c>Board_fk_0</c> / <c>BoardComment_fk_1</c> cascade needs) is only for an actual change.
     /// </summary>

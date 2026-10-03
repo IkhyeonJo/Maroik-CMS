@@ -74,6 +74,11 @@ Accounts
   extend it, and sessions already signed in keep working. So guessing wrong on purpose can delay an account's
   next login but never throw its owner out. `Locked` is the administrator's lock only: locking an unlocked
   account (`Account.LockAndEndSessions`) replaces the security stamp and so ends the account's sessions.
+- A browser that has signed in successfully (or after a password reset) gets a trusted-device cookie
+  (`ITrustedDeviceCookie`, Data Protection-signed: e-mail, the account's `DeviceStamp`, issue time; 180 days —
+  `TrustedDevicePolicy`). A device the account still trusts is not held off by the failed-login wait, so the owner
+  keeps signing in on their own devices whatever others try. Wrong passwords from trusted devices are counted
+  apart (`TrustedDeviceLoginAttempt`); at 5 the `DeviceStamp` is replaced and every device stops being trusted.
 - A successful password reset always unlocks the account, including an admin-imposed lock, ends any login
   wait, and signs the user in straight away (fresh session id, new security stamp) unless the account has not
   accepted the service terms. Admin sanctions use `AdminResetPassword` + `MustChangePassword`, not `Locked`.
