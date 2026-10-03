@@ -35,6 +35,17 @@ Deployment and schema
 - Every deployment wipes the server data and recreates the database from `Init.sql`. There are no
   production migrations, no data back-fills and no backward-compatibility concerns. A schema change
   means editing `Init.sql` (every variant) and the EF Core model so they match — nothing else.
+- Judge code against the schema, the seed scripts and the tests only. The production data is the owner's
+  responsibility: do not raise checks against existing production rows, ask for queries to be run against it, or
+  add safeguards for hypothetical legacy rows.
+- `Maroik.Core.PostgreSQL` (`ApplicationDbContext`, `Models/*`) is EF Core scaffold output. Leave it out of
+  repo-wide comment / style passes; touch it only when the schema mapping itself changes.
+
+Operations and hosting
+- The containers run as root (no `USER` in the Dockerfiles).
+- `AllowedHosts` is `*`. The `amqp://guest:guest@localhost` fallbacks (`Program.cs`, `WorkerHost`) are never
+  used in a deployment (the env files always set the connection string).
+- Data Protection keys are stored unencrypted (Valkey, or the file fallback); they only live on the server.
 
 Authorization and navigation
 - The navigation menu is the access-control list: a `Category` maps to one controller, a `SubCategory`
@@ -47,6 +58,14 @@ Authorization and navigation
   work as a pair; keep both.
 - An administrator can change, lock or delete their own account and edit or delete any menu entry,
   including the ones that grant their own access. No self-lockout or last-admin protection is wanted.
+- The admin-only GET pages (`Management/Account`, `Management/Menu`, `Dashboard/AdminIndex`, ...) are protected
+  by the menu alone, while their POSTs also carry a role attribute. Getting the menu's `Role` right is the
+  administrator's job; do not add a second role check to those GETs.
+- `AuthorizationFilter` sends a signed-out visitor who opens an unlisted page to the public dashboard without
+  logging it (pinned by `OnAuthorizationAsync_LogsNothing_WhenAnAnonymousVisitorIsSentFromAnUnlistedPage`).
+  Denials of signed-in accounts go through `Deny()` and are logged.
+- The `ReturnUri` the layout uses after a culture change is not an open redirect: the router answers 404 to any
+  `//…` or `/\…` path, so no layout renders it. No extra validation is wanted.
 
 Accounts
 - A failed-login lockout is permanent until the user resets the password or an admin unlocks the
@@ -56,12 +75,31 @@ Accounts
   24 hours). The admin account grid intentionally shows and searches `HashedPassword`,
   `RegistrationToken` and `ResetPasswordToken`. Its Excel export (`ExcelExportService.CreateAccountExcel`)
   deliberately leaves those three columns out — keep them out of the export.
+- A successful self-service password change ends the session; the user signs in again (as on other sites), and
+  every other session of the account is invalidated through the security stamp.
+- A deleted account's login answers "Your Account is Deleted. Please contact the administrator." — it is not
+  re-registrable.
+- The Login page is pre-filled with the public demo account (`demo@maroik.com` / `demoO12!!`), and the demo
+  account's dashboard always shows the fixed period from `ServerSetting.DemoDashboardYear/Month`.
+- Nicknames reject `<`, `>`, `"`, the backtick and `\` (after NFKC) but allow `&` and `'` ("R&D팀",
+  "O'Brien"): nicknames are always output encoded, so those two are not an injection vector. An
+  administrator may create an account under a reserved nickname; self-registration may not.
 - IP-based rate limiting is done at Cloudflare. Do not add `AddRateLimiter` or IP-keyed throttling in
   the app (behind Cloudflare, `RemoteIpAddress` is an edge address shared by every visitor).
 
 Finance
 - An asset's currency label can be edited at any time (e.g. "원" → "KRW"). Never reject a currency
   change, whatever the existing balance looks like.
+- A transfer-type expenditure (deposit / investment / public pension / debt repayment) requires its payment
+  method and its deposit asset to carry the same currency label, on create and on update. Relabelling only one
+  of the two assets therefore makes editing an older transfer fail — intended.
+- A negative amount typed into an income / expenditure (one-off or fixed) is stored as its absolute value
+  (`Math.Abs`).
+- The dashboard's first year (`StartYear`) is found from the account's earliest income / expenditure by loading
+  them all.
+- `FixedSchedulePolicy.IsNoticed`'s behaviour around the year end and 29 February is kept as it is.
+- The edit forms receive amounts as JSON numbers, so an amount beyond ~15 significant digits (≥ ~9×10¹⁵) can
+  change on a re-save. Not a defect to raise.
 
 Files and content
 - Maroik.FileStorage is only ever reachable on the internal network; its `[AllowAnonymous]` endpoints
@@ -77,6 +115,10 @@ Files and content
 - Replacing or clearing an attachment (post, private note, calendar event) only rewrites its database
   record; the old file stays in Maroik.FileStorage, as does a file uploaded by a write whose transaction
   later rolls back. There is no delete API on purpose — do not add one or a cleanup job.
+- `HtmlContentSanitizerService` keeps its allow-list breadth (Ganss defaults plus `class`, URL schemes narrowed
+  to http/https, no `data-*`). Do not raise its breadth again.
+- An administrator cannot clear someone else's post lock from the UI (the edit page is owner-only); only a direct
+  POST to the edit endpoint can.
 - `BoardOutputViewModel.BoardAttachedFilePath` (Forum and Management) is populated by the controllers but
   not rendered by any view. Keep it; do not remove it, and do not render the storage path in a view or
   JSON response.
@@ -99,6 +141,11 @@ Error handling
   `{ result, error }`; exceptions are logged on the server. A genuine input-validation failure shows its
   specific reason (or "Input is invalid"), while an infrastructure failure shows a generic
   "temporary error, please try again" message.
+
+## Reviewing this repo
+
+- Items listed under "Intended design" above stay closed; re-raise one only if its premise changes (for example
+  `Maroik.FileStorage` becomes reachable from outside the internal network).
 
 ## Strict TDD — no test, no code
 
