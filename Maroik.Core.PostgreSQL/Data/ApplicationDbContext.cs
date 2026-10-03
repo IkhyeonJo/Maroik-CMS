@@ -117,6 +117,9 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.TrustedDeviceLoginAttempt)
                 .HasDefaultValueSql("0")
                 .HasComment("Consecutive failed logins made from trusted devices");
+            entity.Property(e => e.LastLoginAlertAt)
+                .HasComment("When the owner was last mailed that sign-ins to the account failed; NULL if never")
+                .HasColumnType("timestamp without time zone");
             entity.Property(e => e.LoginBlockedUntil)
                 .HasComment("Until when new logins are held off after failed attempts; NULL when they are not")
                 .HasColumnType("timestamp without time zone");

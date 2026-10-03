@@ -51,7 +51,7 @@ public class AccountService(
     }
 
     /// <inheritdoc />
-    public async Task<LoginResult> LoginAsync(string email, string password, TrustedDeviceClaim? device, CancellationToken ct = default)
+    public async Task<LoginResult> LoginAsync(string email, string password, TrustedDeviceClaim? device, EmailTemplate? loginAlert, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         // Matched in the stored form: a mobile autocomplete's trailing space must not fail the login.
@@ -128,11 +128,16 @@ public class AccountService(
                 }
 
                 account.RecordLoginFailure(settings.Value.MaxLoginAttempt, utcNow);
+                bool alertOwner = loginAlert != null && account.TakeLoginAlert(settings.Value.MaxLoginAttempt, utcNow);
                 await accountRepository.UpdateEntityAsync(account, ct);
                 await unitOfWork.CommitAsync(ct);
                 logger.LogWarning("Login failed: wrong password for {Email} (failed attempts: {LoginAttempts})", email, account.LoginAttempt);
                 if (account.IsLoginBlocked(utcNow))
                     logger.LogWarning("Logins held off for {Email} until {BlockedUntil} after {LoginAttempts} failed attempts", email, account.LoginBlockedUntil, account.LoginAttempt);
+                // After the commit, so the row lock is not held while the queue is reached. A queue that cannot
+                // take it is logged by PublishMailAsync and changes nothing in the reply.
+                if (alertOwner)
+                    await SendLoginAlertAsync(account.Email.Value, loginAlert!, ct);
                 return LoginResult.Fail(genericLoginError);
             }
 
@@ -850,6 +855,17 @@ public class AccountService(
         }
 
         return RegisterResult.Ok(showResendEmail: true, email: account.Email.Value, repeat: repeat);
+    }
+
+    /// <summary>
+    /// Queues the "several sign-ins failed" alert (<paramref name="template"/>, linking to the forgot-password page)
+    /// to <paramref name="to"/>, the owner of the account whose first login wait just started.
+    /// </summary>
+    private async Task SendLoginAlertAsync(string to, EmailTemplate template, CancellationToken ct)
+    {
+        string body = mailClient.GetMailLoginAlertBody(template.Title, template.Content0, template.Content1, settings.Value.DomainName ?? "");
+        if (await PublishMailAsync(to, template.Subject, body, ct))
+            logger.LogInformation("Sign-in alert queued for {Email}", to);
     }
 
     /// <summary>

@@ -29,6 +29,16 @@ public interface IMailClient
     public string GetMailConfirmationBody(string registrationToken, string title, string content0, string content1, string domainName);
 
     /// <summary>
+    /// Builds the HTML body of the alert mailed when several sign-ins to an account failed; it links to the
+    /// forgot-password page.
+    /// </summary>
+    /// <param name="title">Email heading text.</param>
+    /// <param name="content0">First body paragraph.</param>
+    /// <param name="content1">Second body paragraph.</param>
+    /// <param name="domainName">Application domain used to construct the forgot-password URL.</param>
+    public string GetMailLoginAlertBody(string title, string content0, string content1, string domainName);
+
+    /// <summary>
     /// Sends an HTML email via SMTP. Returns a successful <see cref="ServiceResult"/>, or a
     /// <see cref="ServiceErrorType.Failure"/> carrying a generic message (the exception itself is logged,
     /// never returned, so SMTP server details cannot reach a caller).

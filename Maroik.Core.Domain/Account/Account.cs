@@ -126,6 +126,25 @@ public sealed class Account : AggregateRoot<string>
         return true;
     }
 
+    /// <summary>When the owner was last mailed that sign-ins to the account failed, or <see langword="null"/> if never.</summary>
+    public DateTime? LastLoginAlertAt { get; private set; }
+
+    /// <summary>
+    /// Whether to mail the owner now that sign-ins failed: true when this failure started the first wait
+    /// (<paramref name="maxAttempts"/> consecutive failures) and no alert went out within
+    /// <see cref="LoginThrottlePolicy.AlertInterval"/>; it then records <paramref name="utcNow"/> as the alert's time.
+    /// </summary>
+    public bool TakeLoginAlert(int maxAttempts, DateTime utcNow)
+    {
+        if (LoginAttempt != Math.Max(1, maxAttempts))
+            return false;
+        if (LastLoginAlertAt is { } last && utcNow - last < LoginThrottlePolicy.AlertInterval)
+            return false;
+
+        LastLoginAlertAt = utcNow;
+        return true;
+    }
+
     /// <summary>True while <see cref="LoginBlockedUntil"/> is still ahead of <paramref name="utcNow"/>.</summary>
     public bool IsLoginBlocked(DateTime utcNow) => LoginBlockedUntil > utcNow;
 
@@ -233,7 +252,8 @@ public sealed class Account : AggregateRoot<string>
         bool mustChangePassword,
         DateTime? loginBlockedUntil = null,
         string deviceStamp = "",
-        long trustedDeviceLoginAttempt = 0)
+        long trustedDeviceLoginAttempt = 0,
+        DateTime? lastLoginAlertAt = null)
     {
         return new Account(
             Email.FromTrustedSource(email),
@@ -258,7 +278,8 @@ public sealed class Account : AggregateRoot<string>
         {
             LoginBlockedUntil = loginBlockedUntil,
             DeviceStamp = deviceStamp,
-            TrustedDeviceLoginAttempt = trustedDeviceLoginAttempt
+            TrustedDeviceLoginAttempt = trustedDeviceLoginAttempt,
+            LastLoginAlertAt = lastLoginAlertAt
         };
     }
 

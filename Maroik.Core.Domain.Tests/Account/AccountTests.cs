@@ -451,6 +451,61 @@ public class AccountTests
         Assert.True(account.IsLoginBlocked(Now));
     }
 
+    // -- Login alert -------------------------------------------------------------
+
+    /// <summary>The failure that starts the first wait asks for an alert, once, and records when.</summary>
+    [Fact]
+    public void TakeLoginAlert_IsTrue_WhenTheFirstWaitStarts_AndRecordsIt()
+    {
+        var account = ValidAccount();
+        for (int i = 0; i < 3; i++)
+            account.RecordLoginFailure(maxAttempts: 3, Now);
+
+        Assert.True(account.TakeLoginAlert(maxAttempts: 3, Now));
+        Assert.Equal(Now, account.LastLoginAlertAt);
+        Assert.False(account.TakeLoginAlert(maxAttempts: 3, Now));
+    }
+
+    /// <summary>Failures before the first wait, and the later stages, ask for no alert.</summary>
+    [Theory]
+    [InlineData(2)]
+    [InlineData(6)]
+    [InlineData(9)]
+    public void TakeLoginAlert_IsFalse_OutsideTheStartOfTheFirstWait(int failures)
+    {
+        var account = ValidAccount();
+        for (int i = 0; i < failures; i++)
+            account.RecordLoginFailure(maxAttempts: 3, Now);
+
+        Assert.False(account.TakeLoginAlert(maxAttempts: 3, Now));
+        Assert.Null(account.LastLoginAlertAt);
+    }
+
+    /// <summary>
+    /// A new run of failures (after a successful login reset the count) alerts again only once the alert interval has
+    /// passed since the last alert, so failed logins cannot flood the owner's mailbox.
+    /// </summary>
+    [Fact]
+    public void TakeLoginAlert_AlertsAgain_OnlyAfterTheAlertInterval()
+    {
+        var account = ValidAccount();
+        for (int i = 0; i < 3; i++)
+            account.RecordLoginFailure(maxAttempts: 3, Now);
+        Assert.True(account.TakeLoginAlert(maxAttempts: 3, Now));
+
+        account.ResetLoginAttempt(Now);
+        for (int i = 0; i < 3; i++)
+            account.RecordLoginFailure(maxAttempts: 3, Now.AddHours(23));
+        Assert.False(account.TakeLoginAlert(maxAttempts: 3, Now.AddHours(23)));
+
+        account.ResetLoginAttempt(Now);
+        DateTime later = Now + LoginThrottlePolicy.AlertInterval;
+        for (int i = 0; i < 3; i++)
+            account.RecordLoginFailure(maxAttempts: 3, later);
+        Assert.True(account.TakeLoginAlert(maxAttempts: 3, later));
+        Assert.Equal(later, account.LastLoginAlertAt);
+    }
+
     // -- Trusted devices --------------------------------------------------------
 
     /// <summary>A trusted device of <paramref name="failures"/> prior trusted failures, with device stamp "device-stamp".</summary>

@@ -198,6 +198,15 @@
   <data name="Too many failed sign-in attempts. Please try again later or reset your password." xml:space="preserve">
     <value>Too many failed sign-in attempts. Please try again later or reset your password.</value>
   </data>
+  <data name="Maroik sign-in alert" xml:space="preserve">
+    <value>Maroik sign-in alert</value>
+  </data>
+  <data name="Several sign-ins to your account failed" xml:space="preserve">
+    <value>Several sign-ins to your account failed</value>
+  </data>
+  <data name="New sign-ins to your account are paused for a while. If this was not you, reset your password from the link below." xml:space="preserve">
+    <value>New sign-ins to your account are paused for a while. If this was not you, reset your password from the link below.</value>
+  </data>
   <data name="Your Account is Locked, Please reset your password by clicking Forgot password Button" xml:space="preserve">
     <value>Your Account is Locked, Please reset your password by clicking Forgot password Button</value>
   </data>

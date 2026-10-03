@@ -118,6 +118,11 @@ public partial class Account
     /// </summary>
     public long TrustedDeviceLoginAttempt { get; set; }
 
+    /// <summary>
+    /// LastLoginAlertAt
+    /// </summary>
+    public DateTime? LastLoginAlertAt { get; set; }
+
     /// <summary>Assets owned by this account (Asset.AccountEmail).</summary>
     public virtual ICollection<Asset> Assets { get; set; } = new List<Asset>();
 
