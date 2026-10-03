@@ -96,6 +96,13 @@ public class MaroikWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     /// <summary>Points the application at the Testcontainers PostgreSQL instance and applies test-only configuration overrides.</summary>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // -- Do not watch the configuration files -----------------------------
+        // Each watched file holds an inotify instance for the host's lifetime. This factory and every
+        // WithWebHostBuilder host derived from it stay alive for the whole run, so watching would exhaust
+        // the per-user inotify limit (128 by default) and every later host would fail to start. Nothing
+        // here edits appsettings*.json during a run, so nothing is lost.
+        builder.UseSetting("hostBuilder:reloadConfigOnChange", "false");
+
         // -- Override configuration -------------------------------------------
         builder.ConfigureAppConfiguration((_, config) =>
         {
