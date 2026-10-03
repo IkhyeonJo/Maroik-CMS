@@ -53,7 +53,7 @@ public class AccountController(
         if (!ModelState.IsValid) return View();
 
         var result = await accountService.LoginAsync(
-            loginInputViewModel.Email!, loginInputViewModel.Password ?? "", trustedDeviceCookie.Read(Request), ct);
+            loginInputViewModel.Email!, loginInputViewModel.Password ?? "", trustedDeviceCookie.Read(Request), localizer.ToLoginAlertEmailTemplate(), ct);
 
         if (!result.Success)
         {

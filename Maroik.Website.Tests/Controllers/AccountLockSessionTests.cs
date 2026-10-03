@@ -103,6 +103,47 @@ public class AccountLockSessionTests(MaroikWebApplicationFactory factory)
             System.Net.WebUtility.HtmlDecode(await refused.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)));
     }
 
+    /// <summary>The alert mails queued so far to <paramref name="email"/>.</summary>
+    private List<Maroik.Core.Contract.Misc.Messaging.SendEmailMessage> AlertsTo(string email)
+    {
+        using var scope = factory.Services.CreateScope();
+        return [.. scope.ServiceProvider.GetRequiredService<FakeEmailPublisher>().PublishedMessages.Where(m => m.ToEmail == email)];
+    }
+
+    /// <summary>
+    /// The wrong password that starts the account's first wait mails its owner one alert, linking to the
+    /// forgot-password page; the failures that follow mail nothing more.
+    /// </summary>
+    [Fact]
+    public async Task FailedLogins_MailTheOwnerOneAlert_LinkingToTheForgotPasswordPage()
+    {
+        string email = UniqueEmail();
+        await SignInAsync(email);
+
+        for (int i = 0; i < MaxLoginAttempt * 2; i++)
+            await PostLoginAsync(email, "WrongGuess1!");
+
+        var alert = Assert.Single(AlertsTo(email));
+        Assert.Equal("Maroik sign-in alert", alert.Subject);
+        Assert.Contains("Several sign-ins to your account failed", alert.Body);
+        Assert.Contains("/Account/ForgotPassword", alert.Body);
+    }
+
+    /// <summary>The alert is written in the language of the browser whose failure started the wait.</summary>
+    [Fact]
+    public async Task FailedLogins_TheAlert_IsInKorean_WhenAKoreanBrowserStartedTheWait()
+    {
+        string email = UniqueEmail();
+        await SignInAsync(email);
+
+        for (int i = 0; i < MaxLoginAttempt; i++)
+            await PostLoginAsync(email, "WrongGuess1!", culture: "ko-KR");
+
+        var alert = Assert.Single(AlertsTo(email));
+        Assert.Equal("Maroik 로그인 알림", alert.Subject);
+        Assert.Contains("계정 로그인이 여러 번 실패했습니다", System.Net.WebUtility.HtmlDecode(alert.Body));
+    }
+
     /// <summary>An administrator locking the account ends its open session: the next request goes to the login page.</summary>
     [Fact]
     public async Task AnAdminLock_EndsTheOpenSession()

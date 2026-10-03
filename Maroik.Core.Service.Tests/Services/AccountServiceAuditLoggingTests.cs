@@ -104,7 +104,7 @@ public class AccountServiceAuditLoggingTests
     {
         AccountForLogin(ExistingAccount(), passwordMatches: true);
 
-        await CreateSut().LoginAsync(Email, TypedPassword, null, TestContext.Current.CancellationToken);
+        await CreateSut().LoginAsync(Email, TypedPassword, null, null, TestContext.Current.CancellationToken);
 
         Only(LogLevel.Information, "Login succeeded");
         AssertNoSecretLogged(TypedPassword);
@@ -116,7 +116,7 @@ public class AccountServiceAuditLoggingTests
     {
         AccountForLogin(ExistingAccount(loginAttempt: 1), passwordMatches: false);
 
-        await CreateSut().LoginAsync(Email, TypedPassword, null, TestContext.Current.CancellationToken);
+        await CreateSut().LoginAsync(Email, TypedPassword, null, null, TestContext.Current.CancellationToken);
 
         FakeLogRecord record = Only(LogLevel.Warning, "Login failed");
         Assert.Contains("2", record.Message); // the counter after this failure
@@ -129,7 +129,7 @@ public class AccountServiceAuditLoggingTests
     {
         AccountForLogin(ExistingAccount(loginAttempt: 2), passwordMatches: false);
 
-        await CreateSut().LoginAsync(Email, TypedPassword, null, TestContext.Current.CancellationToken);
+        await CreateSut().LoginAsync(Email, TypedPassword, null, null, TestContext.Current.CancellationToken);
 
         FakeLogRecord record = Only(LogLevel.Warning, "Logins held off");
         Assert.Contains("3", record.Message);
@@ -144,11 +144,24 @@ public class AccountServiceAuditLoggingTests
             true, true, null, null, Now, Now, null, false, "stamp", false,
             deviceStamp: "device-stamp", trustedDeviceLoginAttempt: TrustedDevicePolicy.MaxFailedAttempts - 1), passwordMatches: false);
 
-        await CreateSut().LoginAsync(Email, TypedPassword, new TrustedDeviceClaim(Email, "device-stamp", Now.AddDays(-1)), TestContext.Current.CancellationToken);
+        await CreateSut().LoginAsync(Email, TypedPassword, new TrustedDeviceClaim(Email, "device-stamp", Now.AddDays(-1)), null, TestContext.Current.CancellationToken);
 
         FakeLogRecord record = Only(LogLevel.Warning, "trusted devices");
         Assert.Contains(Email, record.Message);
         AssertNoSecretLogged(TypedPassword, "device-stamp");
+    }
+
+    /// <summary>A mailed sign-in alert is recorded at Information, naming the account.</summary>
+    [Fact]
+    public async Task Login_LogsTheAlertMail_WhenTheFirstWaitStarts()
+    {
+        AccountForLogin(ExistingAccount(loginAttempt: 2), passwordMatches: false);
+
+        await CreateSut().LoginAsync(Email, TypedPassword, null,
+            new EmailTemplate { Subject = "s", Title = "t", Content0 = "c0", Content1 = "c1" }, TestContext.Current.CancellationToken);
+
+        Assert.Contains(Email, Only(LogLevel.Information, "Sign-in alert queued").Message);
+        AssertNoSecretLogged(TypedPassword);
     }
 
     /// <summary>Verifies that a login refused during the wait logs a Warning.</summary>
@@ -159,7 +172,7 @@ public class AccountServiceAuditLoggingTests
             true, true, null, null, DateTime.UtcNow, DateTime.UtcNow, null, false, "stamp", false,
             loginBlockedUntil: Now.AddHours(1)), passwordMatches: true);
 
-        await CreateSut().LoginAsync(Email, TypedPassword, null, TestContext.Current.CancellationToken);
+        await CreateSut().LoginAsync(Email, TypedPassword, null, null, TestContext.Current.CancellationToken);
 
         Only(LogLevel.Warning, "Login refused: too many failed attempts");
     }
@@ -170,7 +183,7 @@ public class AccountServiceAuditLoggingTests
     {
         AccountForLogin(null, passwordMatches: false);
 
-        await CreateSut().LoginAsync(Email, TypedPassword, null, TestContext.Current.CancellationToken);
+        await CreateSut().LoginAsync(Email, TypedPassword, null, null, TestContext.Current.CancellationToken);
 
         Only(LogLevel.Warning, "no account");
         AssertNoSecretLogged(TypedPassword);
@@ -182,7 +195,7 @@ public class AccountServiceAuditLoggingTests
     {
         AccountForLogin(ExistingAccount(locked: true, loginAttempt: 3), passwordMatches: true);
 
-        await CreateSut().LoginAsync(Email, TypedPassword, null, TestContext.Current.CancellationToken);
+        await CreateSut().LoginAsync(Email, TypedPassword, null, null, TestContext.Current.CancellationToken);
 
         Only(LogLevel.Warning, "Login refused: account is locked");
     }
@@ -199,7 +212,7 @@ public class AccountServiceAuditLoggingTests
             emailConfirmed: reason != "email not confirmed",
             agreedServiceTerms: reason != "service terms not accepted"), passwordMatches: true);
 
-        await CreateSut().LoginAsync(Email, TypedPassword, null, TestContext.Current.CancellationToken);
+        await CreateSut().LoginAsync(Email, TypedPassword, null, null, TestContext.Current.CancellationToken);
 
         Only(LogLevel.Warning, "Login refused: " + reason);
     }

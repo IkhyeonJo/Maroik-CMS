@@ -29,5 +29,14 @@ public static class AccountEmailTemplateExtensions
             Content0 = localizer["Click the link below to reset your password"].Value,
             Content1 = localizer["If this link does not work, please copy & paste this link to your Internet URL"].Value
         };
+
+        /// <summary>Builds the alert mailed to an account's owner when failed sign-ins started its first login wait.</summary>
+        public EmailTemplate ToLoginAlertEmailTemplate() => new()
+        {
+            Subject = localizer["Maroik sign-in alert"].Value,
+            Title = localizer["Several sign-ins to your account failed"].Value,
+            Content0 = localizer["New sign-ins to your account are paused for a while. If this was not you, reset your password from the link below."].Value,
+            Content1 = localizer["If this link does not work, please copy & paste this link to your Internet URL"].Value
+        };
     }
 }

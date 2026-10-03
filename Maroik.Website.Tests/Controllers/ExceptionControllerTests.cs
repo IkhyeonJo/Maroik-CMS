@@ -91,7 +91,7 @@ public class ExceptionControllerTests(MaroikWebApplicationFactory factory)
     {
         var throwingAccountService = new Mock<IAccountService>();
         throwingAccountService
-            .Setup(a => a.LoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TrustedDeviceClaim?>(), It.IsAny<CancellationToken>()))
+            .Setup(a => a.LoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TrustedDeviceClaim?>(), It.IsAny<EmailTemplate?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("boom"));
 
         await using var factory1 = factory.WithWebHostBuilder(builder =>

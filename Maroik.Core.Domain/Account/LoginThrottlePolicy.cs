@@ -19,6 +19,12 @@ public static class LoginThrottlePolicy
         return StageDelays[(int)Math.Min(stage, StageDelays.Length) - 1];
     }
 
+    /// <summary>
+    /// Least time between two alert mails to the same account ("several sign-ins failed"), so failed logins cannot
+    /// be used to flood its mailbox.
+    /// </summary>
+    public static readonly TimeSpan AlertInterval = TimeSpan.FromHours(24);
+
     /// <summary>The wait for the 1st, 2nd, 3rd and (capped) 4th-and-later stage.</summary>
     private static readonly TimeSpan[] StageDelays =
         [TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), TimeSpan.FromHours(1)];

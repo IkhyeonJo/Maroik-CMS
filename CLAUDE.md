@@ -79,6 +79,10 @@ Accounts
   `TrustedDevicePolicy`). A device the account still trusts is not held off by the failed-login wait, so the owner
   keeps signing in on their own devices whatever others try. Wrong passwords from trusted devices are counted
   apart (`TrustedDeviceLoginAttempt`); at 5 the `DeviceStamp` is replaced and every device stops being trusted.
+- The wrong password that starts an account's first login wait mails its owner a "several sign-ins failed" alert
+  linking to the forgot-password page — at most once per `LoginThrottlePolicy.AlertInterval` (24 h,
+  `LastLoginAlertAt`), never for a trusted device, queued after the commit. It is written in the language of the
+  browser whose failure started the wait (no per-account language is stored).
 - A successful password reset always unlocks the account, including an admin-imposed lock, ends any login
   wait, and signs the user in straight away (fresh session id, new security stamp) unless the account has not
   accepted the service terms. Admin sanctions use `AdminResetPassword` + `MustChangePassword`, not `Locked`.

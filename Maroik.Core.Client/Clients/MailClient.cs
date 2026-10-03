@@ -102,6 +102,11 @@ public class MailClient(ILogger<MailClient> logger) : IMailClient
     }
 
     /// <inheritdoc />
+    public string GetMailLoginAlertBody(string title, string content0, string content1, string domainName) =>
+        // No token in this link: the owner asks for a reset mail themselves, from the page it opens.
+        BuildLinkBody(title, content0, content1, BuildUrl(domainName, "Account/ForgotPassword"));
+
+    /// <inheritdoc />
     public async Task<ServiceResult> SendMailAsync(string toEmail, string subject, string body, ServerSetting settings, CancellationToken ct = default)
     {
         try

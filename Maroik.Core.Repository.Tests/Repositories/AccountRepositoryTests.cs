@@ -430,6 +430,23 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
         Assert.Equal(1, stored.TrustedDeviceLoginAttempt);
     }
 
+    /// <summary>The time of the last login alert is stored and read back.</summary>
+    [Fact]
+    public async Task UpdateEntityAsync_PersistsTheLastLoginAlert()
+    {
+        string email = UniqueEmail("alert");
+        await SeedAsync(NewAccount(email, Unique("Alert")));
+        var at = new DateTime(2031, 5, 6, 7, 8, 9, DateTimeKind.Utc);
+        Account account = (await Sut.FindByEmailAsync(email, TestContext.Current.CancellationToken))!;
+        account.RecordLoginFailure(maxAttempts: 1, at);
+        Assert.True(account.TakeLoginAlert(maxAttempts: 1, at));
+
+        await Sut.UpdateEntityAsync(account, TestContext.Current.CancellationToken);
+        Context.ChangeTracker.Clear();
+
+        Assert.Equal(at, (await Sut.FindByEmailForUpdateAsync(email, TestContext.Current.CancellationToken))!.LastLoginAlertAt);
+    }
+
     /// <summary>
     /// An account write that keeps the nickname (a login, a message, a lock ...) sends exactly one UPDATE: the separate
     /// nickname UPDATE (which the <c>Board_fk_0</c> / <c>BoardComment_fk_1</c> cascade needs) is only for an actual change.
