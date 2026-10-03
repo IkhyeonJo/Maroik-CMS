@@ -1010,7 +1010,7 @@ public class AccountServiceTests
         _rsa.Setup(r => r.Decrypt(It.IsAny<string>())).Throws(new Exception("bad cipher"));
         var sut = CreateSut();
 
-        ServiceResult result = await sut.ResetPasswordAsync("bad", "newpass", TestContext.Current.CancellationToken);
+        (ServiceResult result, _) = await sut.ResetPasswordAsync("bad", "newpass", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
     }
@@ -1025,7 +1025,7 @@ public class AccountServiceTests
             .ReturnsAsync(ActiveAccount());
         var sut = CreateSut();
 
-        ServiceResult result = await sut.ResetPasswordAsync("enc", "newpass", TestContext.Current.CancellationToken);
+        (ServiceResult result, _) = await sut.ResetPasswordAsync("enc", "newpass", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
     }
@@ -1043,7 +1043,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
-        ServiceResult result = await sut.ResetPasswordAsync("enc", "NewPass1!", TestContext.Current.CancellationToken);
+        (ServiceResult result, _) = await sut.ResetPasswordAsync("enc", "NewPass1!", TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         _accountRepo.Verify(r => r.UpdateEntityAsync(It.Is<Account>(a =>
@@ -1051,6 +1051,54 @@ public class AccountServiceTests
             a.Locked == false &&
             a.LoginAttempt == 0 &&
             a.ResetPasswordToken == null), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// A reset that succeeds hands back the account to sign in with: unlocked, with the NEW security stamp (a
+    /// session carrying the old one would be thrown out on its next request) and no forced password change.
+    /// </summary>
+    [Fact]
+    public async Task ResetPasswordAsync_ReturnsTheAccountToSignIn_WithItsNewSecurityStamp()
+    {
+        string freshToken = GuidToken.Generate(Now);
+        var account = ActiveAccount(email: "reset@example.com", locked: true, loginAttempt: 3, resetPasswordToken: freshToken);
+        string oldStamp = account.SecurityStamp;
+        _rsa.Setup(r => r.Decrypt("enc")).Returns(freshToken);
+        _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _passwordService.Setup(p => p.HashPassword("NewPass1!")).Returns("$2a$13$newhash");
+        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        (ServiceResult result, AccountResponse? signIn) = await CreateSut().ResetPasswordAsync("enc", "NewPass1!", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.NotNull(signIn);
+        Assert.Equal("reset@example.com", signIn.Email);
+        Assert.NotEqual(oldStamp, signIn.SecurityStamp);
+        Assert.Equal(account.SecurityStamp, signIn.SecurityStamp);
+        Assert.False(signIn.Locked);
+        Assert.False(signIn.MustChangePassword);
+    }
+
+    /// <summary>
+    /// An account that has not accepted the service terms gets its new password but is not signed in: LoginAsync
+    /// refuses it too, so a reset must not be a way around that.
+    /// </summary>
+    [Fact]
+    public async Task ResetPasswordAsync_ReturnsNoAccountToSignIn_WhenTheServiceTermsAreNotAccepted()
+    {
+        string freshToken = GuidToken.Generate(Now);
+        var account = ActiveAccount(agreedServiceTerms: false, resetPasswordToken: freshToken);
+        _rsa.Setup(r => r.Decrypt("enc")).Returns(freshToken);
+        _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _passwordService.Setup(p => p.HashPassword("NewPass1!")).Returns("$2a$13$newhash");
+        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        (ServiceResult result, AccountResponse? signIn) = await CreateSut().ResetPasswordAsync("enc", "NewPass1!", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Null(signIn);
     }
 
     // -- GetAccountsByNicknamesAsync ------------------------------------------
@@ -1689,7 +1737,7 @@ public class AccountServiceTests
         _rsa.Setup(r => r.Decrypt("enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
 
-        ServiceResult result = await CreateSut().ResetPasswordAsync("enc", "weak", TestContext.Current.CancellationToken);
+        (ServiceResult result, _) = await CreateSut().ResetPasswordAsync("enc", "weak", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         _passwordService.Verify(p => p.HashPassword(It.IsAny<string>()), Times.Never);
@@ -1710,7 +1758,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(rowExistsButDeleted ? ActiveAccount(resetPasswordToken: token, deleted: true) : null);
 
-        ServiceResult result = await CreateSut().ResetPasswordAsync("enc", "NewPass1!", TestContext.Current.CancellationToken);
+        (ServiceResult result, _) = await CreateSut().ResetPasswordAsync("enc", "NewPass1!", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -1729,7 +1777,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(consumed);
         _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$newhash");
 
-        ServiceResult result = await CreateSut().ResetPasswordAsync("enc", "NewPass1!", TestContext.Current.CancellationToken);
+        (ServiceResult result, _) = await CreateSut().ResetPasswordAsync("enc", "NewPass1!", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -1748,7 +1796,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("db down"));
 
-        ServiceResult result = await CreateSut().ResetPasswordAsync("enc", "NewPass1!", TestContext.Current.CancellationToken);
+        (ServiceResult result, _) = await CreateSut().ResetPasswordAsync("enc", "NewPass1!", TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);

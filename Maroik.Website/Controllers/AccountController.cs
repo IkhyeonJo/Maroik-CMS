@@ -17,7 +17,8 @@ namespace Maroik.Website.Controllers;
 public class AccountController(
     IHtmlLocalizer<AccountController> localizer,
     IAccountService accountService,
-    ISessionService sessionService) : Controller
+    ISessionService sessionService,
+    ILogger<AccountController> logger) : Controller
 {
     #region ConsentForm
     /// <summary>Displays the service consent form.</summary>
@@ -292,7 +293,7 @@ public class AccountController(
             return View();
         }
 
-        var result = await accountService.ResetPasswordAsync(
+        var (result, signIn) = await accountService.ResetPasswordAsync(
             loginInputViewModel.ResetPasswordToken ?? "",
             loginInputViewModel.Password ?? "",
             ct);
@@ -311,8 +312,22 @@ public class AccountController(
             return View();
         }
 
-        ViewBag.ResetPasswordComplete = true;
-        return View();
+        if (signIn == null)
+        {
+            // Password changed, but the account may not sign in yet (service terms not accepted).
+            ViewBag.ResetPasswordComplete = true;
+            return View();
+        }
+
+        // Sign the user in with the new password straight away, exactly as Login does: a fresh session id (a
+        // session id planted in the browser before the reset never becomes signed in), the account with its new
+        // security stamp, committed explicitly because RegenerateSession's session is not the auto-committed one.
+        HttpContext.RegenerateSession();
+        sessionService.SetAccount(signIn);
+        await HttpContext.Session.CommitAsync(ct);
+        logger.LogInformation("Signed in after password reset: {Email}", signIn.Email);
+
+        return RedirectToAction("AnonymousIndex", "Dashboard");
     }
     #endregion
 }

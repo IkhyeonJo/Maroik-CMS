@@ -69,8 +69,10 @@ Authorization and navigation
 
 Accounts
 - A failed-login lockout is permanent until the user resets the password or an admin unlocks the
-  account. A successful password reset always unlocks the account, including an admin-imposed lock.
-  Admin sanctions use `AdminResetPassword` + `MustChangePassword`, not `Locked`.
+  account. A successful password reset always unlocks the account, including an admin-imposed lock, and signs
+  the user in straight away (fresh session id, new security stamp) unless the account has not accepted the
+  service terms. This does not weaken the lockout: the reset needs the single-use mailed token, not a guessed
+  password. Admin sanctions use `AdminResetPassword` + `MustChangePassword`, not `Locked`.
 - Registration and password-reset tokens are stored in the database as plain values (they expire after
   24 hours). The admin account grid intentionally shows and searches `HashedPassword`,
   `RegistrationToken` and `ResetPasswordToken`. Its Excel export (`ExcelExportService.CreateAccountExcel`)

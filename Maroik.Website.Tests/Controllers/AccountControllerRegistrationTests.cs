@@ -60,6 +60,9 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     /// <summary>Name prefix of the antiforgery cookie the site issues.</summary>
     private const string AntiForgeryCookieName = "__Secure-.AspNetCore.Antiforgery.";
 
+    /// <summary>Name of the session cookie the site issues (see Program.cs).</summary>
+    private const string SessionCookieName = "__Secure-.AspNetCore.Session";
+
     /// <summary>The value of <paramref name="cookieName"/> from the response's <c>Set-Cookie</c> headers, or <see langword="null"/>.</summary>
     private static string? ExtractCookieValue(HttpResponseMessage response, string cookieName)
     {
@@ -77,7 +80,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     }
 
     /// <summary>Inserts a User account for <paramref name="email"/> directly into the database with the given confirmation state and tokens.</summary>
-    private async Task SeedAccountAsync(string email, bool emailConfirmed, string? registrationToken = null, string? resetPasswordToken = null, string? nickname = null)
+    private async Task SeedAccountAsync(string email, bool emailConfirmed, string? registrationToken = null, string? resetPasswordToken = null, string? nickname = null, bool agreedServiceTerms = true)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -93,7 +96,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
             Locked = false,
             LoginAttempt = 0,
             EmailConfirmed = emailConfirmed,
-            AgreedServiceTerms = true,
+            AgreedServiceTerms = agreedServiceTerms,
             RegistrationToken = registrationToken,
             ResetPasswordToken = resetPasswordToken,
             Deleted = false,
@@ -517,7 +520,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
             ["ResetPasswordToken"] = encryptedToken,
             ["Password"] = "BrandNewPassword1!"
         });
-        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(System.Net.HttpStatusCode.Redirect, response.StatusCode);
 
         // Prove the new password actually works end-to-end via the real Login action.
         var (loginCookie, loginToken) = await GetAntiForgeryAsync("/Account/Login");
@@ -532,6 +535,71 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         var loginResponse = await _client.SendAsync(loginRequest, TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.Redirect, loginResponse.StatusCode); // login success redirects; failure re-renders as 200
+    }
+
+    /// <summary>
+    /// A successful reset signs the user in straight away, the way a successful login does: it redirects to the
+    /// dashboard with a new session cookie, and that session opens a signed-in-only page. The browser brings a
+    /// session cookie an attacker planted: a real one the site issued (the attacker signed in and out, leaving a
+    /// valid signed-out session — a made-up value would be ignored by the session middleware anyway). That
+    /// session must not be the one that gets signed in.
+    /// </summary>
+    [Fact]
+    public async Task ResetPassword_Post_ValidToken_SignsTheUserIn_WithAFreshSession()
+    {
+        string email = UniqueEmail();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
+        await SeedAccountAsync(email, emailConfirmed: true, resetPasswordToken: rawToken);
+        AuthenticatedSession attacker = await AuthenticatedSessionHelper.LoginAsync(
+            factory, _client, UniqueEmail(), "AttackerPassword1!", Role.User, TestContext.Current.CancellationToken);
+        using (var logout = attacker.BuildJsonPostRequest("/Account/Logout"))
+            Assert.Equal(System.Net.HttpStatusCode.Redirect, (await _client.SendAsync(logout, TestContext.Current.CancellationToken)).StatusCode);
+        string plantedSessionId = attacker.CookieHeader.Split(';')[0].Split('=', 2)[1];
+        var (cookie, token) = await GetAntiForgeryAsync("/Account/ResetPassword");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/Account/ResetPassword");
+        request.Headers.Add("Cookie", $"{SessionCookieName}={plantedSessionId}; {AntiForgeryCookieName}={cookie}");
+        request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["ResetPasswordToken"] = EncryptToken(rawToken),
+            ["Password"] = "BrandNewPassword1!",
+            ["__RequestVerificationToken"] = token
+        });
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/", response.Headers.Location?.OriginalString); // the default route: Dashboard/AnonymousIndex, where Login sends a user too
+        string? session = ExtractCookieValue(response, SessionCookieName);
+        Assert.False(string.IsNullOrEmpty(session));
+        Assert.NotEqual(plantedSessionId, session);
+
+        using var page = new HttpRequestMessage(HttpMethod.Get, "/AccountBook/Income");
+        page.Headers.Add("Cookie", $"{SessionCookieName}={session}");
+        var pageResponse = await _client.SendAsync(page, TestContext.Current.CancellationToken);
+        Assert.Equal(System.Net.HttpStatusCode.OK, pageResponse.StatusCode);
+    }
+
+    /// <summary>
+    /// An account that has not accepted the service terms gets its new password but is not signed in (login
+    /// refuses it as well): the "password changed" page is shown and no session cookie is issued.
+    /// </summary>
+    [Fact]
+    public async Task ResetPassword_Post_ValidToken_TermsNotAccepted_ShowsTheCompletionPage_WithoutSigningIn()
+    {
+        string email = UniqueEmail();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
+        await SeedAccountAsync(email, emailConfirmed: true, resetPasswordToken: rawToken, agreedServiceTerms: false);
+
+        var response = await PostFormAsync("/Account/ResetPassword", new Dictionary<string, string>
+        {
+            ["ResetPasswordToken"] = EncryptToken(rawToken),
+            ["Password"] = "BrandNewPassword1!"
+        });
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(ExtractCookieValue(response, SessionCookieName));
+        Assert.Contains("Your account password has been successfully changed", html);
     }
 
     /// <summary>Reset password post unknown token returns fail to reset.</summary>
