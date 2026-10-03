@@ -242,6 +242,26 @@ public class AuthorizationFilterTests
         Assert.Null(context.Result);
     }
 
+    /// <summary>
+    /// A lock does not end a session by itself: an account locked by failed logins (same security stamp) keeps
+    /// using the site; only new logins are refused. (An administrator's lock replaces the stamp, which does end it.)
+    /// </summary>
+    [Fact]
+    public async Task OnAuthorizationAsync_Get_LockedAccountWithAValidSession_Allows()
+    {
+        var session = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, SecurityStamp = "stamp" };
+        var locked = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, SecurityStamp = "stamp", Locked = true };
+        _sessionService.Setup(s => s.GetAccount()).Returns(session);
+        _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(locked);
+        SetupMenu([MakeCategory(1, Role.User, "AccountBook", "Income")], []);
+        var context = BuildContext("AccountBook", "Income");
+
+        await CreateSut().OnAuthorizationAsync(context);
+
+        Assert.Null(context.Result);
+        _sessionService.Verify(s => s.RemoveAccount(), Times.Never);
+    }
+
     /// <summary>On action execution async get user logged in no match redirects.</summary>
     [Fact]
     public async Task OnAuthorizationAsync_Get_UserLoggedIn_NoMatch_Redirects()

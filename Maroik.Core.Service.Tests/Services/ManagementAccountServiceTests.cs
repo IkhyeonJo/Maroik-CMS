@@ -457,6 +457,25 @@ public class ManagementAccountServiceTests
         Assert.Equal("spam", account.Message);
     }
 
+    /// <summary>
+    /// An administrator locking an unlocked account ends its open sessions (new security stamp); re-saving an
+    /// account that is already locked — for example one locked by failed logins — leaves its sessions alone.
+    /// </summary>
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task UpdateAccountAsync_EndsTheSessions_OnlyWhenTheAdminLocksAnUnlockedAccount(bool alreadyLocked, bool stampReplaced)
+    {
+        Account account = ActiveAccount(locked: alreadyLocked);
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+
+        await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = account.Email.Value, Locked = true }, null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(account.Locked);
+        Assert.Equal(stampReplaced, account.SecurityStamp != "stamp");
+    }
+
     /// <summary>An invalid time zone is returned as the domain's validation error and nothing is written.</summary>
     [Fact]
     public async Task UpdateAccountAsync_ReturnsTheDomainValidationError_ForAnUnknownTimeZone()
