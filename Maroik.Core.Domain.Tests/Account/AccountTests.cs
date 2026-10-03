@@ -692,6 +692,39 @@ public class AccountTests
         Assert.Equal("newHash", account.HashedPassword);
     }
 
+    /// <summary>
+    /// A signed-in owner whose account was locked by someone else's failed logins proves the current password to change
+    /// it; the change unlocks the account (counter and lock message cleared), or the sign-in it asks for would be refused.
+    /// </summary>
+    [Fact]
+    public void ChangePassword_UnlocksAnAccountLockedByFailedLogins()
+    {
+        var account = ValidAccount();
+        for (int i = 0; i < 3; i++)
+            account.RecordLoginFailure(maxAttempts: 3, Now);
+
+        account.ChangePassword("newHash", Now);
+
+        Assert.False(account.Locked);
+        Assert.Equal(0, account.LoginAttempt);
+        Assert.Null(account.Message);
+    }
+
+    /// <summary>On an unlocked account the change clears the failed-login counter but keeps the account's message.</summary>
+    [Fact]
+    public void ChangePassword_OnAnUnlockedAccount_ResetsTheCounter_AndKeepsTheMessage()
+    {
+        var account = ValidAccount();
+        account.RecordLoginFailure(maxAttempts: 3, Now);
+        account.SetMessage("note", Now);
+
+        account.ChangePassword("newHash", Now);
+
+        Assert.False(account.Locked);
+        Assert.Equal(0, account.LoginAttempt);
+        Assert.Equal("note", account.Message);
+    }
+
     // -- SetMessage -----------------------------------------------------------
 
     /// <summary>Set message stores text.</summary>

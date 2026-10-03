@@ -2,6 +2,7 @@ using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Website.Tests.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Maroik.Website.Tests.Controllers;
@@ -155,6 +156,51 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
         var profileResponse = await _client.SendAsync(profile, TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.Redirect, profileResponse.StatusCode);
+    }
+
+    /// <summary>
+    /// Someone else's failed logins lock the account while its owner is signed in (that lock keeps the session). The
+    /// owner changes the password, which ends the session and asks for a new sign-in: the change lifts the lock, so that
+    /// sign-in with the new password succeeds instead of being refused as locked.
+    /// </summary>
+    [Fact]
+    public async Task UpdateProfilePassword_OnAnAccountLockedByFailedLogins_LiftsTheLock_SoTheNewSignInSucceeds()
+    {
+        const string email = "management-profile-pw-locked@test.com";
+        var ct = TestContext.Current.CancellationToken;
+        var session = await LoginAsUserAsync(email);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await db.Accounts.Where(a => a.Email == email).ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.Locked, true)
+                .SetProperty(a => a.LoginAttempt, 3)
+                .SetProperty(a => a.Message, "This account is locked"), ct);
+        }
+
+        using var change = session.BuildJsonPostRequest("/Management/UpdateProfilePassword", new
+        {
+            Nickname = "unused",
+            Password = "UserPassword1!",
+            NewPassword = "BrandNewPassword1!",
+            TimeZoneIanaId = "unused"
+        });
+        string json = await (await _client.SendAsync(change, ct)).Content.ReadAsStringAsync(ct);
+
+        Assert.Contains("\"result\":true", json);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var account = db.Accounts.AsNoTracking().Single(a => a.Email == email);
+            Assert.False(account.Locked);
+            Assert.Equal(0, account.LoginAttempt);
+            Assert.Null(account.Message);
+        }
+
+        var signedInAgain = await AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "BrandNewPassword1!", Role.User, ct);
+        using var profile = new HttpRequestMessage(HttpMethod.Get, "/Management/Profile");
+        profile.Headers.Add("Cookie", signedInAgain.CookieHeader);
+        Assert.Equal(System.Net.HttpStatusCode.OK, (await _client.SendAsync(profile, ct)).StatusCode);
     }
 
     /// <summary>

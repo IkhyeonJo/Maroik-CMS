@@ -27,7 +27,8 @@ public interface IProfileService
     Task<ServiceResult> UpdateTimeZoneAsync(string email, string timeZoneIanaId, CancellationToken ct = default);
 
     /// <summary>
-    /// Changes the account's password after verifying <paramref name="currentPassword"/> matches the stored hash.
+    /// Changes the account's password after verifying <paramref name="currentPassword"/> matches the stored hash. The
+    /// change also lifts a lock and clears the failed-login counter, since the current password was proven.
     /// </summary>
     Task<ServiceResult> UpdatePasswordAsync(string email, string currentPassword, string newPassword, CancellationToken ct = default);
 

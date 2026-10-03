@@ -380,13 +380,20 @@ public sealed class Account : AggregateRoot<string>
     /// clears <see cref="MustChangePassword"/>, since supplying a new hash here always goes through
     /// the password-policy-validated self-service flow. Also discards any pending
     /// <see cref="ResetPasswordToken"/>: a reset link mailed before this change must not stay
-    /// usable to overwrite the password the account owner just chose. An empty or blank hash is
-    /// rejected and nothing changes.
+    /// usable to overwrite the password the account owner just chose. The caller proved the current
+    /// password, so the failed-login counter is cleared and a lock is lifted (<see cref="Unlock"/>): a lock from
+    /// someone else's failed logins leaves the owner's session open, and the change ends that session, so the
+    /// sign-in it asks for must not be refused. An empty or blank hash is rejected and nothing changes.
     /// </summary>
     public ErrorOr<Success> ChangePassword(string newHashedPassword, DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(newHashedPassword))
             return LocalizableError.Validation("Account.PasswordEmpty", "New hashed password cannot be empty.");
+
+        if (Locked)
+            Unlock(utcNow);
+        else
+            LoginAttempt = 0;
 
         HashedPassword = newHashedPassword;
         ResetPasswordToken = null;

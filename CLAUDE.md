@@ -80,7 +80,9 @@ Accounts
   `RegistrationToken` and `ResetPasswordToken`. Its Excel export (`ExcelExportService.CreateAccountExcel`)
   deliberately leaves those three columns out — keep them out of the export.
 - A successful self-service password change ends the session; the user signs in again (as on other sites), and
-  every other session of the account is invalidated through the security stamp.
+  every other session of the account is invalidated through the security stamp. Because it proves the current
+  password, it also lifts a lock and clears the failed-login counter (`Account.ChangePassword`) — otherwise an owner
+  locked by someone else's guesses, still signed in, would change the password and then be refused at that sign-in.
 - A deleted account's login answers "Your Account is Deleted. Please contact the administrator." — it is not
   re-registrable.
 - The Login page is pre-filled with the public demo account (`demo@maroik.com` / `demoO12!!`), and the demo

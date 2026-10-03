@@ -454,7 +454,7 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
 
         int n1 = await Sut.UpdateAvatarPathAsync(email, "/new-avatar.jpg", t1, ct);
         int n2 = await Sut.UpdateTimeZoneAsync(email, "Asia/Seoul", t1, ct);
-        int n3 = await Sut.UpdatePasswordAsync(email, "$2a$13$new", "new-stamp", mustChangePassword: true, resetPasswordToken: null, t1, ct);
+        int n3 = await Sut.UpdatePasswordAsync(email, "$2a$13$new", "new-stamp", mustChangePassword: true, resetPasswordToken: null, locked: false, loginAttempt: 0, message: "original-message", t1, ct);
         int n4 = await Sut.UpdateDefaultMonetaryUnitAsync(email, "KRW", ct);
         int n5 = await Sut.UpdateMessageAsync(email, "new-message", t1, ct);
         Context.ChangeTracker.Clear();
@@ -479,6 +479,30 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
         // Untouched by any of the above.
         Assert.True(result.EmailConfirmed);
         Assert.Equal(Role.User, result.Role.Value);
+    }
+
+    /// <summary>A self-service password change lifts a failed-login lock: the password write also stores the lock columns.</summary>
+    [Fact]
+    public async Task UpdatePasswordAsync_WritesTheLockColumns()
+    {
+        string email = UniqueEmail("pwunlock");
+        var seed = NewAccount(email, Unique("PwUnlock"));
+        seed.Locked = true;
+        seed.LoginAttempt = 3;
+        seed.Message = "This account is locked";
+        await SeedAsync(seed);
+
+        var ct = TestContext.Current.CancellationToken;
+        int n = await Sut.UpdatePasswordAsync(email, "$2a$13$new", "new-stamp", mustChangePassword: false, resetPasswordToken: null,
+            locked: false, loginAttempt: 0, message: null, DateTime.UtcNow, ct);
+        Context.ChangeTracker.Clear();
+
+        Assert.Equal(1, n);
+        Account? result = await Sut.FindByEmailAsync(email, ct);
+        Assert.NotNull(result);
+        Assert.False(result.Locked);
+        Assert.Equal(0, result.LoginAttempt);
+        Assert.Null(result.Message);
     }
 
     /// <summary>A null avatar path persists as the shared default-avatar path, matching ToEntity.</summary>
