@@ -123,16 +123,30 @@ public class AccountServiceAuditLoggingTests
         AssertNoSecretLogged(TypedPassword);
     }
 
-    /// <summary>Verifies that the failure that reaches the attempt limit logs an account-locked Warning with the count.</summary>
+    /// <summary>Verifies that the failure that starts a wait logs a Warning with the count and never the typed password.</summary>
     [Fact]
-    public async Task Login_LogsAnAccountLockedWarning_WhenTheFailureReachesTheLimit()
+    public async Task Login_LogsAThrottleWarning_WhenTheFailureStartsAWait()
     {
         AccountForLogin(ExistingAccount(loginAttempt: 2), passwordMatches: false);
 
         await CreateSut().LoginAsync(Email, TypedPassword, TestContext.Current.CancellationToken);
 
-        FakeLogRecord record = Only(LogLevel.Warning, "locked after");
+        FakeLogRecord record = Only(LogLevel.Warning, "Logins held off");
         Assert.Contains("3", record.Message);
+        AssertNoSecretLogged(TypedPassword);
+    }
+
+    /// <summary>Verifies that a login refused during the wait logs a Warning.</summary>
+    [Fact]
+    public async Task Login_LogsWarning_WhenRefusedDuringTheWait()
+    {
+        AccountForLogin(Account.Reconstitute(Email, "$2a$13$placeholder", "User", null, Role.User, "UTC", null, false, 3,
+            true, true, null, null, DateTime.UtcNow, DateTime.UtcNow, null, false, "stamp", false,
+            loginBlockedUntil: Now.AddHours(1)), passwordMatches: true);
+
+        await CreateSut().LoginAsync(Email, TypedPassword, TestContext.Current.CancellationToken);
+
+        Only(LogLevel.Warning, "Login refused: too many failed attempts");
     }
 
     /// <summary>Verifies that a login for an unknown email logs a Warning and never the typed password.</summary>

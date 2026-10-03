@@ -13,9 +13,6 @@ namespace Maroik.Core.Domain.Account;
 /// </summary>
 public sealed class Account : AggregateRoot<string>
 {
-    /// <summary>Admin-facing note set on an account when it is locked out after too many failed login attempts.</summary>
-    private const string AccountLockedMessage = "This account is locked";
-
     /// <summary>
     /// Relative path stored in <see cref="AvatarImagePath"/> for an account that has not uploaded
     /// its own avatar. Single source of truth for the value the persistence and presentation layers
@@ -87,6 +84,15 @@ public sealed class Account : AggregateRoot<string>
     /// password change.
     /// </summary>
     public bool MustChangePassword { get; private set; }
+
+    /// <summary>
+    /// Until when new logins are held off after failed attempts (<see cref="LoginThrottlePolicy"/>), or
+    /// <see langword="null"/> when they are not. Cleared by a successful login, a password reset and an unlock.
+    /// </summary>
+    public DateTime? LoginBlockedUntil { get; private set; }
+
+    /// <summary>True while <see cref="LoginBlockedUntil"/> is still ahead of <paramref name="utcNow"/>.</summary>
+    public bool IsLoginBlocked(DateTime utcNow) => LoginBlockedUntil > utcNow;
 
     /// <summary>Generates a fresh, unpredictable security stamp value.</summary>
     private static string GenerateSecurityStamp() => Guid.NewGuid().ToString("N");
@@ -188,7 +194,8 @@ public sealed class Account : AggregateRoot<string>
         string? message,
         bool deleted,
         string securityStamp,
-        bool mustChangePassword)
+        bool mustChangePassword,
+        DateTime? loginBlockedUntil = null)
     {
         return new Account(
             Email.FromTrustedSource(email),
@@ -209,7 +216,10 @@ public sealed class Account : AggregateRoot<string>
             message,
             deleted,
             securityStamp,
-            mustChangePassword);
+            mustChangePassword)
+        {
+            LoginBlockedUntil = loginBlockedUntil
+        };
     }
 
     /// <summary>
@@ -313,20 +323,23 @@ public sealed class Account : AggregateRoot<string>
     }
 
     /// <summary>
-    /// Increments the failed-login counter and locks the account when <paramref name="maxAttempts"/> is reached.
+    /// Increments the failed-login counter and, once it reaches a stage of <see cref="LoginThrottlePolicy"/>
+    /// (<paramref name="maxAttempts"/> failures per stage), holds new logins off for that stage's wait, counted from
+    /// <paramref name="utcNow"/>. The account is never locked by failures: the wait ends by itself.
     /// </summary>
     public void RecordLoginFailure(int maxAttempts, DateTime utcNow)
     {
         LoginAttempt++;
         Updated = utcNow;
-        if (LoginAttempt >= maxAttempts)
-            Lock(utcNow, AccountLockedMessage);
+        if (LoginThrottlePolicy.DelayAfter(LoginAttempt, maxAttempts) is { } delay)
+            LoginBlockedUntil = utcNow + delay;
     }
 
-    /// <summary>Resets the failed-login counter to zero (called after a successful login).</summary>
+    /// <summary>Resets the failed-login counter to zero and ends any wait (called after a successful login).</summary>
     public void ResetLoginAttempt(DateTime utcNow)
     {
         LoginAttempt = 0;
+        LoginBlockedUntil = null;
         Updated = utcNow;
     }
 
@@ -357,6 +370,7 @@ public sealed class Account : AggregateRoot<string>
     {
         Locked = false;
         LoginAttempt = 0;
+        LoginBlockedUntil = null;
         Message = null;
         Updated = utcNow;
     }

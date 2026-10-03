@@ -6,9 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Maroik.Website.Tests.Controllers;
 
 /// <summary>
-/// What a lock does to a session that is already signed in. A lock from failed logins only refuses new logins —
-/// otherwise anyone who knows an address could throw its owner out of the site by guessing wrong on purpose. An
-/// administrator's lock ends the account's sessions as well.
+/// What failed logins and a lock do to a session that is already signed in. Failed logins never lock the account:
+/// they hold new logins off for a while (LoginThrottlePolicy) and leave open sessions alone — otherwise anyone who
+/// knows an address could throw its owner out of the site by guessing wrong on purpose. An administrator's lock
+/// ends the account's sessions.
 /// </summary>
 [Collection("Website Integration")]
 public class AccountLockSessionTests(MaroikWebApplicationFactory factory)
@@ -37,8 +38,11 @@ public class AccountLockSessionTests(MaroikWebApplicationFactory factory)
         return await _client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
-    /// <summary>Posts the login form for <paramref name="email"/> with <paramref name="password"/>, from a browser with no session.</summary>
-    private async Task<HttpResponseMessage> PostLoginAsync(string email, string password)
+    /// <summary>
+    /// Posts the login form for <paramref name="email"/> with <paramref name="password"/>, from a browser with no
+    /// session (asking for <paramref name="culture"/> when given).
+    /// </summary>
+    private async Task<HttpResponseMessage> PostLoginAsync(string email, string password, string? culture = null)
     {
         var anonymous = await AuthenticatedSessionHelper.AnonymousAsync(_client, TestContext.Current.CancellationToken);
         var form = new MultipartFormDataContent
@@ -47,22 +51,25 @@ public class AccountLockSessionTests(MaroikWebApplicationFactory factory)
             { new StringContent(password), "Password" }
         };
         using var request = anonymous.BuildFormPostRequest("/Account/Login", form);
+        if (culture != null) request.Headers.AcceptLanguage.ParseAdd(culture);
         return await _client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
-    /// <summary>The stored <c>Locked</c> flag of <paramref name="email"/>.</summary>
-    private bool IsLocked(string email)
+    /// <summary>The stored <c>Locked</c> flag and login wait of <paramref name="email"/>.</summary>
+    private (bool Locked, DateTime? BlockedUntil) StoredState(string email)
     {
         using var scope = factory.Services.CreateScope();
-        return scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Accounts.Single(a => a.Email == email).Locked;
+        var account = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Accounts.Single(a => a.Email == email);
+        return (account.Locked, account.LoginBlockedUntil);
     }
 
     /// <summary>
-    /// Someone else guesses wrong until the account locks: the owner's open session keeps working, and only a new
-    /// login (even with the right password) is refused.
+    /// Someone else guesses wrong up to the configured step: the account is not locked but its new logins are held
+    /// off for a while, the owner's open session keeps working, and a new login (even with the right password) is
+    /// refused with the "too many attempts" message.
     /// </summary>
     [Fact]
-    public async Task AFailedLoginLock_KeepsTheOpenSession_AndOnlyRefusesNewLogins()
+    public async Task FailedLogins_HoldNewLoginsOff_AndKeepTheOpenSession()
     {
         string email = UniqueEmail();
         AuthenticatedSession owner = await SignInAsync(email);
@@ -70,9 +77,30 @@ public class AccountLockSessionTests(MaroikWebApplicationFactory factory)
         for (int i = 0; i < MaxLoginAttempt; i++)
             await PostLoginAsync(email, "WrongGuess1!");
 
-        Assert.True(IsLocked(email));
+        (bool locked, DateTime? blockedUntil) = StoredState(email);
+        Assert.False(locked);
+        Assert.NotNull(blockedUntil);
         Assert.Equal(System.Net.HttpStatusCode.OK, (await OpenIncomePageAsync(owner)).StatusCode);
-        Assert.Equal(System.Net.HttpStatusCode.OK, (await PostLoginAsync(email, Password)).StatusCode); // refused: the form again, not a redirect
+        var refused = await PostLoginAsync(email, Password);
+        Assert.Equal(System.Net.HttpStatusCode.OK, refused.StatusCode); // refused: the form again, not a redirect
+        Assert.Contains("Too many failed sign-in attempts. Please try again later or reset your password.",
+            await refused.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>A Korean browser is told the same in Korean.</summary>
+    [Fact]
+    public async Task FailedLogins_TheHeldOffRefusal_IsShownInKorean_ToAKoreanBrowser()
+    {
+        string email = UniqueEmail();
+        await SignInAsync(email);
+        for (int i = 0; i < MaxLoginAttempt; i++)
+            await PostLoginAsync(email, "WrongGuess1!");
+
+        var refused = await PostLoginAsync(email, Password, culture: "ko-KR");
+
+        // Razor writes non-ASCII text as character references (&#xB85C;...), so compare the decoded page.
+        Assert.Contains("로그인 실패가 너무 많습니다. 잠시 후 다시 시도하거나 비밀번호를 재설정해 주세요.",
+            System.Net.WebUtility.HtmlDecode(await refused.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)));
     }
 
     /// <summary>An administrator locking the account ends its open session: the next request goes to the login page.</summary>

@@ -379,6 +379,33 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
     }
 
     /// <summary>
+    /// The wait after failed logins is stored and read back (by the plain and the locked read), and a successful
+    /// login's reset stores it cleared again.
+    /// </summary>
+    [Fact]
+    public async Task UpdateEntityAsync_PersistsTheLoginWait_AndItsClearing()
+    {
+        string email = UniqueEmail("wait");
+        await SeedAsync(NewAccount(email, Unique("Wait")));
+        var failedAt = new DateTime(2031, 5, 6, 7, 8, 9, DateTimeKind.Utc);
+        Account account = (await Sut.FindByEmailAsync(email, TestContext.Current.CancellationToken))!;
+        account.RecordLoginFailure(maxAttempts: 1, failedAt);
+
+        await Sut.UpdateEntityAsync(account, TestContext.Current.CancellationToken);
+        Context.ChangeTracker.Clear();
+
+        Assert.Equal(failedAt.AddMinutes(1), (await Sut.FindByEmailAsync(email, TestContext.Current.CancellationToken))!.LoginBlockedUntil);
+        Account locked = (await Sut.FindByEmailForUpdateAsync(email, TestContext.Current.CancellationToken))!;
+        Assert.Equal(failedAt.AddMinutes(1), locked.LoginBlockedUntil);
+
+        locked.ResetLoginAttempt(failedAt);
+        await Sut.UpdateEntityAsync(locked, TestContext.Current.CancellationToken);
+        Context.ChangeTracker.Clear();
+
+        Assert.Null((await Sut.FindByEmailAsync(email, TestContext.Current.CancellationToken))!.LoginBlockedUntil);
+    }
+
+    /// <summary>
     /// An account write that keeps the nickname (a login, a message, a lock ...) sends exactly one UPDATE: the separate
     /// nickname UPDATE (which the <c>Board_fk_0</c> / <c>BoardComment_fk_1</c> cascade needs) is only for an actual change.
     /// </summary>
