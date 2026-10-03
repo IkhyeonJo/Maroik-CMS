@@ -665,7 +665,7 @@ public class AccountService(
     }
 
     /// <inheritdoc />
-    public async Task<ServiceResult> ResetPasswordAsync(string encryptedToken, string newPassword, CancellationToken ct = default)
+    public async Task<(ServiceResult Result, AccountResponse? SignIn)> ResetPasswordAsync(string encryptedToken, string newPassword, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         string rawToken;
@@ -673,19 +673,19 @@ public class AccountService(
         catch (Exception e)
         {
             logger.LogWarning(e, "Failed to decrypt reset password token");
-            return ServiceResult.Fail("reset-password-invalid");
+            return (ServiceResult.Fail("reset-password-invalid"), null);
         }
 
         Account? found = await FindByResetPasswordTokenAsync(rawToken, ct);
         if (found == null || found.Deleted || !GuidToken.IsTokenAlive(rawToken, utcNow) || !found.EmailConfirmed)
         {
             logger.LogWarning("Password reset rejected: invalid or expired token");
-            return ServiceResult.Fail("reset-password-invalid");
+            return (ServiceResult.Fail("reset-password-invalid"), null);
         }
 
         // Enforce the complexity rule server-side, before hashing — Account.ResetPassword only sees the hash.
         if (!PasswordPolicy.IsValid(newPassword))
-            return ServiceResult.Validation("Account.PasswordPolicy", PasswordPolicy.ViolationMessage);
+            return (ServiceResult.Validation("Account.PasswordPolicy", PasswordPolicy.ViolationMessage), null);
 
         string newHashedPassword = passwordService.HashPassword(newPassword);
 
@@ -701,7 +701,7 @@ public class AccountService(
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Password reset rejected: account {Email} no longer exists or is deleted", found.Email.Value);
-                return ServiceResult.Fail("reset-password-invalid");
+                return (ServiceResult.Fail("reset-password-invalid"), null);
             }
 
             // ResetPassword re-checks the stored token, so a concurrent reset that already consumed
@@ -711,7 +711,7 @@ public class AccountService(
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Password reset rejected: invalid or expired token for {Email}", account.Email.Value);
-                return ServiceResult.Fail("reset-password-invalid");
+                return (ServiceResult.Fail("reset-password-invalid"), null);
             }
 
             // Unlock the account so the user can log in immediately after resetting their password.
@@ -721,13 +721,19 @@ public class AccountService(
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
             logger.LogInformation("Password reset completed for {Email}", account.Email.Value);
-            return ServiceResult.Ok();
+
+            // The holder of the mailed link has just proven the mailbox and chosen the password, so they may be
+            // signed in straight away — nothing a password guesser could use (the lockout guards guessing; this
+            // path needs the single-use token). The account handed back carries the NEW security stamp. Not
+            // deleted and email-confirmed are already guaranteed above; the remaining LoginAsync refusal
+            // (service terms not accepted) still applies, so a reset is no way around it.
+            return (ServiceResult.Ok(), account.AgreedServiceTerms ? AccountMapper.ToResponse(account) : null);
         }
         catch (Exception e)
         {
             logger.LogError(e, "Failed to reset password for {Email}", found.Email.Value);
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Failure("Account.ResetPasswordFailed", "Error occurred while processing about reset password");
+            return (ServiceResult.Failure("Account.ResetPasswordFailed", "Error occurred while processing about reset password"), null);
         }
     }
 
