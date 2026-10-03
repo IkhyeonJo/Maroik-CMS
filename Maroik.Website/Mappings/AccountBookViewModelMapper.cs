@@ -167,11 +167,12 @@ public static class AccountBookViewModelMapper
     extension(AccountBookPageViewModel vm)
     {
         /// <summary>
-        /// Fills the current local time fields on <paramref name="vm"/> for pre-populating date/time pickers.
+        /// Fills the current local time fields on <paramref name="vm"/> for pre-populating date/time pickers:
+        /// <paramref name="utcNow"/> (the request's clock reading) shown in <paramref name="timeZoneIanaId"/>.
         /// </summary>
-        public void PopulateTimeData(string timeZoneIanaId)
+        public void PopulateTimeData(string timeZoneIanaId, DateTime utcNow)
         {
-            DateTime ct = DateTime.UtcNow.ConvertTimeByTimeZoneIanaId(timeZoneIanaId);
+            DateTime ct = utcNow.ConvertTimeByTimeZoneIanaId(timeZoneIanaId);
             vm.CurrentDate = ct.ToString("yyyy-MM-dd");
             vm.CurrentHour = ct.Hour;
             vm.CurrentMinute = ct.Minute;

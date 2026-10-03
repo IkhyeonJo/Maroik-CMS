@@ -18,7 +18,8 @@ namespace Maroik.Website.Controllers;
 public class DashboardController(
     IDashboardService dashboardService,
     IProfileService profileService,
-    ILogger<DashboardController> logger) : Controller
+    ILogger<DashboardController> logger,
+    TimeProvider timeProvider) : Controller
 {
     /// <summary>Host CPU / memory / disk report written by the host's resource-monitoring cron job (mounted into the container).</summary>
     private const string HostResourceFilePath = "/app/Maroik.Log/HostResourceInfo.txt";
@@ -44,7 +45,7 @@ public class DashboardController(
             return Json(new { result = false });
 
         Response.Cookies.Append(CookieRequestCultureProvider.DefaultCookieName, CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
-            new CookieOptions { Expires = DateTimeOffset.Now.AddDays(30), Secure = true, HttpOnly = true, SameSite = SameSiteMode.Strict });
+            new CookieOptions { Expires = timeProvider.GetUtcNow().AddDays(30), Secure = true, HttpOnly = true, SameSite = SameSiteMode.Strict });
 
         return Json(new { result = true });
     }

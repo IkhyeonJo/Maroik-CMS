@@ -32,6 +32,8 @@ public class AccountBookController : Controller
     private readonly IExcelExportService _excelExportService;
     /// <summary>Resource-key → localized text delegate handed to the mappers and the Excel export.</summary>
     private readonly Func<string, string> _localize;
+    /// <summary>The clock read for the pickers' current date/time and the export file name's timestamp.</summary>
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>Initializes a new instance of <see cref="AccountBookController"/> with the supplied dependencies.</summary>
     public AccountBookController(
@@ -40,7 +42,8 @@ public class AccountBookController : Controller
         IAssetService assetService,
         IIncomeService incomeService,
         IExpenditureService expenditureService,
-        IExcelExportService excelExportService)
+        IExcelExportService excelExportService,
+        TimeProvider timeProvider)
     {
         _localizer = localizer;
         _logger = logger;
@@ -49,6 +52,7 @@ public class AccountBookController : Controller
         _expenditureService = expenditureService;
         _excelExportService = excelExportService;
         _localize = key => _localizer[key].Value;
+        _timeProvider = timeProvider;
     }
 
     #region Asset
@@ -115,7 +119,7 @@ public class AccountBookController : Controller
                 .Where(x => !x.Deleted).OrderBy(x => x.ProductName)
             ]
         };
-        vm.PopulateTimeData(tz);
+        vm.PopulateTimeData(tz, _timeProvider.GetUtcNow().UtcDateTime);
         return View(vm);
     }
 
@@ -203,7 +207,7 @@ public class AccountBookController : Controller
         AccountResponse account = ViewBag.LoggedInAccount;
         var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
         var stream = _excelExportService.CreateAssetExcel(assets, _localize, account.TimeZoneIanaId!);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
 
@@ -278,7 +282,7 @@ public class AccountBookController : Controller
                 .Where(x => !x.Deleted).OrderBy(x => x.ProductName)
             ]
         };
-        vm.PopulateTimeData(tz);
+        vm.PopulateTimeData(tz, _timeProvider.GetUtcNow().UtcDateTime);
         return View(vm);
     }
 
@@ -396,7 +400,7 @@ public class AccountBookController : Controller
         var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
         var incomes = await _incomeService.GetIncomesAsync(account.Email!, ct);
         var stream = _excelExportService.CreateIncomeExcel(incomes, assets, _localize, account.TimeZoneIanaId!);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
 
@@ -473,7 +477,7 @@ public class AccountBookController : Controller
                 .Where(x => !x.Deleted).OrderBy(x => x.ProductName)
             ]
         };
-        vm.PopulateTimeData(tz);
+        vm.PopulateTimeData(tz, _timeProvider.GetUtcNow().UtcDateTime);
         return View(vm);
     }
 
@@ -594,7 +598,7 @@ public class AccountBookController : Controller
         var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
         var expenditures = await _expenditureService.GetExpendituresAsync(account.Email!, ct);
         var stream = _excelExportService.CreateExpenditureExcel(expenditures, assets, _localize, account.TimeZoneIanaId!);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
 

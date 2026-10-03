@@ -24,7 +24,8 @@ public class CalendarController(
     ILogger<CalendarController> logger,
     ICalendarService calendarService,
     IRsaService rsa,
-    IOptions<ServerSetting> serverSettings) : Controller
+    IOptions<ServerSetting> serverSettings,
+    TimeProvider timeProvider) : Controller
 {
     /// <summary>Shared extension-to-MIME-type lookup for attachment downloads (safe for concurrent reads).</summary>
     private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
@@ -195,7 +196,7 @@ public class CalendarController(
             LoggedInAccount = loggedInAccount,
             LoggedInAccountTimeZoneIanaId = userTimezone
         };
-        vm.PopulateTimeData(userTimezone);
+        vm.PopulateTimeData(userTimezone, timeProvider.GetUtcNow().UtcDateTime);
         return View(vm);
     }
 
@@ -230,7 +231,7 @@ public class CalendarController(
             LoggedInAccount = loggedInAccount,
             LoggedInAccountTimeZoneIanaId = userTimezone
         };
-        vm.PopulateTimeData(userTimezone);
+        vm.PopulateTimeData(userTimezone, timeProvider.GetUtcNow().UtcDateTime);
         return View(vm);
     }
 
@@ -250,7 +251,7 @@ public class CalendarController(
             LoggedInAccount = loggedInAccount,
             LoggedInAccountTimeZoneIanaId = userTimezone
         };
-        vm.PopulateTimeData(userTimezone);
+        vm.PopulateTimeData(userTimezone, timeProvider.GetUtcNow().UtcDateTime);
         return View(vm);
     }
 

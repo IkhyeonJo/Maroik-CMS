@@ -3,6 +3,7 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Website.Services;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Maroik.Website.Tests.Services;
 
@@ -14,8 +15,8 @@ namespace Maroik.Website.Tests.Services;
 /// </summary>
 public class ExcelExportServiceTests
 {
-    /// <summary>The service under test.</summary>
-    private readonly ExcelExportService _sut = new();
+    /// <summary>The service under test, on the real clock (the fixtures below date their schedules relative to it).</summary>
+    private readonly ExcelExportService _sut = new(TimeProvider.System);
 
     /// <summary>A fake localizer that prefixes each key with <c>L:</c>.</summary>
     private static readonly Func<string, string> _localize = key => $"L:{key}";
@@ -394,6 +395,25 @@ public class ExcelExportServiceTests
         var row = ReadRows(_sut.CreateFixedIncomeExcel(items, assets, _identity, "UTC", 7))[1];
 
         Assert.Equal("KRW", row[4]);
+    }
+
+    /// <summary>
+    /// Both fixed-schedule exports judge "Expired" against the injected clock, not the machine's: on 2031-01-01 a
+    /// schedule that matured on 2030-12-31 has expired.
+    /// </summary>
+    [Fact]
+    public void FixedScheduleExports_JudgeExpiry_AgainstTheInjectedClock()
+    {
+        var sut = new ExcelExportService(new FakeTimeProvider(new DateTimeOffset(2031, 1, 1, 0, 0, 0, TimeSpan.Zero)));
+        var maturity = new DateTime(2030, 12, 31);
+
+        var fixedIncome = ReadRows(sut.CreateFixedIncomeExcel(
+            [new() { Content = "salary", Amount = 1m, MaturityDate = maturity, DepositMonth = 6, DepositDay = 1 }], [], _identity, "UTC", 7))[1];
+        var fixedExpenditure = ReadRows(sut.CreateFixedExpenditureExcel(
+            [new() { Content = "rent", Amount = 1m, MaturityDate = maturity, DepositMonth = 6, DepositDay = 1 }], [], _identity, "UTC", 7))[1];
+
+        Assert.Equal("True", fixedIncome[13]);
+        Assert.Equal("True", fixedExpenditure[^1]);
     }
 
     /// <summary>Create fixed income excel expired rows are ordered before active rows.</summary>

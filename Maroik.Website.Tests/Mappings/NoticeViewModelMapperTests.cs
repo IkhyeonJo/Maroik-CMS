@@ -116,18 +116,48 @@ public class NoticeViewModelMapperTests
     public void FixedIncomesToDisplayViewModels_SetsRowCssClass_ForExpiredItem()
     {
         var items = new[] { new FixedIncomeResponse { MaturityDate = DateTime.UtcNow.AddDays(-1) } };
-        var vms = items.ToDisplayViewModels([], k => k, "UTC", 7);
+        var vms = items.ToDisplayViewModels([], k => k, "UTC", 7, DateTime.UtcNow);
         Assert.Equal("table-danger clsGridRow", vms[0].RowCssClass);
     }
 
     // ── NoticeViewModelMapper.ToDisplayViewModels ────────────────────────────
+
+    /// <summary>
+    /// "Expired" is judged on the given instant's date in the viewer's time zone, not on the machine's clock:
+    /// 2030-06-01 15:30 UTC is still 1 June in UTC (a schedule maturing that day is live) but already
+    /// 2 June in Asia/Seoul (it has expired).
+    /// </summary>
+    [Theory]
+    [InlineData("UTC", false)]
+    [InlineData("Asia/Seoul", true)]
+    public void FixedIncomesToDisplayViewModels_JudgesExpiry_OnTheGivenInstantInTheViewersTimeZone(string timeZone, bool expired)
+    {
+        var items = new[] { new FixedIncomeResponse { MaturityDate = new DateTime(2030, 6, 1), DepositMonth = 1, DepositDay = 1 } };
+
+        var vms = items.ToDisplayViewModels([], k => k, timeZone, 7, new DateTime(2030, 6, 1, 15, 30, 0, DateTimeKind.Utc));
+
+        Assert.Equal(expired, vms[0].Expired);
+    }
+
+    /// <summary>The fixed-expenditure mapping judges expiry the same way (see the fixed-income test above).</summary>
+    [Theory]
+    [InlineData("UTC", false)]
+    [InlineData("Asia/Seoul", true)]
+    public void FixedExpendituresToDisplayViewModels_JudgesExpiry_OnTheGivenInstantInTheViewersTimeZone(string timeZone, bool expired)
+    {
+        var items = new[] { new FixedExpenditureResponse { MaturityDate = new DateTime(2030, 6, 1), DepositMonth = 1, DepositDay = 1 } };
+
+        var vms = items.ToDisplayViewModels([], k => k, timeZone, 7, new DateTime(2030, 6, 1, 15, 30, 0, DateTimeKind.Utc));
+
+        Assert.Equal(expired, vms[0].Expired);
+    }
 
     /// <summary>Fixed incomes to display view models localizes class fields.</summary>
     [Fact]
     public void FixedIncomesToDisplayViewModels_LocalizesClassFields()
     {
         var items = new[] { new FixedIncomeResponse { MainClass = "RegularIncome", SubClass = "LaborIncome", MaturityDate = DateTime.UtcNow.AddYears(1) } };
-        var vms = items.ToDisplayViewModels([], key => $"L:{key}", "UTC", 7);
+        var vms = items.ToDisplayViewModels([], key => $"L:{key}", "UTC", 7, DateTime.UtcNow);
         Assert.Equal("L:RegularIncome", vms[0].MainClass);
         Assert.Equal("L:LaborIncome", vms[0].SubClass);
     }
@@ -138,7 +168,7 @@ public class NoticeViewModelMapperTests
     {
         var assets = new[] { new AssetResponse { ProductName = "Bank", MonetaryUnit = "KRW" } };
         var items = new[] { new FixedIncomeResponse { DepositMyAssetProductName = "Bank", MaturityDate = DateTime.UtcNow.AddYears(1) } };
-        var vms = items.ToDisplayViewModels(assets, k => k, "UTC", 7);
+        var vms = items.ToDisplayViewModels(assets, k => k, "UTC", 7, DateTime.UtcNow);
         Assert.Equal("KRW", vms[0].MonetaryUnit);
     }
 }

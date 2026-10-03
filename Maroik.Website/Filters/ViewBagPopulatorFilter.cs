@@ -26,7 +26,8 @@ public class ViewBagPopulatorFilter(
     IDashboardService dashboardService,
     ITimeZoneCatalogService timeZoneCatalogService,
     IOptions<ServerSetting> serverSettings,
-    ISessionService sessionService) : IAsyncActionFilter
+    ISessionService sessionService,
+    TimeProvider timeProvider) : IAsyncActionFilter
 {
     /// <summary>Populates shared ViewBag entries before each action executes.</summary>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -88,7 +89,7 @@ public class ViewBagPopulatorFilter(
 
         controller.ViewBag.LoggedInAccount = loggedInAccount;
         controller.ViewBag.TimeZoneOptions = timeZoneCatalogService.GetTimeZoneOptions();
-        controller.ViewBag.CopyrightYear = DateTime.UtcNow.ConvertTimeByTimeZoneIanaId(loggedInAccount.TimeZoneIanaId ?? "UTC").Year;
+        controller.ViewBag.CopyrightYear = timeProvider.GetUtcNow().UtcDateTime.ConvertTimeByTimeZoneIanaId(loggedInAccount.TimeZoneIanaId ?? "UTC").Year;
 
         (IEnumerable<CategoryResponse>? roleCategories, IEnumerable<SubCategoryResponse>? roleSubCategories) = loggedInAccount.Role switch
         {

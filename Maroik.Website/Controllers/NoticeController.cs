@@ -33,6 +33,8 @@ public class NoticeController : Controller
     private readonly IExcelExportService _excelExportService;
     /// <summary>Resource-key → localized text delegate handed to the mappers and the Excel export.</summary>
     private readonly Func<string, string> _localize;
+    /// <summary>The clock the grids' notice / expiry flags and the export file name's timestamp are read from.</summary>
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>Initializes a new instance of <see cref="NoticeController"/> with the supplied dependencies.</summary>
     public NoticeController(
@@ -42,7 +44,8 @@ public class NoticeController : Controller
         IFixedIncomeService fixedIncomeService,
         IFixedExpenditureService fixedExpenditureService,
         IOptions<ServerSetting> settings,
-        IExcelExportService excelExportService)
+        IExcelExportService excelExportService,
+        TimeProvider timeProvider)
     {
         _localizer = localizer;
         _logger = logger;
@@ -52,6 +55,7 @@ public class NoticeController : Controller
         _settings = settings;
         _excelExportService = excelExportService;
         _localize = key => _localizer[key].Value;
+        _timeProvider = timeProvider;
     }
 
     #region FixedIncome
@@ -117,7 +121,7 @@ public class NoticeController : Controller
                 ? await _fixedIncomeService.GetFixedIncomesAsync(account.Email!, ct)
                 : await _fixedIncomeService.SearchFixedIncomesAsync(account.Email!, wholeSearch, ct);
             var viewModels = incomes
-                .ToDisplayViewModels(assets, _localize, account.TimeZoneIanaId!, _settings.Value.NoticeMaturityDateDay)
+                .ToDisplayViewModels(assets, _localize, account.TimeZoneIanaId!, _settings.Value.NoticeMaturityDateDay, _timeProvider.GetUtcNow().UtcDateTime)
                 .OrderByDescending(a => a.Expired).ThenByDescending(m => m.Noticed)
                 .ThenByDescending(m => m.Unpunctuality).ThenByDescending(a => a.Created)
                 .ThenByDescending(a => a.Updated)
@@ -276,7 +280,7 @@ public class NoticeController : Controller
         var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
         var incomes = await _fixedIncomeService.GetFixedIncomesAsync(account.Email!, ct);
         var stream = _excelExportService.CreateFixedIncomeExcel(incomes, assets, _localize, account.TimeZoneIanaId!, _settings.Value.NoticeMaturityDateDay);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
     #endregion
@@ -347,7 +351,7 @@ public class NoticeController : Controller
                 ? await _fixedExpenditureService.GetFixedExpendituresAsync(account.Email!, ct)
                 : await _fixedExpenditureService.SearchFixedExpendituresAsync(account.Email!, wholeSearch, ct);
             var viewModels = expenditures
-                .ToDisplayViewModels(assets, _localize, account.TimeZoneIanaId!, _settings.Value.NoticeMaturityDateDay)
+                .ToDisplayViewModels(assets, _localize, account.TimeZoneIanaId!, _settings.Value.NoticeMaturityDateDay, _timeProvider.GetUtcNow().UtcDateTime)
                 .OrderByDescending(a => a.Expired).ThenByDescending(m => m.Noticed)
                 .ThenByDescending(m => m.Unpunctuality).ThenByDescending(a => a.Created)
                 .ThenByDescending(a => a.Updated)
@@ -508,7 +512,7 @@ public class NoticeController : Controller
         var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
         var expenditures = await _fixedExpenditureService.GetFixedExpendituresAsync(account.Email!, ct);
         var stream = _excelExportService.CreateFixedExpenditureExcel(expenditures, assets, _localize, account.TimeZoneIanaId!, _settings.Value.NoticeMaturityDateDay);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
     #endregion

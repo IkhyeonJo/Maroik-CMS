@@ -258,7 +258,7 @@ public class CalendarViewModelMapperTests
     {
         var vm = new CalendarOutputViewModel();
 
-        vm.PopulateTimeData("UTC");
+        vm.PopulateTimeData("UTC", DateTime.UtcNow);
 
         Assert.Equal(96, vm.TimeIntervals.Count); // 24h * 4 (15-min slots)
         Assert.Equal("00:00", vm.TimeIntervals[0]);
@@ -271,7 +271,7 @@ public class CalendarViewModelMapperTests
     {
         var vm = new CalendarOutputViewModel();
 
-        vm.PopulateTimeData("UTC");
+        vm.PopulateTimeData("UTC", DateTime.UtcNow);
 
         int roundedMinute = (int)Math.Round(vm.CurrentMinute / 15.0) * 15;
         int expectedHour = vm.CurrentHour;
@@ -279,6 +279,23 @@ public class CalendarViewModelMapperTests
         string expectedInterval = $"{expectedHour:D2}:{roundedMinute:D2}";
 
         Assert.Equal(expectedInterval, vm.CurrentInterval);
+    }
+
+    /// <summary>
+    /// The current date/time and the preselected 15-minute slot come from the given instant shown in the viewer's
+    /// time zone, not from the machine's clock: 2031-02-03 23:50:07 UTC is 2031-02-04 08:50:07 in Asia/Seoul,
+    /// which rounds to the 08:45 slot.
+    /// </summary>
+    [Fact]
+    public void PopulateTimeData_UsesTheGivenInstantInTheViewersTimeZone()
+    {
+        var vm = new CalendarOutputViewModel();
+
+        vm.PopulateTimeData("Asia/Seoul", new DateTime(2031, 2, 3, 23, 50, 7, DateTimeKind.Utc));
+
+        Assert.Equal("2031-02-04", vm.CurrentDate);
+        Assert.Equal((8, 50, 7), (vm.CurrentHour, vm.CurrentMinute, vm.CurrentSecond));
+        Assert.Equal("08:45", vm.CurrentInterval);
     }
 
     // -- ToCalendarEventRequest: all-day ------------------------------------------
