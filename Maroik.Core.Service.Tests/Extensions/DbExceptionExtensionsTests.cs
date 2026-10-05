@@ -206,4 +206,49 @@ public class DbExceptionExtensionsTests
 
         Assert.True(ex.IsAccountNicknameUniqueViolation());
     }
+
+    // -- The Code fallback and the "SQLSTATE:" prefix ------------------------------------------
+
+    /// <summary>An exception that exposes the SQLSTATE only as <c>Code</c> (no <c>SqlState</c> property).</summary>
+    private sealed class CodeOnlyException(string message, string code, string? constraintName = null) : Exception(message)
+    {
+        /// <summary>The SQLSTATE under its other name.</summary>
+        public string Code { get; } = code;
+        /// <summary>Name of the violated constraint.</summary>
+        public string? ConstraintName { get; } = constraintName;
+    }
+
+    /// <summary>An exception whose <c>SqlState</c> and <c>Code</c> disagree; <c>SqlState</c> is authoritative.</summary>
+    private sealed class BothCodesException(string message, string sqlState, string code, string? constraintName = null) : Exception(message)
+    {
+        /// <summary>The SQLSTATE.</summary>
+        public string SqlState { get; } = sqlState;
+        /// <summary>A disagreeing second code.</summary>
+        public string Code { get; } = code;
+        /// <summary>Name of the violated constraint.</summary>
+        public string? ConstraintName { get; } = constraintName;
+    }
+
+    /// <summary>The SQLSTATE is also read from a <c>Code</c> property when there is no <c>SqlState</c>.</summary>
+    [Fact]
+    public void IsPostgresUniqueViolation_ReadsTheCodeProperty_WhenThereIsNoSqlState()
+    {
+        Assert.True(new CodeOnlyException("duplicate key", "23505").IsPostgresUniqueViolation());
+        Assert.True(new CodeOnlyException("duplicate key", "23505", "C_unique").IsPostgresUniqueViolationOn("C_unique"));
+    }
+
+    /// <summary><c>SqlState</c> wins over <c>Code</c> when an exception carries both.</summary>
+    [Fact]
+    public void IsPostgresUniqueViolation_PrefersSqlStateOverCode()
+    {
+        Assert.True(new BothCodesException("duplicate key", "23505", "XX000").IsPostgresUniqueViolation());
+        Assert.True(new BothCodesException("duplicate key", "23505", "XX000", "C_unique").IsPostgresUniqueViolationOn("C_unique"));
+    }
+
+    /// <summary>The message fallback needs "23505:" exactly; a longer number that merely starts with 23505 is not it.</summary>
+    [Fact]
+    public void IsPostgresUniqueViolation_RequiresTheColonAfterTheSqlStateInTheMessage()
+    {
+        Assert.False(new Exception("2350599 rows affected").IsPostgresUniqueViolation());
+    }
 }

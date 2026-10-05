@@ -52,7 +52,7 @@ public sealed class RabbitMqEmailPublisher(
     /// <summary>The cached AMQP connection, opened lazily by <see cref="GetChannelAsync"/>; null until the first publish.</summary>
     private IConnection? _connection;
 
-    /// <summary>The cached publisher-confirms channel on <see cref="_connection"/>; null until the first publish or after it dropped.</summary>
+    /// <summary>The cached publisher-confirms channel on <see cref="_connection"/>; null until the first publish, or after it dropped.</summary>
     private IChannel? _channel;
 
     /// <summary>

@@ -28,7 +28,7 @@ public class ServerSetting
     /// <summary>Whether the SMTP connection requires SSL/TLS.</summary>
     public bool SmtpSsl { get; set; }
 
-    /// <summary>Email address shown in the From header of outgoing emails.</summary>
+    /// <summary>Email address shown in the form header of outgoing emails.</summary>
     public string? FromEmail { get; set; }
 
     /// <summary>Display name shown next to the From address in outgoing emails.</summary>
@@ -67,7 +67,7 @@ public class ServerSetting
     /// <summary>Host name or IP address of the ClamAV antivirus daemon.</summary>
     public string? ClamavHost { get; set; }
 
-    /// <summary>TCP port of the ClamAV daemon (clamd's standard port is 3310; no default is applied here).</summary>
+    /// <summary>TCP port of the ClamAV daemon (clamav standard port is 3310; no default is applied here).</summary>
     public int ClamavPort { get; set; }
 
     /// <summary>Base URL of the Maroik.FileStorage microservice used for file upload/download.</summary>

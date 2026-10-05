@@ -149,7 +149,7 @@ public sealed class CalendarRepositoryTests(DatabaseFixture database) : Reposito
         await SeedAsync(seed);
 
         await using var unitOfWork = new UnitOfWork(Context);
-        await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
+        await unitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
         Calendar? result = await Sut.FindByIdForUpdateAsync(seed.Id, TestContext.Current.CancellationToken);
         await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -162,7 +162,7 @@ public sealed class CalendarRepositoryTests(DatabaseFixture database) : Reposito
     public async Task FindByIdForUpdateAsync_ReturnsNull_WhenNotFound()
     {
         await using var unitOfWork = new UnitOfWork(Context);
-        await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
+        await unitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
         Calendar? result = await Sut.FindByIdForUpdateAsync(long.MaxValue, TestContext.Current.CancellationToken);
         await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
 

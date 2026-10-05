@@ -122,6 +122,7 @@ public class FixedIncomeServiceTests
 
         ServiceResult result = await sut.CreateAsync("user@example.com", request, TestContext.Current.CancellationToken);
 
+        Assert.Equal("FixedIncome.DepositDay", result.ErrorCode);
         Assert.Equal("Deposit day must be between 1 and {0} for month {1}.", result.ErrorKey);
         Assert.Equal([31, (short)1], result.ErrorArgs);
     }
@@ -392,15 +393,16 @@ public class FixedIncomeServiceTests
 
     /// <summary>A schedule cannot be created for an unknown / archived deposit asset.</summary>
     [Theory]
-    [InlineData(false, "FixedIncome.AssetNotFound")]
-    [InlineData(true, "FixedIncome.AssetDeleted")]
-    public async Task CreateAsync_RefusesAnUnusableDepositAsset(bool archived, string expectedCode)
+    [InlineData(false, "FixedIncome.AssetNotFound", "The selected asset could not be found.")]
+    [InlineData(true, "FixedIncome.AssetDeleted", "Actions cannot be executed with assets that have already been deleted.")]
+    public async Task CreateAsync_RefusesAnUnusableDepositAsset(bool archived, string expectedCode, string expectedKey)
     {
         _assetBalance.Setup(r => r.GetAssetAsync(Email, "SavingsAccount", It.IsAny<CancellationToken>())).ReturnsAsync(archived ? ArchivedAsset() : null);
 
         ServiceResult result = await CreateSut().CreateAsync(Email, ValidRequest(), TestContext.Current.CancellationToken);
 
         Assert.Equal(expectedCode, result.ErrorCode);
+        Assert.Equal(expectedKey, result.ErrorKey);
         _fixedIncomeRepo.Verify(r => r.CreateAsync(It.IsAny<FixedIncome>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -420,9 +422,9 @@ public class FixedIncomeServiceTests
 
     /// <summary>An update naming an unknown / archived deposit asset is refused; the row is not touched.</summary>
     [Theory]
-    [InlineData(false, "FixedIncome.AssetNotFound")]
-    [InlineData(true, "FixedIncome.AssetDeleted")]
-    public async Task UpdateAsync_RefusesAnUnusableDepositAsset(bool archived, string expectedCode)
+    [InlineData(false, "FixedIncome.AssetNotFound", "The selected asset could not be found.")]
+    [InlineData(true, "FixedIncome.AssetDeleted", "Actions cannot be executed with assets that have already been deleted.")]
+    public async Task UpdateAsync_RefusesAnUnusableDepositAsset(bool archived, string expectedCode, string expectedKey)
     {
         _fixedIncomeRepo.Setup(r => r.GetByAccountEmailAsync(Email, It.IsAny<CancellationToken>())).ReturnsAsync([ExistingIncome()]);
         _assetBalance.Setup(r => r.GetAssetAsync(Email, "SavingsAccount", It.IsAny<CancellationToken>())).ReturnsAsync(archived ? ArchivedAsset() : null);
@@ -430,6 +432,7 @@ public class FixedIncomeServiceTests
         ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ValidRequest()), TestContext.Current.CancellationToken);
 
         Assert.Equal(expectedCode, result.ErrorCode);
+        Assert.Equal(expectedKey, result.ErrorKey);
         _fixedIncomeRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<FixedIncome>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -446,5 +449,66 @@ public class FixedIncomeServiceTests
 
         Assert.Equal("Finance.ContentTooLong", result.ErrorCode);
         _fixedIncomeRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<FixedIncome>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // -- Deposit-month boundaries and not-found results ------------------------------
+
+    /// <summary>The first, second and last months of the year are all valid deposit months.</summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(12)]
+    public async Task CreateAsync_AcceptsEveryMonthFromJanuaryToDecember(short month)
+    {
+        _assetBalance.Setup(r => r.GetAssetAsync(Email, "SavingsAccount", It.IsAny<CancellationToken>())).ReturnsAsync(MakeSavingsAsset());
+        FixedIncomeRequest request = ValidRequest();
+        request.DepositMonth = month;
+
+        ServiceResult result = await CreateSut().CreateAsync(Email, request, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+    }
+
+    /// <summary>A month outside 1..12 is the deposit-month validation error, with its message.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(13)]
+    public async Task CreateAsync_ReturnsTheDepositMonthError_WhenTheMonthIsOutOfRange(short month)
+    {
+        FixedIncomeRequest request = ValidRequest();
+        request.DepositMonth = month;
+
+        ServiceResult result = await CreateSut().CreateAsync(Email, request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
+        Assert.Equal("FixedIncome.DepositMonth", result.ErrorCode);
+        Assert.Equal("Deposit month must be between 1 and 12.", result.ErrorKey);
+    }
+
+    /// <summary>An unknown schedule id on update is a NotFound with the localizable "record not found" message.</summary>
+    [Fact]
+    public async Task UpdateAsync_ReturnsFixedIncomeNotFound_WithItsMessage_WhenTheRecordIsUnknown()
+    {
+        _fixedIncomeRepo.Setup(r => r.GetByAccountEmailAsync(Email, It.IsAny<CancellationToken>())).ReturnsAsync([ExistingIncome(2)]);
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ValidRequest()), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("FixedIncome.NotFound", result.ErrorCode);
+        Assert.Equal("The fixed-income record could not be found.", result.ErrorKey);
+    }
+
+    /// <summary>An unknown schedule id on delete is a NotFound with the localizable "record not found" message.</summary>
+    [Fact]
+    public async Task DeleteAsync_ReturnsFixedIncomeNotFound_WithItsMessage_WhenTheRecordIsUnknown()
+    {
+        _fixedIncomeRepo.Setup(r => r.GetByAccountEmailAsync(Email, It.IsAny<CancellationToken>())).ReturnsAsync([ExistingIncome(2)]);
+
+        ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("FixedIncome.NotFound", result.ErrorCode);
+        Assert.Equal("The fixed-income record could not be found.", result.ErrorKey);
+        _fixedIncomeRepo.Verify(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

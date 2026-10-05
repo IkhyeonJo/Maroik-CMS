@@ -2,7 +2,8 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Settings;
 using Maroik.Core.Service.Services;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using Moq;
 
@@ -26,6 +27,8 @@ public class AttachmentContentServiceTests
     private readonly Mock<IHtmlContentSanitizerService> _htmlSanitizer = new();
     /// <summary>Mock <c>IHtmlParserService</c> injected into the system under test.</summary>
     private readonly Mock<IHtmlParserService> _htmlParser = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
+    private readonly FakeLogger<AttachmentContentService> _logger = new();
     /// <summary>Settings with a 1 KB attachment limit and a fake file-storage URL.</summary>
     private readonly IOptions<ServerSetting> _settings = Options.Create(new ServerSetting
     {
@@ -41,7 +44,7 @@ public class AttachmentContentServiceTests
         _htmlSanitizer.Object,
         _htmlParser.Object,
         _settings,
-        NullLogger<AttachmentContentService>.Instance);
+        _logger);
 
     // -- ValidateAttachedFile ---------------------------------------------------
 
@@ -91,7 +94,7 @@ public class AttachmentContentServiceTests
         var settings = Options.Create(new ServerSetting { MaxAttachedFileSizeBytes = 5 * 1024 * 1024, FileStorageBaseUrl = "http://filestorage.local" });
         var sut = new AttachmentContentService(
             _fileClient.Object, _rsa.Object, _imageValidator.Object, _htmlSanitizer.Object, _htmlParser.Object,
-            settings, NullLogger<AttachmentContentService>.Instance);
+            settings, _logger);
         var file = new AttachedFileDto { FileName = "archive.zip", Size = 10 * 1024 * 1024 };
 
         var result = sut.ValidateAttachedFile(file);
@@ -479,5 +482,95 @@ public class AttachmentContentServiceTests
         HtmlImgPatch? patch = await capturedFactory!(path, TestContext.Current.CancellationToken);
 
         Assert.Equal(expected, patch!.DataContentType);
+    }
+
+    // -- Exact results, storage address and the undecryptable-alt warning -------------------
+
+    /// <summary>A non-zip attachment is the "only zip" Validation error.</summary>
+    [Fact]
+    public void ValidateAttachedFile_ReturnsExtensionNotAllowed_WithItsMessage()
+    {
+        ServiceResult? result = CreateSut().ValidateAttachedFile(new AttachedFileDto { FileName = "document.pdf", Size = 100 });
+
+        Assert.Equal(ServiceErrorType.Validation, result?.ErrorType);
+        Assert.Equal("Attachment.ExtensionNotAllowed", result?.ErrorCode);
+        Assert.Equal("Only zip extension allowed.", result?.ErrorKey);
+    }
+
+    /// <summary>An oversized attachment is the "too large" Validation error.</summary>
+    [Fact]
+    public void ValidateAttachedFile_ReturnsTooLarge_WithItsCode()
+    {
+        ServiceResult? result = CreateSut().ValidateAttachedFile(new AttachedFileDto { FileName = "a.zip", Size = 4096 });
+
+        Assert.Equal(ServiceErrorType.Validation, result?.ErrorType);
+        Assert.Equal("Attachment.TooLarge", result?.ErrorCode);
+    }
+
+    /// <summary>Every refused editor image (wrong type, SVG, undecodable) answers "Invalid image file.".</summary>
+    [Theory]
+    [InlineData("photo.gif", "image/gif", false, true)]
+    [InlineData("photo.png", "image/png", true, true)]
+    [InlineData("photo.png", "image/png", false, false)]
+    public async Task UploadSummernoteImageAsync_AnswersInvalidImageFile_ForEveryRefusal(string fileName, string contentType, bool svg, bool valid)
+    {
+        _imageValidator.Setup(v => v.IsSvg(It.IsAny<byte[]>())).Returns(svg);
+        _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(valid);
+        var file = new AttachedFileDto { Bytes = [1, 2, 3], ContentType = contentType, FileName = fileName };
+
+        SummernoteUploadResult result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", "uploader@test.com", TestContext.Current.CancellationToken);
+
+        Assert.False(result.Success);
+        Assert.Equal("Invalid image file.", result.ErrorKey);
+    }
+
+    /// <summary>An editor image is uploaded to the configured file-storage address.</summary>
+    [Fact]
+    public async Task UploadSummernoteImageAsync_UploadsToTheConfiguredFileStorage()
+    {
+        _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(true);
+        var file = new AttachedFileDto { Bytes = [0xFF, 0xD8, 0xFF], ContentType = "image/png", FileName = "x.png" };
+
+        await CreateSut().UploadSummernoteImageAsync(file, "board", "post", "uploader@test.com", TestContext.Current.CancellationToken);
+
+        _fileClient.Verify(f => f.UploadAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), "http://filestorage.local", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>A body image is downloaded from the configured file-storage address.</summary>
+    [Fact]
+    public async Task PrepareHtmlForDisplayAsync_DownloadsFromTheConfiguredFileStorage()
+    {
+        Func<string, CancellationToken, Task<HtmlImgPatch?>>? capturedFactory = null;
+        _htmlParser.Setup(p => p.TransformImageAttributesAsync(
+                It.IsAny<string>(), It.IsAny<Func<string, CancellationToken, Task<HtmlImgPatch?>>>(), It.IsAny<CancellationToken>()))
+            .Callback<string, Func<string, CancellationToken, Task<HtmlImgPatch?>>, CancellationToken>((_, factory, _) => capturedFactory = factory)
+            .ReturnsAsync(("<html/>", true));
+        _fileClient.Setup(f => f.DownloadAsync("upload/img.png", "http://filestorage.local", It.IsAny<CancellationToken>())).ReturnsAsync([1]);
+
+        await CreateSut().PrepareHtmlForDisplayAsync("<html/>", TestContext.Current.CancellationToken);
+        HtmlImgPatch? patch = await capturedFactory!("upload/img.png", TestContext.Current.CancellationToken);
+
+        Assert.Equal("AQ==", patch?.DataFile);
+    }
+
+    /// <summary>An image alt that does not decrypt is dropped with one Warning carrying the decryption failure.</summary>
+    [Fact]
+    public void SanitizeAndDecryptContent_LogsAWarning_WhenAnAltDoesNotDecrypt()
+    {
+        _htmlSanitizer.Setup(s => s.Sanitize("<raw/>")).Returns("<clean/>");
+        Func<string, HtmlImgPatch?>? capturedFactory = null;
+        _htmlParser.Setup(p => p.TransformImageAttributes("<clean/>", It.IsAny<Func<string, HtmlImgPatch?>>()))
+            .Callback<string, Func<string, HtmlImgPatch?>>((_, factory) => capturedFactory = factory)
+            .Returns("<final/>");
+        var thrown = new FormatException("not base64");
+        _rsa.Setup(r => r.Decrypt("forged")).Throws(thrown);
+
+        CreateSut().SanitizeAndDecryptContent("<raw/>");
+        capturedFactory!("forged");
+
+        FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot());
+        Assert.Equal(LogLevel.Warning, record.Level);
+        Assert.Same(thrown, record.Exception);
+        Assert.Equal("Ignoring an image alt that is not a decryptable storage token", record.Message);
     }
 }

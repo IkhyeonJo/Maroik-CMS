@@ -59,10 +59,10 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
     public async Task BeginAsync_WhileTransactionActive_Throws()
     {
         await using var uow = NewUnitOfWork();
-        await uow.BeginAsync(TestContext.Current.CancellationToken);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => uow.BeginAsync(TestContext.Current.CancellationToken));
+            () => uow.BeginAsync(ct: TestContext.Current.CancellationToken));
 
         await uow.RollbackAsync(TestContext.Current.CancellationToken);
     }
@@ -72,12 +72,12 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
     public async Task BeginAsync_AfterCommit_CanStartAnotherTransaction()
     {
         await using var uow = NewUnitOfWork();
-        await uow.BeginAsync(TestContext.Current.CancellationToken);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
         await uow.CommitAsync(TestContext.Current.CancellationToken);
 
         Exception? ex = await Record.ExceptionAsync(async () =>
         {
-            await uow.BeginAsync(TestContext.Current.CancellationToken);
+            await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
             await uow.CommitAsync(TestContext.Current.CancellationToken);
         });
 
@@ -89,7 +89,7 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
     public async Task RollbackAsync_AfterCommit_DoesNotThrow()
     {
         await using var uow = NewUnitOfWork();
-        await uow.BeginAsync(TestContext.Current.CancellationToken);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
         await uow.CommitAsync(TestContext.Current.CancellationToken);
 
         Exception? ex = await Record.ExceptionAsync(() => uow.RollbackAsync(TestContext.Current.CancellationToken));
@@ -108,7 +108,7 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
         await using var context = NewDbContext();
         var uow = new UnitOfWork(context);
 
-        await uow.BeginAsync(TestContext.Current.CancellationToken, IsolationLevel.RepeatableRead);
+        await uow.BeginAsync(IsolationLevel.RepeatableRead, TestContext.Current.CancellationToken);
 
         Assert.Equal(IsolationLevel.RepeatableRead, context.Database.CurrentTransaction?.GetDbTransaction().IsolationLevel);
 
@@ -134,7 +134,7 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
 
         await using var context = NewDbContext();
         var uow = new UnitOfWork(context);
-        await uow.BeginAsync(ct);
+        await uow.BeginAsync(ct: ct);
         context.Accounts.Add(new OrmAccount
         {
             Email = email, // same primary key as the row just seeded
@@ -167,7 +167,7 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
 
         await using var context = NewDbContext();
         var uow = new UnitOfWork(context);
-        await uow.BeginAsync(ct);
+        await uow.BeginAsync(ct: ct);
         context.Accounts.Add(new OrmAccount
         {
             Email = email,
@@ -187,7 +187,7 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
 
         Exception? ex = await Record.ExceptionAsync(async () =>
         {
-            await uow.BeginAsync(ct);
+            await uow.BeginAsync(ct: ct);
             await uow.CommitAsync(ct);
         });
 
@@ -202,7 +202,7 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
         CancellationToken ct = TestContext.Current.CancellationToken;
         var context = NewDbContext();
         var uow = new UnitOfWork(context);
-        await uow.BeginAsync(ct);
+        await uow.BeginAsync(ct: ct);
         int pid = await context.Database.SqlQueryRaw<int>("SELECT pg_backend_pid() AS \"Value\"").SingleAsync(ct);
         await Context.Database.ExecuteSqlAsync($"SELECT pg_terminate_backend({pid})", ct);
         return (uow, context);

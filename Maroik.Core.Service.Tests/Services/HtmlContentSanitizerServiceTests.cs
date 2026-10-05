@@ -106,4 +106,38 @@ public class HtmlContentSanitizerServiceTests
     /// <summary>Matches one <paramref name="property"/> declaration inside an inline style.</summary>
     private static Regex StyleDeclaration(string property) =>
         new($"style=\"(?:[^\"]*[;\\s])?{Regex.Escape(property)}\\s*:", RegexOptions.IgnoreCase);
+
+    /// <summary>Stored content cannot carry <c>data-*</c> attributes (script hooks for client widgets).</summary>
+    [Fact]
+    public void Sanitize_RemovesDataAttributes()
+    {
+        string result = _sut.Sanitize("<div data-toggle=\"modal\" data-target=\"#x\">text</div>");
+
+        Assert.DoesNotContain("data-", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("text", result);
+    }
+
+    /// <summary>Links and images keep plain http and https addresses.</summary>
+    [Theory]
+    [InlineData("<a href=\"http://example.com/\">x</a>", "href=\"http://example.com/\"")]
+    [InlineData("<a href=\"https://example.com/\">x</a>", "href=\"https://example.com/\"")]
+    [InlineData("<img src=\"http://example.com/a.png\">", "src=\"http://example.com/a.png\"")]
+    public void Sanitize_KeepsHttpAndHttpsUrls(string html, string expected)
+    {
+        Assert.Contains(expected, _sut.Sanitize(html));
+    }
+
+    /// <summary>Any other URL scheme is dropped from links and images.</summary>
+    [Theory]
+    [InlineData("<a href=\"javascript:alert(1)\">x</a>")]
+    [InlineData("<a href=\"mailto:someone@example.com\">x</a>")]
+    [InlineData("<a href=\"ftp://example.com/f\">x</a>")]
+    [InlineData("<img src=\"data:image/png;base64,AAAA\">")]
+    public void Sanitize_DropsUrlsWithAnyOtherScheme(string html)
+    {
+        string result = _sut.Sanitize(html);
+
+        Assert.DoesNotContain("href=", result, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("src=", result, StringComparison.OrdinalIgnoreCase);
+    }
 }

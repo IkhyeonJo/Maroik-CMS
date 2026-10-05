@@ -16,45 +16,22 @@ namespace Maroik.Website.Controllers;
 /// Manages account-book records: assets, income transactions, and expenditure transactions
 /// (create, read, update, delete, export).
 /// </summary>
-public class AccountBookController : Controller
+/// <param name="localizer">Localizer for this controller's user-facing messages.</param>
+/// <param name="logger">Logger for unexpected failures in the account-book actions.</param>
+/// <param name="assetService">Asset use cases.</param>
+/// <param name="incomeService">Income use cases.</param>
+/// <param name="expenditureService">Expenditure use cases.</param>
+/// <param name="excelExportService">Builds the asset / income / expenditure Excel exports.</param>
+/// <param name="timeProvider">The clock read for the pickers' current date/time and the export file name's timestamp.</param>
+public class AccountBookController(
+    IHtmlLocalizer<AccountBookController> localizer,
+    ILogger<AccountBookController> logger,
+    IAssetService assetService,
+    IIncomeService incomeService,
+    IExpenditureService expenditureService,
+    IExcelExportService excelExportService,
+    TimeProvider timeProvider) : Controller
 {
-    /// <summary>Localizer for this controller's user-facing messages.</summary>
-    private readonly IHtmlLocalizer<AccountBookController> _localizer;
-    /// <summary>Logger for unexpected failures in the account-book actions.</summary>
-    private readonly ILogger<AccountBookController> _logger;
-    /// <summary>Asset use cases.</summary>
-    private readonly IAssetService _assetService;
-    /// <summary>Income use cases.</summary>
-    private readonly IIncomeService _incomeService;
-    /// <summary>Expenditure use cases.</summary>
-    private readonly IExpenditureService _expenditureService;
-    /// <summary>Builds the asset / income / expenditure Excel exports.</summary>
-    private readonly IExcelExportService _excelExportService;
-    /// <summary>Resource-key → localized text delegate handed to the mappers and the Excel export.</summary>
-    private readonly Func<string, string> _localize;
-    /// <summary>The clock read for the pickers' current date/time and the export file name's timestamp.</summary>
-    private readonly TimeProvider _timeProvider;
-
-    /// <summary>Initializes a new instance of <see cref="AccountBookController"/> with the supplied dependencies.</summary>
-    public AccountBookController(
-        IHtmlLocalizer<AccountBookController> localizer,
-        ILogger<AccountBookController> logger,
-        IAssetService assetService,
-        IIncomeService incomeService,
-        IExpenditureService expenditureService,
-        IExcelExportService excelExportService,
-        TimeProvider timeProvider)
-    {
-        _localizer = localizer;
-        _logger = logger;
-        _assetService = assetService;
-        _incomeService = incomeService;
-        _expenditureService = expenditureService;
-        _excelExportService = excelExportService;
-        _localize = key => _localizer[key].Value;
-        _timeProvider = timeProvider;
-    }
-
     #region Asset
 
     #region Create
@@ -66,7 +43,7 @@ public class AccountBookController : Controller
     public async Task<IActionResult> CreateAsset([FromBody] AssetInputViewModel assetInputViewModel, CancellationToken ct)
     {
         if (!ModelState.IsValid)
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         string email = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
 
@@ -80,10 +57,10 @@ public class AccountBookController : Controller
             Deleted = false
         };
 
-        var result = await _assetService.CreateAsync(email, request, ct);
+        var result = await assetService.CreateAsync(email, request, ct);
         return result.Success
-            ? Json(new { result = true, message = _localizer["The asset has been successfully created."].Value })
-            : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+            ? Json(new { result = true, message = localizer["The asset has been successfully created."].Value })
+            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
     }
 
     #endregion
@@ -100,10 +77,10 @@ public class AccountBookController : Controller
         {
             AccountResponse account = ViewBag.LoggedInAccount;
             var assets = string.IsNullOrEmpty(wholeSearch)
-                ? await _assetService.GetAssetsAsync(account.Email!, ct)
-                : await _assetService.SearchAssetsAsync(account.Email!, wholeSearch, ct);
+                ? await assetService.GetAssetsAsync(account.Email!, ct)
+                : await assetService.SearchAssetsAsync(account.Email!, wholeSearch, ct);
             var viewModels = assets
-                .ToDisplayViewModels(_localize, account.TimeZoneIanaId!)
+                .ToDisplayViewModels(key => localizer[key].Value, account.TimeZoneIanaId!)
                 .OrderBy(m => m.ProductName)
                 .AsQueryable();
             return PartialView("_AssetGrid", viewModels);
@@ -115,11 +92,11 @@ public class AccountBookController : Controller
         {
             Assets =
             [
-                .. (await _assetService.GetAssetsAsync(pageAccount.Email!, ct))
+                .. (await assetService.GetAssetsAsync(pageAccount.Email!, ct))
                 .Where(x => !x.Deleted).OrderBy(x => x.ProductName)
             ]
         };
-        vm.PopulateTimeData(tz, _timeProvider.GetUtcNow().UtcDateTime);
+        vm.PopulateTimeData(tz, timeProvider.GetUtcNow().UtcDateTime);
         return View(vm);
     }
 
@@ -131,17 +108,17 @@ public class AccountBookController : Controller
     {
         try
         {
-            AssetResponse? asset = await _assetService.GetAssetAsync(
+            AssetResponse? asset = await assetService.GetAssetAsync(
                 ((AccountResponse)ViewBag.LoggedInAccount).Email!, productName, ct);
 
             return asset == null
-                ? Json(new { result = false, error = _localizer["Fail to find the asset by given product name"].Value })
+                ? Json(new { result = false, error = localizer["Fail to find the asset by given product name"].Value })
                 : Json(new { result = true, asset });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to check asset existence for product {ProductName}", productName);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to check asset existence for product {ProductName}", productName);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -157,7 +134,7 @@ public class AccountBookController : Controller
     {
         _ = ModelState.Remove(nameof(assetInputViewModel.MonetaryUnit));
         if (!ModelState.IsValid)
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         string email = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
 
@@ -171,10 +148,10 @@ public class AccountBookController : Controller
             Deleted = assetInputViewModel.Deleted
         };
 
-        var result = await _assetService.UpdateAsync(email, request, assetInputViewModel.OriginalProductName!, ct);
+        var result = await assetService.UpdateAsync(email, request, assetInputViewModel.OriginalProductName!, ct);
         return result.Success
-            ? Json(new { result = true, message = _localizer["The asset has been successfully updated."].Value })
-            : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+            ? Json(new { result = true, message = localizer["The asset has been successfully updated."].Value })
+            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
     }
 
     #endregion
@@ -188,10 +165,10 @@ public class AccountBookController : Controller
     public async Task<IActionResult> DeleteAsset([FromBody] AssetInputViewModel assetInputViewModel, CancellationToken ct)
     {
         string email = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
-        var result = await _assetService.DeleteAsync(email, assetInputViewModel.ProductName!, ct);
+        var result = await assetService.DeleteAsync(email, assetInputViewModel.ProductName!, ct);
         return result.Success
-            ? Json(new { result = true, message = _localizer["The asset has been successfully deleted."].Value })
-            : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+            ? Json(new { result = true, message = localizer["The asset has been successfully deleted."].Value })
+            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
     }
 
     #endregion
@@ -205,9 +182,9 @@ public class AccountBookController : Controller
     public async Task<IActionResult> ExportExcelAsset(string fileName = "", CancellationToken ct = default)
     {
         AccountResponse account = ViewBag.LoggedInAccount;
-        var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
-        var stream = _excelExportService.CreateAssetExcel(assets, _localize, account.TimeZoneIanaId!);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
+        var assets = await assetService.GetAssetsAsync(account.Email!, ct);
+        var stream = excelExportService.CreateAssetExcel(assets, key => localizer[key].Value, account.TimeZoneIanaId!);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
 
@@ -226,7 +203,7 @@ public class AccountBookController : Controller
     public async Task<IActionResult> CreateIncome([FromBody] IncomeInputViewModel incomeInputViewModel, CancellationToken ct)
     {
         if (!ModelState.IsValid)
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         AccountResponse account = ViewBag.LoggedInAccount;
 
@@ -241,10 +218,10 @@ public class AccountBookController : Controller
             Note = incomeInputViewModel.Note ?? ""
         };
 
-        var result = await _incomeService.CreateAsync(account.Email!, request, ct);
+        var result = await incomeService.CreateAsync(account.Email!, request, ct);
         return result.Success
-            ? Json(new { result = true, message = _localizer["The income has been successfully created."].Value })
-            : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+            ? Json(new { result = true, message = localizer["The income has been successfully created."].Value })
+            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
     }
 
     #endregion
@@ -260,12 +237,12 @@ public class AccountBookController : Controller
 #pragma warning restore ASP0015
         {
             AccountResponse account = ViewBag.LoggedInAccount;
-            var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
+            var assets = await assetService.GetAssetsAsync(account.Email!, ct);
             var incomes = string.IsNullOrEmpty(wholeSearch)
-                ? await _incomeService.GetIncomesAsync(account.Email!, ct)
-                : await _incomeService.SearchIncomesAsync(account.Email!, wholeSearch, ct);
+                ? await incomeService.GetIncomesAsync(account.Email!, ct)
+                : await incomeService.SearchIncomesAsync(account.Email!, wholeSearch, ct);
             var viewModels = incomes
-                .ToDisplayViewModels(assets, _localize, account.TimeZoneIanaId!)
+                .ToDisplayViewModels(assets, key => localizer[key].Value, account.TimeZoneIanaId!)
                 .OrderByDescending(m => m.Created)
                 .ThenByDescending(m => m.Updated)
                 .AsQueryable();
@@ -278,11 +255,11 @@ public class AccountBookController : Controller
         {
             Assets =
             [
-                .. (await _assetService.GetAssetsAsync(pageAccount.Email!, ct))
+                .. (await assetService.GetAssetsAsync(pageAccount.Email!, ct))
                 .Where(x => !x.Deleted).OrderBy(x => x.ProductName)
             ]
         };
-        vm.PopulateTimeData(tz, _timeProvider.GetUtcNow().UtcDateTime);
+        vm.PopulateTimeData(tz, timeProvider.GetUtcNow().UtcDateTime);
         return View(vm);
     }
 
@@ -297,17 +274,17 @@ public class AccountBookController : Controller
             string email = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
             string tz = ((AccountResponse)ViewBag.LoggedInAccount).TimeZoneIanaId!;
 
-            IncomeResponse? income = await _incomeService.GetByIdAsync(email, id, ct);
+            IncomeResponse? income = await incomeService.GetByIdAsync(email, id, ct);
             if (income == null)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
             income.Created = income.Created.ConvertTimeByTimeZoneIanaId(tz);
             return Json(new { result = true, income });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to check income existence for id {IncomeId}", id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to check income existence for id {IncomeId}", id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -319,8 +296,8 @@ public class AccountBookController : Controller
     {
         try
         {
-            string baseLabel = _localizer["Amount"].Value;
-            AssetResponse? asset = await _assetService.GetAssetAsync(
+            string baseLabel = localizer["Amount"].Value;
+            AssetResponse? asset = await assetService.GetAssetAsync(
                 ((AccountResponse)ViewBag.LoggedInAccount).Email!, productName, ct);
 
             string label = !string.IsNullOrEmpty(asset?.MonetaryUnit)
@@ -331,8 +308,8 @@ public class AccountBookController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get income amount label for product {ProductName}", productName);
-            return Json(new { result = false, label = _localizer["Amount"].Value });
+            logger.LogError(ex, "Failed to get income amount label for product {ProductName}", productName);
+            return Json(new { result = false, label = localizer["Amount"].Value });
         }
     }
 
@@ -347,7 +324,7 @@ public class AccountBookController : Controller
     public async Task<IActionResult> UpdateIncome([FromBody] IncomeInputViewModel incomeInputViewModel, CancellationToken ct)
     {
         if (!ModelState.IsValid)
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         AccountResponse account = ViewBag.LoggedInAccount;
 
@@ -363,10 +340,10 @@ public class AccountBookController : Controller
             Note = incomeInputViewModel.Note
         };
 
-        var result = await _incomeService.UpdateAsync(account.Email!, request, ct);
+        var result = await incomeService.UpdateAsync(account.Email!, request, ct);
         return result.Success
-            ? Json(new { result = true, message = _localizer["The income has been successfully updated."].Value })
-            : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+            ? Json(new { result = true, message = localizer["The income has been successfully updated."].Value })
+            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
     }
 
     #endregion
@@ -380,10 +357,10 @@ public class AccountBookController : Controller
     public async Task<IActionResult> DeleteIncome([FromBody] IncomeInputViewModel incomeInputViewModel, CancellationToken ct)
     {
         string email = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
-        var result = await _incomeService.DeleteAsync(email, incomeInputViewModel.Id, ct);
+        var result = await incomeService.DeleteAsync(email, incomeInputViewModel.Id, ct);
         return result.Success
-            ? Json(new { result = true, message = _localizer["The income has been successfully deleted."].Value })
-            : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+            ? Json(new { result = true, message = localizer["The income has been successfully deleted."].Value })
+            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
     }
 
     #endregion
@@ -397,10 +374,10 @@ public class AccountBookController : Controller
     public async Task<IActionResult> ExportExcelIncome(string fileName = "", CancellationToken ct = default)
     {
         AccountResponse account = ViewBag.LoggedInAccount;
-        var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
-        var incomes = await _incomeService.GetIncomesAsync(account.Email!, ct);
-        var stream = _excelExportService.CreateIncomeExcel(incomes, assets, _localize, account.TimeZoneIanaId!);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
+        var assets = await assetService.GetAssetsAsync(account.Email!, ct);
+        var incomes = await incomeService.GetIncomesAsync(account.Email!, ct);
+        var stream = excelExportService.CreateIncomeExcel(incomes, assets, key => localizer[key].Value, account.TimeZoneIanaId!);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
 
@@ -420,7 +397,7 @@ public class AccountBookController : Controller
         [FromBody] ExpenditureInputViewModel expenditureInputViewModel, CancellationToken ct)
     {
         if (!ModelState.IsValid)
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         AccountResponse account = ViewBag.LoggedInAccount;
 
@@ -436,10 +413,10 @@ public class AccountBookController : Controller
             Note = expenditureInputViewModel.Note ?? ""
         };
 
-        var result = await _expenditureService.CreateAsync(account.Email!, request, ct);
+        var result = await expenditureService.CreateAsync(account.Email!, request, ct);
         return result.Success
-            ? Json(new { result = true, message = _localizer["The expenditure has been successfully created."].Value })
-            : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+            ? Json(new { result = true, message = localizer["The expenditure has been successfully created."].Value })
+            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
     }
 
     #endregion
@@ -455,12 +432,12 @@ public class AccountBookController : Controller
 #pragma warning restore ASP0015
         {
             AccountResponse account = ViewBag.LoggedInAccount;
-            var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
+            var assets = await assetService.GetAssetsAsync(account.Email!, ct);
             var expenditures = string.IsNullOrEmpty(wholeSearch)
-                ? await _expenditureService.GetExpendituresAsync(account.Email!, ct)
-                : await _expenditureService.SearchExpendituresAsync(account.Email!, wholeSearch, ct);
+                ? await expenditureService.GetExpendituresAsync(account.Email!, ct)
+                : await expenditureService.SearchExpendituresAsync(account.Email!, wholeSearch, ct);
             var viewModels = expenditures
-                .ToDisplayViewModels(assets, _localize, account.TimeZoneIanaId!)
+                .ToDisplayViewModels(assets, key => localizer[key].Value, account.TimeZoneIanaId!)
                 .OrderByDescending(m => m.Created)
                 .ThenByDescending(m => m.Updated)
                 .AsQueryable();
@@ -473,11 +450,11 @@ public class AccountBookController : Controller
         {
             Assets =
             [
-                .. (await _assetService.GetAssetsAsync(pageAccount.Email!, ct))
+                .. (await assetService.GetAssetsAsync(pageAccount.Email!, ct))
                 .Where(x => !x.Deleted).OrderBy(x => x.ProductName)
             ]
         };
-        vm.PopulateTimeData(tz, _timeProvider.GetUtcNow().UtcDateTime);
+        vm.PopulateTimeData(tz, timeProvider.GetUtcNow().UtcDateTime);
         return View(vm);
     }
 
@@ -492,17 +469,17 @@ public class AccountBookController : Controller
             string email = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
             string tz = ((AccountResponse)ViewBag.LoggedInAccount).TimeZoneIanaId!;
 
-            ExpenditureResponse? expenditure = await _expenditureService.GetByIdAsync(email, id, ct);
+            ExpenditureResponse? expenditure = await expenditureService.GetByIdAsync(email, id, ct);
             if (expenditure == null)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
             expenditure.Created = expenditure.Created.ConvertTimeByTimeZoneIanaId(tz);
             return Json(new { result = true, expenditure });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to check expenditure existence for id {ExpenditureId}", id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to check expenditure existence for id {ExpenditureId}", id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -514,8 +491,8 @@ public class AccountBookController : Controller
     {
         try
         {
-            string baseLabel = _localizer["Amount"].Value;
-            AssetResponse? asset = await _assetService.GetAssetAsync(
+            string baseLabel = localizer["Amount"].Value;
+            AssetResponse? asset = await assetService.GetAssetAsync(
                 ((AccountResponse)ViewBag.LoggedInAccount).Email!, productName, ct);
 
             string label = !string.IsNullOrEmpty(asset?.MonetaryUnit)
@@ -526,8 +503,8 @@ public class AccountBookController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get expenditure amount label for product {ProductName}", productName);
-            return Json(new { result = false, label = _localizer["Amount"].Value });
+            logger.LogError(ex, "Failed to get expenditure amount label for product {ProductName}", productName);
+            return Json(new { result = false, label = localizer["Amount"].Value });
         }
     }
 
@@ -543,7 +520,7 @@ public class AccountBookController : Controller
         [FromBody] ExpenditureInputViewModel expenditureInputViewModel, CancellationToken ct)
     {
         if (!ModelState.IsValid)
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         AccountResponse account = ViewBag.LoggedInAccount;
 
@@ -560,10 +537,10 @@ public class AccountBookController : Controller
             Note = expenditureInputViewModel.Note ?? ""
         };
 
-        var result = await _expenditureService.UpdateAsync(account.Email!, request, ct);
+        var result = await expenditureService.UpdateAsync(account.Email!, request, ct);
         return result.Success
-            ? Json(new { result = true, message = _localizer["The expenditure has been successfully updated."].Value })
-            : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+            ? Json(new { result = true, message = localizer["The expenditure has been successfully updated."].Value })
+            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
     }
 
     #endregion
@@ -578,10 +555,10 @@ public class AccountBookController : Controller
         [FromBody] ExpenditureInputViewModel expenditureInputViewModel, CancellationToken ct)
     {
         string email = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
-        var result = await _expenditureService.DeleteAsync(email, expenditureInputViewModel.Id, ct);
+        var result = await expenditureService.DeleteAsync(email, expenditureInputViewModel.Id, ct);
         return result.Success
-            ? Json(new { result = true, message = _localizer["The expenditure has been successfully deleted."].Value })
-            : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+            ? Json(new { result = true, message = localizer["The expenditure has been successfully deleted."].Value })
+            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
     }
 
     #endregion
@@ -595,10 +572,10 @@ public class AccountBookController : Controller
     public async Task<IActionResult> ExportExcelExpenditure(string fileName = "", CancellationToken ct = default)
     {
         AccountResponse account = ViewBag.LoggedInAccount;
-        var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
-        var expenditures = await _expenditureService.GetExpendituresAsync(account.Email!, ct);
-        var stream = _excelExportService.CreateExpenditureExcel(expenditures, assets, _localize, account.TimeZoneIanaId!);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
+        var assets = await assetService.GetAssetsAsync(account.Email!, ct);
+        var expenditures = await expenditureService.GetExpendituresAsync(account.Email!, ct);
+        var stream = excelExportService.CreateExpenditureExcel(expenditures, assets, key => localizer[key].Value, account.TimeZoneIanaId!);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
 

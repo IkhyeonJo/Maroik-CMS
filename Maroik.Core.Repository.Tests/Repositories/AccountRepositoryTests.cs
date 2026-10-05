@@ -542,7 +542,7 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
         await SeedAsync(NewAccount(email, nickname));
 
         await using var unitOfWork = new UnitOfWork(Context);
-        await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
+        await unitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
         Account? result = await Sut.FindByEmailForUpdateAsync(email, TestContext.Current.CancellationToken);
         await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -555,7 +555,7 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
     public async Task FindByEmailForUpdateAsync_ReturnsNull_WhenNotFound()
     {
         await using var unitOfWork = new UnitOfWork(Context);
-        await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
+        await unitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
         Account? result = await Sut.FindByEmailForUpdateAsync(UniqueEmail("missing"), TestContext.Current.CancellationToken);
         await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -570,7 +570,7 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
         await SeedAsync(NewAccount(email, Unique("Alice")));
 
         await using var unitOfWork = new UnitOfWork(Context);
-        await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
+        await unitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
         Account? result = await Sut.FindByEmailForUpdateAsync(email.ToUpperInvariant(), TestContext.Current.CancellationToken);
         await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -598,7 +598,7 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
         {
             var repo = new AccountRepository(context);
             await using var unitOfWork = new UnitOfWork(context);
-            await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
+            await unitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
             Account account = (await repo.FindByEmailForUpdateAsync(email, TestContext.Current.CancellationToken))!;
             account.RecordLoginFailure(maxAttempts: 100, DateTime.UtcNow);
             await repo.UpdateEntityAsync(account, TestContext.Current.CancellationToken);

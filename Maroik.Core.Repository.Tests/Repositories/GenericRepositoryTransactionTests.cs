@@ -50,7 +50,7 @@ public sealed class GenericRepositoryTransactionTests(DatabaseFixture database) 
         var repo = new CategoryRepository(Context);
         var category = NewCategory();
 
-        await uow.BeginAsync(TestContext.Current.CancellationToken);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
         await repo.CreateAsync(category, TestContext.Current.CancellationToken);
 
         // Still pending — no SaveChanges was issued by the repository call.
@@ -74,7 +74,7 @@ public sealed class GenericRepositoryTransactionTests(DatabaseFixture database) 
         var repo = new CategoryRepository(Context);
         var category = NewCategory();
 
-        await uow.BeginAsync(TestContext.Current.CancellationToken);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
         await repo.CreateAsync(category, TestContext.Current.CancellationToken);
         await uow.RollbackAsync(TestContext.Current.CancellationToken);
 
@@ -98,7 +98,7 @@ public sealed class GenericRepositoryTransactionTests(DatabaseFixture database) 
         await using var uow = new UnitOfWork(Context);
         var repo = new OtherCalendarRepository(Context);
 
-        await uow.BeginAsync(TestContext.Current.CancellationToken);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
         await repo.CreateAsync(link, TestContext.Current.CancellationToken);
         List<OtherCalendar> subscriptions = await repo.GetByAccountEmailAsync(email, TestContext.Current.CancellationToken);
 
@@ -124,7 +124,7 @@ public sealed class GenericRepositoryTransactionTests(DatabaseFixture database) 
         await using var uow = new UnitOfWork(Context);
         var repo = new AccountRepository(Context);
 
-        await uow.BeginAsync(TestContext.Current.CancellationToken);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
         await repo.CreateAsync(account, TestContext.Current.CancellationToken);
         Account? found = await repo.FindByEmailAsync(email, TestContext.Current.CancellationToken);
 
@@ -160,7 +160,7 @@ public sealed class GenericRepositoryTransactionTests(DatabaseFixture database) 
             .SingleAsync(TestContext.Current.CancellationToken);
 
         await using var uow = new UnitOfWork(Context);
-        await uow.BeginAsync(TestContext.Current.CancellationToken);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
         var renamed = Category.Reconstitute(id, newName, "Display", "/icons/i.svg", "Ctrl", "Index", Role.User, 1);
         await repo.UpdateEntityAsync(renamed, TestContext.Current.CancellationToken);
         await repo.DeleteByNameAsync(newName, TestContext.Current.CancellationToken);
@@ -206,7 +206,7 @@ public sealed class GenericRepositoryTransactionTests(DatabaseFixture database) 
         await repo.CreateAsync(CategoryNamed(prefix + "-d"), TestContext.Current.CancellationToken);
 
         await using var uow = new UnitOfWork(Context);
-        await uow.BeginAsync(TestContext.Current.CancellationToken);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
         await repo.CreateAsync(CategoryNamed(prefix + "-a"), TestContext.Current.CancellationToken);
         await repo.CreateAsync(CategoryNamed(prefix + "-c"), TestContext.Current.CancellationToken);
 
@@ -227,7 +227,7 @@ public sealed class GenericRepositoryTransactionTests(DatabaseFixture database) 
         await repo.CreateAsync(CategoryNamed(prefix + "-b"), TestContext.Current.CancellationToken);
 
         await using var uow = new UnitOfWork(Context);
-        await uow.BeginAsync(TestContext.Current.CancellationToken);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
         await repo.CreateAsync(CategoryNamed(prefix + "-a"), TestContext.Current.CancellationToken);
 
         Category? first = await repo.FirstOrderedAsync(prefix, TestContext.Current.CancellationToken);
@@ -248,7 +248,7 @@ public sealed class GenericRepositoryTransactionTests(DatabaseFixture database) 
         await repo.CreateAsync(CategoryNamed(prefix + "-gone"), TestContext.Current.CancellationToken);
 
         await using var uow = new UnitOfWork(Context);
-        await uow.BeginAsync(TestContext.Current.CancellationToken);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
         await repo.DeleteByPrefixAsync(prefix + "-gone", TestContext.Current.CancellationToken);
 
         List<Category> visible = await repo.ListOrderedAsync(prefix, TestContext.Current.CancellationToken);
@@ -267,7 +267,7 @@ public sealed class GenericRepositoryTransactionTests(DatabaseFixture database) 
         var repo = new PrefixCategoryRepository(Context);
 
         await using var uow = new UnitOfWork(Context);
-        await uow.BeginAsync(TestContext.Current.CancellationToken);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
         await repo.CreateAsync(CategoryNamed(name), TestContext.Current.CancellationToken);
         await repo.DeleteByPrefixAsync(name, TestContext.Current.CancellationToken);
         await uow.CommitAsync(TestContext.Current.CancellationToken);

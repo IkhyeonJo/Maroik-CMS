@@ -5,7 +5,8 @@ using Maroik.Core.Contract.Misc.Settings;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.Domain.Finance;
 using Maroik.Core.Service.Services;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -32,6 +33,8 @@ public class ProfileServiceTests
     private readonly Mock<IImageValidatorService> _imageValidator = ImageValidatorMock.Create();
     /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
+    private readonly FakeLogger<ProfileService> _logger = new();
     /// <summary>Settings with a local file-storage URL.</summary>
     private readonly IOptions<ServerSetting> _settings =
         Options.Create(new ServerSetting { FileStorageBaseUrl = "http://localhost:5001" });
@@ -50,7 +53,7 @@ public class ProfileServiceTests
         _imageValidator.Object,
         _settings,
         _unitOfWork.Object,
-        NullLogger<ProfileService>.Instance,
+        _logger,
         _time);
 
     // -- Helpers --------------------------------------------------------------
@@ -403,7 +406,7 @@ public class ProfileServiceTests
         Assert.True(result.Success);
         _accountRepo.Verify(r => r.UpdatePasswordAsync(
             account.Email.Value, "$2a$13$newhash", It.IsAny<string>(), false, null, It.IsAny<bool>(), It.IsAny<long>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
-        _unitOfWork.Verify(u => u.BeginAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -662,5 +665,202 @@ public class ProfileServiceTests
         Assert.Equal("Profile.UploadAvatarFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
+    }
+
+    // -- Exact results, storage address and failure logging --------------------------------
+
+    /// <summary>E-mail of the account these tests act on.</summary>
+    private const string Email = "user@example.com";
+
+    /// <summary>Asserts the one Error entry carries <paramref name="thrown"/> and reads <paramref name="message"/>.</summary>
+    private void AssertLoggedError(string message, Exception thrown)
+    {
+        FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Error);
+        Assert.Same(thrown, record.Exception);
+        Assert.Equal(message, record.Message);
+    }
+
+    /// <summary>Asserts <paramref name="result"/> is the account NotFound ("Input is invalid").</summary>
+    private static void AssertAccountNotFound(ServiceResult result)
+    {
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Account.NotFound", result.ErrorCode);
+        Assert.Equal("Input is invalid", result.ErrorKey);
+    }
+
+    /// <summary>Makes the validator accept the upload as a (non-SVG) image.</summary>
+    private void GivenAValidImage()
+    {
+        _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(true);
+        _imageValidator.Setup(v => v.IsSvg(It.IsAny<byte[]>())).Returns(false);
+    }
+
+    /// <summary>Makes the file storage answer every upload with <paramref name="outcome"/>.</summary>
+    private void GivenTheStorageAnswers(FileUploadResult outcome) =>
+        _fileClient.Setup(c => c.UploadWithResultAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(outcome);
+
+    /// <summary>An unknown e-mail has no profile.</summary>
+    [Fact]
+    public async Task GetProfileAsync_ReturnsNull_WhenTheAccountDoesNotExist()
+    {
+        Assert.Null(await CreateSut().GetProfileAsync("ghost@example.com", TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>The avatar of an unknown account cannot be changed: NotFound, and nothing is written.</summary>
+    [Fact]
+    public async Task UpdateAvatarAsync_ReturnsAccountNotFound_WhenTheAccountIsUnknown()
+    {
+        AssertAccountNotFound(await CreateSut().UpdateAvatarAsync(Email, "/a.png", TestContext.Current.CancellationToken));
+        _accountRepo.Verify(r => r.UpdateAvatarPathAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An avatar update that throws is logged with the exception and the account.</summary>
+    [Fact]
+    public async Task UpdateAvatarAsync_LogsTheFailure_WhenTheRepositoryThrows()
+    {
+        var thrown = new InvalidOperationException("boom");
+        _accountRepo.Setup(r => r.FindByEmailAsync(Email, It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().UpdateAvatarAsync(Email, "/a.png", TestContext.Current.CancellationToken);
+
+        AssertLoggedError($"Failed to update avatar for {Email}", thrown);
+    }
+
+    /// <summary>The time zone of an unknown account cannot be changed: NotFound, and nothing is written.</summary>
+    [Fact]
+    public async Task UpdateTimeZoneAsync_ReturnsAccountNotFound_WhenTheAccountIsUnknown()
+    {
+        AssertAccountNotFound(await CreateSut().UpdateTimeZoneAsync(Email, "Asia/Seoul", TestContext.Current.CancellationToken));
+        _accountRepo.Verify(r => r.UpdateTimeZoneAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A time-zone update that throws is logged with the exception and the account.</summary>
+    [Fact]
+    public async Task UpdateTimeZoneAsync_LogsTheFailure_WhenTheRepositoryThrows()
+    {
+        var thrown = new InvalidOperationException("boom");
+        _accountRepo.Setup(r => r.FindByEmailAsync(Email, It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().UpdateTimeZoneAsync(Email, "Asia/Seoul", TestContext.Current.CancellationToken);
+
+        AssertLoggedError($"Failed to update timezone for {Email}", thrown);
+    }
+
+    /// <summary>The password of an unknown account cannot be changed: NotFound, rolled back.</summary>
+    [Fact]
+    public async Task UpdatePasswordAsync_ReturnsAccountNotFound_AndRollsBack_WhenTheAccountIsUnknown()
+    {
+        AssertAccountNotFound(await CreateSut().UpdatePasswordAsync(Email, "Old1234!", "New1234!", TestContext.Current.CancellationToken));
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>A wrong current password is the "invalid password" Validation error.</summary>
+    [Fact]
+    public async Task UpdatePasswordAsync_ReturnsWrongPassword_WithItsMessage_WhenTheCurrentPasswordIsWrong()
+    {
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(Email, It.IsAny<CancellationToken>())).ReturnsAsync(ActiveAccount());
+        _passwordService.Setup(p => p.VerifyPassword(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
+
+        ServiceResult result = await CreateSut().UpdatePasswordAsync(Email, "Wrong1234!", "New1234!", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
+        Assert.Equal("Profile.WrongPassword", result.ErrorCode);
+        Assert.Equal("Invalid password. Please check again.", result.ErrorKey);
+    }
+
+    /// <summary>A password change that throws is logged with the exception and the account (and never with a password).</summary>
+    [Fact]
+    public async Task UpdatePasswordAsync_LogsTheFailure_WhenTheRepositoryThrows()
+    {
+        var thrown = new InvalidOperationException("boom");
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(Email, It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().UpdatePasswordAsync(Email, "Old1234!", "New1234!", TestContext.Current.CancellationToken);
+
+        AssertLoggedError($"Failed to update password for {Email}", thrown);
+    }
+
+    /// <summary>A disallowed extension is the "invalid-image" Validation error.</summary>
+    [Fact]
+    public async Task UploadAndUpdateAvatarAsync_ReturnsInvalidImageValidation_ForADisallowedExtension()
+    {
+        ServiceResult result = await CreateSut().UploadAndUpdateAvatarAsync(Email, [1, 2, 3], ".gif", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
+        Assert.Equal("Profile.InvalidImage", result.ErrorCode);
+    }
+
+    /// <summary>An SVG is the "svg-not-allowed" Validation error.</summary>
+    [Fact]
+    public async Task UploadAndUpdateAvatarAsync_ReturnsSvgNotAllowedValidation_ForAnSvg()
+    {
+        _imageValidator.Setup(v => v.IsSvg(It.IsAny<byte[]>())).Returns(true);
+
+        ServiceResult result = await CreateSut().UploadAndUpdateAvatarAsync(Email, [1, 2, 3], ".png", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
+        Assert.Equal("Profile.SvgNotAllowed", result.ErrorCode);
+    }
+
+    /// <summary>A payload that is not a JPEG/PNG is the "invalid-image" Validation error.</summary>
+    [Fact]
+    public async Task UploadAndUpdateAvatarAsync_ReturnsInvalidImageValidation_ForANonImage()
+    {
+        _imageValidator.Setup(v => v.IsValidImage(It.IsAny<byte[]>())).Returns(false);
+
+        ServiceResult result = await CreateSut().UploadAndUpdateAvatarAsync(Email, [1, 2, 3], ".png", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
+        Assert.Equal("Profile.InvalidImage", result.ErrorCode);
+    }
+
+    /// <summary>A virus detection is a Validation error (the user's file), a scanner outage a Failure (ours).</summary>
+    [Theory]
+    [InlineData(FileUploadResult.Infected, ServiceErrorType.Validation, "Profile.VirusDetected")]
+    [InlineData(FileUploadResult.ScanUnavailable, ServiceErrorType.Failure, "Profile.ScanUnavailable")]
+    public async Task UploadAndUpdateAvatarAsync_ClassifiesTheScanOutcome(FileUploadResult outcome, ServiceErrorType expectedType, string expectedCode)
+    {
+        GivenAValidImage();
+        GivenTheStorageAnswers(outcome);
+
+        ServiceResult result = await CreateSut().UploadAndUpdateAvatarAsync(Email, [0xFF, 0xD8, 0xFF], ".png", TestContext.Current.CancellationToken);
+
+        Assert.Equal(expectedType, result.ErrorType);
+        Assert.Equal(expectedCode, result.ErrorCode);
+    }
+
+    /// <summary>The avatar is uploaded to the configured file-storage address.</summary>
+    [Fact]
+    public async Task UploadAndUpdateAvatarAsync_UploadsToTheConfiguredFileStorage()
+    {
+        GivenAValidImage();
+        GivenTheStorageAnswers(FileUploadResult.Failed);
+
+        await CreateSut().UploadAndUpdateAvatarAsync(Email, [0xFF, 0xD8, 0xFF], ".png", TestContext.Current.CancellationToken);
+
+        _fileClient.Verify(c => c.UploadWithResultAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), "http://localhost:5001", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>An avatar upload that throws is logged with the exception and the account.</summary>
+    [Fact]
+    public async Task UploadAndUpdateAvatarAsync_LogsTheFailure_WhenTheValidatorThrows()
+    {
+        var thrown = new InvalidOperationException("boom");
+        _imageValidator.Setup(v => v.IsSvg(It.IsAny<byte[]>())).Throws(thrown);
+
+        await CreateSut().UploadAndUpdateAvatarAsync(Email, [1, 2, 3], ".png", TestContext.Current.CancellationToken);
+
+        AssertLoggedError($"Failed to upload and update avatar for {Email}", thrown);
+    }
+
+    /// <summary>An avatar is downloaded from the configured file-storage address.</summary>
+    [Fact]
+    public async Task DownloadAvatarAsync_DownloadsFromTheConfiguredFileStorage()
+    {
+        _fileClient.Setup(c => c.DownloadAsync("upload/Management/Profile/Avatar/abc.png", "http://localhost:5001", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([1, 2, 3]);
+
+        Assert.Equal([1, 2, 3], await CreateSut().DownloadAvatarAsync("abc.png", TestContext.Current.CancellationToken));
     }
 }

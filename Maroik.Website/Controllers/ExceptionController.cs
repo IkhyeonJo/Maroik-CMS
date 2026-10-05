@@ -7,11 +7,6 @@ namespace Maroik.Website.Controllers;
 /// <summary>Handles application error and access-denied pages.</summary>
 public class ExceptionController : Controller
 {
-    /// <summary>Initializes a new instance of <see cref="ExceptionController"/> (it has no dependencies).</summary>
-    public ExceptionController()
-    {
-    }
-
     /// <summary>Returns the access-denied view.</summary>
     [HttpGet]
     public IActionResult AccessDenied()

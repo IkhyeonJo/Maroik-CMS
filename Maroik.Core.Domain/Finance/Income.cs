@@ -136,7 +136,7 @@ public sealed class Income : AggregateRoot<long>
         var moneyResult = Money.Create(amount, currency);
         if (moneyResult.IsError) return moneyResult.Errors;
 
-        var (validMainClass, validSubClass, validDepositAsset) = coreResult.Value;
+        (string validMainClass, string validSubClass, string validDepositAsset) = coreResult.Value;
         var income = new Income(0, emailResult.Value, validMainClass, validSubClass, content,
             moneyResult.Value, validDepositAsset, note, utcNow);
 
@@ -204,7 +204,7 @@ public sealed class Income : AggregateRoot<long>
         var moneyResult = Money.Create(amount, currency);
         if (moneyResult.IsError) return moneyResult.Errors;
 
-        var (validMainClass, validSubClass, validDepositAsset) = coreResult.Value;
+        (string validMainClass, string validSubClass, string validDepositAsset) = coreResult.Value;
         MainClass = validMainClass;
         SubClass = validSubClass;
         Content = content;

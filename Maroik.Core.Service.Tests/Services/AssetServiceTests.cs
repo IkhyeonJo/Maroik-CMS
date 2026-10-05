@@ -2,7 +2,8 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Finance;
 using Maroik.Core.Service.Services;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 
@@ -20,6 +21,8 @@ public class AssetServiceTests
     private readonly Mock<IAssetRepository> _assetRepo = new();
     /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
+    private readonly FakeLogger<AssetService> _logger = new();
 
     /// <summary>The fixed "current time" of these tests.</summary>
     private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
@@ -27,12 +30,12 @@ public class AssetServiceTests
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(Now));
 
     /// <summary>The service under test over the mocked dependencies.</summary>
-    private AssetService CreateSut() => new(_assetRepo.Object, _unitOfWork.Object, NullLogger<AssetService>.Instance, _time);
+    private AssetService CreateSut() => new(_assetRepo.Object, _unitOfWork.Object, _logger, _time);
 
     /// <summary>Initializes the test fixture, setting up all required test doubles and the system under test.</summary>
     public AssetServiceTests()
     {
-        _unitOfWork.Setup(u => u.BeginAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _unitOfWork.Setup(u => u.BeginAsync(null, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.CommitAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.RollbackAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.DisposeAsync()).Returns(ValueTask.CompletedTask);
@@ -445,5 +448,243 @@ public class AssetServiceTests
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // -- Transaction boundaries, exact results, field fall-backs and failure logging -------
+
+    /// <summary>Owner e-mail of every asset in these tests.</summary>
+    private const string Email = "user@example.com";
+
+    /// <summary>Asserts the one Error entry names <see cref="Email"/> and <paramref name="assetName"/>, carries the thrown exception and starts with <paramref name="prefix"/>.</summary>
+    private void AssertLoggedFailure(string prefix, string assetName, Exception thrown)
+    {
+        FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot());
+        Assert.Equal(LogLevel.Error, record.Level);
+        Assert.Same(thrown, record.Exception);
+        Assert.StartsWith(prefix, record.Message, StringComparison.Ordinal);
+        Assert.Contains(assetName, record.Message);
+        Assert.Contains(Email, record.Message);
+    }
+
+    /// <summary>Asserts <paramref name="result"/> is the "asset already exists" Conflict.</summary>
+    private static void AssertDuplicate(ServiceResult result)
+    {
+        Assert.Equal(ServiceErrorType.Conflict, result.ErrorType);
+        Assert.Equal("Asset.Duplicate", result.ErrorCode);
+        Assert.Equal("The asset already exists.", result.ErrorKey);
+    }
+
+    /// <summary>Asserts <paramref name="result"/> is the "asset not found" NotFound.</summary>
+    private static void AssertAssetNotFound(ServiceResult result)
+    {
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Asset.NotFound", result.ErrorCode);
+        Assert.Equal("Fail to find the asset by given product name", result.ErrorKey);
+    }
+
+    /// <summary>An unknown product name resolves to null.</summary>
+    [Fact]
+    public async Task GetAssetAsync_ReturnsNull_WhenTheAssetDoesNotExist()
+    {
+        SetupFindAsset(null);
+
+        Assert.Null(await CreateSut().GetAssetAsync(Email, "Ghost", TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>An unknown asset category is a Validation error with its localizable message.</summary>
+    [Fact]
+    public async Task CreateAsync_ReturnsItemInvalid_WithItsMessage_WhenTheItemIsUnknown()
+    {
+        AssetRequest request = ValidRequest();
+        request.Item = "Unknown";
+
+        ServiceResult result = await CreateSut().CreateAsync(Email, request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
+        Assert.Equal("Asset.ItemInvalid", result.ErrorCode);
+        Assert.Equal("Asset category (item) is not a recognised value.", result.ErrorKey);
+    }
+
+    /// <summary>The duplicate check looks up the requested product name; an existing one is the "already exists" Conflict.</summary>
+    [Fact]
+    public async Task CreateAsync_ReturnsDuplicate_WhenTheRequestedNameIsAlreadyTaken()
+    {
+        _assetRepo.Setup(r => r.FindByEmailAndProductNameAsync(Email, "MyBank", It.IsAny<CancellationToken>())).ReturnsAsync(MakeAsset("MyBank"));
+
+        ServiceResult result = await CreateSut().CreateAsync(Email, ValidRequest("MyBank"), TestContext.Current.CancellationToken);
+
+        AssertDuplicate(result);
+        _assetRepo.Verify(r => r.CreateAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A concurrent insert that hits the primary key is the same "already exists" Conflict.</summary>
+    [Fact]
+    public async Task CreateAsync_ReturnsDuplicate_WhenAConcurrentInsertHitsThePrimaryKey()
+    {
+        SetupFindAsset(null);
+        _assetRepo.Setup(r => r.CreateAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("insert failed", new Exception("23505: duplicate key value violates unique constraint \"Asset_pk\"")));
+
+        AssertDuplicate(await CreateSut().CreateAsync(Email, ValidRequest(), TestContext.Current.CancellationToken));
+        Assert.Empty(_logger.Collector.GetSnapshot());
+    }
+
+    /// <summary>A create that throws anything else logs the failure with the exception, the asset and the account.</summary>
+    [Fact]
+    public async Task CreateAsync_LogsTheFailureWithTheException_WhenTheRepositoryThrows()
+    {
+        SetupFindAsset(null);
+        var thrown = new InvalidOperationException("boom");
+        _assetRepo.Setup(r => r.CreateAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().CreateAsync(Email, ValidRequest("MyBank"), TestContext.Current.CancellationToken);
+
+        AssertLoggedFailure("Failed to create asset", "MyBank", thrown);
+    }
+
+    /// <summary>A successful update opens the transaction and commits it.</summary>
+    [Fact]
+    public async Task UpdateAsync_BeginsAndCommitsTheTransaction_OnSuccess()
+    {
+        SetupFindAsset(MakeAsset("MyBank"));
+        _assetRepo.Setup(r => r.UpdateAssetWithProductNameAsync(It.IsAny<Asset>(), "MyBank", It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, ValidRequest("MyBank"), "MyBank", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An unknown asset category on update is a Validation error with its localizable message.</summary>
+    [Fact]
+    public async Task UpdateAsync_ReturnsItemInvalid_WithItsMessage_WhenTheItemIsUnknown()
+    {
+        AssetRequest request = ValidRequest();
+        request.Item = "Unknown";
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, request, "MyBank", TestContext.Current.CancellationToken);
+
+        Assert.Equal("Asset.ItemInvalid", result.ErrorCode);
+        Assert.Equal("Asset category (item) is not a recognised value.", result.ErrorKey);
+    }
+
+    /// <summary>An unknown original product name on update is the "asset not found" NotFound.</summary>
+    [Fact]
+    public async Task UpdateAsync_ReturnsAssetNotFound_WithItsMessage_WhenTheAssetIsUnknown()
+    {
+        SetupFindAsset(null);
+
+        AssertAssetNotFound(await CreateSut().UpdateAsync(Email, ValidRequest(), "Ghost", TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>A rename that hits an existing product name is the "already exists" Conflict.</summary>
+    [Fact]
+    public async Task UpdateAsync_ReturnsDuplicate_WhenTheRenameHitsAnExistingName()
+    {
+        SetupFindAsset(MakeAsset("OldName"));
+        _assetRepo.Setup(r => r.UpdateAssetWithProductNameAsync(It.IsAny<Asset>(), "OldName", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("rename failed", new Exception("23505: duplicate key value violates unique constraint \"Asset_pk\"")));
+
+        AssertDuplicate(await CreateSut().UpdateAsync(Email, ValidRequest("NewName"), "OldName", TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>An update that matches no row is the "Input is invalid" failure.</summary>
+    [Fact]
+    public async Task UpdateAsync_ReturnsUpdateFailed_WithInputIsInvalid_WhenNoRowIsUpdated()
+    {
+        SetupFindAsset(MakeAsset("MyBank"));
+        _assetRepo.Setup(r => r.UpdateAssetWithProductNameAsync(It.IsAny<Asset>(), "MyBank", It.IsAny<CancellationToken>())).ReturnsAsync(0);
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, ValidRequest("MyBank"), "MyBank", TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.Failure, result.ErrorType);
+        Assert.Equal("Asset.UpdateFailed", result.ErrorCode);
+        Assert.Equal("Input is invalid", result.ErrorKey);
+    }
+
+    /// <summary>The requested currency label and category replace the stored ones (a currency label can be relabelled at any time).</summary>
+    [Fact]
+    public async Task UpdateAsync_StoresTheRequestedCurrencyAndItem()
+    {
+        SetupFindAsset(MakeAsset("MyBank", currency: "원"));
+        Asset? written = null;
+        _assetRepo.Setup(r => r.UpdateAssetWithProductNameAsync(It.IsAny<Asset>(), "MyBank", It.IsAny<CancellationToken>()))
+            .Callback<Asset, string, CancellationToken>((a, _, _) => written = a).ReturnsAsync(1);
+        var request = new AssetRequest { ProductName = "MyBank", Item = "SavingsAsset", Amount = 10m, MonetaryUnit = "KRW" };
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, request, "MyBank", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal("KRW", written?.Balance.Currency.Value);
+        Assert.Equal("SavingsAsset", written?.Item);
+    }
+
+    /// <summary>A request without a currency keeps the stored currency label.</summary>
+    [Fact]
+    public async Task UpdateAsync_KeepsTheStoredCurrency_WhenTheRequestHasNone()
+    {
+        SetupFindAsset(MakeAsset("MyBank", currency: "USD"));
+        Asset? written = null;
+        _assetRepo.Setup(r => r.UpdateAssetWithProductNameAsync(It.IsAny<Asset>(), "MyBank", It.IsAny<CancellationToken>()))
+            .Callback<Asset, string, CancellationToken>((a, _, _) => written = a).ReturnsAsync(1);
+        var request = new AssetRequest { ProductName = "MyBank", Item = "FreeDepositAndWithdrawal", Amount = 10m, MonetaryUnit = null };
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, request, "MyBank", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal("USD", written?.Balance.Currency.Value);
+    }
+
+    /// <summary>An update that throws anything else logs the failure with the exception, the asset and the account.</summary>
+    [Fact]
+    public async Task UpdateAsync_LogsTheFailureWithTheException_WhenTheRepositoryThrows()
+    {
+        SetupFindAsset(MakeAsset("MyBank"));
+        var thrown = new InvalidOperationException("boom");
+        _assetRepo.Setup(r => r.UpdateAssetWithProductNameAsync(It.IsAny<Asset>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().UpdateAsync(Email, ValidRequest("MyBank"), "MyBank", TestContext.Current.CancellationToken);
+
+        AssertLoggedFailure("Failed to update asset", "MyBank", thrown);
+    }
+
+    /// <summary>A successful soft-delete opens the transaction and commits it.</summary>
+    [Fact]
+    public async Task DeleteAsync_BeginsAndCommitsTheTransaction_OnSuccess()
+    {
+        SetupFindAsset(MakeAsset("MyBank"));
+
+        ServiceResult result = await CreateSut().DeleteAsync(Email, "MyBank", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An unknown asset on delete is the "asset not found" NotFound, and the transaction is rolled back.</summary>
+    [Fact]
+    public async Task DeleteAsync_ReturnsAssetNotFound_AndRollsBack_WhenTheAssetIsUnknown()
+    {
+        SetupFindAsset(null);
+
+        AssertAssetNotFound(await CreateSut().DeleteAsync(Email, "Ghost", TestContext.Current.CancellationToken));
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A delete that throws logs the failure with the exception, the asset and the account.</summary>
+    [Fact]
+    public async Task DeleteAsync_LogsTheFailureWithTheException_WhenTheRepositoryThrows()
+    {
+        SetupFindAsset(MakeAsset("MyBank"));
+        var thrown = new InvalidOperationException("boom");
+        _assetRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().DeleteAsync(Email, "MyBank", TestContext.Current.CancellationToken);
+
+        AssertLoggedFailure("Failed to delete asset", "MyBank", thrown);
     }
 }

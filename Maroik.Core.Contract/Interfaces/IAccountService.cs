@@ -7,9 +7,6 @@ namespace Maroik.Core.Contract.Interfaces;
 /// </summary>
 public interface IAccountService
 {
-    /// <summary>Returns all accounts (admin use).</summary>
-    Task<List<AccountResponse>> GetAllAccountsAsync(CancellationToken ct = default);
-
     /// <summary>Returns accounts whose nickname matches any of the given values.</summary>
     Task<List<AccountResponse>> GetAccountsByNicknamesAsync(IEnumerable<string> nicknames, CancellationToken ct = default);
 

@@ -121,4 +121,27 @@ public class ManagementFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture
         await Assertions.Expect(page.Locator(".mvc-grid tbody tr").First).ToBeVisibleAsync();
         await Assertions.Expect(page.Locator(".mvc-grid")).ToContainTextAsync("nav-icon");
     }
+
+    // -- Private note (User) ----------------------------------------------------------
+
+    /// <summary>The private-note write page turns the body into a Summernote editor.</summary>
+    [Fact]
+    public async Task PrivateNoteWriteMode_ShowsTheRichTextEditor()
+    {
+        var (page, _) = await NewSignedInPageAsync();
+        await GotoAsync(page, "/Management/PrivateNote?method=write");
+
+        await Assertions.Expect(page.Locator(".note-editor .note-editable")).ToBeVisibleAsync();
+    }
+
+    /// <summary>The private-note edit page turns the body into a Summernote editor holding the note's content.</summary>
+    [Fact]
+    public async Task PrivateNoteEditMode_ShowsTheRichTextEditor_WithTheNoteBody()
+    {
+        var (page, account) = await NewSignedInPageAsync();
+        long boardId = await Db.SeedPrivateNoteAsync(account.Nickname, "<p>editable note</p>");
+        await GotoAsync(page, $"/Management/PrivateNote?method=edit&boardId={boardId}");
+
+        await Assertions.Expect(page.Locator(".note-editor .note-editable")).ToContainTextAsync("editable note");
+    }
 }

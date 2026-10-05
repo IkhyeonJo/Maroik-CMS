@@ -176,7 +176,7 @@ public sealed class FixedIncome : AggregateRoot<long>
             return LocalizableError.Validation("FixedIncome.MaturityDateInPast",
                 "The maturity date cannot be earlier than the current date.");
 
-        var (validMainClass, validSubClass, validDepositAsset) = coreResult.Value;
+        (string validMainClass, string validSubClass, string validDepositAsset) = coreResult.Value;
         var fixedIncome = new FixedIncome(0, emailResult.Value, validMainClass, validSubClass, content,
             moneyResult.Value, validDepositAsset, depositMonth, depositDay, maturityDate, note, utcNow);
 
@@ -265,7 +265,7 @@ public sealed class FixedIncome : AggregateRoot<long>
             return LocalizableError.Validation("FixedIncome.MaturityDateInPast",
                 "The maturity date cannot be earlier than the current date.");
 
-        var (validMainClass, validSubClass, validDepositAsset) = coreResult.Value;
+        (string validMainClass, string validSubClass, string validDepositAsset) = coreResult.Value;
         MainClass = validMainClass;
         SubClass = validSubClass;
         Content = content;

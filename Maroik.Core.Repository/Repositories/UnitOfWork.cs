@@ -30,7 +30,7 @@ public class UnitOfWork(ApplicationDbContext context) : IUnitOfWork
     private IDbContextTransaction? _transaction;
 
     /// <inheritdoc />
-    public async Task BeginAsync(CancellationToken ct = default, IsolationLevel? isolationLevel = null)
+    public async Task BeginAsync(IsolationLevel? isolationLevel = null, CancellationToken ct = default)
     {
         if (_transaction != null)
         {

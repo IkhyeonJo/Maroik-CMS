@@ -218,7 +218,7 @@ public sealed class BoardCommentRepositoryTests(DatabaseFixture database) : Repo
             var commentRepo = new BoardCommentRepository(context);
             await using var unitOfWork = new UnitOfWork(context);
 
-            await unitOfWork.BeginAsync(TestContext.Current.CancellationToken);
+            await unitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
             BoardComment? locked = await commentRepo.FindByIdForUpdateAsync(orm.Id, TestContext.Current.CancellationToken);
             if (locked == null)
             {

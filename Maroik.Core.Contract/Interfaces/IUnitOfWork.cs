@@ -16,7 +16,7 @@ public interface IUnitOfWork : IAsyncDisposable
     /// pinning a multi-query read to one snapshot — asks for it here; a repository must never open a
     /// transaction of its own to get one.
     /// </summary>
-    Task BeginAsync(CancellationToken ct = default, IsolationLevel? isolationLevel = null);
+    Task BeginAsync(IsolationLevel? isolationLevel = null, CancellationToken ct = default);
 
     /// <summary>Flushes any pending changes and commits the current transaction.</summary>
     Task CommitAsync(CancellationToken ct = default);

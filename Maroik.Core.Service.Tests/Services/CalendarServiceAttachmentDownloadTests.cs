@@ -198,4 +198,18 @@ public class CalendarServiceAttachmentDownloadTests
         Assert.Equal(ServiceErrorType.Failure, result.ErrorType);
         Assert.Null(file);
     }
+
+    /// <summary>A refused anonymous download logs the viewer as "Anonymous"; a signed-in one logs its e-mail.</summary>
+    [Theory]
+    [InlineData(null, "Anonymous")]
+    [InlineData("mallory@example.com", "mallory@example.com")]
+    public async Task OpenCalendarEventAttachedFileAsync_LogsWhoWasRefused(string? viewerEmail, string expected)
+    {
+        GivenAnEventWithAnAttachment();
+
+        await CreateSut().OpenCalendarEventAttachedFileAsync(7, viewerEmail == null ? null : Viewer(viewerEmail), TestContext.Current.CancellationToken);
+
+        FakeLogRecord denial = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
+        Assert.EndsWith($"is missing or not visible to {expected}", denial.Message);
+    }
 }

@@ -76,9 +76,11 @@ public class RsaService : IRsaService
         // which is the case here since this decrypts attacker-suppliable email-confirmation/
         // password-reset tokens.
         using RSA? rsa = CreatePrivateKeyRsa();
-        if (rsa == null)
-            throw new InvalidOperationException("RSA private key is not configured.");
-
+        switch (rsa)
+        {
+            case null:
+                throw new InvalidOperationException("RSA private key is not configured.");
+        }
         byte[] cipherBytes;
         try
         {
@@ -92,6 +94,7 @@ public class RsaService : IRsaService
         }
 
         return Encoding.UTF8.GetString(rsa.Decrypt(cipherBytes, RSAEncryptionPadding.CreateOaep(_hashAlgorithmName)));
+
     }
 
     /// <inheritdoc />

@@ -106,7 +106,9 @@ public class ManagementAccountService(
                     : ServiceResult.Conflict("Account.AlreadyExists", "This account has already been created.");
             }
 
+ #pragma warning disable CA1873
             logger.LogInformation("Admin created account {Email} with role {Role} by admin {Admin}", account.Email.Value, account.Role, actorEmail);
+ #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -134,7 +136,7 @@ public class ManagementAccountService(
             newHashedPassword = passwordService.HashPassword(newPassword);
         }
 
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // FOR UPDATE: hold the row lock from read to commit so a concurrent self-service
@@ -175,7 +177,9 @@ public class ManagementAccountService(
 
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
+ #pragma warning disable CA1873
             logger.LogInformation(
+ #pragma warning restore CA1873
                 "Admin updated account {Email}: role {OldRole} -> {NewRole}, locked {OldLocked} -> {NewLocked}, deleted {OldDeleted} -> {NewDeleted}, password reset {PasswordReset} by admin {Admin}",
                 account.Email.Value, oldRole, account.Role, oldLocked, account.Locked, oldDeleted, account.Deleted, newHashedPassword != null, actorEmail);
             return ServiceResult.Ok();
@@ -209,19 +213,30 @@ public class ManagementAccountService(
             account.ChangeRole(roleResult.Value, utcNow);
         }
 
-        // Locking an unlocked account is the admin's sanction and ends its sessions; re-saving an account that is
-        // already locked (e.g. by failed logins) keeps them, as that lock only refuses new logins.
-        if (request.Locked && account.Locked)
-            account.Lock(utcNow);
-        else if (request.Locked)
-            account.LockAndEndSessions(utcNow);
-        else
-            account.Unlock(utcNow);
+        switch (request.Locked)
+        {
+            // Locking an unlocked account is the admin's sanction and ends its sessions; re-saving an account that is
+            // already locked (e.g. by failed logins) keeps them, as that lock only refuses new logins.
+            case true when account.Locked:
+                account.Lock(utcNow);
+                break;
+            case true:
+                account.LockAndEndSessions(utcNow);
+                break;
+            default:
+                account.Unlock(utcNow);
+                break;
+        }
 
-        if (request.EmailConfirmed && !account.EmailConfirmed)
-            account.ForceConfirmEmail(utcNow);
-        else if (!request.EmailConfirmed && account.EmailConfirmed)
-            account.RevokeEmailConfirmation(utcNow);
+        switch (request.EmailConfirmed)
+        {
+            case true when !account.EmailConfirmed:
+                account.ForceConfirmEmail(utcNow);
+                break;
+            case false when account.EmailConfirmed:
+                account.RevokeEmailConfirmation(utcNow);
+                break;
+        }
 
         if (request.AgreedServiceTerms)
             account.AcceptServiceTerms(utcNow);
@@ -245,7 +260,7 @@ public class ManagementAccountService(
     public async Task<ServiceResult> DeleteAccountAsync(string email, string actorEmail, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // FOR UPDATE, same reason as UpdateAccountAsync: SoftDelete is persisted as a full-row
@@ -263,7 +278,9 @@ public class ManagementAccountService(
 
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
+ #pragma warning disable CA1873
             logger.LogInformation("Admin deleted account {Email} by admin {Admin}", account.Email.Value, actorEmail);
+ #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)

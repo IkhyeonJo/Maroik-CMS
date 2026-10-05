@@ -82,13 +82,7 @@ public sealed class E2EDatabase(string connectionString)
     /// </summary>
     public async Task<long> SeedFreeForumPostAsync(string writer, string contentHtml, string? attachmentPath = null, long attachmentSize = 0)
     {
-        long id = await ScalarAsync<long>(
-            """
-            INSERT INTO "Board" ("Type", "Title", "Content", "Writer", "Created", "Updated", "View", "Deleted", "Locked", "Noticed")
-            VALUES ('FreeForum', @title, @content, @writer, now(), now(), 0, false, false, false)
-            RETURNING "Id"
-            """,
-            ("title", $"E2E post {NewKey()}"), ("content", contentHtml), ("writer", writer));
+        long id = await SeedBoardAsync("FreeForum", writer, contentHtml);
 
         if (attachmentPath != null)
             await ExecuteAsync(
@@ -100,6 +94,19 @@ public sealed class E2EDatabase(string connectionString)
 
         return id;
     }
+
+    /// <summary>Seeds a private note by <paramref name="writer"/> (a nickname) with <paramref name="contentHtml"/> as its body. Returns its id.</summary>
+    public Task<long> SeedPrivateNoteAsync(string writer, string contentHtml) => SeedBoardAsync("PrivateNote", writer, contentHtml);
+
+    /// <summary>Inserts a <c>Board</c> row of <paramref name="type"/> and returns its id.</summary>
+    private Task<long> SeedBoardAsync(string type, string writer, string contentHtml) =>
+        ScalarAsync<long>(
+            """
+            INSERT INTO "Board" ("Type", "Title", "Content", "Writer", "Created", "Updated", "View", "Deleted", "Locked", "Noticed")
+            VALUES (@type, @title, @content, @writer, now(), now(), 0, false, false, false)
+            RETURNING "Id"
+            """,
+            ("type", type), ("title", $"E2E post {NewKey()}"), ("content", contentHtml), ("writer", writer));
 
     /// <summary>Runs a statement that returns no rows.</summary>
     public async Task ExecuteAsync(string sql, params (string Name, object? Value)[] parameters)

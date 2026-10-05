@@ -79,12 +79,11 @@ public class AttachmentContentService(
         string filePath = $"upload/{area}/{subArea}/summernote/images/{imageFile}";
 
         bool uploaded = await fileClient.UploadAsync(stored.Bytes, stored.ContentType, filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
-        if (!uploaded)
-            return SummernoteUploadResult.Fail(ServiceResult.TemporaryErrorKey);
+        return !uploaded ? SummernoteUploadResult.Fail(ServiceResult.TemporaryErrorKey) :
+            // File storage only reports success once it has stored the bytes as sent, so the editor gets
+            // the bytes already in hand instead of a second round trip to read them back.
+            SummernoteUploadResult.Ok(stored.Bytes, stored.ContentType, imageFile, filePath);
 
-        // File storage only reports success once it has stored the bytes as sent, so the editor gets
-        // the bytes already in hand instead of a second round trip to read them back.
-        return SummernoteUploadResult.Ok(stored.Bytes, stored.ContentType, imageFile, filePath);
     }
 
     /// <inheritdoc />

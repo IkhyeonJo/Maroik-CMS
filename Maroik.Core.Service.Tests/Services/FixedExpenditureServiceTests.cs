@@ -143,6 +143,7 @@ public class FixedExpenditureServiceTests
 
         ServiceResult result = await sut.CreateAsync("user@example.com", request, TestContext.Current.CancellationToken);
 
+        Assert.Equal("FixedExpenditure.DepositDay", result.ErrorCode);
         Assert.Equal("Deposit day must be between 1 and {0} for month {1}.", result.ErrorKey);
         Assert.Equal([31, (short)1], result.ErrorArgs);
     }
@@ -588,5 +589,104 @@ public class FixedExpenditureServiceTests
 
         Assert.True(result.Success);
         _fixedExpenditureRepo.Verify(r => r.UpdateEntityAsync(It.Is<FixedExpenditure>(f => f.MyDepositAsset == null && f.PaymentMethod == "Wallet"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // -- Deposit-month boundaries, transfer routing and result messages ----------------
+
+    /// <summary>The first, second and last months of the year are all valid deposit months.</summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(12)]
+    public async Task CreateAsync_AcceptsEveryMonthFromJanuaryToDecember(short month)
+    {
+        GivenAssets(MakeAsset("Wallet"));
+        FixedExpenditureRequest request = ConsumerRequest();
+        request.DepositMonth = month;
+
+        ServiceResult result = await CreateSut().CreateAsync(Email, request, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+    }
+
+    /// <summary>A month outside 1..12 is the deposit-month validation error, with its message.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(13)]
+    public async Task CreateAsync_ReturnsTheDepositMonthError_WhenTheMonthIsOutOfRange(short month)
+    {
+        FixedExpenditureRequest request = ConsumerRequest();
+        request.DepositMonth = month;
+
+        ServiceResult result = await CreateSut().CreateAsync(Email, request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
+        Assert.Equal("FixedExpenditure.DepositMonth", result.ErrorCode);
+        Assert.Equal("Deposit month must be between 1 and 12.", result.ErrorKey);
+    }
+
+    /// <summary>An unknown payment asset is a NotFound with the localizable "asset not found" message.</summary>
+    [Fact]
+    public async Task CreateAsync_ReturnsAssetNotFound_WithItsMessage_WhenThePaymentAssetIsUnknown()
+    {
+        ServiceResult result = await CreateSut().CreateAsync(Email, ConsumerRequest(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("FixedExpenditure.AssetNotFound", result.ErrorCode);
+        Assert.Equal("The selected asset could not be found.", result.ErrorKey);
+    }
+
+    /// <summary>An archived payment asset is a Conflict with the localizable "asset deleted" message.</summary>
+    [Fact]
+    public async Task CreateAsync_ReturnsAssetDeleted_WithItsMessage_WhenThePaymentAssetIsArchived()
+    {
+        GivenAssets(ArchivedAsset("Wallet"));
+
+        ServiceResult result = await CreateSut().CreateAsync(Email, ConsumerRequest(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.Conflict, result.ErrorType);
+        Assert.Equal("FixedExpenditure.AssetDeleted", result.ErrorCode);
+        Assert.Equal("Actions cannot be executed with assets that have already been deleted.", result.ErrorKey);
+    }
+
+    /// <summary>A non-transfer schedule turned into a transfer is stored with its deposit asset.</summary>
+    [Fact]
+    public async Task UpdateAsync_StoresTheDepositAsset_ForATransfer()
+    {
+        GivenAssets(MakeAsset("Checking"), MakeAsset("Savings"));
+        _fixedExpenditureRepo.Setup(r => r.GetByAccountEmailAsync(Email, It.IsAny<CancellationToken>())).ReturnsAsync([ExistingConsumer(payment: "Checking")]);
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(SavingsRequest()), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _fixedExpenditureRepo.Verify(r => r.UpdateEntityAsync(It.Is<FixedExpenditure>(f => f.MyDepositAsset == "Savings"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>An unknown schedule id on update is a NotFound with the localizable "record not found" message.</summary>
+    [Fact]
+    public async Task UpdateAsync_ReturnsFixedExpenditureNotFound_WithItsMessage_WhenTheRecordIsUnknown()
+    {
+        GivenAssets(MakeAsset("Wallet"));
+        _fixedExpenditureRepo.Setup(r => r.GetByAccountEmailAsync(Email, It.IsAny<CancellationToken>())).ReturnsAsync([ExistingConsumer(id: 2)]);
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ConsumerRequest()), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("FixedExpenditure.NotFound", result.ErrorCode);
+        Assert.Equal("The fixed-expenditure record could not be found.", result.ErrorKey);
+    }
+
+    /// <summary>An unknown schedule id on delete is a NotFound with the localizable "record not found" message.</summary>
+    [Fact]
+    public async Task DeleteAsync_ReturnsFixedExpenditureNotFound_WithItsMessage_WhenTheRecordIsUnknown()
+    {
+        _fixedExpenditureRepo.Setup(r => r.GetByAccountEmailAsync(Email, It.IsAny<CancellationToken>())).ReturnsAsync([ExistingConsumer(id: 2)]);
+
+        ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("FixedExpenditure.NotFound", result.ErrorCode);
+        Assert.Equal("The fixed-expenditure record could not be found.", result.ErrorKey);
+        _fixedExpenditureRepo.Verify(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

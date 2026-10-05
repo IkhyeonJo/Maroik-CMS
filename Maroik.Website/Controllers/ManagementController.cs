@@ -11,7 +11,6 @@ using Maroik.Website.Attributes;
 using Maroik.Website.Contracts;
 using Maroik.Website.Extensions;
 using Maroik.Website.Mappings;
-// ReSharper disable ConvertToConstant.Local
 using Maroik.Website.Models;
 using Maroik.Website.Models.ViewModels.Management;
 using Microsoft.AspNetCore.Mvc;
@@ -25,69 +24,34 @@ namespace Maroik.Website.Controllers;
 /// The Management area: every signed-in account's own profile (avatar, time zone, password) and private
 /// notes, plus the admin-only account management and navigation-menu (categories and sub-categories) pages.
 /// </summary>
-public class ManagementController : Controller
+/// <param name="localizer">Localizer for this controller's user-facing messages.</param>
+/// <param name="logger">Logger for unexpected failures in the Management actions.</param>
+/// <param name="profileService">Self-service profile use cases (avatar, time zone, password).</param>
+/// <param name="accountService">Account reads (writer nicknames of the private-note pages).</param>
+/// <param name="managementAccountService">Admin account-management use cases.</param>
+/// <param name="menuService">Admin navigation-menu use cases.</param>
+/// <param name="boardService">Private-note (PrivateNote board) use cases.</param>
+/// <param name="rsa">Encrypts the storage path returned for an uploaded Summernote image.</param>
+/// <param name="serverSettings">Server settings (upload size cap).</param>
+/// <param name="sessionService">Reads / refreshes / clears the signed-in account stored in the session.</param>
+/// <param name="excelExportService">Builds the account / menu Excel exports.</param>
+/// <param name="cache">Distributed cache whose navigation-menu entries are invalidated after a menu change.</param>
+/// <param name="timeProvider">The clock the export file name's timestamp is read from.</param>
+public class ManagementController(
+    IHtmlLocalizer<ManagementController> localizer,
+    ILogger<ManagementController> logger,
+    IProfileService profileService,
+    IAccountService accountService,
+    IManagementAccountService managementAccountService,
+    IMenuService menuService,
+    IBoardService boardService,
+    IRsaService rsa,
+    IOptions<ServerSetting> serverSettings,
+    ISessionService sessionService,
+    IExcelExportService excelExportService,
+    IDistributedCache cache,
+    TimeProvider timeProvider) : Controller
 {
-    /// <summary>Encrypts the storage path returned for an uploaded Summernote image.</summary>
-    private readonly IRsaService _rsa;
-    /// <summary>Localizer for this controller's user-facing messages.</summary>
-    private readonly IHtmlLocalizer<ManagementController> _localizer;
-    /// <summary>Logger for unexpected failures in the Management actions.</summary>
-    private readonly ILogger<ManagementController> _logger;
-    /// <summary>Self-service profile use cases (avatar, time zone, password).</summary>
-    private readonly IProfileService _profileService;
-    /// <summary>Account reads (writer nicknames of the private-note pages).</summary>
-    private readonly IAccountService _accountService;
-    /// <summary>Admin account-management use cases.</summary>
-    private readonly IManagementAccountService _managementAccountService;
-    /// <summary>Admin navigation-menu use cases.</summary>
-    private readonly IMenuService _menuService;
-    /// <summary>Private-note (PrivateNote board) use cases.</summary>
-    private readonly IBoardService _boardService;
-    /// <summary>Reads / refreshes / clears the signed-in account stored in the session.</summary>
-    private readonly ISessionService _sessionService;
-    /// <summary>Builds the account / menu Excel exports.</summary>
-    private readonly IExcelExportService _excelExportService;
-    /// <summary>Distributed cache whose navigation-menu entries are invalidated after a menu change.</summary>
-    private readonly IDistributedCache _cache;
-    /// <summary>Server settings (upload size cap).</summary>
-    private readonly IOptions<ServerSetting> _serverSettings;
-    /// <summary>Resource-key → localized text delegate handed to the mappers and the Excel export.</summary>
-    private readonly Func<string, string> _localize;
-    /// <summary>The clock the export file name's timestamp is read from.</summary>
-    private readonly TimeProvider _timeProvider;
-
-    /// <summary>Initializes a new instance of <see cref="ManagementController"/> with the supplied dependencies.</summary>
-    public ManagementController(
-        IHtmlLocalizer<ManagementController> localizer,
-        ILogger<ManagementController> logger,
-        IProfileService profileService,
-        IAccountService accountService,
-        IManagementAccountService managementAccountService,
-        IMenuService menuService,
-        IBoardService boardService,
-        IRsaService rsa,
-        IOptions<ServerSetting> serverSettings,
-        ISessionService sessionService,
-        IExcelExportService excelExportService,
-        IDistributedCache cache,
-        TimeProvider timeProvider)
-    {
-        _rsa = rsa;
-        _sessionService = sessionService;
-        _localizer = localizer;
-        _logger = logger;
-        _profileService = profileService;
-        _accountService = accountService;
-        _managementAccountService = managementAccountService;
-        _menuService = menuService;
-        _boardService = boardService;
-        _excelExportService = excelExportService;
-        _cache = cache;
-        _serverSettings = serverSettings;
-        _localize = key => _localizer[key].Value;
-        _timeProvider = timeProvider;
-    }
-
     /// <summary>
     /// E-mail of the signed-in administrator, passed to the admin write use cases so their audit log
     /// records who made the change (ViewBag.LoggedInAccount is set by ViewBagPopulatorFilter).
@@ -104,7 +68,7 @@ public class ManagementController : Controller
     {
         AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
         string? loggedInAccountTimeZoneIanaId = loggedInAccount.TimeZoneIanaId;
-        AccountResponse? tempAccount = await _profileService.GetProfileAsync(loggedInAccount.Email!, HttpContext.RequestAborted);
+        AccountResponse? tempAccount = await profileService.GetProfileAsync(loggedInAccount.Email!, HttpContext.RequestAborted);
 
         return View(new ProfileOutputViewModel()
         {
@@ -133,17 +97,17 @@ public class ManagementController : Controller
         // A request with no form fields at all (an empty multipart body) is not bound to a model — treat it as "no file".
         if (profileInputViewModel?.ProfileAvatarFiles == null || profileInputViewModel.ProfileAvatarFiles.Count == 0)
         {
-            return Ok(new { result = false, errorMessage = _localizer["Please attach a file"].Value });
+            return Ok(new { result = false, errorMessage = localizer["Please attach a file"].Value });
         }
 
         IFormFile file = profileInputViewModel.ProfileAvatarFiles[0];
 
-        if (file.Length <= 0 || file.Length > _serverSettings.Value.MaxAttachedFileSizeBytes)
-            return Ok(new { result = false, errorMessage = _localizer["File Size must be smaller than {0}MB.", _serverSettings.Value.MaxAttachedFileSizeBytes / (1024 * 1024)].ToPlainString() });
+        if (file.Length <= 0 || file.Length > serverSettings.Value.MaxAttachedFileSizeBytes)
+            return Ok(new { result = false, errorMessage = localizer["File Size must be smaller than {0}MB.", serverSettings.Value.MaxAttachedFileSizeBytes / (1024 * 1024)].ToPlainString() });
 
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (!ImageUploadPolicy.IsAllowedExtension(extension))
-            return Ok(new { result = false, errorMessage = _localizer["Only .jpg or jpeg or .png file allowed"].Value });
+            return Ok(new { result = false, errorMessage = localizer["Only .jpg or jpeg or .png file allowed"].Value });
 
         byte[] imageBytes;
         using (var ms = new MemoryStream())
@@ -154,18 +118,18 @@ public class ManagementController : Controller
 
         string? email = ((AccountResponse)ViewBag.LoggedInAccount).Email;
 
-        ServiceResult avatarResult = await _profileService.UploadAndUpdateAvatarAsync(email!, imageBytes, extension, HttpContext.RequestAborted);
+        ServiceResult avatarResult = await profileService.UploadAndUpdateAvatarAsync(email!, imageBytes, extension, HttpContext.RequestAborted);
 
         if (!avatarResult.Success)
         {
             return avatarResult.ErrorKey switch
             {
-                "virus-detected" => Ok(new { result = false, errorMessage = _localizer["File may be infected with a virus."].Value }),
-                "scan-unavailable" => Ok(new { result = false, errorMessage = _localizer["The file could not be scanned for viruses. Please try again later."].Value }),
-                "svg-not-allowed" => Ok(new { result = false, errorMessage = _localizer["SVG format is not allowed"].Value }),
-                "invalid-image" => Ok(new { result = false, errorMessage = _localizer["Invalid image file"].Value }),
-                ServiceResult.TemporaryErrorKey => Ok(new { result = false, errorMessage = _localizer[ServiceResult.TemporaryErrorKey].Value }),
-                _ => Ok(new { result = false, errorMessage = _localizer["Input is invalid"].Value })
+                "virus-detected" => Ok(new { result = false, errorMessage = localizer["File may be infected with a virus."].Value }),
+                "scan-unavailable" => Ok(new { result = false, errorMessage = localizer["The file could not be scanned for viruses. Please try again later."].Value }),
+                "svg-not-allowed" => Ok(new { result = false, errorMessage = localizer["SVG format is not allowed"].Value }),
+                "invalid-image" => Ok(new { result = false, errorMessage = localizer["Invalid image file"].Value }),
+                ServiceResult.TemporaryErrorKey => Ok(new { result = false, errorMessage = localizer[ServiceResult.TemporaryErrorKey].Value }),
+                _ => Ok(new { result = false, errorMessage = localizer["Input is invalid"].Value })
             };
         }
 
@@ -195,17 +159,17 @@ public class ManagementController : Controller
         string? email = ((AccountResponse)ViewBag.LoggedInAccount).Email;
         try
         {
-            await _profileService.UpdateTimeZoneAsync(email!, profileInputViewModel.TimeZoneIanaId!, HttpContext.RequestAborted);
+            await profileService.UpdateTimeZoneAsync(email!, profileInputViewModel.TimeZoneIanaId!, HttpContext.RequestAborted);
 
             // Refresh session with updated timezone. GetProfileAsync returns a plain AccountResponse,
             // which no longer carries a password hash at all (see AdminAccountResponse).
-            AccountResponse? updatedAccount = await _profileService.GetProfileAsync(email!, HttpContext.RequestAborted);
-            _sessionService.RemoveAccount();
-            _sessionService.SetAccount(updatedAccount!);
+            AccountResponse? updatedAccount = await profileService.GetProfileAsync(email!, HttpContext.RequestAborted);
+            sessionService.RemoveAccount();
+            sessionService.SetAccount(updatedAccount!);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update time zone for account {AccountEmail}", email);
+            logger.LogError(ex, "Failed to update time zone for account {AccountEmail}", email);
         }
 
         return RedirectToAction("Profile", "Management");
@@ -226,12 +190,12 @@ public class ManagementController : Controller
         _ = ModelState.Remove(nameof(profileInputViewModel.TimeZoneIanaId));
 
         if (!ModelState.IsValid)
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         string? email = ((AccountResponse)ViewBag.LoggedInAccount).Email;
         try
         {
-            ServiceResult result = await _profileService.UpdatePasswordAsync(
+            ServiceResult result = await profileService.UpdatePasswordAsync(
                 email!,
                 profileInputViewModel.Password ?? "",
                 profileInputViewModel.NewPassword ?? "",
@@ -242,17 +206,17 @@ public class ManagementController : Controller
                 // ChangePassword regenerated the account's SecurityStamp, so every session of this
                 // account is now invalid — this one included. Drop it here explicitly and let the
                 // client send the user to the sign-in page (they sign in again with the new password).
-                _sessionService.RemoveAccount();
+                sessionService.RemoveAccount();
             }
 
             return result.Success
-                ? Json(new { result = true, message = _localizer["Password changed. Please sign in again."].Value })
-                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["Password changed. Please sign in again."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update password for account {AccountEmail}", email);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to update password for account {AccountEmail}", email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -284,7 +248,7 @@ public class ManagementController : Controller
 
             if (!ModelState.IsValid)
             {
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
             }
 
             #region Create account
@@ -292,7 +256,7 @@ public class ManagementController : Controller
             // Email format, password complexity, nickname length, role and time-zone are all
             // validated by ManagementAccountService / Account.Create / PasswordPolicy in the Core
             // layers — the controller only binds the request and renders the result.
-            ServiceResult createResult = await _managementAccountService.CreateAccountAsync(new AdminCreateAccountRequest
+            ServiceResult createResult = await managementAccountService.CreateAccountAsync(new AdminCreateAccountRequest
             {
                 Email = accountInputViewModel.Email,
                 PlainPassword = accountInputViewModel.Password, // service validates + hashes
@@ -305,16 +269,16 @@ public class ManagementController : Controller
             }, AdminEmail, HttpContext.RequestAborted);
 
             return createResult.Success
-                ? Json(new { result = true, message = _localizer["Account create successfully done."].Value })
-                : Json(new { result = false, error = _localizer[createResult.ErrorKey, createResult.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["Account create successfully done."].Value })
+                : Json(new { result = false, error = localizer[createResult.ErrorKey, createResult.ErrorArgs].ToPlainString() });
 
             #endregion
 
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create account {AccountEmail}", accountInputViewModel.Email);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to create account {AccountEmail}", accountInputViewModel.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -335,8 +299,8 @@ public class ManagementController : Controller
 
         string tz = ((AccountResponse)ViewBag.LoggedInAccount).TimeZoneIanaId!;
         var accounts = string.IsNullOrEmpty(wholeSearch)
-            ? await _managementAccountService.GetAllAccountsAsync(HttpContext.RequestAborted)
-            : await _managementAccountService.SearchAccountsAsync(wholeSearch, HttpContext.RequestAborted);
+            ? await managementAccountService.GetAllAccountsAsync(HttpContext.RequestAborted)
+            : await managementAccountService.SearchAccountsAsync(wholeSearch, HttpContext.RequestAborted);
         var viewModels = accounts
             .ToDisplayViewModels(tz)
             .OrderBy(m => m.Email) // the e-mail address is the account's unique key, so no tie-breaker is needed
@@ -353,20 +317,20 @@ public class ManagementController : Controller
     {
         try
         {
-            AccountResponse? tempAccount = await _managementAccountService.GetAccountByEmailAsync(email, HttpContext.RequestAborted);
+            AccountResponse? tempAccount = await managementAccountService.GetAccountByEmailAsync(email, HttpContext.RequestAborted);
 
             return tempAccount == null
                 ? Json(new
                 {
                     result = false,
-                    error = _localizer["Fail to find the account by given email address"].Value
+                    error = localizer["Fail to find the account by given email address"].Value
                 })
                 : (IActionResult)Json(new { result = true, account = tempAccount });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to check account existence for email {AccountEmail}", email);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to check account existence for email {AccountEmail}", email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -393,12 +357,12 @@ public class ManagementController : Controller
             _ = ModelState.Remove(nameof(accountInputViewModel.Message));
 
             if (!ModelState.IsValid)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
             // Role validity is enforced by Account.ChangeRole in the Domain layer, which rejects
             // the request with a validation error below instead of the controller silently
             // coercing an invalid value.
-            ServiceResult updateResult = await _managementAccountService.UpdateAccountAsync(
+            ServiceResult updateResult = await managementAccountService.UpdateAccountAsync(
                 new AdminUpdateAccountRequest
                 {
                     Email = accountInputViewModel.Email,
@@ -414,13 +378,13 @@ public class ManagementController : Controller
                 AdminEmail, HttpContext.RequestAborted);
 
             return updateResult.Success
-                ? Json(new { result = true, message = _localizer["Successfully updated the account"].Value })
-                : Json(new { result = false, error = _localizer[updateResult.ErrorKey, updateResult.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["Successfully updated the account"].Value })
+                : Json(new { result = false, error = localizer[updateResult.ErrorKey, updateResult.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update account {AccountEmail}", accountInputViewModel.Email);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to update account {AccountEmail}", accountInputViewModel.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -436,15 +400,15 @@ public class ManagementController : Controller
     {
         try
         {
-            ServiceResult deleteResult = await _managementAccountService.DeleteAccountAsync(accountInputViewModel.Email!, AdminEmail, HttpContext.RequestAborted);
+            ServiceResult deleteResult = await managementAccountService.DeleteAccountAsync(accountInputViewModel.Email!, AdminEmail, HttpContext.RequestAborted);
             return deleteResult.Success
-                ? Json(new { result = true, message = _localizer["Successfully deleted the account"].Value })
-                : Json(new { result = false, error = _localizer[deleteResult.ErrorKey, deleteResult.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["Successfully deleted the account"].Value })
+                : Json(new { result = false, error = localizer[deleteResult.ErrorKey, deleteResult.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete account {AccountEmail}", accountInputViewModel.Email);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to delete account {AccountEmail}", accountInputViewModel.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -459,9 +423,9 @@ public class ManagementController : Controller
     public async Task<IActionResult> ExportExcelAccount(string fileName = "")
     {
         AccountResponse account = ViewBag.LoggedInAccount;
-        var accounts = await _managementAccountService.GetAllAccountsAsync(HttpContext.RequestAborted);
-        var stream = _excelExportService.CreateAccountExcel(accounts, _localize, account.TimeZoneIanaId!);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
+        var accounts = await managementAccountService.GetAllAccountsAsync(HttpContext.RequestAborted);
+        var stream = excelExportService.CreateAccountExcel(accounts, key => localizer[key].Value, account.TimeZoneIanaId!);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
 
@@ -485,9 +449,9 @@ public class ManagementController : Controller
                 .Action)); // remove ModelState check in Action (in Request parameters, Action can be null)
 
             if (!ModelState.IsValid)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
-            ServiceResult createCatResult = await _menuService.CreateCategoryAsync(new CategoryRequest
+            ServiceResult createCatResult = await menuService.CreateCategoryAsync(new CategoryRequest
             {
                 Name = menuInputViewModel.Name,
                 DisplayName = menuInputViewModel.DisplayName,
@@ -498,14 +462,14 @@ public class ManagementController : Controller
                 Order = menuInputViewModel.Order
             }, AdminEmail, HttpContext.RequestAborted);
             if (!createCatResult.Success)
-                return Json(new { result = false, error = _localizer[createCatResult.ErrorKey, createCatResult.ErrorArgs].ToPlainString() });
-            await _cache.InvalidateNavigationMenuCacheAsync();
-            return Json(new { result = true, message = _localizer["Successfully created the category"].Value });
+                return Json(new { result = false, error = localizer[createCatResult.ErrorKey, createCatResult.ErrorArgs].ToPlainString() });
+            await cache.InvalidateNavigationMenuCacheAsync();
+            return Json(new { result = true, message = localizer["Successfully created the category"].Value });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create menu category {CategoryName}", menuInputViewModel.Name);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to create menu category {CategoryName}", menuInputViewModel.Name);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -521,9 +485,9 @@ public class ManagementController : Controller
                 .Controller)); // remove ModelState check in Controller (in Request parameters, Controller can be null)
 
             if (!ModelState.IsValid)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
-            ServiceResult createSubCatResult = await _menuService.CreateSubCategoryAsync(new SubCategoryRequest
+            ServiceResult createSubCatResult = await menuService.CreateSubCategoryAsync(new SubCategoryRequest
             {
                 CategoryId = menuInputViewModel.CategoryId,
                 Name = menuInputViewModel.Name,
@@ -534,14 +498,14 @@ public class ManagementController : Controller
                 Order = menuInputViewModel.Order
             }, AdminEmail, HttpContext.RequestAborted);
             if (!createSubCatResult.Success)
-                return Json(new { result = false, error = _localizer[createSubCatResult.ErrorKey, createSubCatResult.ErrorArgs].ToPlainString() });
-            await _cache.InvalidateNavigationMenuCacheAsync();
-            return Json(new { result = true, message = _localizer["Successfully created the subCategory"].Value });
+                return Json(new { result = false, error = localizer[createSubCatResult.ErrorKey, createSubCatResult.ErrorArgs].ToPlainString() });
+            await cache.InvalidateNavigationMenuCacheAsync();
+            return Json(new { result = true, message = localizer["Successfully created the subCategory"].Value });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create menu sub-category {SubCategoryName}", menuInputViewModel.Name);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to create menu sub-category {SubCategoryName}", menuInputViewModel.Name);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -565,7 +529,7 @@ public class ManagementController : Controller
         // view model.
         List<MenuOutputViewModel> menuOutputViewModels =
         [
-            .. (await _menuService.SearchCategoriesAsync(wholeSearch, HttpContext.RequestAborted))
+            .. (await menuService.SearchCategoriesAsync(wholeSearch, HttpContext.RequestAborted))
             .Select(item => new MenuOutputViewModel
             {
                 Id = item.Id,
@@ -579,7 +543,7 @@ public class ManagementController : Controller
                 Order = item.Order
             }),
 
-            .. (await _menuService.SearchSubCategoriesAsync(wholeSearch, HttpContext.RequestAborted))
+            .. (await menuService.SearchSubCategoriesAsync(wholeSearch, HttpContext.RequestAborted))
             .Select(item => new MenuOutputViewModel
             {
                 Id = item.Id,
@@ -608,9 +572,9 @@ public class ManagementController : Controller
     {
         try
         {
-            CategoryResponse? category = await _menuService.GetCategoryByIdAsync(id, HttpContext.RequestAborted);
+            CategoryResponse? category = await menuService.GetCategoryByIdAsync(id, HttpContext.RequestAborted);
             if (category == null)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
             MenuOutputViewModel vm = new()
             {
@@ -628,8 +592,8 @@ public class ManagementController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to check category existence for id {CategoryId}", id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to check category existence for id {CategoryId}", id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -641,9 +605,9 @@ public class ManagementController : Controller
     {
         try
         {
-            SubCategoryResponse? subCategory = await _menuService.GetSubCategoryByIdAsync(id, HttpContext.RequestAborted);
+            SubCategoryResponse? subCategory = await menuService.GetSubCategoryByIdAsync(id, HttpContext.RequestAborted);
             if (subCategory == null)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
             MenuOutputViewModel vm = new()
             {
@@ -661,8 +625,8 @@ public class ManagementController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to check sub-category existence for id {SubCategoryId}", id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to check sub-category existence for id {SubCategoryId}", id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -682,9 +646,9 @@ public class ManagementController : Controller
                 .Action)); // remove ModelState check in Action (in Request parameters, Action can be null)
 
             if (!ModelState.IsValid)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
-            ServiceResult updateCatResult = await _menuService.UpdateCategoryAsync(new CategoryRequest
+            ServiceResult updateCatResult = await menuService.UpdateCategoryAsync(new CategoryRequest
             {
                 Id = menuInputViewModel.Id,
                 Name = menuInputViewModel.Name,
@@ -696,14 +660,14 @@ public class ManagementController : Controller
                 Order = menuInputViewModel.Order
             }, AdminEmail, HttpContext.RequestAborted);
             if (!updateCatResult.Success)
-                return Json(new { result = false, error = _localizer[updateCatResult.ErrorKey, updateCatResult.ErrorArgs].ToPlainString() });
-            await _cache.InvalidateNavigationMenuCacheAsync();
-            return Json(new { result = true, message = _localizer["Successfully updated the category"].Value });
+                return Json(new { result = false, error = localizer[updateCatResult.ErrorKey, updateCatResult.ErrorArgs].ToPlainString() });
+            await cache.InvalidateNavigationMenuCacheAsync();
+            return Json(new { result = true, message = localizer["Successfully updated the category"].Value });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update menu category {CategoryId}", menuInputViewModel.Id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to update menu category {CategoryId}", menuInputViewModel.Id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -719,9 +683,9 @@ public class ManagementController : Controller
                 .Controller)); // remove ModelState check in Controller (in Request parameters, Controller can be null)
 
             if (!ModelState.IsValid)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
-            ServiceResult updateSubCatResult = await _menuService.UpdateSubCategoryAsync(new SubCategoryRequest
+            ServiceResult updateSubCatResult = await menuService.UpdateSubCategoryAsync(new SubCategoryRequest
             {
                 Id = menuInputViewModel.Id,
                 CategoryId = menuInputViewModel.CategoryId,
@@ -733,14 +697,14 @@ public class ManagementController : Controller
                 Order = menuInputViewModel.Order
             }, AdminEmail, HttpContext.RequestAborted);
             if (!updateSubCatResult.Success)
-                return Json(new { result = false, error = _localizer[updateSubCatResult.ErrorKey, updateSubCatResult.ErrorArgs].ToPlainString() });
-            await _cache.InvalidateNavigationMenuCacheAsync();
-            return Json(new { result = true, message = _localizer["Successfully updated the subCategory"].Value });
+                return Json(new { result = false, error = localizer[updateSubCatResult.ErrorKey, updateSubCatResult.ErrorArgs].ToPlainString() });
+            await cache.InvalidateNavigationMenuCacheAsync();
+            return Json(new { result = true, message = localizer["Successfully updated the subCategory"].Value });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update menu sub-category {SubCategoryId}", menuInputViewModel.Id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to update menu sub-category {SubCategoryId}", menuInputViewModel.Id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -760,9 +724,9 @@ public class ManagementController : Controller
                 .Action)); // remove ModelState check in Action (in Request parameters, Action can be null)
 
             if (!ModelState.IsValid)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
-            ServiceResult deleteCatResult = await _menuService.DeleteCategoryAsync(new CategoryRequest
+            ServiceResult deleteCatResult = await menuService.DeleteCategoryAsync(new CategoryRequest
             {
                 Id = menuInputViewModel.Id,
                 Name = menuInputViewModel.Name,
@@ -774,14 +738,14 @@ public class ManagementController : Controller
                 Order = menuInputViewModel.Order
             }, AdminEmail, HttpContext.RequestAborted);
             if (!deleteCatResult.Success)
-                return Json(new { result = false, error = _localizer[deleteCatResult.ErrorKey, deleteCatResult.ErrorArgs].ToPlainString() });
-            await _cache.InvalidateNavigationMenuCacheAsync();
-            return Json(new { result = true, message = _localizer["Successfully deleted the category"].Value });
+                return Json(new { result = false, error = localizer[deleteCatResult.ErrorKey, deleteCatResult.ErrorArgs].ToPlainString() });
+            await cache.InvalidateNavigationMenuCacheAsync();
+            return Json(new { result = true, message = localizer["Successfully deleted the category"].Value });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete menu category {CategoryId}", menuInputViewModel.Id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to delete menu category {CategoryId}", menuInputViewModel.Id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -797,9 +761,9 @@ public class ManagementController : Controller
                 .Controller)); // remove ModelState check in Controller (in Request parameters, Controller can be null)
 
             if (!ModelState.IsValid)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
-            ServiceResult deleteSubCatResult = await _menuService.DeleteSubCategoryAsync(new SubCategoryRequest
+            ServiceResult deleteSubCatResult = await menuService.DeleteSubCategoryAsync(new SubCategoryRequest
             {
                 Id = menuInputViewModel.Id,
                 CategoryId = menuInputViewModel.CategoryId,
@@ -812,14 +776,14 @@ public class ManagementController : Controller
             }, AdminEmail, HttpContext.RequestAborted);
 
             if (!deleteSubCatResult.Success)
-                return Json(new { result = false, error = _localizer[deleteSubCatResult.ErrorKey, deleteSubCatResult.ErrorArgs].ToPlainString() });
-            await _cache.InvalidateNavigationMenuCacheAsync();
-            return Json(new { result = true, message = _localizer["Successfully deleted the subCategory"].Value });
+                return Json(new { result = false, error = localizer[deleteSubCatResult.ErrorKey, deleteSubCatResult.ErrorArgs].ToPlainString() });
+            await cache.InvalidateNavigationMenuCacheAsync();
+            return Json(new { result = true, message = localizer["Successfully deleted the subCategory"].Value });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete menu sub-category {SubCategoryId}", menuInputViewModel.Id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to delete menu sub-category {SubCategoryId}", menuInputViewModel.Id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -834,10 +798,10 @@ public class ManagementController : Controller
     public async Task<IActionResult> ExportExcelMenu(string fileName = "")
     {
         AccountResponse account = ViewBag.LoggedInAccount;
-        var categories = await _menuService.GetAllCategoriesAsync(HttpContext.RequestAborted);
-        var subCats = await _menuService.GetAllSubCategoriesAsync(HttpContext.RequestAborted);
-        var stream = _excelExportService.CreateMenuExcel(categories, subCats, _localize);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
+        var categories = await menuService.GetAllCategoriesAsync(HttpContext.RequestAborted);
+        var subCats = await menuService.GetAllSubCategoriesAsync(HttpContext.RequestAborted);
+        var stream = excelExportService.CreateMenuExcel(categories, subCats, key => localizer[key].Value);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
 
@@ -863,7 +827,7 @@ public class ManagementController : Controller
         try
         {
             if (!ModelState.IsValid)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
             boardInputViewModel.Content ??= "";
 
@@ -873,7 +837,7 @@ public class ManagementController : Controller
             AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
 
             if (loggedInAccount.Role is not (Role.Admin or Role.User))
-                return Json(new { result = false, error = _localizer["Please Login to write board"].Value });
+                return Json(new { result = false, error = localizer["Please Login to write board"].Value });
 
             BoardRequest boardRequest = new()
             {
@@ -883,17 +847,17 @@ public class ManagementController : Controller
                 Writer = loggedInAccount.Nickname!
             };
 
-            AttachedFileDto? attachedFile = await boardInputViewModel.UploadedFile.ToAttachedFileInfoAsync(_serverSettings.Value.MaxAttachedFileSizeBytes, HttpContext.RequestAborted);
+            AttachedFileDto? attachedFile = await boardInputViewModel.UploadedFile.ToAttachedFileInfoAsync(serverSettings.Value.MaxAttachedFileSizeBytes, HttpContext.RequestAborted);
 
-            ServiceResult result = await _boardService.WriteBoardAsync(boardRequest, loggedInAccount.Role == Role.Admin, attachedFile, HttpContext.RequestAborted);
+            ServiceResult result = await boardService.WriteBoardAsync(boardRequest, loggedInAccount.Role == Role.Admin, attachedFile, HttpContext.RequestAborted);
             return result.Success
-                ? Json(new { result = true, message = _localizer["The board has been successfully created."].Value })
-                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["The board has been successfully created."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to write private note board {Title}", boardInputViewModel.Title);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to write private note board {Title}", boardInputViewModel.Title);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -912,15 +876,15 @@ public class ManagementController : Controller
         try
         {
             if (!ModelState.IsValid)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
             if (string.IsNullOrEmpty(boardCommentInputViewModel.Content))
-                return Json(new { result = false, error = _localizer["Please enter a comment."].Value });
+                return Json(new { result = false, error = localizer["Please enter a comment."].Value });
 
             // DB-fresh account already loaded by ViewBagPopulatorFilter for this request (see WritePrivateNoteBoard).
             AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
             if (loggedInAccount.Role is not (Role.Admin or Role.User))
-                return Json(new { result = false, error = _localizer["Please Login to write comment."].Value });
+                return Json(new { result = false, error = localizer["Please Login to write comment."].Value });
 
             BoardCommentRequest commentRequest = new()
             {
@@ -930,15 +894,15 @@ public class ManagementController : Controller
                 Content = boardCommentInputViewModel.Content
             };
 
-            ServiceResult result = await _boardService.WriteCommentAsync(commentRequest, loggedInAccount.Nickname!, requiredType: BoardTypes.PrivateNote, ct: HttpContext.RequestAborted);
+            ServiceResult result = await boardService.WriteCommentAsync(commentRequest, loggedInAccount.Nickname!, requiredType: BoardTypes.PrivateNote, ct: HttpContext.RequestAborted);
             return result.Success
                 ? Json(new { result = true, boardId = boardCommentInputViewModel.BoardId, page = boardCommentInputViewModel.DetailCurrentPage })
-                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to write private note comment on board {BoardId}", boardCommentInputViewModel.BoardId);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to write private note comment on board {BoardId}", boardCommentInputViewModel.BoardId);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -958,30 +922,30 @@ public class ManagementController : Controller
     public async Task<IActionResult> UploadImageFile(IFormFile? summernoteImageFile)
     {
         if (summernoteImageFile == null)
-            return Ok(new { result = false, errorMessage = _localizer["Please attach a file."].Value });
+            return Ok(new { result = false, errorMessage = localizer["Please attach a file."].Value });
 
         // A refused upload is a security event: record who sent what (the attachment service logs its own refusals).
         string uploaderEmail = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
-        if (summernoteImageFile.Length <= 0 || summernoteImageFile.Length > _serverSettings.Value.MaxAttachedFileSizeBytes)
+        if (summernoteImageFile.Length <= 0 || summernoteImageFile.Length > serverSettings.Value.MaxAttachedFileSizeBytes)
         {
-            _logger.LogWarning("Editor image upload refused: size {Size} bytes is outside the {MaxBytes}-byte limit for {Email}",
-                summernoteImageFile.Length, _serverSettings.Value.MaxAttachedFileSizeBytes, uploaderEmail);
-            return Ok(new { result = false, errorMessage = _localizer["File Size must be smaller than {0}MB.", _serverSettings.Value.MaxAttachedFileSizeBytes / (1024 * 1024)].ToPlainString() });
+            logger.LogWarning("Editor image upload refused: size {Size} bytes is outside the {MaxBytes}-byte limit for {Email}",
+                summernoteImageFile.Length, serverSettings.Value.MaxAttachedFileSizeBytes, uploaderEmail);
+            return Ok(new { result = false, errorMessage = localizer["File Size must be smaller than {0}MB.", serverSettings.Value.MaxAttachedFileSizeBytes / (1024 * 1024)].ToPlainString() });
         }
 
         var ext = Path.GetExtension(summernoteImageFile.FileName).ToLowerInvariant();
         if (!ImageUploadPolicy.IsAllowedExtension(ext))
         {
-            _logger.LogWarning("Editor image upload refused: extension not allowed ({Extension}) for {Email}", ext, uploaderEmail);
-            return Ok(new { result = false, errorMessage = _localizer["Only .jpg or jpeg or .png file allowed."].Value });
+            logger.LogWarning("Editor image upload refused: extension not allowed ({Extension}) for {Email}", ext, uploaderEmail);
+            return Ok(new { result = false, errorMessage = localizer["Only .jpg or jpeg or .png file allowed."].Value });
         }
 
-        AttachedFileDto file = (await summernoteImageFile.ToAttachedFileInfoAsync(_serverSettings.Value.MaxAttachedFileSizeBytes, HttpContext.RequestAborted))!;
+        AttachedFileDto file = (await summernoteImageFile.ToAttachedFileInfoAsync(serverSettings.Value.MaxAttachedFileSizeBytes, HttpContext.RequestAborted))!;
 
-        SummernoteUploadResult uploadResult = await _boardService.UploadSummernoteImageAsync(file, "Management", BoardTypes.PrivateNote, uploaderEmail, HttpContext.RequestAborted);
+        SummernoteUploadResult uploadResult = await boardService.UploadSummernoteImageAsync(file, "Management", BoardTypes.PrivateNote, uploaderEmail, HttpContext.RequestAborted);
 
         if (!uploadResult.Success)
-            return Ok(new { result = false, errorMessage = _localizer[uploadResult.ErrorKey ?? "Input is invalid"].Value });
+            return Ok(new { result = false, errorMessage = localizer[uploadResult.ErrorKey ?? "Input is invalid"].Value });
 
         // The Summernote editor only needs the raw bytes (base64) + content type to build an object
         // URL for the inserted <img>; return those explicitly rather than serializing a whole
@@ -994,7 +958,7 @@ public class ManagementController : Controller
                 fileContents = Convert.ToBase64String(uploadResult.FileBytes!),
                 contentType = uploadResult.ContentType!
             },
-            filePath = _rsa.Encrypt(uploadResult.FilePath!)
+            filePath = rsa.Encrypt(uploadResult.FilePath!)
         });
     }
     #endregion
@@ -1014,8 +978,15 @@ public class ManagementController : Controller
             // Write
             case "write":
             {
-                PrivateNoteOutputViewModel privateNoteOutputViewModel = new() { Method = method };
-                bool isAccountSessionExist = ((AccountResponse)ViewBag.LoggedInAccount).Role != Role.Anonymous;
+                AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+                // The view picks the role's page script (the editor) from LoggedInAccount.
+                PrivateNoteOutputViewModel privateNoteOutputViewModel = new()
+                {
+                    Method = method,
+                    LoggedInAccount = loggedInAccount,
+                    LoggedInAccountTimeZoneIanaId = loggedInAccount.TimeZoneIanaId ?? ""
+                };
+                bool isAccountSessionExist = loggedInAccount.Role != Role.Anonymous;
                 return isAccountSessionExist ? View(privateNoteOutputViewModel) : RedirectToAction("Login", "Account");
             }
             // Detail view
@@ -1040,15 +1011,15 @@ public class ManagementController : Controller
 
                 try
                 {
-                    BoardResponse? privateNoteBoard = await _boardService.GetBoardByIdAsync((long)boardId, BoardTypes.PrivateNote, HttpContext.RequestAborted);
-                    BoardAttachedFileDto? attachedFile = await _boardService.GetAttachedFileByBoardIdAsync((long)boardId, HttpContext.RequestAborted);
+                    BoardResponse? privateNoteBoard = await boardService.GetBoardByIdAsync((long)boardId, BoardTypes.PrivateNote, HttpContext.RequestAborted);
+                    BoardAttachedFileDto? attachedFile = await boardService.GetAttachedFileByBoardIdAsync((long)boardId, HttpContext.RequestAborted);
 
-                    if (privateNoteBoard == null || privateNoteBoard.Deleted || !_boardService.CanView(privateNoteBoard, loggedInAccount))
+                    if (privateNoteBoard == null || privateNoteBoard.Deleted || !boardService.CanView(privateNoteBoard, loggedInAccount))
                         return RedirectToAction(BoardTypes.PrivateNote, "Management");
 
-                    await _boardService.IncrementBoardViewAsync((long)boardId, HttpContext.RequestAborted);
+                    await boardService.IncrementBoardViewAsync((long)boardId, HttpContext.RequestAborted);
 
-                    (privateNoteBoard.Content, bool isImgTagIncluded) = await _boardService.PrepareHtmlForDisplayAsync(privateNoteBoard.Content ?? "", HttpContext.RequestAborted);
+                    (privateNoteBoard.Content, bool isImgTagIncluded) = await boardService.PrepareHtmlForDisplayAsync(privateNoteBoard.Content ?? "", HttpContext.RequestAborted);
 
                     privateNoteOutputViewModel.BoardOutputViewModel =
                         new BoardOutputViewModel
@@ -1072,7 +1043,7 @@ public class ManagementController : Controller
                     // Preload comments and accounts for detail view
                     privateNoteOutputViewModel.DetailBoardComments =
                     [
-                        .. await _boardService.GetCommentsByBoardIdAsync((long)boardId, HttpContext.RequestAborted)
+                        .. await boardService.GetCommentsByBoardIdAsync((long)boardId, HttpContext.RequestAborted)
                     ];
                     // Only the accounts shown on this page (the note's author and its commenters) are
                     // needed, to highlight admin-authored entries — not every account in the system.
@@ -1081,7 +1052,7 @@ public class ManagementController : Controller
                         .Where(w => !string.IsNullOrEmpty(w))
                         .Select(w => w!)
                         .Distinct();
-                    privateNoteOutputViewModel.AllAccounts = await _accountService.GetAccountsByNicknamesAsync(detailNicknames, HttpContext.RequestAborted);
+                    privateNoteOutputViewModel.AllAccounts = await accountService.GetAccountsByNicknamesAsync(detailNicknames, HttpContext.RequestAborted);
                     privateNoteOutputViewModel.AdminNicknames = privateNoteOutputViewModel.AllAccounts.ToAdminNicknameSet();
                     privateNoteOutputViewModel.LoggedInAccount = loggedInAccount;
                     privateNoteOutputViewModel.LoggedInAccountTimeZoneIanaId = loggedInAccount.TimeZoneIanaId ?? "";
@@ -1090,7 +1061,7 @@ public class ManagementController : Controller
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to load private note board detail for board {BoardId}", boardId);
+                    logger.LogError(ex, "Failed to load private note board detail for board {BoardId}", boardId);
                     return RedirectToAction(BoardTypes.PrivateNote, "Management");
                 }
             }
@@ -1112,15 +1083,15 @@ public class ManagementController : Controller
 
                 try
                 {
-                    BoardResponse? privateNoteBoard = await _boardService.GetBoardByIdAsync((long)boardId, BoardTypes.PrivateNote, HttpContext.RequestAborted);
-                    BoardAttachedFileDto? attachedFile = await _boardService.GetAttachedFileByBoardIdAsync((long)boardId, HttpContext.RequestAborted);
+                    BoardResponse? privateNoteBoard = await boardService.GetBoardByIdAsync((long)boardId, BoardTypes.PrivateNote, HttpContext.RequestAborted);
+                    BoardAttachedFileDto? attachedFile = await boardService.GetAttachedFileByBoardIdAsync((long)boardId, HttpContext.RequestAborted);
 
                     if (privateNoteBoard == null || privateNoteBoard.Deleted || !loggedInAccount.IsOwner(privateNoteBoard.Writer))
                     {
                         return RedirectToAction(BoardTypes.PrivateNote, "Management");
                     }
 
-                    (privateNoteBoard.Content, bool isImgTagIncluded) = await _boardService.PrepareHtmlForDisplayAsync(privateNoteBoard.Content ?? "", HttpContext.RequestAborted);
+                    (privateNoteBoard.Content, bool isImgTagIncluded) = await boardService.PrepareHtmlForDisplayAsync(privateNoteBoard.Content ?? "", HttpContext.RequestAborted);
 
                     privateNoteOutputViewModel.BoardOutputViewModel =
                         new BoardOutputViewModel
@@ -1136,12 +1107,14 @@ public class ManagementController : Controller
                             BoardAttachedFilePath = attachedFile?.Path ?? "",
                             IsImgTagIncluded = isImgTagIncluded
                         };
+                    privateNoteOutputViewModel.LoggedInAccount = loggedInAccount;
+                    privateNoteOutputViewModel.LoggedInAccountTimeZoneIanaId = loggedInAccount.TimeZoneIanaId ?? "";
 
                     return View(privateNoteOutputViewModel);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to load private note board edit form for board {BoardId}", boardId);
+                    logger.LogError(ex, "Failed to load private note board edit form for board {BoardId}", boardId);
                     return RedirectToAction(BoardTypes.PrivateNote, "Management");
                 }
             }
@@ -1170,7 +1143,7 @@ public class ManagementController : Controller
                 // applies no further role/lock visibility split — every candidate row already
                 // belongs to the caller (same "already scoped to the caller's own notes" behavior
                 // this replaced).
-                (IEnumerable<BoardResponse> pageItems, int totalCount) = await _boardService.GetBoardPageAsync(new BoardPageQuery(
+                (IEnumerable<BoardResponse> pageItems, int totalCount) = await boardService.GetBoardPageAsync(new BoardPageQuery(
                     Type: BoardTypes.PrivateNote,
                     OwnerNickname: loggedInAccount.Nickname,
                     SearchType: searchType,
@@ -1212,11 +1185,11 @@ public class ManagementController : Controller
                     .Where(w => !string.IsNullOrEmpty(w))
                     .Select(w => w!)
                     .Distinct();
-                privateNoteOutputViewModel.AllAccounts = await _accountService.GetAccountsByNicknamesAsync(listNicknames, HttpContext.RequestAborted);
+                privateNoteOutputViewModel.AllAccounts = await accountService.GetAccountsByNicknamesAsync(listNicknames, HttpContext.RequestAborted);
                 privateNoteOutputViewModel.AdminNicknames = privateNoteOutputViewModel.AllAccounts.ToAdminNicknameSet();
                 List<long> boardIds = [.. boardResponses.Select(b => b.Id)];
-                Dictionary<long, int> commentCounts = await _boardService.GetCommentCountsForBoardsAsync(boardIds, HttpContext.RequestAborted);
-                Dictionary<long, BoardAttachedFileDto?> attachedFiles = await _boardService.GetAttachedFilesForBoardsAsync(boardIds, HttpContext.RequestAborted);
+                Dictionary<long, int> commentCounts = await boardService.GetCommentCountsForBoardsAsync(boardIds, HttpContext.RequestAborted);
+                Dictionary<long, BoardAttachedFileDto?> attachedFiles = await boardService.GetAttachedFilesForBoardsAsync(boardIds, HttpContext.RequestAborted);
 
                 foreach (var board in boardResponses)
                 {
@@ -1252,17 +1225,17 @@ public class ManagementController : Controller
         {
             // Re-fetched from the database by ViewBagPopulatorFilter on every request.
             AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
-            (ServiceResult result, AttachmentDownload? file) = await _boardService.OpenAttachedFileAsync(
+            (ServiceResult result, AttachmentDownload? file) = await boardService.OpenAttachedFileAsync(
                 boardId, BoardTypes.PrivateNote, loggedInAccount, HttpContext.RequestAborted);
             if (!result.Success)
-                return Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                return Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
 
             return File(file!.Content, "application/octet-stream", file.FileName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to download the attachment of private note {BoardId}", boardId);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to download the attachment of private note {BoardId}", boardId);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -1283,16 +1256,16 @@ public class ManagementController : Controller
         try
         {
             string? nickname = ((AccountResponse)ViewBag.LoggedInAccount).Nickname;
-            BoardResponse? board = await _boardService.GetBoardByIdAsync(id, BoardTypes.PrivateNote, HttpContext.RequestAborted);
+            BoardResponse? board = await boardService.GetBoardByIdAsync(id, BoardTypes.PrivateNote, HttpContext.RequestAborted);
 
             return board == null || board.Deleted || board.Writer != nickname
-                ? Json(new { result = false, error = _localizer["Input is invalid"].Value })
+                ? Json(new { result = false, error = localizer["Input is invalid"].Value })
                 : Json(new { result = true, PrivateNoteBoard = new { id = board.Id } });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to check private note board existence for id {BoardId}", id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to check private note board existence for id {BoardId}", id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -1314,14 +1287,14 @@ public class ManagementController : Controller
         try
         {
             if (!ModelState.IsValid)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
             boardInputViewModel.Content ??= "";
 
             // DB-fresh account already loaded by ViewBagPopulatorFilter for this request (see WritePrivateNoteBoard).
             AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
             if (loggedInAccount.Role is not (Role.Admin or Role.User))
-                return Json(new { result = false, error = _localizer["Please Login to edit board"].Value });
+                return Json(new { result = false, error = localizer["Please Login to edit board"].Value });
 
             BoardRequest boardRequest = new()
             {
@@ -1331,17 +1304,17 @@ public class ManagementController : Controller
                 Content = boardInputViewModel.Content
             };
 
-            AttachedFileDto? attachedFile = await boardInputViewModel.UploadedFile.ToAttachedFileInfoAsync(_serverSettings.Value.MaxAttachedFileSizeBytes, HttpContext.RequestAborted);
+            AttachedFileDto? attachedFile = await boardInputViewModel.UploadedFile.ToAttachedFileInfoAsync(serverSettings.Value.MaxAttachedFileSizeBytes, HttpContext.RequestAborted);
 
-            ServiceResult result = await _boardService.EditBoardAsync(boardRequest, loggedInAccount.Nickname!, loggedInAccount.Role == Role.Admin, attachedFile, HttpContext.RequestAborted);
+            ServiceResult result = await boardService.EditBoardAsync(boardRequest, loggedInAccount.Nickname!, loggedInAccount.Role == Role.Admin, attachedFile, HttpContext.RequestAborted);
             return result.Success
-                ? Json(new { result = true, message = _localizer["The board has been successfully updated."].Value })
-                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["The board has been successfully updated."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to edit private note board {BoardId}", boardInputViewModel.Id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to edit private note board {BoardId}", boardInputViewModel.Id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -1368,7 +1341,7 @@ public class ManagementController : Controller
 
             // Private notes are single-owner: unlike the free forum, an admin may not delete
             // another account's private note board.
-            ServiceResult result = await _boardService.DeleteBoardAsync(
+            ServiceResult result = await boardService.DeleteBoardAsync(
                 boardInputViewModel.Id,
                 BoardTypes.PrivateNote,
                 loggedInAccount.Nickname!,
@@ -1376,13 +1349,13 @@ public class ManagementController : Controller
                 HttpContext.RequestAborted);
 
             return result.Success
-                ? Json(new { result = true, message = _localizer["The board has been successfully deleted."].Value })
-                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["The board has been successfully deleted."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete private note board {BoardId}", boardInputViewModel.Id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to delete private note board {BoardId}", boardInputViewModel.Id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -1403,7 +1376,7 @@ public class ManagementController : Controller
             // on every request (not the session-cached snapshot) — see the "detail" case above.
             AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
 
-            ServiceResult result = await _boardService.DeleteCommentAsync(
+            ServiceResult result = await boardService.DeleteCommentAsync(
                 id,
                 loggedInAccount.Nickname!,
                 loggedInAccount.Role == Role.Admin,
@@ -1412,12 +1385,12 @@ public class ManagementController : Controller
 
             return result.Success
                 ? Json(new { result = true })
-                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete private note comment {CommentId}", id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to delete private note comment {CommentId}", id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 

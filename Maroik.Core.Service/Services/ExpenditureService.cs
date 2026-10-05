@@ -47,7 +47,7 @@ public class ExpenditureService(
     public async Task<ServiceResult> CreateAsync(string accountEmail, ExpenditureRequest request, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             var classResult = ExpenditureClassPolicy.Validate(request.MainClass, request.SubClass);
@@ -120,7 +120,7 @@ public class ExpenditureService(
     public async Task<ServiceResult> UpdateAsync(string accountEmail, ExpenditureRequest request, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             var classResult = ExpenditureClassPolicy.Validate(request.MainClass, request.SubClass);
@@ -205,7 +205,7 @@ public class ExpenditureService(
     public async Task<ServiceResult> DeleteAsync(string accountEmail, long id, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // FOR UPDATE: see UpdateAsync — lock the record so a concurrent edit/delete of the
@@ -275,11 +275,11 @@ public class ExpenditureService(
             new(toRevert.PaymentMethod, toRevert.Amount, IsDeposit: true, Currency: toRevert.Currency),
             new(toRevert.MyDepositAsset, toRevert.Amount, IsDeposit: false, Currency: toRevert.Currency)
         ];
-        if (toApply.HasValue)
-        {
-            adjustments.Add(new AssetBalanceAdjustment(toApply.Value.PaymentMethod, toApply.Value.Amount, IsDeposit: false, Currency: toApply.Value.Currency));
-            adjustments.Add(new AssetBalanceAdjustment(toApply.Value.MyDepositAsset, toApply.Value.Amount, IsDeposit: true, Currency: toApply.Value.Currency));
-        }
+        if (!toApply.HasValue)
+            return await assetBalance.ApplyAssetBalanceAdjustmentsAsync(
+                touchedAssets, adjustments, "Expenditure.AssetNotFound", "The asset referenced by this expenditure could not be found.", utcNow, ct);
+        adjustments.Add(new AssetBalanceAdjustment(toApply.Value.PaymentMethod, toApply.Value.Amount, IsDeposit: false, Currency: toApply.Value.Currency));
+        adjustments.Add(new AssetBalanceAdjustment(toApply.Value.MyDepositAsset, toApply.Value.Amount, IsDeposit: true, Currency: toApply.Value.Currency));
 
         return await assetBalance.ApplyAssetBalanceAdjustmentsAsync(
             touchedAssets, adjustments, "Expenditure.AssetNotFound", "The asset referenced by this expenditure could not be found.", utcNow, ct);

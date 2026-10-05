@@ -101,7 +101,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteAsync(string accountEmail, long id, CancellationToken ct = default)
     {
-        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
+        _ = timeProvider.GetUtcNow().UtcDateTime;
         FixedIncome? fi = await fixedIncomeRepository.FindByEmailAndIdAsync(accountEmail, id, ct);
         if (fi == null)
             return ServiceResult.NotFound("FixedIncome.NotFound", "The fixed-income record could not be found.");

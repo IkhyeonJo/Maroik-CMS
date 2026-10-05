@@ -919,4 +919,137 @@ public class DashboardServiceTests
             File.Delete(hostFile);
         }
     }
+
+    // -- Range edges, missing account, year window, notice counting and resource parsing ----
+
+    /// <summary>The first and last valid month and year are kept as asked, not replaced with today's.</summary>
+    [Theory]
+    [InlineData("2025", "1", 2025, 1)]
+    [InlineData("2025", "12", 2025, 12)]
+    [InlineData("1", "3", 1, 3)]
+    [InlineData("9998", "3", 9998, 3)]
+    public async Task GetSummaryAsync_KeepsTheBoundaryYearsAndMonths(string year, string month, int expectedYear, int expectedMonth)
+    {
+        GivenSummaryInputs([], [], [], defaultUnit: null);
+
+        DashboardDto summary = await CreateSut().GetSummaryAsync("user@example.com", year, month, "UTC", TestContext.Current.CancellationToken);
+
+        Assert.Equal(expectedYear, summary.SelectedYear);
+        Assert.Equal(expectedMonth, summary.SelectedMonth);
+    }
+
+    /// <summary>An e-mail without an account has no default currency (and nothing is written back).</summary>
+    [Fact]
+    public async Task GetSummaryAsync_HasNoDefaultCurrency_WhenTheAccountDoesNotExist()
+    {
+        GivenSummaryInputs([MakeAsset("Wallet")], [], []);
+        _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
+
+        DashboardDto summary = await CreateSut().GetSummaryAsync("ghost@example.com", "2025", "3", "UTC", TestContext.Current.CancellationToken);
+
+        Assert.Null(summary.DefaultMonetaryUnit);
+        _accountRepo.Verify(r => r.UpdateDefaultMonetaryUnitAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>The year totals are read for exactly the selected calendar year, [1 Jan, next 1 Jan).</summary>
+    [Fact]
+    public async Task GetSummaryAsync_QueriesTheSelectedCalendarYear()
+    {
+        GivenSummaryInputs([MakeAsset("Wallet")], [], []);
+
+        await CreateSut().GetSummaryAsync("user@example.com", "2025", "3", "UTC", TestContext.Current.CancellationToken);
+
+        var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        _incomeRepo.Verify(r => r.GetByAccountEmailAndDateRangeAsync("user@example.com", start, end, It.IsAny<CancellationToken>()), Times.Once);
+        _expenditureRepo.Verify(r => r.GetByAccountEmailAndDateRangeAsync("user@example.com", start, end, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// The month totals take the rows from the first instant of the month up to, but not including, the first instant
+    /// of the next month; the year totals keep all of them.
+    /// </summary>
+    [Fact]
+    public async Task GetSummaryAsync_MonthTotals_IncludeTheMonthsFirstInstant_AndExcludeTheNextMonthsFirstInstant()
+    {
+        var before = new DateTime(2025, 2, 28, 23, 59, 59, DateTimeKind.Utc);
+        var first = new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var next = new DateTime(2025, 4, 1, 0, 0, 0, DateTimeKind.Utc);
+        GivenSummaryInputs([MakeAsset("Wallet")],
+            [IncomeAt(1, "Wallet", 1m, before), IncomeAt(2, "Wallet", 1m, first), IncomeAt(3, "Wallet", 1m, next)],
+            [ExpenditureAt(4, "Wallet", 1m, before), ExpenditureAt(5, "Wallet", 1m, first), ExpenditureAt(6, "Wallet", 1m, next)]);
+
+        DashboardDto summary = await CreateSut().GetSummaryAsync("user@example.com", "2025", "3", "UTC", TestContext.Current.CancellationToken);
+
+        Assert.Equal([2L], summary.YearMonthIncomes.Select(i => i.Id));
+        Assert.Equal([5L], summary.YearMonthExpenditures.Select(e => e.Id));
+        Assert.Equal(3, summary.YearIncomes.Count);
+        Assert.Equal(3, summary.YearExpenditures.Count);
+    }
+
+    /// <summary>A fixed expenditure outside its notice window (and not "always notify") is not counted as noticed.</summary>
+    [Fact]
+    public async Task GetNoticeCountsAsync_DoesNotCountAFixedExpenditureOutsideItsNoticeWindow()
+    {
+        _fixedIncomeRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _fixedExpenditureRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([FixedExpenditureDue(Now.AddYears(1))]); // due 1 January; "today" is 1 July
+
+        NotificationDto counts = await CreateSut().GetNoticeCountsAsync("user@example.com", 7, "UTC", TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, counts.FixedExpendituresNoticed);
+    }
+
+    /// <summary>Writes the two resource files, runs the summary over them, and deletes them.</summary>
+    private ServerResourceDto SummarizeResources(string hostText, string dockerText)
+    {
+        string hostFile = Path.GetTempFileName();
+        string dockerFile = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(hostFile, hostText);
+            File.WriteAllText(dockerFile, dockerText);
+            return CreateSut().GetServerResourceSummary(hostFile, dockerFile);
+        }
+        finally
+        {
+            File.Delete(hostFile);
+            File.Delete(dockerFile);
+        }
+    }
+
+    /// <summary>
+    /// A docker row with fewer than five columns (a truncated line) is skipped, while a row with more than five keeps
+    /// its first five.
+    /// </summary>
+    [Fact]
+    public void GetServerResourceSummary_SkipsTruncatedDockerRows_AndKeepsWiderOnes()
+    {
+        ServerResourceDto summary = SummarizeResources("",
+            "Docker Resource Usage:\nNAME CPU% MEM USED / LIMIT\nbroken 1%\nweb 12.3% 100MiB / 512MiB extra");
+
+        DockerContainerResourceDto web = Assert.Single(summary.DockerContainerResult);
+        Assert.Equal("web", web.Name);
+        Assert.Equal("100MiB / 512MiB", web.MemUsageDisplay);
+    }
+
+    /// <summary>The CPU section is the text between its marker and the memory marker, without either marker.</summary>
+    [Fact]
+    public void GetServerResourceSummary_ExtractsTheCpuSection_BetweenItsMarkers()
+    {
+        ServerResourceDto summary = SummarizeResources(
+            "Host CPU Information: 45.5%\nHost Memory Information: Memory: 4GB/8GB\nHost Disk Information: Disk: 1GB/2GB", "");
+
+        Assert.Equal("45.5%", summary.HostCpuInfo);
+    }
+
+    /// <summary>A section whose end marker is missing is empty (not the rest of the file, and no error).</summary>
+    [Fact]
+    public void GetServerResourceSummary_LeavesASectionEmpty_WhenItsEndMarkerIsMissing()
+    {
+        ServerResourceDto summary = SummarizeResources("Host CPU Information: 45.5%", "");
+
+        Assert.Equal("", summary.HostCpuInfo);
+        Assert.Equal(0, summary.HostCpuNumeric);
+    }
 }
