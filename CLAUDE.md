@@ -299,6 +299,12 @@ the real schema), `Maroik.Website.Tests` and `Maroik.E2E.Tests` (PostgreSQL 17),
 `Maroik.Worker.Tests` (RabbitMQ 4; the mail path uses an in-process SMTP server, `FakeSmtpServer`). Prefer these real services over
 mocks when a test is about how the code behaves against PostgreSQL / RabbitMQ.
 
+`Maroik.E2E.Tests` must not run alongside the other Testcontainers suites: when another session's container leaves the Docker
+bridge, the browser aborts a request in flight (`net::ERR_NETWORK_CHANGED`), and `OtherTestcontainersTests` expects no other
+session to be running. A solution-wide run must therefore run the modules one at a time:
+
+    dotnet test --solution Maroik.sln --max-parallel-test-modules 1
+
 ## Mutation testing (on demand)
 
 Coverage says code ran, not that a test would notice it breaking. Stryker.NET (pinned in `.config/dotnet-tools.json`) changes the
