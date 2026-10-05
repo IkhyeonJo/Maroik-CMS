@@ -81,15 +81,14 @@ public class FileClient(IHttpClientFactory httpClientFactory, ILogger<FileClient
         // So Maroik.FileStorage's failure logs for this call can be traced back to this request.
         content.Add(new StringContent(correlationId), "correlationId");
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{fileStorageBaseUrl}/api/File/download") { Content = content };
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{fileStorageBaseUrl}/api/File/download");
+        request.Content = content;
         HttpResponseMessage response = await httpClient.SendAsync(request, completion, ct);
-        if (!response.IsSuccessStatusCode)
-        {
-            response.Dispose();
-            throw new HttpRequestException($"File storage answered {(int)response.StatusCode} for '{filePath}'.", null, response.StatusCode);
-        }
+        if (response.IsSuccessStatusCode)
+            return response;
+        response.Dispose();
+        throw new HttpRequestException($"File storage answered {(int)response.StatusCode} for '{filePath}'.", null, response.StatusCode);
 
-        return response;
     }
 
     /// <summary>The storage service's plain-text refusal reason, truncated; empty if it cannot be read.</summary>
@@ -116,9 +115,7 @@ public class FileClient(IHttpClientFactory httpClientFactory, ILogger<FileClient
     {
         if (reason.Contains(FileStorageRefusals.Infected, StringComparison.Ordinal))
             return FileUploadResult.Infected;
-        if (reason.Contains(FileStorageRefusals.ScanUnavailable, StringComparison.Ordinal))
-            return FileUploadResult.ScanUnavailable;
-        return FileUploadResult.Failed;
+        return reason.Contains(FileStorageRefusals.ScanUnavailable, StringComparison.Ordinal) ? FileUploadResult.ScanUnavailable : FileUploadResult.Failed;
     }
 
     /// <inheritdoc />

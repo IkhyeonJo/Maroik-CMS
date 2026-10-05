@@ -12,7 +12,7 @@ namespace Maroik.Core.Domain.ValueObjects;
 public sealed class CurrencyCode : ValueObject
 {
     /// <summary>Longest code the persisted <c>MonetaryUnit</c> / <c>DefaultMonetaryUnit</c> columns (<c>varchar(45)</c>) accept.</summary>
-    public const int MaxLength = 45;
+    private const int MaxLength = 45;
 
     /// <summary>The normalized (trimmed, upper-case) code.</summary>
     public string Value { get; }

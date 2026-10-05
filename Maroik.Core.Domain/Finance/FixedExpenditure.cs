@@ -189,7 +189,7 @@ public sealed class FixedExpenditure : AggregateRoot<long>
             return LocalizableError.Validation("FixedExpenditure.MaturityDateInPast",
                 "The maturity date cannot be earlier than the current date.");
 
-        var (validMainClass, validSubClass, validPaymentMethod) = coreResult.Value;
+        (string validMainClass, string validSubClass, string validPaymentMethod) = coreResult.Value;
         var fixedExpenditure = new FixedExpenditure(0, emailResult.Value, validMainClass, validSubClass, content,
             moneyResult.Value, validPaymentMethod, myDepositAsset, depositMonth, depositDay, maturityDate, note, utcNow);
 
@@ -279,7 +279,7 @@ public sealed class FixedExpenditure : AggregateRoot<long>
             return LocalizableError.Validation("FixedExpenditure.MaturityDateInPast",
                 "The maturity date cannot be earlier than the current date.");
 
-        var (validMainClass, validSubClass, validPaymentMethod) = coreResult.Value;
+        (string validMainClass, string validSubClass, string validPaymentMethod) = coreResult.Value;
         MainClass = validMainClass;
         SubClass = validSubClass;
         Content = content;

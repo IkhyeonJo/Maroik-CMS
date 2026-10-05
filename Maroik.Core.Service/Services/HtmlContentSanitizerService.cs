@@ -31,7 +31,7 @@ public class HtmlContentSanitizerService : IHtmlContentSanitizerService
     /// (a full-screen invisible link or a fake login overlay). The default allow-list includes them;
     /// Summernote never emits them.
     /// </summary>
-    private static readonly string[] OverlayCssProperties =
+    private static readonly string[] _overlayCssProperties =
         ["position", "top", "left", "right", "bottom", "z-index", "opacity"];
 
     /// <summary>The one shared, pre-configured sanitizer used by every <see cref="Sanitize"/> call.</summary>
@@ -52,7 +52,7 @@ public class HtmlContentSanitizerService : IHtmlContentSanitizerService
 
         _sanitizer.AllowedAttributes.Add("class");
 
-        foreach (string property in OverlayCssProperties)
+        foreach (string property in _overlayCssProperties)
         {
             _sanitizer.AllowedCssProperties.Remove(property);
         }

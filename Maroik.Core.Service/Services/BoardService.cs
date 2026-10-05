@@ -46,10 +46,10 @@ public class BoardService(
         // REPEATABLE READ pins the count and page reads QueryPageAsync makes to one snapshot, so a
         // concurrent insert/delete between them can't produce a TotalCount inconsistent with the
         // returned page. Owned here (Service via IUnitOfWork), not inside the repository.
-        await unitOfWork.BeginAsync(ct, IsolationLevel.RepeatableRead);
+        await unitOfWork.BeginAsync(IsolationLevel.RepeatableRead, ct);
         try
         {
-            var (items, totalCount) = await boardRepository.QueryPageAsync(query, ct);
+            (var items, int totalCount) = await boardRepository.QueryPageAsync(query, ct);
             await unitOfWork.CommitAsync(ct);
             return (items.Select(BoardMapper.ToResponse), totalCount);
         }
@@ -113,7 +113,7 @@ public class BoardService(
 
         string content = attachmentContent.SanitizeAndDecryptContent(request.Content ?? "");
 
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             var boardResult = Board.Create(request.Type, request.Title, content, request.Writer, utcNow);
@@ -177,7 +177,7 @@ public class BoardService(
 
         string content = attachmentContent.SanitizeAndDecryptContent(request.Content ?? "");
 
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // Row-lock the post for the rest of the transaction. The subsequent UpdateEntityAsync
@@ -232,7 +232,9 @@ public class BoardService(
                     // adminClearingSomeoneElsesLock: an admin acting on a post they don't own may only
                     // clear its lock -- title and content are left untouched.
                     board.Unlock(utcNow);
+ #pragma warning disable CA1873
                     logger.LogInformation("Lock on post {BoardId} of {Writer} cleared by admin {Requester}", board.Id, board.Writer, writerNickname);
+ #pragma warning restore CA1873
                     break;
             }
 
@@ -261,7 +263,7 @@ public class BoardService(
     public async Task<ServiceResult> DeleteBoardAsync(long boardId, string boardType, string requesterNickname, bool isAdmin, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // Row-lock the post: SoftDelete goes out through the full-row UpdateEntityAsync, so a
@@ -288,7 +290,9 @@ public class BoardService(
 
             await boardRepository.UpdateEntityAsync(board, ct);
             await unitOfWork.CommitAsync(ct);
+ #pragma warning disable CA1873
             logger.LogInformation("Board post {BoardId} of {Writer} deleted by {Requester} (admin: {IsAdmin})", boardId, board.Writer, requesterNickname, isAdmin);
+ #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -305,7 +309,7 @@ public class BoardService(
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         string content = attachmentContent.SanitizeContent(request.Content ?? "");
 
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // Row-locks the post for the rest of this transaction, so concurrent commenters on
@@ -377,7 +381,7 @@ public class BoardService(
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteCommentAsync(long commentId, string requesterNickname, bool isAdmin, string? requiredType = null, CancellationToken ct = default)
     {
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // Lock the row for the rest of this transaction, consistent with every other write in
@@ -425,7 +429,9 @@ public class BoardService(
 
             await boardCommentRepository.UpdateEntityAsync(comment, ct);
             await unitOfWork.CommitAsync(ct);
+ #pragma warning disable CA1873
             logger.LogInformation("Comment {CommentId} of {Writer} deleted by {Requester} (admin: {IsAdmin})", commentId, comment.Writer, requesterNickname, isAdmin);
+ #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -516,10 +522,8 @@ public class BoardService(
 
         // OpenFileAsync logs its own failure (with the storage path) where it happens.
         Stream? content = await attachmentContent.OpenFileAsync(attachedFile.Path, ct);
-        if (content == null)
-            return (ServiceResult.Failure("Board.AttachedFileUnavailable", ServiceResult.TemporaryErrorKey), null);
+        return content == null ? (ServiceResult.Failure("Board.AttachedFileUnavailable", ServiceResult.TemporaryErrorKey), null) : (ServiceResult.Ok(), new AttachmentDownload(content, $"{attachedFile.Name}{attachedFile.Extension}"));
 
-        return (ServiceResult.Ok(), new AttachmentDownload(content, $"{attachedFile.Name}{attachedFile.Extension}"));
     }
 
     /// <summary>

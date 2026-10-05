@@ -13,9 +13,6 @@ public interface IBoardRepository : IGenericRepository<Board>
     /// <summary>Inserts a new board post and returns its generated ID.</summary>
     Task<long> WriteBoardAsync(Board board, CancellationToken ct = default);
 
-    /// <summary>Returns all non-deleted posts of the specified board type.</summary>
-    Task<List<Board>> GetByTypeAsync(string type, CancellationToken ct = default);
-
     /// <summary>Returns all non-deleted, pinned ("Noticed") posts of the specified board type, newest first.</summary>
     Task<List<Board>> GetNoticedAsync(string type, CancellationToken ct = default);
 

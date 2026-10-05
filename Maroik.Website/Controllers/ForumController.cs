@@ -197,9 +197,16 @@ public class ForumController(
             // Write
             case "write":
             {
-                FreeForumOutputViewModel freeForumOutputViewModel = new() { Method = method };
+                AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+                // The view picks the role's page script (the editor) from LoggedInAccount.
+                FreeForumOutputViewModel freeForumOutputViewModel = new()
+                {
+                    Method = method,
+                    LoggedInAccount = loggedInAccount,
+                    LoggedInAccountTimeZoneIanaId = loggedInAccount.TimeZoneIanaId ?? ""
+                };
 
-                bool isAccountSessionExist = ((AccountResponse)ViewBag.LoggedInAccount).Role != Role.Anonymous;
+                bool isAccountSessionExist = loggedInAccount.Role != Role.Anonymous;
                 return isAccountSessionExist ? View(freeForumOutputViewModel) : RedirectToAction("Login", "Account");
             }
             // Detail view
@@ -314,6 +321,8 @@ public class ForumController(
                         BoardAttachedFilePath = boardAttachedFile?.Path ?? "",
                         IsImgTagIncluded = isImgTagIncluded
                     };
+                    freeForumOutputViewModel.LoggedInAccount = loggedInAccount;
+                    freeForumOutputViewModel.LoggedInAccountTimeZoneIanaId = loggedInAccount.TimeZoneIanaId ?? "";
 
                     return View(freeForumOutputViewModel);
                 }
@@ -456,10 +465,8 @@ public class ForumController(
 
             // Re-fetched from the database by ViewBagPopulatorFilter on every request.
             AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
-            if (!loggedInAccount.IsOwnerOrAdmin(board.Writer))
-                return Json(new { result = false, error = localizer["Input is invalid"].Value });
+            return !loggedInAccount.IsOwnerOrAdmin(board.Writer) ? Json(new { result = false, error = localizer["Input is invalid"].Value }) : Json(new { result = true, freeBoard = new { id = board.Id } });
 
-            return Json(new { result = true, freeBoard = new { id = board.Id } });
         }
         catch (Exception ex)
         {

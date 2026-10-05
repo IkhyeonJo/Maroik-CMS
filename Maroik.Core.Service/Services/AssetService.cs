@@ -97,7 +97,7 @@ public class AssetService(
     public async Task<ServiceResult> UpdateAsync(string accountEmail, AssetRequest request, string originalProductName, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             if (!AssetItems.IsKnown(request.Item))
@@ -160,7 +160,7 @@ public class AssetService(
     public async Task<ServiceResult> DeleteAsync(string accountEmail, string productName, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // Row-lock the asset for the rest of this transaction, exactly as UpdateAsync does: the

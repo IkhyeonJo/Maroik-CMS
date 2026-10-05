@@ -150,7 +150,7 @@ public class CalendarService(
         // row and only attempt whatever ids are still actually missing.
         for (int attempt = 0; attempt < SharedRaceRetryLimit; attempt++)
         {
-            await unitOfWork.BeginAsync(ct);
+            await unitOfWork.BeginAsync(ct: ct);
             try
             {
                 // Single fetch of the whole table, reused for every ID instead of one full scan per calendar.
@@ -233,7 +233,7 @@ public class CalendarService(
     public async Task<ServiceResult> CreateCalendarAsync(string accountEmail, CalendarRequest request, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             List<Calendar> calendars = await calendarRepository.GetByAccountEmailAsync(accountEmail, ct);
@@ -279,7 +279,7 @@ public class CalendarService(
     public async Task<ServiceResult> UpdateCalendarAsync(string accountEmail, CalendarRequest request, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // FOR UPDATE: lock the row for the rest of the transaction so a concurrent update from
@@ -317,7 +317,7 @@ public class CalendarService(
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteCalendarAsync(string accountEmail, CalendarRequest request, CancellationToken ct = default)
     {
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             List<Calendar> calendars = await calendarRepository.GetByAccountEmailAsync(accountEmail, ct);
@@ -341,7 +341,7 @@ public class CalendarService(
     public async Task<ServiceResult> EnsureDefaultCalendarAsync(string accountEmail, CalendarRequest request, CancellationToken ct = default)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             List<Calendar> calendars = await calendarRepository.GetByAccountEmailAsync(accountEmail, ct);
@@ -391,7 +391,7 @@ public class CalendarService(
     {
         List<OtherCalendarRequest> requestList = [.. requests];
 
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // A subscription must only ever be created for a calendar its owner has explicitly
@@ -458,7 +458,7 @@ public class CalendarService(
         // branch for it instead of re-inserting, still applying this call's requested values.
         for (int attempt = 0; attempt < SharedRaceRetryLimit; attempt++)
         {
-            await unitOfWork.BeginAsync(ct);
+            await unitOfWork.BeginAsync(ct: ct);
             try
             {
                 // Upsert: a CalendarShared row may not exist yet for a calendar being shared for the
@@ -514,7 +514,7 @@ public class CalendarService(
 
         string description = attachmentContent.SanitizeAndDecryptContent(request.Description ?? "");
 
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             List<Calendar> calendars = await calendarRepository.GetByAccountEmailAsync(email, ct);
@@ -578,7 +578,7 @@ public class CalendarService(
 
         string description = attachmentContent.SanitizeAndDecryptContent(request.Description ?? "");
 
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             List<Calendar> calendars = await calendarRepository.GetByAccountEmailAsync(email, ct);
@@ -647,7 +647,7 @@ public class CalendarService(
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteCalendarEventAsync(long calendarEventId, string email, CancellationToken ct = default)
     {
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             List<Calendar> calendars = await calendarRepository.GetByAccountEmailAsync(email, ct);
@@ -808,10 +808,8 @@ public class CalendarService(
 
         // OpenFileAsync logs its own failure (with the storage path) where it happens.
         Stream? content = await attachmentContent.OpenFileAsync(attachedFile.Path, ct);
-        if (content == null)
-            return (ServiceResult.Failure("CalendarEvent.AttachedFileUnavailable", ServiceResult.TemporaryErrorKey), null);
+        return content == null ? (ServiceResult.Failure("CalendarEvent.AttachedFileUnavailable", ServiceResult.TemporaryErrorKey), null) : (ServiceResult.Ok(), new AttachmentDownload(content, $"{attachedFile.Name}{attachedFile.Extension}"));
 
-        return (ServiceResult.Ok(), new AttachmentDownload(content, $"{attachedFile.Name}{attachedFile.Extension}"));
     }
 
     /// <inheritdoc />

@@ -58,10 +58,6 @@ public class BoardRepository(ApplicationDbContext context)
     };
 
     /// <inheritdoc />
-    public Task<List<Board>> GetByTypeAsync(string type, CancellationToken ct = default)
-        => QueryAsync(e => e.Type == type && !e.Deleted, ct: ct);
-
-    /// <inheritdoc />
     public Task<List<Board>> GetNoticedAsync(string type, CancellationToken ct = default)
         // Pure-display read (rendered as the noticed-post list, never saved back): AsNoTracking
         // skips the change-tracking snapshot/identity-map overhead this method has no use for.

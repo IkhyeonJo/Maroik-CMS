@@ -138,4 +138,31 @@ public class BoardServiceAttachmentDownloadTests
         Assert.Equal(ServiceErrorType.Failure, result.ErrorType);
         Assert.Null(file);
     }
+
+    /// <summary>A refused download names the post as missing and logs the anonymous viewer as "Anonymous".</summary>
+    [Fact]
+    public async Task OpenAttachedFileAsync_RefusesWithThePostNotFoundMessage_AndLogsAnAnonymousViewerAsSuch()
+    {
+        GivenAPostWithAnAttachment(locked: true);
+
+        var (result, _) = await CreateSut().OpenAttachedFileAsync(7, BoardTypes.FreeForum, null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("The post could not be found.", result.ErrorKey);
+        FakeLogRecord denial = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
+        Assert.EndsWith("is missing or not visible to Anonymous", denial.Message);
+    }
+
+    /// <summary>A refused download by a signed-in viewer logs that viewer's nickname.</summary>
+    [Fact]
+    public async Task OpenAttachedFileAsync_LogsTheSignedInViewersNickname_WhenRefused()
+    {
+        GivenAPostWithAnAttachment(type: BoardTypes.PrivateNote);
+        var viewer = new AccountResponse { Email = "bob@example.com", Nickname = "Bob", Role = Role.User };
+
+        await CreateSut().OpenAttachedFileAsync(7, BoardTypes.PrivateNote, viewer, TestContext.Current.CancellationToken);
+
+        FakeLogRecord denial = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
+        Assert.EndsWith("is missing or not visible to Bob", denial.Message);
+    }
 }

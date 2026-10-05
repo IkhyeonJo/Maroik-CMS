@@ -143,4 +143,46 @@ public class HtmlParserServiceTests
         Assert.Contains("<p>keep</p>", html);
         Assert.Contains("alt=\"clean\"", html);
     }
+
+    // -- Images without alt, and more images than the fetch limit ----------------------------
+
+    /// <summary>An &lt;img&gt; without an alt reaches the async patch factory as an empty string.</summary>
+    [Fact]
+    public async Task TransformImageAttributesAsync_PassesAnEmptyAlt_ForAnImageWithoutOne()
+    {
+        string? capturedAlt = null;
+
+        await _sut.TransformImageAttributesAsync("<img src=\"x\" />",
+            (alt, _) => { capturedAlt = alt; return Task.FromResult<HtmlImgPatch?>(null); }, TestContext.Current.CancellationToken);
+
+        Assert.Equal("", capturedAlt);
+    }
+
+    /// <summary>An &lt;img&gt; without an alt reaches the sync patch factory as an empty string.</summary>
+    [Fact]
+    public void TransformImageAttributes_PassesAnEmptyAlt_ForAnImageWithoutOne()
+    {
+        string? capturedAlt = null;
+
+        _sut.TransformImageAttributes("<img src=\"x\" />", alt => { capturedAlt = alt; return null; });
+
+        Assert.Equal("", capturedAlt);
+    }
+
+    /// <summary>
+    /// A post with more images than may be fetched at once still gets every image patched: each finished fetch frees
+    /// its slot for the next one.
+    /// </summary>
+    [Fact]
+    public async Task TransformImageAttributesAsync_PatchesEveryImage_WhenThereAreMoreThanTheConcurrentFetchLimit()
+    {
+        string html = string.Concat(Enumerable.Range(0, 9).Select(i => $"<img alt=\"{i}\" />"));
+
+        Task<(string Html, bool HasImages)> transform = _sut.TransformImageAttributesAsync(html,
+            async (alt, _) => { await Task.Yield(); return new HtmlImgPatch(NewAlt: $"done-{alt}"); }, TestContext.Current.CancellationToken);
+        (string result, _) = await transform.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        for (int i = 0; i < 9; i++)
+            Assert.Contains($"alt=\"done-{i}\"", result);
+    }
 }

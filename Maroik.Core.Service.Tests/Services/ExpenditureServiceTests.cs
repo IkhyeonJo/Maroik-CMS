@@ -2,7 +2,8 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Finance;
 using Maroik.Core.Service.Services;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 
@@ -22,6 +23,8 @@ public class ExpenditureServiceTests
     private readonly Mock<IAssetBalanceStore> _assetBalance = new();
     /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
+    private readonly FakeLogger<ExpenditureService> _logger = new();
 
     /// <summary>The fixed "current time" of these tests.</summary>
     private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
@@ -33,13 +36,13 @@ public class ExpenditureServiceTests
         _expenditureRepo.Object,
         _assetBalance.Object,
         _unitOfWork.Object,
-        NullLogger<ExpenditureService>.Instance,
+        _logger,
         _time);
 
     /// <summary>Initializes the test fixture, setting up all required test doubles and the system under test.</summary>
     public ExpenditureServiceTests()
     {
-        _unitOfWork.Setup(u => u.BeginAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _unitOfWork.Setup(u => u.BeginAsync(null, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.CommitAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.RollbackAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.DisposeAsync()).Returns(ValueTask.CompletedTask);
@@ -783,5 +786,315 @@ public class ExpenditureServiceTests
 
         Assert.Equal("Expenditure.AssetDeleted", result.ErrorCode);
         _expenditureRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Expenditure>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // -- Transaction boundaries, result codes, transfer routing and failure logging -------
+
+    /// <summary>Asserts the one Error entry names <see cref="Email"/>, carries the thrown exception and starts with <paramref name="prefix"/>.</summary>
+    private void AssertLoggedFailure(string prefix, Exception thrown)
+    {
+        FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot());
+        Assert.Equal(LogLevel.Error, record.Level);
+        Assert.Same(thrown, record.Exception);
+        Assert.StartsWith(prefix, record.Message, StringComparison.Ordinal);
+        Assert.Contains(Email, record.Message);
+    }
+
+    /// <summary>Records every asset passed to <c>SaveAsync</c>, keyed by name with its saved balance.</summary>
+    private Dictionary<string, decimal> CaptureSavedBalances()
+    {
+        var saved = new Dictionary<string, decimal>();
+        _assetBalance.Setup(r => r.SaveAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>()))
+            .Callback<Asset, CancellationToken>((a, _) => saved[a.ProductName] = a.Balance.Amount)
+            .Returns(Task.CompletedTask);
+        return saved;
+    }
+
+    /// <summary>A stored expenditure is returned mapped, looked up under the caller's account.</summary>
+    [Fact]
+    public async Task GetByIdAsync_ReturnsTheMappedExpenditure_WhenItExists()
+    {
+        GivenExistingExpenditure(ExistingConsumer(amount: 42m));
+
+        ExpenditureResponse? result = await CreateSut().GetByIdAsync(Email, 1, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result.Id);
+        Assert.Equal(42m, result.Amount);
+    }
+
+    /// <summary>An id the caller does not own resolves to null.</summary>
+    [Fact]
+    public async Task GetByIdAsync_ReturnsNull_WhenTheExpenditureDoesNotExist()
+    {
+        GivenExistingExpenditure(ExistingConsumer());
+
+        Assert.Null(await CreateSut().GetByIdAsync(Email, 2, TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>A successful create opens the transaction and commits it, without rolling back.</summary>
+    [Fact]
+    public async Task CreateAsync_BeginsAndCommitsTheTransaction_OnSuccess()
+    {
+        GivenAssets(MakeAsset("Wallet"));
+
+        ServiceResult result = await CreateSut().CreateAsync(Email, ConsumerRequest(), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An unknown payment asset is a NotFound with the localizable "asset not found" message.</summary>
+    [Fact]
+    public async Task CreateAsync_ReturnsAssetNotFound_WithItsMessage_WhenThePaymentAssetIsUnknown()
+    {
+        ServiceResult result = await CreateSut().CreateAsync(Email, ConsumerRequest("Ghost"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Expenditure.AssetNotFound", result.ErrorCode);
+        Assert.Equal("The selected asset could not be found.", result.ErrorKey);
+    }
+
+    /// <summary>
+    /// A consumer expenditure ignores a deposit asset the form still carries: the record keeps no deposit asset, that
+    /// asset is neither locked nor credited, and only the payment asset is withdrawn.
+    /// </summary>
+    [Fact]
+    public async Task CreateAsync_IgnoresTheDepositAsset_ForANonTransferExpenditure()
+    {
+        GivenAssets(MakeAsset("Wallet", amount: 1000m), MakeAsset("Savings", amount: 500m));
+        Expenditure? stored = null;
+        _expenditureRepo.Setup(r => r.CreateAsync(It.IsAny<Expenditure>(), It.IsAny<CancellationToken>()))
+            .Callback<Expenditure, CancellationToken>((e, _) => stored = e).Returns(Task.CompletedTask);
+        Dictionary<string, decimal> saved = CaptureSavedBalances();
+        ExpenditureRequest request = ConsumerRequest(amount: 100m);
+        request.MyDepositAsset = "Savings";
+
+        ServiceResult result = await CreateSut().CreateAsync(Email, request, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.True(string.IsNullOrEmpty(stored?.MyDepositAsset));
+        Assert.Equal(new Dictionary<string, decimal> { ["Wallet"] = 900m }, saved);
+        _assetBalance.Verify(r => r.GetAssetsAsync(Email, It.Is<IReadOnlyCollection<string>>(n => n.Contains("Savings")), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A transfer is stored with its deposit asset.</summary>
+    [Fact]
+    public async Task CreateAsync_StoresTheDepositAsset_ForATransfer()
+    {
+        GivenAssets(MakeAsset("Checking"), MakeAsset("Savings"));
+        Expenditure? stored = null;
+        _expenditureRepo.Setup(r => r.CreateAsync(It.IsAny<Expenditure>(), It.IsAny<CancellationToken>()))
+            .Callback<Expenditure, CancellationToken>((e, _) => stored = e).Returns(Task.CompletedTask);
+
+        ServiceResult result = await CreateSut().CreateAsync(Email, SavingsTransferRequest(), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal("Savings", stored?.MyDepositAsset);
+    }
+
+    /// <summary>A create that throws logs the failure with the exception and the account.</summary>
+    [Fact]
+    public async Task CreateAsync_LogsTheFailureWithTheException_WhenThePersistenceThrows()
+    {
+        GivenAssets(MakeAsset("Wallet"));
+        var thrown = new InvalidOperationException("boom");
+        _expenditureRepo.Setup(r => r.CreateAsync(It.IsAny<Expenditure>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().CreateAsync(Email, ConsumerRequest(), TestContext.Current.CancellationToken);
+
+        AssertLoggedFailure("Failed to create expenditure", thrown);
+    }
+
+    /// <summary>A successful update opens the transaction and commits it.</summary>
+    [Fact]
+    public async Task UpdateAsync_BeginsAndCommitsTheTransaction_OnSuccess()
+    {
+        GivenExistingExpenditure(ExistingConsumer());
+        GivenAssets(MakeAsset("Wallet"));
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ConsumerRequest()), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An unknown expenditure id is a NotFound with the localizable "record not found" message.</summary>
+    [Fact]
+    public async Task UpdateAsync_ReturnsExpenditureNotFound_WithItsMessage_WhenTheRecordIsUnknown()
+    {
+        _expenditureRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ConsumerRequest()), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Expenditure.NotFound", result.ErrorCode);
+        Assert.Equal("The expenditure record could not be found.", result.ErrorKey);
+    }
+
+    /// <summary>
+    /// Editing a transfer reverts the old movement and applies the new one on both sides: the payment asset gets the
+    /// old amount back and loses the new one, the deposit asset loses the old amount and gains the new one.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAsync_MovesTheNewAmountIntoTheDepositAsset_ForATransfer()
+    {
+        GivenExistingExpenditure(ExistingTransfer(amount: 50m));
+        GivenAssets(MakeAsset("Checking", amount: 1000m), MakeAsset("Savings", amount: 1000m));
+        Dictionary<string, decimal> saved = CaptureSavedBalances();
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(SavingsTransferRequest(amount: 200m)), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal(850m, saved["Checking"]);  // 1000 + 50 - 200
+        Assert.Equal(1150m, saved["Savings"]);  // 1000 - 50 + 200
+    }
+
+    /// <summary>
+    /// A consumer expenditure edit ignores a deposit asset the form still carries: the record keeps no deposit asset
+    /// and that asset is neither locked nor credited.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAsync_IgnoresTheDepositAsset_ForANonTransferExpenditure()
+    {
+        GivenExistingExpenditure(ExistingConsumer(amount: 50m));
+        GivenAssets(MakeAsset("Wallet", amount: 1000m), MakeAsset("Savings", amount: 500m));
+        Expenditure? stored = null;
+        _expenditureRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Expenditure>(), It.IsAny<CancellationToken>()))
+            .Callback<Expenditure, CancellationToken>((e, _) => stored = e).Returns(Task.CompletedTask);
+        Dictionary<string, decimal> saved = CaptureSavedBalances();
+        ExpenditureRequest request = WithId(ConsumerRequest(amount: 100m));
+        request.MyDepositAsset = "Savings";
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, request, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.True(string.IsNullOrEmpty(stored?.MyDepositAsset));
+        Assert.Equal(new Dictionary<string, decimal> { ["Wallet"] = 950m }, saved);
+        _assetBalance.Verify(r => r.GetAssetsAsync(Email, It.Is<IReadOnlyCollection<string>>(n => n.Contains("Savings")), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A transfer edit is stored with its deposit asset.</summary>
+    [Fact]
+    public async Task UpdateAsync_StoresTheDepositAsset_ForATransfer()
+    {
+        GivenExistingExpenditure(ExistingConsumer(payment: "Checking"));
+        GivenAssets(MakeAsset("Checking"), MakeAsset("Savings"));
+        Expenditure? stored = null;
+        _expenditureRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Expenditure>(), It.IsAny<CancellationToken>()))
+            .Callback<Expenditure, CancellationToken>((e, _) => stored = e).Returns(Task.CompletedTask);
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(SavingsTransferRequest()), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal("Savings", stored?.MyDepositAsset);
+    }
+
+    /// <summary>
+    /// An edit whose previous payment asset no longer exists cannot revert the old movement: a NotFound naming the
+    /// asset referenced by the expenditure, rolled back.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAsync_ReturnsReferencedAssetNotFound_WhenThePreviousPaymentAssetIsGone()
+    {
+        GivenExistingExpenditure(ExistingConsumer(payment: "Vanished"));
+        GivenAssets(MakeAsset("Wallet"));
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ConsumerRequest()), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Expenditure.AssetNotFound", result.ErrorCode);
+        Assert.Equal("The asset referenced by this expenditure could not be found.", result.ErrorKey);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An update that throws logs the failure with the exception and the account.</summary>
+    [Fact]
+    public async Task UpdateAsync_LogsTheFailureWithTheException_WhenThePersistenceThrows()
+    {
+        GivenExistingExpenditure(ExistingConsumer());
+        GivenAssets(MakeAsset("Wallet"));
+        var thrown = new InvalidOperationException("boom");
+        _expenditureRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Expenditure>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().UpdateAsync(Email, WithId(ConsumerRequest()), TestContext.Current.CancellationToken);
+
+        AssertLoggedFailure("Failed to update expenditure 1", thrown);
+    }
+
+    /// <summary>A successful delete opens the transaction and commits it.</summary>
+    [Fact]
+    public async Task DeleteAsync_BeginsAndCommitsTheTransaction_OnSuccess()
+    {
+        GivenExistingExpenditure(ExistingConsumer());
+        GivenAssets(MakeAsset("Wallet"));
+
+        ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An unknown expenditure id on delete is a NotFound with the localizable "record not found" message.</summary>
+    [Fact]
+    public async Task DeleteAsync_ReturnsExpenditureNotFound_WithItsMessage_WhenTheRecordIsUnknown()
+    {
+        _expenditureRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
+        ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Expenditure.NotFound", result.ErrorCode);
+        Assert.Equal("The expenditure record could not be found.", result.ErrorKey);
+    }
+
+    /// <summary>An expenditure paid from a since-archived asset cannot be deleted (the archived balance must not move).</summary>
+    [Fact]
+    public async Task DeleteAsync_ReturnsAssetDeleted_WhenThePaymentAssetIsArchived()
+    {
+        GivenExistingExpenditure(ExistingConsumer());
+        GivenAssets(MakeAsset("Wallet", deleted: true));
+
+        ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
+
+        Assert.Equal("Expenditure.AssetDeleted", result.ErrorCode);
+        _expenditureRepo.Verify(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Deleting an expenditure whose payment asset no longer exists cannot revert its impact: a NotFound naming the
+    /// asset referenced by the expenditure, and the row is kept.
+    /// </summary>
+    [Fact]
+    public async Task DeleteAsync_ReturnsReferencedAssetNotFound_AndKeepsTheRow_WhenThePaymentAssetIsGone()
+    {
+        GivenExistingExpenditure(ExistingConsumer(payment: "Vanished"));
+
+        ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Expenditure.AssetNotFound", result.ErrorCode);
+        Assert.Equal("The asset referenced by this expenditure could not be found.", result.ErrorKey);
+        _expenditureRepo.Verify(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A delete that throws logs the failure with the exception and the account.</summary>
+    [Fact]
+    public async Task DeleteAsync_LogsTheFailureWithTheException_WhenThePersistenceThrows()
+    {
+        GivenExistingExpenditure(ExistingConsumer());
+        GivenAssets(MakeAsset("Wallet"));
+        var thrown = new InvalidOperationException("boom");
+        _expenditureRepo.Setup(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
+
+        AssertLoggedFailure("Failed to delete expenditure 1", thrown);
     }
 }

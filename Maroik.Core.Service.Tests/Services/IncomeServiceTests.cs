@@ -2,7 +2,8 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Finance;
 using Maroik.Core.Service.Services;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 
@@ -22,6 +23,8 @@ public class IncomeServiceTests
     private readonly Mock<IAssetBalanceStore> _assetBalance = new();
     /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
+    private readonly FakeLogger<IncomeService> _logger = new();
 
     /// <summary>The fixed "current time" of these tests.</summary>
     private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
@@ -33,13 +36,13 @@ public class IncomeServiceTests
         _incomeRepo.Object,
         _assetBalance.Object,
         _unitOfWork.Object,
-        NullLogger<IncomeService>.Instance,
+        _logger,
         _time);
 
     /// <summary>Initializes the test fixture, setting up all required test doubles and the system under test.</summary>
     public IncomeServiceTests()
     {
-        _unitOfWork.Setup(u => u.BeginAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _unitOfWork.Setup(u => u.BeginAsync(null, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.CommitAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.RollbackAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.DisposeAsync()).Returns(ValueTask.CompletedTask);
@@ -73,13 +76,13 @@ public class IncomeServiceTests
     // -- Helpers --------------------------------------------------------------
 
     /// <summary>A persisted asset named <paramref name="name"/>.</summary>
-    private static Asset MakeAsset(string name, decimal amount = 1000m, bool deleted = false)
+    private static Asset MakeAsset(string name, decimal amount = 1000m, bool deleted = false, string currency = "KRW")
         => Asset.Reconstitute(
             productName: name,
             accountEmail: "user@example.com",
             item: "Deposit",
             amount: amount,
-            monetaryUnit: "KRW",
+            monetaryUnit: currency,
             note: null,
             deleted: deleted,
             created: DateTime.UtcNow,
@@ -662,5 +665,225 @@ public class IncomeServiceTests
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // -- Transaction boundaries, result codes and failure logging --------------------
+
+    /// <summary>Asserts the one Error entry names <see cref="Email"/>, carries the thrown exception and starts with <paramref name="prefix"/>.</summary>
+    private void AssertLoggedFailure(string prefix, Exception thrown)
+    {
+        FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot());
+        Assert.Equal(LogLevel.Error, record.Level);
+        Assert.Same(thrown, record.Exception);
+        Assert.StartsWith(prefix, record.Message, StringComparison.Ordinal);
+        Assert.Contains(Email, record.Message);
+    }
+
+    /// <summary>A stored income is returned mapped, looked up under the caller's account.</summary>
+    [Fact]
+    public async Task GetByIdAsync_ReturnsTheMappedIncome_WhenItExists()
+    {
+        GivenExistingIncome(MakeIncome(5, amount: 42m));
+
+        IncomeResponse? result = await CreateSut().GetByIdAsync(Email, 5, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(5, result.Id);
+        Assert.Equal(42m, result.Amount);
+    }
+
+    /// <summary>An id the caller does not own resolves to null.</summary>
+    [Fact]
+    public async Task GetByIdAsync_ReturnsNull_WhenTheIncomeDoesNotExist()
+    {
+        GivenExistingIncome(MakeIncome(5));
+
+        Assert.Null(await CreateSut().GetByIdAsync(Email, 6, TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>A successful create opens the transaction and commits it, without rolling back.</summary>
+    [Fact]
+    public async Task CreateAsync_BeginsAndCommitsTheTransaction_OnSuccess()
+    {
+        GivenAssets(MakeAsset("SavingsAccount"));
+
+        ServiceResult result = await CreateSut().CreateAsync(Email, ValidRequest(), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An unknown deposit asset is a NotFound with the localizable "asset not found" message.</summary>
+    [Fact]
+    public async Task CreateAsync_ReturnsAssetNotFound_WithItsMessage_WhenTheDepositAssetIsUnknown()
+    {
+        ServiceResult result = await CreateSut().CreateAsync(Email, ValidRequest("Ghost"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Income.AssetNotFound", result.ErrorCode);
+        Assert.Equal("The selected asset could not be found.", result.ErrorKey);
+    }
+
+    /// <summary>A create that throws logs the failure with the exception and the account.</summary>
+    [Fact]
+    public async Task CreateAsync_LogsTheFailureWithTheException_WhenThePersistenceThrows()
+    {
+        GivenAssets(MakeAsset("SavingsAccount"));
+        var thrown = new InvalidOperationException("boom");
+        _incomeRepo.Setup(r => r.CreateAsync(It.IsAny<Income>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().CreateAsync(Email, ValidRequest(), TestContext.Current.CancellationToken);
+
+        AssertLoggedFailure("Failed to create income", thrown);
+    }
+
+    /// <summary>A successful update opens the transaction and commits it.</summary>
+    [Fact]
+    public async Task UpdateAsync_BeginsAndCommitsTheTransaction_OnSuccess()
+    {
+        GivenExistingIncome(MakeIncome(1));
+        GivenAssets(MakeAsset("SavingsAccount"));
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ValidRequest()), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An unknown income id is a NotFound with the localizable "record not found" message.</summary>
+    [Fact]
+    public async Task UpdateAsync_ReturnsIncomeNotFound_WithItsMessage_WhenTheRecordIsUnknown()
+    {
+        GivenExistingIncome(MakeIncome(2));
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ValidRequest()), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Income.NotFound", result.ErrorCode);
+        Assert.Equal("The income record could not be found.", result.ErrorKey);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>Retargeting onto an unknown asset is a NotFound with the localizable "asset not found" message.</summary>
+    [Fact]
+    public async Task UpdateAsync_ReturnsAssetNotFound_WithItsMessage_WhenTheNewAssetIsUnknown()
+    {
+        GivenExistingIncome(MakeIncome(1));
+        GivenAssets(MakeAsset("SavingsAccount"));
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ValidRequest("Ghost")), TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Income.AssetNotFound", result.ErrorCode);
+        Assert.Equal("The selected asset could not be found.", result.ErrorKey);
+    }
+
+    /// <summary>
+    /// An update that clears the deposit asset is the domain's "deposit asset empty" validation error — not an
+    /// "asset not found", which only applies to a named asset that does not resolve.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAsync_ReturnsTheDomainDepositAssetEmptyError_WhenTheRequestClearsTheAsset()
+    {
+        GivenExistingIncome(MakeIncome(1));
+        GivenAssets(MakeAsset("SavingsAccount"));
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ValidRequest("")), TestContext.Current.CancellationToken);
+
+        Assert.Equal("Income.DepositAssetEmpty", result.ErrorCode);
+        _incomeRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Income>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An income moved onto an asset in another currency is re-recorded in the new asset's currency.</summary>
+    [Fact]
+    public async Task UpdateAsync_RecordsTheNewAssetsCurrency_WhenTheIncomeMovesToAnAssetInAnotherCurrency()
+    {
+        GivenExistingIncome(MakeIncome(1, "SavingsAccount", 100m));
+        GivenAssets(MakeAsset("SavingsAccount"), MakeAsset("DollarAccount", amount: 0m, currency: "USD"));
+        Income? stored = null;
+        _incomeRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Income>(), It.IsAny<CancellationToken>()))
+            .Callback<Income, CancellationToken>((i, _) => stored = i).Returns(Task.CompletedTask);
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ValidRequest("DollarAccount")), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal("USD", stored?.Amount.Currency.Value);
+    }
+
+    /// <summary>An update that throws logs the failure with the exception and the account.</summary>
+    [Fact]
+    public async Task UpdateAsync_LogsTheFailureWithTheException_WhenThePersistenceThrows()
+    {
+        GivenExistingIncome(MakeIncome(1));
+        GivenAssets(MakeAsset("SavingsAccount"));
+        var thrown = new InvalidOperationException("boom");
+        _incomeRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Income>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().UpdateAsync(Email, WithId(ValidRequest()), TestContext.Current.CancellationToken);
+
+        AssertLoggedFailure("Failed to update income 1", thrown);
+    }
+
+    /// <summary>A successful delete opens the transaction and commits it.</summary>
+    [Fact]
+    public async Task DeleteAsync_BeginsAndCommitsTheTransaction_OnSuccess()
+    {
+        GivenExistingIncome(MakeIncome(1));
+        GivenAssets(MakeAsset("SavingsAccount"));
+
+        ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An unknown income id on delete is a NotFound with the localizable "record not found" message.</summary>
+    [Fact]
+    public async Task DeleteAsync_ReturnsIncomeNotFound_WithItsMessage_WhenTheRecordIsUnknown()
+    {
+        GivenExistingIncome(MakeIncome(2));
+
+        ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Income.NotFound", result.ErrorCode);
+        Assert.Equal("The income record could not be found.", result.ErrorKey);
+    }
+
+    /// <summary>
+    /// Deleting an income whose deposit asset no longer exists cannot revert its impact: a NotFound naming the
+    /// asset referenced by the income, and the row is kept.
+    /// </summary>
+    [Fact]
+    public async Task DeleteAsync_ReturnsReferencedAssetNotFound_AndKeepsTheRow_WhenTheDepositAssetIsGone()
+    {
+        GivenExistingIncome(MakeIncome(1, "Vanished"));
+
+        ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Income.AssetNotFound", result.ErrorCode);
+        Assert.Equal("The asset referenced by this income could not be found.", result.ErrorKey);
+        _incomeRepo.Verify(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A delete that throws logs the failure with the exception and the account.</summary>
+    [Fact]
+    public async Task DeleteAsync_LogsTheFailureWithTheException_WhenThePersistenceThrows()
+    {
+        GivenExistingIncome(MakeIncome(1));
+        GivenAssets(MakeAsset("SavingsAccount"));
+        var thrown = new InvalidOperationException("boom");
+        _incomeRepo.Setup(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
+
+        AssertLoggedFailure("Failed to delete income 1", thrown);
     }
 }

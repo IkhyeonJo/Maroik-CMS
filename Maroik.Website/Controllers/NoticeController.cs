@@ -15,49 +15,24 @@ using Microsoft.Extensions.Options;
 namespace Maroik.Website.Controllers;
 
 /// <summary>Manages fixed-income and fixed-expenditure notice records (create, read, update, delete, export).</summary>
-public class NoticeController : Controller
+/// <param name="localizer">Localizer for this controller's user-facing messages.</param>
+/// <param name="logger">Logger for unexpected failures in the Notice actions.</param>
+/// <param name="assetService">Asset reads (asset dropdowns, currency labels).</param>
+/// <param name="fixedIncomeService">Fixed-income use cases.</param>
+/// <param name="fixedExpenditureService">Fixed-expenditure use cases.</param>
+/// <param name="settings">Server settings (notice window in days).</param>
+/// <param name="excelExportService">Builds the fixed-income / fixed-expenditure Excel exports.</param>
+/// <param name="timeProvider">The clock the grids' notice / expiry flags and the export file name's timestamp are read from.</param>
+public class NoticeController(
+    IHtmlLocalizer<NoticeController> localizer,
+    ILogger<NoticeController> logger,
+    IAssetService assetService,
+    IFixedIncomeService fixedIncomeService,
+    IFixedExpenditureService fixedExpenditureService,
+    IOptions<ServerSetting> settings,
+    IExcelExportService excelExportService,
+    TimeProvider timeProvider) : Controller
 {
-    /// <summary>Localizer for this controller's user-facing messages.</summary>
-    private readonly IHtmlLocalizer<NoticeController> _localizer;
-    /// <summary>Logger for unexpected failures in the Notice actions.</summary>
-    private readonly ILogger<NoticeController> _logger;
-    /// <summary>Asset reads (asset dropdowns, currency labels).</summary>
-    private readonly IAssetService _assetService;
-    /// <summary>Fixed-income use cases.</summary>
-    private readonly IFixedIncomeService _fixedIncomeService;
-    /// <summary>Fixed-expenditure use cases.</summary>
-    private readonly IFixedExpenditureService _fixedExpenditureService;
-    /// <summary>Server settings (notice window in days).</summary>
-    private readonly IOptions<ServerSetting> _settings;
-    /// <summary>Builds the fixed-income / fixed-expenditure Excel exports.</summary>
-    private readonly IExcelExportService _excelExportService;
-    /// <summary>Resource-key → localized text delegate handed to the mappers and the Excel export.</summary>
-    private readonly Func<string, string> _localize;
-    /// <summary>The clock the grids' notice / expiry flags and the export file name's timestamp are read from.</summary>
-    private readonly TimeProvider _timeProvider;
-
-    /// <summary>Initializes a new instance of <see cref="NoticeController"/> with the supplied dependencies.</summary>
-    public NoticeController(
-        IHtmlLocalizer<NoticeController> localizer,
-        ILogger<NoticeController> logger,
-        IAssetService assetService,
-        IFixedIncomeService fixedIncomeService,
-        IFixedExpenditureService fixedExpenditureService,
-        IOptions<ServerSetting> settings,
-        IExcelExportService excelExportService,
-        TimeProvider timeProvider)
-    {
-        _localizer = localizer;
-        _logger = logger;
-        _assetService = assetService;
-        _fixedIncomeService = fixedIncomeService;
-        _fixedExpenditureService = fixedExpenditureService;
-        _settings = settings;
-        _excelExportService = excelExportService;
-        _localize = key => _localizer[key].Value;
-        _timeProvider = timeProvider;
-    }
-
     #region FixedIncome
 
     #region Create
@@ -69,7 +44,7 @@ public class NoticeController : Controller
         [FromBody] FixedIncomeInputViewModel fixedIncomeInputViewModel, CancellationToken ct)
     {
         if (!ModelState.IsValid)
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         try
         {
@@ -92,15 +67,15 @@ public class NoticeController : Controller
                 Unpunctuality = fixedIncomeInputViewModel.Unpunctuality
             };
 
-            var result = await _fixedIncomeService.CreateAsync(email, request, ct);
+            var result = await fixedIncomeService.CreateAsync(email, request, ct);
             return result.Success
-                ? Json(new { result = true, message = _localizer["The fixedIncome has been successfully created."].Value })
-                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["The fixedIncome has been successfully created."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create fixed-income record");
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to create fixed-income record");
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -116,12 +91,12 @@ public class NoticeController : Controller
 #pragma warning restore ASP0015
         {
             AccountResponse account = ViewBag.LoggedInAccount;
-            var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
+            var assets = await assetService.GetAssetsAsync(account.Email!, ct);
             var incomes = string.IsNullOrEmpty(wholeSearch)
-                ? await _fixedIncomeService.GetFixedIncomesAsync(account.Email!, ct)
-                : await _fixedIncomeService.SearchFixedIncomesAsync(account.Email!, wholeSearch, ct);
+                ? await fixedIncomeService.GetFixedIncomesAsync(account.Email!, ct)
+                : await fixedIncomeService.SearchFixedIncomesAsync(account.Email!, wholeSearch, ct);
             var viewModels = incomes
-                .ToDisplayViewModels(assets, _localize, account.TimeZoneIanaId!, _settings.Value.NoticeMaturityDateDay, _timeProvider.GetUtcNow().UtcDateTime)
+                .ToDisplayViewModels(assets, key => localizer[key].Value, account.TimeZoneIanaId!, settings.Value.NoticeMaturityDateDay, timeProvider.GetUtcNow().UtcDateTime)
                 .OrderByDescending(a => a.Expired).ThenByDescending(m => m.Noticed)
                 .ThenByDescending(m => m.Unpunctuality).ThenByDescending(a => a.Created)
                 .ThenByDescending(a => a.Updated)
@@ -130,7 +105,7 @@ public class NoticeController : Controller
         }
 
         AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
-        var fixedIncomeAssets = (await _assetService.GetAssetsAsync(loggedInAccount.Email!, ct))
+        var fixedIncomeAssets = (await assetService.GetAssetsAsync(loggedInAccount.Email!, ct))
             .Where(x => !x.Deleted).OrderBy(x => x.ProductName).ToList();
         ViewBag.Assets = fixedIncomeAssets;
         ViewBag.DefaultAssetProductName = fixedIncomeAssets.FirstOrDefault()?.ProductName;
@@ -146,9 +121,9 @@ public class NoticeController : Controller
         try
         {
             string email = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
-            FixedIncomeResponse? item = await _fixedIncomeService.GetByIdAsync(email, id, ct);
+            FixedIncomeResponse? item = await fixedIncomeService.GetByIdAsync(email, id, ct);
             if (item == null)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
             var vm = new FixedIncomeOutputViewModel
             {
@@ -168,8 +143,8 @@ public class NoticeController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to check fixed-income existence for id {FixedIncomeId}", id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to check fixed-income existence for id {FixedIncomeId}", id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -181,8 +156,8 @@ public class NoticeController : Controller
     {
         try
         {
-            string baseLabel = _localizer["Amount"].Value;
-            AssetResponse? asset = await _assetService.GetAssetAsync(
+            string baseLabel = localizer["Amount"].Value;
+            AssetResponse? asset = await assetService.GetAssetAsync(
                 ((AccountResponse)ViewBag.LoggedInAccount).Email!, productName, ct);
 
             string label = !string.IsNullOrEmpty(asset?.MonetaryUnit)
@@ -193,8 +168,8 @@ public class NoticeController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get fixed-income amount label for product {ProductName}", productName);
-            return Json(new { result = false, label = _localizer["Amount"].Value });
+            logger.LogError(ex, "Failed to get fixed-income amount label for product {ProductName}", productName);
+            return Json(new { result = false, label = localizer["Amount"].Value });
         }
     }
 
@@ -209,7 +184,7 @@ public class NoticeController : Controller
         [FromBody] FixedIncomeInputViewModel fixedIncomeInputViewModel, CancellationToken ct)
     {
         if (!ModelState.IsValid)
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         try
         {
@@ -232,15 +207,15 @@ public class NoticeController : Controller
                 Unpunctuality = fixedIncomeInputViewModel.Unpunctuality
             };
 
-            var result = await _fixedIncomeService.UpdateAsync(email, request, ct);
+            var result = await fixedIncomeService.UpdateAsync(email, request, ct);
             return result.Success
-                ? Json(new { result = true, message = _localizer["The fixedIncome has been successfully updated."].Value })
-                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["The fixedIncome has been successfully updated."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update fixed-income record {FixedIncomeId}", fixedIncomeInputViewModel.Id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to update fixed-income record {FixedIncomeId}", fixedIncomeInputViewModel.Id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -256,15 +231,15 @@ public class NoticeController : Controller
         try
         {
             string email = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
-            var result = await _fixedIncomeService.DeleteAsync(email, fixedIncomeInputViewModel.Id, ct);
+            var result = await fixedIncomeService.DeleteAsync(email, fixedIncomeInputViewModel.Id, ct);
             return result.Success
-                ? Json(new { result = true, message = _localizer["The fixedIncome has been successfully deleted."].Value })
-                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["The fixedIncome has been successfully deleted."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete fixed-income record {FixedIncomeId}", fixedIncomeInputViewModel.Id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to delete fixed-income record {FixedIncomeId}", fixedIncomeInputViewModel.Id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -277,10 +252,10 @@ public class NoticeController : Controller
     public async Task<IActionResult> ExportExcelFixedIncome(string fileName = "", CancellationToken ct = default)
     {
         AccountResponse account = ViewBag.LoggedInAccount;
-        var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
-        var incomes = await _fixedIncomeService.GetFixedIncomesAsync(account.Email!, ct);
-        var stream = _excelExportService.CreateFixedIncomeExcel(incomes, assets, _localize, account.TimeZoneIanaId!, _settings.Value.NoticeMaturityDateDay);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
+        var assets = await assetService.GetAssetsAsync(account.Email!, ct);
+        var incomes = await fixedIncomeService.GetFixedIncomesAsync(account.Email!, ct);
+        var stream = excelExportService.CreateFixedIncomeExcel(incomes, assets, key => localizer[key].Value, account.TimeZoneIanaId!, settings.Value.NoticeMaturityDateDay);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
     #endregion
@@ -298,7 +273,7 @@ public class NoticeController : Controller
         [FromBody] FixedExpenditureInputViewModel fixedExpenditureInputViewModel, CancellationToken ct)
     {
         if (!ModelState.IsValid)
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         try
         {
@@ -322,15 +297,15 @@ public class NoticeController : Controller
                 Unpunctuality = fixedExpenditureInputViewModel.Unpunctuality
             };
 
-            var result = await _fixedExpenditureService.CreateAsync(email, request, ct);
+            var result = await fixedExpenditureService.CreateAsync(email, request, ct);
             return result.Success
-                ? Json(new { result = true, message = _localizer["The fixedExpenditure has been successfully created."].Value })
-                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["The fixedExpenditure has been successfully created."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create fixed-expenditure record");
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to create fixed-expenditure record");
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -346,12 +321,12 @@ public class NoticeController : Controller
 #pragma warning restore ASP0015
         {
             AccountResponse account = ViewBag.LoggedInAccount;
-            var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
+            var assets = await assetService.GetAssetsAsync(account.Email!, ct);
             var expenditures = string.IsNullOrEmpty(wholeSearch)
-                ? await _fixedExpenditureService.GetFixedExpendituresAsync(account.Email!, ct)
-                : await _fixedExpenditureService.SearchFixedExpendituresAsync(account.Email!, wholeSearch, ct);
+                ? await fixedExpenditureService.GetFixedExpendituresAsync(account.Email!, ct)
+                : await fixedExpenditureService.SearchFixedExpendituresAsync(account.Email!, wholeSearch, ct);
             var viewModels = expenditures
-                .ToDisplayViewModels(assets, _localize, account.TimeZoneIanaId!, _settings.Value.NoticeMaturityDateDay, _timeProvider.GetUtcNow().UtcDateTime)
+                .ToDisplayViewModels(assets, key => localizer[key].Value, account.TimeZoneIanaId!, settings.Value.NoticeMaturityDateDay, timeProvider.GetUtcNow().UtcDateTime)
                 .OrderByDescending(a => a.Expired).ThenByDescending(m => m.Noticed)
                 .ThenByDescending(m => m.Unpunctuality).ThenByDescending(a => a.Created)
                 .ThenByDescending(a => a.Updated)
@@ -360,7 +335,7 @@ public class NoticeController : Controller
         }
 
         AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
-        var fixedExpenditureAssets = (await _assetService.GetAssetsAsync(loggedInAccount.Email!, ct))
+        var fixedExpenditureAssets = (await assetService.GetAssetsAsync(loggedInAccount.Email!, ct))
             .Where(x => !x.Deleted).OrderBy(x => x.ProductName).ToList();
         ViewBag.Assets = fixedExpenditureAssets;
         ViewBag.DefaultAssetProductName = fixedExpenditureAssets.FirstOrDefault()?.ProductName;
@@ -376,9 +351,9 @@ public class NoticeController : Controller
         try
         {
             string email = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
-            FixedExpenditureResponse? item = await _fixedExpenditureService.GetByIdAsync(email, id, ct);
+            FixedExpenditureResponse? item = await fixedExpenditureService.GetByIdAsync(email, id, ct);
             if (item == null)
-                return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+                return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
             var vm = new FixedExpenditureOutputViewModel
             {
@@ -399,8 +374,8 @@ public class NoticeController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to check fixed-expenditure existence for id {FixedExpenditureId}", id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to check fixed-expenditure existence for id {FixedExpenditureId}", id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
 
@@ -412,8 +387,8 @@ public class NoticeController : Controller
     {
         try
         {
-            string baseLabel = _localizer["Amount"].Value;
-            AssetResponse? asset = await _assetService.GetAssetAsync(
+            string baseLabel = localizer["Amount"].Value;
+            AssetResponse? asset = await assetService.GetAssetAsync(
                 ((AccountResponse)ViewBag.LoggedInAccount).Email!, productName, ct);
 
             string label = !string.IsNullOrEmpty(asset?.MonetaryUnit)
@@ -424,8 +399,8 @@ public class NoticeController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get fixed-expenditure amount label for product {ProductName}", productName);
-            return Json(new { result = false, label = _localizer["Amount"].Value });
+            logger.LogError(ex, "Failed to get fixed-expenditure amount label for product {ProductName}", productName);
+            return Json(new { result = false, label = localizer["Amount"].Value });
         }
     }
 
@@ -440,7 +415,7 @@ public class NoticeController : Controller
         [FromBody] FixedExpenditureInputViewModel fixedExpenditureInputViewModel, CancellationToken ct)
     {
         if (!ModelState.IsValid)
-            return Json(new { result = false, error = _localizer["Input is invalid"].Value });
+            return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         try
         {
@@ -464,15 +439,15 @@ public class NoticeController : Controller
                 Unpunctuality = fixedExpenditureInputViewModel.Unpunctuality
             };
 
-            var result = await _fixedExpenditureService.UpdateAsync(email, request, ct);
+            var result = await fixedExpenditureService.UpdateAsync(email, request, ct);
             return result.Success
-                ? Json(new { result = true, message = _localizer["The fixedExpenditure has been successfully updated."].Value })
-                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["The fixedExpenditure has been successfully updated."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update fixed-expenditure record {FixedExpenditureId}", fixedExpenditureInputViewModel.Id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to update fixed-expenditure record {FixedExpenditureId}", fixedExpenditureInputViewModel.Id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -488,15 +463,15 @@ public class NoticeController : Controller
         try
         {
             string email = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
-            var result = await _fixedExpenditureService.DeleteAsync(email, fixedExpenditureInputViewModel.Id, ct);
+            var result = await fixedExpenditureService.DeleteAsync(email, fixedExpenditureInputViewModel.Id, ct);
             return result.Success
-                ? Json(new { result = true, message = _localizer["The fixedExpenditure has been successfully deleted."].Value })
-                : Json(new { result = false, error = _localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+                ? Json(new { result = true, message = localizer["The fixedExpenditure has been successfully deleted."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete fixed-expenditure record {FixedExpenditureId}", fixedExpenditureInputViewModel.Id);
-            return Json(new { result = false, error = _localizer[ServiceResult.TemporaryErrorKey].Value });
+            logger.LogError(ex, "Failed to delete fixed-expenditure record {FixedExpenditureId}", fixedExpenditureInputViewModel.Id);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
     #endregion
@@ -509,10 +484,10 @@ public class NoticeController : Controller
     public async Task<IActionResult> ExportExcelFixedExpenditure(string fileName = "", CancellationToken ct = default)
     {
         AccountResponse account = ViewBag.LoggedInAccount;
-        var assets = await _assetService.GetAssetsAsync(account.Email!, ct);
-        var expenditures = await _fixedExpenditureService.GetFixedExpendituresAsync(account.Email!, ct);
-        var stream = _excelExportService.CreateFixedExpenditureExcel(expenditures, assets, _localize, account.TimeZoneIanaId!, _settings.Value.NoticeMaturityDateDay);
-        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, _timeProvider.GetUtcNow().UtcDateTime);
+        var assets = await assetService.GetAssetsAsync(account.Email!, ct);
+        var expenditures = await fixedExpenditureService.GetFixedExpendituresAsync(account.Email!, ct);
+        var stream = excelExportService.CreateFixedExpenditureExcel(expenditures, assets, key => localizer[key].Value, account.TimeZoneIanaId!, settings.Value.NoticeMaturityDateDay);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, timeProvider.GetUtcNow().UtcDateTime);
         return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
     }
     #endregion

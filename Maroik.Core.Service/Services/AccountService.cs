@@ -36,10 +36,6 @@ public class AccountService(
     ) : IAccountService
 {
     /// <inheritdoc />
-    public async Task<List<AccountResponse>> GetAllAccountsAsync(CancellationToken ct = default)
-        => (await accountRepository.GetAllAsync(ct)).Select(AccountMapper.ToResponse).ToList();
-
-    /// <inheritdoc />
     public async Task<List<AccountResponse>> GetAccountsByNicknamesAsync(IEnumerable<string> nicknames, CancellationToken ct = default)
         => (await accountRepository.FindByNicknamesAsync(nicknames, ct)).Select(AccountMapper.ToResponse).ToList();
 
@@ -56,7 +52,7 @@ public class AccountService(
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         // Matched in the stored form: a mobile autocomplete's trailing space must not fail the login.
         email = Email.NormalizeForLookup(email);
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // Row lock (FOR UPDATE) held until commit/rollback below, so concurrent login attempts
@@ -137,7 +133,9 @@ public class AccountService(
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
 
+ #pragma warning disable CA1873
             logger.LogInformation("Login succeeded for {Email}", email);
+ #pragma warning restore CA1873
             return LoginResult.Ok(AccountMapper.ToResponse(account));
         }
         catch
@@ -217,7 +215,9 @@ public class AccountService(
                 return RegisterResult.Fail("Error occurred while processing about account registration");
             }
 
+ #pragma warning disable CA1873
             logger.LogInformation("Account registered: {Email}", account.Email.Value);
+ #pragma warning restore CA1873
 
             // The account was just created with UserCreatedVerifyEmail already set above, so a
             // successful send should not overwrite it with VerifyEmail.
@@ -245,7 +245,7 @@ public class AccountService(
             string hashedPassword = passwordService.HashPassword(newAccount.PlainPassword ?? "");
 
             Account locked;
-            await unitOfWork.BeginAsync(ct);
+            await unitOfWork.BeginAsync(ct: ct);
             try
             {
                 // Re-read under FOR UPDATE: serializes against a concurrent ConfirmEmailAsync /
@@ -300,7 +300,9 @@ public class AccountService(
                 throw;
             }
 
+ #pragma warning disable CA1873
             logger.LogInformation("Unconfirmed registration replaced for {Email}", locked.Email.Value);
+ #pragma warning restore CA1873
 
             // Mail send + final status write run unlocked, after the row lock above was released.
             // SendConfirmationEmailAndUpdateStatusAsync re-persists the same token it finds on
@@ -382,7 +384,7 @@ public class AccountService(
         }
 
         Account locked;
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // Re-read under FOR UPDATE before regenerating/persisting the token: serializes against
@@ -441,14 +443,15 @@ public class AccountService(
         }
 
         Account? account = await FindByRegistrationTokenAsync(rawToken, ct);
-        if (account == null || !GuidToken.IsTokenAlive(rawToken, utcNow))
-        {
-            logger.LogWarning("Email confirmation link rejected: invalid or expired token");
-            return new ConfirmEmailResult { InvalidToken = true, AccountCreated = false };
-        }
+        if (account != null && GuidToken.IsTokenAlive(rawToken, utcNow))
+            return new ConfirmEmailResult
+            {
+                InvalidToken = false, AccountCreated = false, RegistrationToken = encryptedToken
+            };
+        logger.LogWarning("Email confirmation link rejected: invalid or expired token");
+        return new ConfirmEmailResult { InvalidToken = true, AccountCreated = false };
 
         // A live link: show the password form, echoing the still-encrypted token back into it.
-        return new ConfirmEmailResult { InvalidToken = false, AccountCreated = false, RegistrationToken = encryptedToken };
     }
 
     /// <inheritdoc />
@@ -477,7 +480,7 @@ public class AccountService(
             return new ConfirmEmailResult { InvalidToken = true, AccountCreated = false };
         }
 
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // Re-read under FOR UPDATE, serializing against a concurrent ResendConfirmationEmailAsync
@@ -559,7 +562,9 @@ public class AccountService(
             // way as "account not found" rather than a false AccountCreated success.
             if (rowsAffected != 0)
             {
+ #pragma warning disable CA1873
                 logger.LogInformation("Email confirmed for {Email}", locked.Email.Value);
+ #pragma warning restore CA1873
                 return new ConfirmEmailResult { InvalidToken = false, AccountCreated = true };
             }
 
@@ -628,7 +633,9 @@ public class AccountService(
             string body = mailClient.GetMailResetPasswordBody(rsa.Encrypt(resetPasswordToken), emailTemplate.Title, emailTemplate.Content0, emailTemplate.Content1, settings.Value.DomainName ?? "");
             bool published = await PublishMailAsync(account.Email.Value, emailTemplate.Subject, body, ct);
             if (published)
+ #pragma warning disable CA1873
                 logger.LogInformation("Password reset requested for {Email}", account.Email.Value);
+ #pragma warning restore CA1873
 
             account.SetMessage(EnumHelper.GetDescription(published ? AccountMessage.ResetPasswordMail : AccountMessage.FailToMailSent), utcNow);
             await accountRepository.UpdateMessageAsync(account.Email.Value, account.Message, account.Updated, ct);
@@ -655,14 +662,15 @@ public class AccountService(
         // Reject if account not found, deleted, token has expired, or email is unconfirmed. Mirrors
         // the same guard on ForgotPasswordAsync / ResetPasswordAsync so a soft-deleted account's
         // lingering token can never be reported "valid" here only to be rejected at the actual reset.
-        if (account == null || account.Deleted || !GuidToken.IsTokenAlive(rawToken, utcNow) || !account.EmailConfirmed)
-        {
-            logger.LogWarning("Password reset link rejected: invalid or expired token");
-            return new ResetPasswordValidationResult { FailToReset = true };
-        }
+        if (account != null && !account.Deleted && GuidToken.IsTokenAlive(rawToken, utcNow) && account.EmailConfirmed)
+            return new ResetPasswordValidationResult
+            {
+                FailToReset = false, ResetPasswordToken = encryptedToken
+            };
+        logger.LogWarning("Password reset link rejected: invalid or expired token");
+        return new ResetPasswordValidationResult { FailToReset = true };
 
         // Return the still-encrypted token so the client can pass it back during the actual reset.
-        return new ResetPasswordValidationResult { FailToReset = false, ResetPasswordToken = encryptedToken };
     }
 
     /// <inheritdoc />
@@ -690,7 +698,7 @@ public class AccountService(
 
         string newHashedPassword = passwordService.HashPassword(newPassword);
 
-        await unitOfWork.BeginAsync(ct);
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
             // The lookup above was by token and unlocked. Re-read the row under FOR UPDATE before
@@ -721,7 +729,9 @@ public class AccountService(
 
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
+ #pragma warning disable CA1873
             logger.LogInformation("Password reset completed for {Email}", account.Email.Value);
+ #pragma warning restore CA1873
 
             // The holder of the mailed link has just proven the mailbox and chosen the password, so they may be
             // signed in straight away — nothing a password guesser could use (the lockout guards guessing; this

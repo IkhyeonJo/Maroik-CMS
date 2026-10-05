@@ -2,7 +2,8 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.Service.Services;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 
@@ -25,6 +26,8 @@ public class ManagementAccountServiceTests
     private readonly Mock<IPasswordService> _passwordService = new();
     /// <summary>Mock <c>IUnitOfWork</c> injected into the system under test.</summary>
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    /// <summary>Captures the log entries the system under test writes.</summary>
+    private readonly FakeLogger<ManagementAccountService> _logger = new();
 
     /// <summary>The fixed "current time" of these tests.</summary>
     private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
@@ -36,7 +39,7 @@ public class ManagementAccountServiceTests
         _accountRepo.Object,
         _passwordService.Object,
         _unitOfWork.Object,
-        NullLogger<ManagementAccountService>.Instance,
+        _logger,
         _time);
 
     // -- Helpers --------------------------------------------------------------
@@ -621,7 +624,7 @@ public class ManagementAccountServiceTests
 
         Assert.Equal("Account.PasswordPolicy", result.ErrorCode);
         _passwordService.Verify(p => p.HashPassword(It.IsAny<string>()), Times.Never);
-        _unitOfWork.Verify(u => u.BeginAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Never);
     }
 
     /// <summary>An unknown role is returned as the domain's validation error; the row is not written and the lock is released.</summary>
@@ -664,5 +667,177 @@ public class ManagementAccountServiceTests
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         Assert.DoesNotContain("secret detail", result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // -- Exact results, lookup keys, defaults, transaction boundaries and failure logging ---
+
+    /// <summary>Asserts the one Error entry carries <paramref name="thrown"/> and reads <paramref name="message"/>.</summary>
+    private void AssertLoggedError(string message, Exception thrown)
+    {
+        FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Error);
+        Assert.Same(thrown, record.Exception);
+        Assert.Equal(message, record.Message);
+    }
+
+    /// <summary>The duplicate-email check looks up the requested e-mail; an existing one is the "already created" Conflict.</summary>
+    [Fact]
+    public async Task CreateAccountAsync_ReturnsAlreadyExists_WhenTheRequestedEmailIsTaken()
+    {
+        _accountRepo.Setup(r => r.FindByEmailAsync("taken@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(ActiveAccount("taken@example.com"));
+
+        ServiceResult result = await CreateSut().CreateAccountAsync(NewAccountRequest("taken@example.com"), Actor, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.Conflict, result.ErrorType);
+        Assert.Equal("Account.AlreadyExists", result.ErrorCode);
+        Assert.Equal("This account has already been created.", result.ErrorKey);
+        _accountRepo.Verify(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A nickname taken (ignoring case) is a Conflict whose message template takes the nickname as its argument.</summary>
+    [Fact]
+    public async Task CreateAccountAsync_ReturnsTheNicknameConflictTemplate_WhenTheNicknameIsTaken()
+    {
+        _accountRepo.Setup(r => r.NicknameExistsIgnoreCaseAsync("NewUser", It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        ServiceResult result = await CreateSut().CreateAccountAsync(NewAccountRequest(), Actor, TestContext.Current.CancellationToken);
+
+        Assert.Equal("'{0}' is a Nickname that already exists. Please enter another Nickname.", result.ErrorKey);
+        Assert.Equal(["NewUser"], result.ErrorArgs);
+    }
+
+    /// <summary>A concurrent create that hits the e-mail primary key is the "already created" Conflict, with its message.</summary>
+    [Fact]
+    public async Task CreateAccountAsync_ReturnsTheAlreadyExistsMessage_WhenTheEmailPrimaryKeyRaces()
+    {
+        _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$hashed");
+        _accountRepo.Setup(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("duplicate key", new Exception("23505: duplicate key value violates unique constraint \"Account_pk\"")));
+
+        ServiceResult result = await CreateSut().CreateAccountAsync(NewAccountRequest(), Actor, TestContext.Current.CancellationToken);
+
+        Assert.Equal("This account has already been created.", result.ErrorKey);
+    }
+
+    /// <summary>An account created without a time zone gets UTC.</summary>
+    [Fact]
+    public async Task CreateAccountAsync_DefaultsTheTimeZoneToUtc_WhenNoneIsGiven()
+    {
+        _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$hashed");
+        AdminCreateAccountRequest request = NewAccountRequest();
+        request.TimeZoneIanaId = null;
+
+        ServiceResult result = await CreateSut().CreateAccountAsync(request, Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _accountRepo.Verify(r => r.CreateAsync(It.Is<Account>(a => a.TimeZone.Value == "UTC"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>The requested time zone is stored on the new account.</summary>
+    [Fact]
+    public async Task CreateAccountAsync_StoresTheRequestedTimeZone()
+    {
+        _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$hashed");
+        AdminCreateAccountRequest request = NewAccountRequest();
+        request.TimeZoneIanaId = "Asia/Seoul";
+
+        await CreateSut().CreateAccountAsync(request, Actor, TestContext.Current.CancellationToken);
+
+        _accountRepo.Verify(r => r.CreateAsync(It.Is<Account>(a => a.TimeZone.Value == "Asia/Seoul"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>A create that throws unexpectedly is logged with the exception and the e-mail.</summary>
+    [Fact]
+    public async Task CreateAccountAsync_LogsTheFailure_WhenTheRepositoryThrows()
+    {
+        _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$hashed");
+        var thrown = new InvalidOperationException("boom");
+        _accountRepo.Setup(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().CreateAccountAsync(NewAccountRequest(), Actor, TestContext.Current.CancellationToken);
+
+        AssertLoggedError("Failed to create account for new@example.com", thrown);
+    }
+
+    /// <summary>A successful admin update locks the requested account's row inside a transaction and commits it.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_LocksTheRequestedAccountAndCommits_OnSuccess()
+    {
+        Account account = ActiveAccount();
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync("user@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(account);
+
+        ServiceResult result = await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = "user@example.com" }, null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An unknown account on update is a NotFound ("Email address is wrong"), rolled back.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_ReturnsNotFound_AndRollsBack_WhenTheAccountIsUnknown()
+    {
+        ServiceResult result = await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = "ghost@example.com" }, null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Account.NotFound", result.ErrorCode);
+        Assert.Equal("Email address is wrong", result.ErrorKey);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An update that throws unexpectedly is logged with the exception and the e-mail.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_LogsTheFailure_WhenTheRepositoryThrows()
+    {
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync("user@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(ActiveAccount());
+        var thrown = new InvalidOperationException("boom");
+        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().UpdateAccountAsync(new AdminUpdateAccountRequest { Email = "user@example.com" }, null, Actor, TestContext.Current.CancellationToken);
+
+        AssertLoggedError("Failed to update account for user@example.com", thrown);
+    }
+
+    /// <summary>A successful admin delete runs inside a transaction and commits it.</summary>
+    [Fact]
+    public async Task DeleteAccountAsync_BeginsAndCommitsTheTransaction_OnSuccess()
+    {
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync("user@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(ActiveAccount());
+
+        ServiceResult result = await CreateSut().DeleteAccountAsync("user@example.com", Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>An unknown account on delete is a NotFound with its message, rolled back.</summary>
+    [Fact]
+    public async Task DeleteAccountAsync_ReturnsNotFound_AndRollsBack_WhenTheAccountIsUnknown()
+    {
+        ServiceResult result = await CreateSut().DeleteAccountAsync("ghost@example.com", Actor, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
+        Assert.Equal("Account.NotFound", result.ErrorCode);
+        Assert.Equal("Fail to find the account by given email address", result.ErrorKey);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A delete that throws unexpectedly is logged with the exception and the e-mail.</summary>
+    [Fact]
+    public async Task DeleteAccountAsync_LogsTheFailure_WhenTheRepositoryThrows()
+    {
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync("user@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(ActiveAccount());
+        var thrown = new InvalidOperationException("boom");
+        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+
+        await CreateSut().DeleteAccountAsync("user@example.com", Actor, TestContext.Current.CancellationToken);
+
+        AssertLoggedError("Failed to delete account for user@example.com", thrown);
     }
 }

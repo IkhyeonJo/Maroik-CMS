@@ -152,4 +152,16 @@ public class PasswordServiceTests
         Assert.False(_sut.VerifyPassword("Wrong-Pass1!", hash));
         Assert.Empty(_logger.Collector.GetSnapshot());
     }
+
+    /// <summary>
+    /// A blank password never verifies, even against a hash that was made from that same blank value (which only
+    /// BCrypt itself, not <see cref="PasswordService.HashPassword"/>, could have produced).
+    /// </summary>
+    [Fact]
+    public void VerifyPassword_ReturnsFalse_ForABlankPassword_EvenAgainstAHashOfThatBlankValue()
+    {
+        string hashOfBlank = BCrypt.Net.BCrypt.HashPassword(" ", 4);
+
+        Assert.False(_sut.VerifyPassword(" ", hashOfBlank));
+    }
 }

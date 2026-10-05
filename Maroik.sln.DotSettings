@@ -72,5 +72,10 @@
 
 	<!-- ===== Migration marker ===== -->
 	<s:Boolean x:Key="/Default/Environment/SettingsMigration/IsMigratedToUnifiedSettings/@EntryValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UserDictionary/Words/=appsettings/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UserDictionary/Words/=Clamav/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UserDictionary/Words/=clamav/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UserDictionary/Words/=contenttype/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UserDictionary/Words/=Maroik/@EntryIndexedValue">True</s:Boolean>
 
 </wpf:ResourceDictionary>

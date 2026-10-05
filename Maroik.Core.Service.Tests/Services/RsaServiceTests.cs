@@ -175,4 +175,15 @@ public class RsaServiceTests
 
         Assert.Contains("private key", ex.Message);
     }
+
+    /// <summary>Encrypting without a configured public key fails loudly instead of returning garbage.</summary>
+    [Fact]
+    public void Encrypt_Throws_WhenNoPublicKeyIsConfigured()
+    {
+        var sut = new RsaService(Options.Create(new ServerSetting { RsaAlgorithm = RsaType.Rsa2, RsaPrivateKey = "", RsaPublicKey = "" }));
+
+        var ex = Assert.Throws<InvalidOperationException>(() => sut.Encrypt("anything"));
+
+        Assert.Equal("RSA public key is not configured.", ex.Message);
+    }
 }

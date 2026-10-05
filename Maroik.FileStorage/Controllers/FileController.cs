@@ -34,7 +34,7 @@ public class FileController(IFileValidationService fileValidationService, IOptio
     {
         try
         {
-            var (success, error) = await fileValidationService.ValidateAndSaveAsync(file, filePath);
+            (bool success, string? error) = await fileValidationService.ValidateAndSaveAsync(file, filePath);
             if (!success)
             {
                 // A scanner outage is an operational fault; every other refusal is the caller's input

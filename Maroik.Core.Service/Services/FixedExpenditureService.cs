@@ -127,7 +127,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteAsync(string accountEmail, long id, CancellationToken ct = default)
     {
-        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
+        _ = timeProvider.GetUtcNow().UtcDateTime;
         FixedExpenditure? fe = await fixedExpenditureRepository.FindByEmailAndIdAsync(accountEmail, id, ct);
         if (fe == null)
             return ServiceResult.NotFound("FixedExpenditure.NotFound", "The fixed-expenditure record could not be found.");

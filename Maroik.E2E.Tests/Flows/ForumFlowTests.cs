@@ -76,6 +76,29 @@ public class ForumFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture)
         await Assertions.Expect(page.Locator("#loginForm")).ToBeVisibleAsync();
     }
 
+    // -- Write / edit mode: rich-text editor -----------------------------------
+
+    /// <summary>The write page turns the post body into a Summernote editor for a signed-in user.</summary>
+    [Fact]
+    public async Task FreeForumWriteMode_ShowsTheRichTextEditor()
+    {
+        var (page, _) = await NewSignedInPageAsync();
+        await GotoAsync(page, "/Forum/FreeForum?method=write");
+
+        await Assertions.Expect(page.Locator(".note-editor .note-editable")).ToBeVisibleAsync();
+    }
+
+    /// <summary>The edit page turns the post body into a Summernote editor holding the post's content.</summary>
+    [Fact]
+    public async Task FreeForumEditMode_ShowsTheRichTextEditor_WithThePostBody()
+    {
+        var (page, account) = await NewSignedInPageAsync();
+        long boardId = await Db.SeedFreeForumPostAsync(account.Nickname, "<p>editable body</p>");
+        await GotoAsync(page, $"/Forum/FreeForum?method=edit&boardId={boardId}");
+
+        await Assertions.Expect(page.Locator(".note-editor .note-editable")).ToContainTextAsync("editable body");
+    }
+
     // -- Detail mode: missing board --------------------------------------------
 
     /// <summary>Verifies that <c>FreeForumDetailMode</c> with missing board id when redirects to list.</summary>

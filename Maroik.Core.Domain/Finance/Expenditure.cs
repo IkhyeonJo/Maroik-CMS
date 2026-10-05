@@ -150,7 +150,7 @@ public sealed class Expenditure : AggregateRoot<long>
         var moneyResult = Money.Create(amount, currency);
         if (moneyResult.IsError) return moneyResult.Errors;
 
-        var (validMainClass, validSubClass, validPaymentMethod) = coreResult.Value;
+        (string validMainClass, string validSubClass, string validPaymentMethod) = coreResult.Value;
         var expenditure = new Expenditure(0, emailResult.Value, validMainClass, validSubClass, content,
             moneyResult.Value, validPaymentMethod, myDepositAsset, note, utcNow);
 
@@ -219,7 +219,7 @@ public sealed class Expenditure : AggregateRoot<long>
         var moneyResult = Money.Create(amount, currency);
         if (moneyResult.IsError) return moneyResult.Errors;
 
-        var (validMainClass, validSubClass, validPaymentMethod) = coreResult.Value;
+        (string validMainClass, string validSubClass, string validPaymentMethod) = coreResult.Value;
         MainClass = validMainClass;
         SubClass = validSubClass;
         Content = content;
