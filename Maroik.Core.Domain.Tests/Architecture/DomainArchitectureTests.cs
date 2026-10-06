@@ -227,6 +227,14 @@ public class DomainArchitectureTests
     }
 
     /// <summary>
+    /// <paramref name="type"/> and every type nested in it. NetArchTest hands a custom rule only the
+    /// top-level type, but lambdas, iterators and async methods compile their bodies into nested types,
+    /// so an IL rule that looks only at <c>type.Methods</c> silently misses them.
+    /// </summary>
+    private static IEnumerable<TypeDefinition> Flatten(TypeDefinition type)
+        => [type, .. type.NestedTypes.SelectMany(Flatten)];
+
+    /// <summary>
     /// Flags a type whose IL reads the system clock through <see cref="DateTime"/> /
     /// <see cref="DateTimeOffset"/> or calls into <see cref="TimeProvider"/>.
     /// </summary>
@@ -246,10 +254,6 @@ public class DomainArchitectureTests
                 .Any(instruction => instruction.Operand is MethodReference called
                     && (_clockGetters.Contains($"{called.DeclaringType.FullName}::{called.Name}")
                         || called.DeclaringType.FullName == "System.TimeProvider"));
-
-        /// <summary><paramref name="type"/> and every type nested in it (lambdas and iterators compile to nested types).</summary>
-        private static IEnumerable<TypeDefinition> Flatten(TypeDefinition type)
-            => [type, .. type.NestedTypes.SelectMany(Flatten)];
     }
 
     /// <summary>
@@ -266,10 +270,10 @@ public class DomainArchitectureTests
         private static readonly string[] _rawFactoryMethodNames =
             ["Validation", "Conflict", "Failure", "NotFound", "Forbidden", "Unexpected"];
 
-        /// <summary>Returns <see langword="false"/> when any method body of <paramref name="type"/> calls a raw <c>ErrorOr.Error</c> factory.</summary>
+        /// <summary>Returns <see langword="false"/> when any method body of <paramref name="type"/> (or a type nested in it) calls a raw <c>ErrorOr.Error</c> factory.</summary>
         public bool MeetsRule(TypeDefinition type)
         {
-            foreach (var instruction in type.Methods.Where(method => method.HasBody).SelectMany(method => method.Body.Instructions.Where(instruction => instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)))
+            foreach (var instruction in Flatten(type).SelectMany(t => t.Methods).Where(method => method.HasBody).SelectMany(method => method.Body.Instructions.Where(instruction => instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)))
             {
                 if (instruction.Operand is not MethodReference calledMethod) continue;
 

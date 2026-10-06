@@ -616,11 +616,15 @@
             // user's calendars into the "my calendar" select, default the
             // timezone to the signed-in account's, and open the modal.
             select: function(arg: any) {
-                $createCalendarEventAllDayUncheckedStartDate.val(moment.utc(arg.start).add(1, "days").format("YYYY-MM-DD"));
-                $createCalendarEventAllDayCheckedStartDate.val(moment.utc(arg.start).add(1, "days").format("YYYY-MM-DD"));
+                // FullCalendar hands back local-time dates (no `timeZone` option), with `end` exclusive:
+                // format them in local time and step `end` back one day to the last selected date.
+                const selectedStartDate = moment(arg.start).format("YYYY-MM-DD");
+                const selectedEndDate = moment(arg.end).subtract(1, "days").format("YYYY-MM-DD");
+                $createCalendarEventAllDayUncheckedStartDate.val(selectedStartDate);
+                $createCalendarEventAllDayCheckedStartDate.val(selectedStartDate);
 
-                $createCalendarEventAllDayUncheckedEndDate.val(moment.utc(arg.end).format("YYYY-MM-DD"));
-                $createCalendarEventAllDayCheckedEndDate.val(moment.utc(arg.end).format("YYYY-MM-DD"));
+                $createCalendarEventAllDayUncheckedEndDate.val(selectedEndDate);
+                $createCalendarEventAllDayCheckedEndDate.val(selectedEndDate);
 
                 $.ajax({
                     url: "/Calendar/GetCalendars",

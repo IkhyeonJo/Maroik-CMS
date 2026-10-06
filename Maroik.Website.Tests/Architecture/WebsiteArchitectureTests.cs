@@ -327,7 +327,7 @@ public class WebsiteArchitectureTests
     }
 
     /// <summary>
-    /// Controllers must read the currently logged-in account via <c>ViewBag.LoggedInAccount</c> —
+    /// Controllers must read the currently logged-in account via <c>HttpContext.GetLoggedInAccount()</c> —
     /// re-fetched from the database by <see cref="ViewBagPopulatorFilter"/> on every request — never
     /// <c>ISessionService.GetAccount()</c>, which returns the snapshot cached in the session at
     /// login time. A mid-session change to Role, Locked, Nickname, TimeZoneIanaId, etc. must take
@@ -348,11 +348,78 @@ public class WebsiteArchitectureTests
 
         Assert.True(
             result.IsSuccessful,
-            "Controllers must read the logged-in account via ViewBag.LoggedInAccount (populated " +
+            "Controllers must read the logged-in account via HttpContext.GetLoggedInAccount() (populated " +
             "fresh from the database by ViewBagPopulatorFilter on every request), not " +
             "ISessionService.GetAccount() (the stale, login-time session snapshot). " +
             "SetAccount/RemoveAccount are still allowed — only the GetAccount read is forbidden.\n" +
             "Failing types: " + string.Join(", ", result.FailingTypeNames ?? []));
+    }
+
+    /// <summary>
+    /// The logged-in account lives on <c>HttpContext.Items</c> and is read through the typed
+    /// <c>HttpContext.GetLoggedInAccount()</c> extension. Nothing in the
+    /// Website assembly — controllers, filters, or the Razor views compiled into it — may read or write it
+    /// as the dynamic <c>ViewBag.LoggedInAccount</c> again: that bypasses the compiler (a typo or wrong cast
+    /// only fails at runtime) and splits the account across two sources that can drift apart.
+    /// </summary>
+    [Fact]
+    public void WebsiteTypes_ShouldNot_AccessLoggedInAccountThroughViewBag()
+    {
+        NetArchTest.Rules.TestResult result = Types.InAssembly(_websiteAssembly)
+            .Should()
+            .MeetCustomRule(new DoesNotAccessDynamicMember("LoggedInAccount"))
+            .GetResult();
+
+        Assert.True(
+            result.IsSuccessful,
+            "Read the logged-in account via HttpContext.GetLoggedInAccount() (Context.GetLoggedInAccount() in " +
+            "views), not the dynamic ViewBag.LoggedInAccount.\n" +
+            "Failing types: " + string.Join(", ", result.FailingTypeNames ?? []));
+    }
+
+    /// <summary>
+    /// <paramref name="type"/> and every type nested in it. NetArchTest hands a custom rule only the
+    /// top-level type, but async methods (every Razor view's <c>ExecuteAsync</c>, most controller actions),
+    /// lambdas and iterators compile their bodies into nested types — so an IL rule that looks only at
+    /// <c>type.Methods</c> silently misses them. Mirrors <c>DomainArchitectureTests.DoesNotReadTheClock.Flatten</c>.
+    /// </summary>
+    private static IEnumerable<TypeDefinition> WithNestedTypes(TypeDefinition type)
+        => [type, .. type.NestedTypes.SelectMany(WithNestedTypes)];
+
+    /// <summary>
+    /// Flags a type whose IL accesses a member with the given name dynamically (e.g. <c>ViewBag.X</c>).
+    /// The C# compiler lowers each dynamic get/set to a call site created by
+    /// <c>Microsoft.CSharp.RuntimeBinder.Binder.GetMember/SetMember(flags, "X", ...)</c>, with the member
+    /// name as the last string literal loaded before that call — so that pair identifies the access
+    /// without matching unrelated string literals or the typed <c>LoggedInAccount</c> view-model properties.
+    /// </summary>
+    private sealed class DoesNotAccessDynamicMember(string memberName) : ICustomRule
+    {
+        /// <summary>Returns <see langword="false"/> when any method body of <paramref name="type"/> (or a type nested in it) binds <c>memberName</c> dynamically.</summary>
+        public bool MeetsRule(TypeDefinition type)
+        {
+            foreach (var method in WithNestedTypes(type).SelectMany(t => t.Methods).Where(method => method.HasBody))
+            {
+                string? lastStringLiteral = null;
+                foreach (var instruction in method.Body.Instructions)
+                {
+                    if (instruction.OpCode == OpCodes.Ldstr)
+                    {
+                        lastStringLiteral = (string)instruction.Operand;
+                    }
+                    else if (instruction.OpCode == OpCodes.Call
+                        && instruction.Operand is MethodReference calledMethod
+                        && calledMethod.DeclaringType.FullName == "Microsoft.CSharp.RuntimeBinder.Binder"
+                        && (calledMethod.Name is "GetMember" or "SetMember")
+                        && lastStringLiteral == memberName)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
     }
 
     /// <summary>
@@ -364,10 +431,10 @@ public class WebsiteArchitectureTests
     /// </summary>
     private sealed class DoesNotCallSessionServiceGetAccount : ICustomRule
     {
-        /// <summary>Returns <see langword="false"/> when any method body of <paramref name="type"/> calls <c>ISessionService.GetAccount</c>.</summary>
+        /// <summary>Returns <see langword="false"/> when any method body of <paramref name="type"/> (or a type nested in it) calls <c>ISessionService.GetAccount</c>.</summary>
         public bool MeetsRule(TypeDefinition type)
         {
-            foreach (var instruction in type.Methods.Where(method => method.HasBody).SelectMany(method => method.Body.Instructions.Where(instruction => instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)))
+            foreach (var instruction in WithNestedTypes(type).SelectMany(t => t.Methods).Where(method => method.HasBody).SelectMany(method => method.Body.Instructions.Where(instruction => instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)))
             {
                 if (instruction.Operand is not MethodReference calledMethod) continue;
 

@@ -6,13 +6,13 @@
       - Updating nickname and avatar image.
       - Changing password (current + new + confirm new).
       - Changing the preferred time-zone.
-    The logged-in account is read from ViewBag.LoggedInAccount to pre-populate read-only fields.
+    The logged-in account is read from Context.GetLoggedInAccount() to pre-populate read-only fields.
 *@
 @model Maroik.Website.Models.ViewModels.Management.ProfileOutputViewModel
 @using Maroik.Core.Domain.Media
 
 @{
-    var loggedInAccount = ViewBag.LoggedInAccount as AccountResponse ?? new AccountResponse { Role = Role.Anonymous };
+    AccountResponse loggedInAccount = Context.GetLoggedInAccount();
     long maxAttachedFileSizeBytes = (long)ViewBag.MaxAttachedFileSizeBytes;
 }
 @Html.Hidden(nameof(maxAttachedFileSizeBytes), maxAttachedFileSizeBytes)

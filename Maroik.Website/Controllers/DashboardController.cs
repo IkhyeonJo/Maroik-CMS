@@ -3,6 +3,7 @@ using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.Domain.Localization;
 using Maroik.Website.Attributes;
+using Maroik.Website.Extensions;
 using Maroik.Website.Mappings;
 using Maroik.Website.Models.ViewModels.Account;
 using Maroik.Website.Models.ViewModels.Dashboard;
@@ -77,7 +78,7 @@ public class DashboardController(
     [HttpGet]
     public async Task<IActionResult> UserIndex(string year, string month, CancellationToken ct)
     {
-        AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+        AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
         string? email = loggedInAccount.Email;
         string? timeZoneId = loggedInAccount.TimeZoneIanaId;
 
@@ -93,7 +94,7 @@ public class DashboardController(
     [RequiredHttpPostAccess(Role = Role.User)]
     public async Task<IActionResult> UserUpdateDefaultMonetary([FromBody] UserIndexInputViewModel userIndexInputViewModel, CancellationToken ct)
     {
-        string email = ((AccountResponse)ViewBag.LoggedInAccount).Email ?? "";
+        string email = HttpContext.GetLoggedInAccount().Email ?? "";
         try
         {
             await profileService.UpdateDefaultMonetaryUnitAsync(email, userIndexInputViewModel.DefaultMonetaryUnit, ct);
@@ -114,7 +115,7 @@ public class DashboardController(
     [HttpGet]
     public IActionResult AnonymousIndex()
     {
-        AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+        AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
         return loggedInAccount.Role switch
         {

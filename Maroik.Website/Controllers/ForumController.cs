@@ -55,7 +55,7 @@ public class ForumController(
             // The DB-fresh, re-validated account ViewBagPopulatorFilter already loaded for this
             // request (via HttpContext.Items) — reuse it instead of re-reading the login-time
             // session snapshot, so a mid-session role change takes effect here immediately.
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
             if (loggedInAccount.Role is not (Role.Admin or Role.User))
                 return Json(new { result = false, error = localizer["Please Login to write board"].Value });
@@ -104,7 +104,7 @@ public class ForumController(
                 return Json(new { result = false, error = localizer["Please enter a comment."].Value });
 
             // DB-fresh account already loaded by ViewBagPopulatorFilter for this request (see WriteFreeBoard).
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
             if (loggedInAccount.Role is not (Role.Admin or Role.User))
                 return Json(new { result = false, error = localizer["Please Login to write comment."].Value });
 
@@ -146,7 +146,7 @@ public class ForumController(
             return Ok(new { result = false, errorMessage = localizer["Please attach a file."].Value });
 
         // A refused upload is a security event: record who sent what (the attachment service logs its own refusals).
-        string uploaderEmail = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
+        string uploaderEmail = HttpContext.GetLoggedInAccount().Email!;
         if (summernoteImageFile.Length <= 0 || summernoteImageFile.Length > serverSettings.Value.MaxAttachedFileSizeBytes)
         {
             logger.LogWarning("Editor image upload refused: size {Size} bytes is outside the {MaxBytes}-byte limit for {Email}",
@@ -197,7 +197,7 @@ public class ForumController(
             // Write
             case "write":
             {
-                AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+                AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
                 // The view picks the role's page script (the editor) from LoggedInAccount.
                 FreeForumOutputViewModel freeForumOutputViewModel = new()
                 {
@@ -229,11 +229,11 @@ public class ForumController(
                     if (freeBoard == null || freeBoard.Deleted)
                         return RedirectToAction(BoardTypes.FreeForum, "Forum");
 
-                    // ViewBag.LoggedInAccount is re-fetched from the database by ViewBagPopulatorFilter
+                    // The account from HttpContext.GetLoggedInAccount() is re-fetched from the database by ViewBagPopulatorFilter
                     // on every request (not the session-cached snapshot), so a mid-session Role
                     // change (e.g. an admin demotion) is reflected immediately in the CanView check
-                    // below — matching the "edit" case's use of ViewBag.LoggedInAccount.
-                    AccountResponse? loggedInAccount = ViewBag.LoggedInAccount;
+                    // below — matching the "edit" case's use of HttpContext.GetLoggedInAccount().
+                    AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
                     if (!boardService.CanView(freeBoard, loggedInAccount))
                         return RedirectToAction(BoardTypes.FreeForum, "Forum");
 
@@ -241,7 +241,7 @@ public class ForumController(
 
                     (freeBoard.Content, bool isImgTagIncluded) = await boardService.PrepareHtmlForDisplayAsync(freeBoard.Content ?? "", ct);
 
-                    freeForumOutputViewModel.LoggedInAccount = loggedInAccount ?? new AccountResponse { Role = Role.Anonymous };
+                    freeForumOutputViewModel.LoggedInAccount = loggedInAccount;
                     freeForumOutputViewModel.LoggedInAccountTimeZoneIanaId = freeForumOutputViewModel.LoggedInAccount.TimeZoneIanaId ?? "";
 
                     freeForumOutputViewModel.BoardOutputViewModel = new BoardOutputViewModel
@@ -298,10 +298,10 @@ public class ForumController(
                     if (freeBoard == null || freeBoard.Deleted)
                         return RedirectToAction(BoardTypes.FreeForum, "Forum");
 
-                    // ViewBag.LoggedInAccount is re-fetched from the database by ViewBagPopulatorFilter
+                    // The account from HttpContext.GetLoggedInAccount() is re-fetched from the database by ViewBagPopulatorFilter
                     // on every request (not the session-cached snapshot), so ownership is always checked
                     // against the account's current state. The edit page is owner-only (no admin bypass).
-                    AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+                    AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
                     if (!loggedInAccount.IsOwner(freeBoard.Writer))
                         return RedirectToAction(BoardTypes.FreeForum, "Forum");
 
@@ -338,11 +338,11 @@ public class ForumController(
                 const int pageSize = 5;
                 if (page < 1) page = 1;
 
-                // ViewBag.LoggedInAccount is re-fetched from the database by ViewBagPopulatorFilter
+                // The account from HttpContext.GetLoggedInAccount() is re-fetched from the database by ViewBagPopulatorFilter
                 // on every request (not the session-cached snapshot), so a mid-session Role change
                 // is reflected immediately in the locked-post visibility rule below — same
                 // rationale as the "detail" case above.
-                AccountResponse loggedInAccountForQuery = ViewBag.LoggedInAccount;
+                AccountResponse loggedInAccountForQuery = HttpContext.GetLoggedInAccount();
                 bool isLoggedIn = loggedInAccountForQuery.Role != Role.Anonymous;
                 // Filtering, search/visibility rules, ordering, and paging are all pushed down into
                 // one SQL query (see BoardRepository.QueryPageAsync) instead of materializing the
@@ -426,7 +426,7 @@ public class ForumController(
         try
         {
             // Re-fetched from the database by ViewBagPopulatorFilter on every request.
-            AccountResponse? viewer = ViewBag.LoggedInAccount;
+            AccountResponse viewer = HttpContext.GetLoggedInAccount();
             (ServiceResult result, AttachmentDownload? file) = await boardService.OpenAttachedFileAsync(boardId, BoardTypes.FreeForum, viewer, ct);
             if (!result.Success)
                 return Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
@@ -464,7 +464,7 @@ public class ForumController(
             }
 
             // Re-fetched from the database by ViewBagPopulatorFilter on every request.
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
             return !loggedInAccount.IsOwnerOrAdmin(board.Writer) ? Json(new { result = false, error = localizer["Input is invalid"].Value }) : Json(new { result = true, freeBoard = new { id = board.Id } });
 
         }
@@ -496,7 +496,7 @@ public class ForumController(
             boardInputViewModel.Content ??= "";
 
             // DB-fresh account already loaded by ViewBagPopulatorFilter for this request (see WriteFreeBoard).
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
             if (loggedInAccount.Role is not (Role.Admin or Role.User))
                 return Json(new { result = false, error = localizer["Please Login to edit board."].Value });
 
@@ -539,7 +539,7 @@ public class ForumController(
         try
         {
             // Re-fetched from the database by ViewBagPopulatorFilter on every request.
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
             ServiceResult result = await boardService.DeleteBoardAsync(
                 boardInputViewModel.Id,
@@ -571,7 +571,7 @@ public class ForumController(
         try
         {
             // Re-fetched from the database by ViewBagPopulatorFilter on every request.
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
             ServiceResult result = await boardService.DeleteCommentAsync(
                 id,

@@ -5,6 +5,7 @@
  * so each site.test.ts supplies a `build()` for its own fixture and the checked-calendar ids it expects.
  */
 import { describe, it, expect, vi } from "vitest";
+import realMoment from "moment";
 import { hidden, type SiteHandle } from "@tests/_common/harness";
 
 /** Short alias used by the calendar suites. */
@@ -944,6 +945,31 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
             expect(h.toastr.error).toHaveBeenCalledWith("L_FailedToLoadCalendars");
             expect(modal).toHaveBeenCalledWith("show");
         });
+
+        // FullCalendar runs in the browser's local time zone: a drag over Jan 5–7 hands `select` local
+        // midnights, with `end` exclusive (local midnight of Jan 8). The form must show Jan 5 → Jan 7 in
+        // every zone — east of UTC (Seoul), west of it (New York) and on it.
+        it.each(["Asia/Seoul", "America/New_York", "UTC"])(
+            "drag-selecting Jan 5–7 pre-fills the create form with 2024-01-05 → 2024-01-07 in %s", (zone) => {
+                const originalZone = process.env.TZ;
+                process.env.TZ = zone;
+                try {
+                    const h = build();
+                    spyModal(h);
+                    // The harness stubs moment to a fixed date; this test is about the real date arithmetic.
+                    (h.win as any).moment = realMoment;
+                    h.calendarOptions[0].select({ start: new Date(2024, 0, 5), end: new Date(2024, 0, 8) });
+
+                    for (const layout of ["AllDayUnchecked", "AllDayChecked"]) {
+                        expect(h.$(`#createCalendarEvent${layout}StartDate`).val()).toBe("2024-01-05");
+                        expect(h.$(`#createCalendarEvent${layout}EndDate`).val()).toBe("2024-01-07");
+                    }
+                } finally {
+                    // Assigning undefined would store the string "undefined" as the zone.
+                    if (originalZone === undefined) delete process.env.TZ;
+                    else process.env.TZ = originalZone;
+                }
+            });
 
         const labels = (h: Handle) => h.$("#myCalendars > label").map((_, l) => l.id).get();
 

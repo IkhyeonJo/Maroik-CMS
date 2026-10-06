@@ -48,7 +48,7 @@ public class CalendarController(
                 return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
             CalendarRequest tempCalendar = calendarInputViewModel.Calendars.FirstOrDefault() ?? new CalendarRequest();
-            string accountEmail = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
+            string accountEmail = HttpContext.GetLoggedInAccount().Email!;
 
             ServiceResult result = await calendarService.CreateCalendarAsync(accountEmail, tempCalendar, HttpContext.RequestAborted);
 
@@ -64,7 +64,7 @@ public class CalendarController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to create calendar for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
+            logger.LogError(ex, "Failed to create calendar for account {AccountEmail}", HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -85,7 +85,7 @@ public class CalendarController(
 
             calendarEventInputViewModel.Description ??= "";
 
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
             if (loggedInAccount.Role is not (Role.Admin or Role.User))
                 return Json(new { result = false, error = localizer["Please Login to create calendar event"].Value });
@@ -102,7 +102,7 @@ public class CalendarController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to create calendar event for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
+            logger.LogError(ex, "Failed to create calendar event for account {AccountEmail}", HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -123,7 +123,7 @@ public class CalendarController(
             return Ok(new { result = false, errorMessage = localizer["Please attach a file."].Value });
 
         // A refused upload is a security event: record who sent what (the attachment service logs its own refusals).
-        AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+        AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
         string uploaderEmail = loggedInAccount.Email!;
         if (summernoteImageFile.Length <= 0 || summernoteImageFile.Length > serverSettings.Value.MaxAttachedFileSizeBytes)
         {
@@ -172,7 +172,7 @@ public class CalendarController(
     [HttpGet]
     public async Task<IActionResult> AdminIndex()
     {
-        AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+        AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
         string userTimezone = loggedInAccount.TimeZoneIanaId ?? "UTC";
 
         List<CalendarResponse> calendars = await calendarService.GetCalendarsAsync(loggedInAccount.Email!, HttpContext.RequestAborted);
@@ -204,7 +204,7 @@ public class CalendarController(
     [HttpGet]
     public async Task<IActionResult> UserIndex()
     {
-        AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+        AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
         string userTimezone = loggedInAccount.TimeZoneIanaId ?? "UTC";
 
         List<CalendarResponse> calendars = await calendarService.GetCalendarsAsync(loggedInAccount.Email!, HttpContext.RequestAborted);
@@ -265,7 +265,7 @@ public class CalendarController(
         try
         {
             var tempCalendars =
-                await calendarService.GetCalendarsAsync(((AccountResponse)ViewBag.LoggedInAccount).Email!,
+                await calendarService.GetCalendarsAsync(HttpContext.GetLoggedInAccount().Email!,
                     HttpContext.RequestAborted);
 
             if (tempCalendars.Count == 0)
@@ -295,13 +295,13 @@ public class CalendarController(
     {
         try
         {
-            List<CalendarResponse> calendars = await calendarService.GetCalendarsAsync(((AccountResponse)ViewBag.LoggedInAccount).Email!, HttpContext.RequestAborted);
+            List<CalendarResponse> calendars = await calendarService.GetCalendarsAsync(HttpContext.GetLoggedInAccount().Email!, HttpContext.RequestAborted);
 
             return Json(new { result = true, calendars });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get calendars for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
+            logger.LogError(ex, "Failed to get calendars for account {AccountEmail}", HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -316,9 +316,9 @@ public class CalendarController(
         try
         {
             // GetVisibleOtherCalendarsAsync treats a null account as anonymous (returns the calendars
-            // shared with anonymous visitors); ViewBag.LoggedInAccount is never null itself, so an
+            // shared with anonymous visitors); HttpContext.GetLoggedInAccount() never returns null, so an
             // actually-anonymous viewer is identified by Role instead and null is passed through explicitly.
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
             List<CalendarResponse> tempOtherCalendars = await calendarService.GetVisibleOtherCalendarsAsync(
                 loggedInAccount.Role == Role.Anonymous ? null : loggedInAccount, HttpContext.RequestAborted);
 
@@ -326,7 +326,7 @@ public class CalendarController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get other calendars for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
+            logger.LogError(ex, "Failed to get other calendars for account {AccountEmail}", HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -340,7 +340,7 @@ public class CalendarController(
     {
         try
         {
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
             List<CalendarResponse> calendars = await calendarService.GetCalendarsAsync(loggedInAccount.Email!, HttpContext.RequestAborted);
 
             CalendarEventOutputViewModel? calendarEvent = await calendarService.GetCalendarEventDetailViewModelAsync(
@@ -367,9 +367,9 @@ public class CalendarController(
     {
         try
         {
-            // GetVisibleOtherCalendarsAsync treats a null account as anonymous; ViewBag.LoggedInAccount
-            // is never null itself, so an actually-anonymous viewer is identified by Role instead.
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            // GetVisibleOtherCalendarsAsync treats a null account as anonymous; HttpContext.GetLoggedInAccount()
+            // never returns null, so an actually-anonymous viewer is identified by Role instead.
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
             AccountResponse? sessionAccount = loggedInAccount.Role == Role.Anonymous ? null : loggedInAccount;
             List<CalendarResponse> calendars =
                 await calendarService.GetVisibleOtherCalendarsAsync(sessionAccount, HttpContext.RequestAborted);
@@ -402,8 +402,8 @@ public class CalendarController(
     {
         try
         {
-            // ViewBag.LoggedInAccount is never null itself, so an actually-anonymous viewer is identified by Role.
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            // HttpContext.GetLoggedInAccount() never returns null, so an actually-anonymous viewer is identified by Role.
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
             AccountResponse? viewer = loggedInAccount.Role == Role.Anonymous ? null : loggedInAccount;
             (ServiceResult result, AttachmentDownload? file) = await calendarService.OpenCalendarEventAttachedFileAsync(
                 calendarEventId, viewer, HttpContext.RequestAborted);
@@ -433,9 +433,9 @@ public class CalendarController(
             if (!ModelState.IsValid)
                 return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
-            // GetVisibleOtherCalendarsAsync treats a null account as anonymous; ViewBag.LoggedInAccount
-            // is never null itself, so an actually-anonymous viewer is identified by Role instead.
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            // GetVisibleOtherCalendarsAsync treats a null account as anonymous; HttpContext.GetLoggedInAccount()
+            // never returns null, so an actually-anonymous viewer is identified by Role instead.
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
             AccountResponse? sessionAccount = loggedInAccount.Role == Role.Anonymous ? null : loggedInAccount;
             List<CalendarResponse> ownedCalendars = sessionAccount != null
                 ? await calendarService.GetCalendarsAsync(sessionAccount.Email!, HttpContext.RequestAborted)
@@ -480,7 +480,7 @@ public class CalendarController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get calendar events for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
+            logger.LogError(ex, "Failed to get calendar events for account {AccountEmail}", HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -494,13 +494,13 @@ public class CalendarController(
         try
         {
             List<CalendarSharedSummaryResponse> setCalendarShareds =
-                await calendarService.GetCalendarSharedSummariesAsync(((AccountResponse)ViewBag.LoggedInAccount).Email!, HttpContext.RequestAborted);
+                await calendarService.GetCalendarSharedSummariesAsync(HttpContext.GetLoggedInAccount().Email!, HttpContext.RequestAborted);
 
             return Json(new { result = true, setCalendarShareds });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get calendar shareds for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
+            logger.LogError(ex, "Failed to get calendar shareds for account {AccountEmail}", HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -514,13 +514,13 @@ public class CalendarController(
         try
         {
             List<CalendarBrowseSummaryResponse> browseCalendarsOfInterests =
-                await calendarService.GetBrowseCalendarsOfInterestAsync(((AccountResponse)ViewBag.LoggedInAccount).Email!, HttpContext.RequestAborted);
+                await calendarService.GetBrowseCalendarsOfInterestAsync(HttpContext.GetLoggedInAccount().Email!, HttpContext.RequestAborted);
 
             return Json(new { result = true, browseCalendarsOfInterests });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get browse calendars of interest for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
+            logger.LogError(ex, "Failed to get browse calendars of interest for account {AccountEmail}", HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -544,7 +544,7 @@ public class CalendarController(
             }
 
             CalendarRequest calendarRequest = calendarInputViewModel.Calendars.FirstOrDefault() ?? new CalendarRequest();
-            string accountEmail = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
+            string accountEmail = HttpContext.GetLoggedInAccount().Email!;
 
             ServiceResult updateResult = await calendarService.UpdateCalendarAsync(accountEmail, calendarRequest, HttpContext.RequestAborted);
 
@@ -552,7 +552,7 @@ public class CalendarController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to update calendar for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
+            logger.LogError(ex, "Failed to update calendar for account {AccountEmail}", HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -573,7 +573,7 @@ public class CalendarController(
 
             calendarEventInputViewModel.Description ??= "";
 
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
             if (loggedInAccount.Role is not (Role.Admin or Role.User))
                 return Json(new { result = false, error = localizer["Please Login to update calendar event"].Value });
@@ -590,7 +590,7 @@ public class CalendarController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to update calendar event for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
+            logger.LogError(ex, "Failed to update calendar event for account {AccountEmail}", HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -610,13 +610,13 @@ public class CalendarController(
                 return Json(new { result = false, error = localizer["Input is invalid"].Value });
             }
 
-            ServiceResult sharedResult = await calendarService.UpdateCalendarSharedAsync(((AccountResponse)ViewBag.LoggedInAccount).Email!, calendarShareds, HttpContext.RequestAborted);
+            ServiceResult sharedResult = await calendarService.UpdateCalendarSharedAsync(HttpContext.GetLoggedInAccount().Email!, calendarShareds, HttpContext.RequestAborted);
 
             return !sharedResult.Success ? Json(new { result = false, error = localizer[sharedResult.ErrorKey, sharedResult.ErrorArgs].ToPlainString() }) : Json(new { result = true, message = localizer["The calendar shared has been successfully updated."].Value });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to update calendar shared records for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
+            logger.LogError(ex, "Failed to update calendar shared records for account {AccountEmail}", HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -633,7 +633,7 @@ public class CalendarController(
         {
             if (ModelState.IsValid)
             {
-                AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+                AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
                 if (loggedInAccount.Role is not (Role.Admin or Role.User))
                     return Json(new { result = false, error = localizer["Login required."].Value });
@@ -650,7 +650,7 @@ public class CalendarController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to update other calendar for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
+            logger.LogError(ex, "Failed to update other calendar for account {AccountEmail}", HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -669,7 +669,7 @@ public class CalendarController(
         try
         {
             CalendarRequest tempCalendar = calendarInputViewModel.Calendars.FirstOrDefault() ?? new CalendarRequest();
-            string accountEmail = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
+            string accountEmail = HttpContext.GetLoggedInAccount().Email!;
 
             ServiceResult deleteCalendarResult = await calendarService.DeleteCalendarAsync(accountEmail, tempCalendar, HttpContext.RequestAborted);
 
@@ -677,7 +677,7 @@ public class CalendarController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to delete calendar for account {AccountEmail}", ((AccountResponse)ViewBag.LoggedInAccount).Email);
+            logger.LogError(ex, "Failed to delete calendar for account {AccountEmail}", HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -691,7 +691,7 @@ public class CalendarController(
     {
         try
         {
-            string email = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
+            string email = HttpContext.GetLoggedInAccount().Email!;
 
             ServiceResult deleteEventResult = await calendarService.DeleteCalendarEventAsync(id, email, HttpContext.RequestAborted);
 

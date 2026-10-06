@@ -1,7 +1,7 @@
 ﻿@*
     Shared/_Layout.cshtml
     Main AdminLTE shell layout used by all authenticated and anonymous views (except Account/Exception pages).
-    Resolves the logged-in account from ViewBag and selects the correct role-specific static-asset bundle
+    Resolves the logged-in account (Context.GetLoggedInAccount()) and selects the correct role-specific static-asset bundle
     (admin / user / anonymous) for CSS and JavaScript references.
     Renders: top bar, left sidebar, page body (via @RenderBody()), control sidebar, and footer partials.
     All inline comments mark individual third-party library inclusions and section injection points.
@@ -9,13 +9,7 @@
 
 @{
     string returnUri = ViewBag.ReturnUri as string ?? "/";
-    var loggedInAccount = ViewBag.LoggedInAccount as AccountResponse ?? new AccountResponse
-    {
-        Nickname = Localizer["Login"].Value,
-        Role = Role.Anonymous,
-        TimeZoneIanaId = "UTC",
-        AvatarImagePath = "/anonymous/images/bg1.jpg"
-    };
+    AccountResponse loggedInAccount = Context.GetLoggedInAccount();
 }
 
 <!DOCTYPE html>

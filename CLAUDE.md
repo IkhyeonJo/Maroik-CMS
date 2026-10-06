@@ -42,6 +42,9 @@ Deployment and schema
   repo-wide comment / style passes; touch it only when the schema mapping itself changes.
 
 Operations and hosting
+- Maroik only ever runs under docker-compose on Linux (Ubuntu). Behaviour that differs only on a Windows dev box
+  (path separators, a test that fails only there such as `CertificateManagerTests`) is an environment
+  difference, not a defect.
 - The containers run as root (no `USER` in the Dockerfiles).
 - `AllowedHosts` is `*`. The `amqp://guest:guest@localhost` fallbacks (`Program.cs`, `WorkerHost`) are never
   used in a deployment (the env files always set the connection string).
@@ -91,7 +94,20 @@ Accounts
   "O'Brien"): nicknames are always output encoded, so those two are not an injection vector. An
   administrator may create an account under a reserved nickname; self-registration may not.
 - IP-based rate limiting is done at Cloudflare. Do not add `AddRateLimiter` or IP-keyed throttling in
-  the app (behind Cloudflare, `RemoteIpAddress` is an edge address shared by every visitor).
+  the app (behind Cloudflare, `RemoteIpAddress` is an edge address shared by every visitor). Login BCrypt CPU
+  cost and registration / reset mail volume are infrastructure concerns in the same way.
+- The public demo account has no server-side write protection: anyone can change its password, lock it or post
+  as it. Anyone can also lock any account with `MaxLoginAttempt` wrong guesses. Both are accepted.
+
+Data access and transactions
+- Every service write spells out its own `BeginAsync` / `CommitAsync` / `RollbackAsync` (and the service tests
+  assert them). Do not fold them into a decorator, filter or "unit of work per request" helper.
+- Several rows are locked in one statement, `... ORDER BY <column> FOR UPDATE` without `LIMIT` (e.g. the asset
+  balance lock). This is a proven fix for a lost-update bug; do not report it as a deadlock-ordering risk.
+  (`LIMIT` combined with `ORDER BY ... FOR UPDATE` would be a different, documented caveat.)
+- Posts and comments are owned by `Nickname`, not by email: a nickname is unique and never changes after
+  registration (only an unconfirmed account's can, via `ReplaceUnconfirmedRegistration`), and accounts are
+  only soft-deleted.
 
 Finance
 - An asset's currency label can be edited at any time (e.g. "원" → "KRW"). Never reject a currency
@@ -145,6 +161,15 @@ Client scripts
   nearly identical. Do not merge them into shared scripts; the only shared helpers are the `window`
   globals each role's `_Layout` script defines.
 
+Code and tests
+- The DDD + Clean Architecture layering is deliberate preparation for growth, not over-engineering.
+- Long rationale comments are wanted; do not trim them in a review.
+- Service tests mock the repositories, and the Service layer's mutation score sits below the Domain's on purpose:
+  the business rules live in Domain (with its own tests), and real-database coverage comes from the Repository
+  and Website integration tests.
+- A service reachable only on the internal Docker network gets no app-level authentication (API keys, shared
+  secrets, JWT) and no `IsDevelopment()` gating: the network boundary is its security boundary.
+
 Error handling
 - Controller actions keep their per-action `catch` blocks and return HTTP 200 with
   `{ result, error }`; exceptions are logged on the server. A genuine input-validation failure shows its
@@ -153,6 +178,8 @@ Error handling
 
 ## Reviewing this repo
 
+- **Read "Intended design" above before starting any review**, and check every candidate finding against it
+  before reporting.
 - Items listed under "Intended design" above stay closed; re-raise one only if its premise changes (for example
   `Maroik.FileStorage` becomes reachable from outside the internal network).
 

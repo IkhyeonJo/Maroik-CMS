@@ -250,6 +250,7 @@ export function loadSite(
     const moment: any = (_d?: unknown) => ({
         format: () => "2024-01-01",
         add: () => moment(),
+        subtract: () => moment(),
     });
     moment.utc = (_d?: unknown) => moment();
     win.moment = moment;
