@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Domain.Account;
+using Maroik.Website.Constants;
+using Maroik.Website.Extensions;
 using Maroik.Website.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -14,7 +16,7 @@ namespace Maroik.Website.Tests.Controllers;
 /// The write actions re-check the role of the (DB-fresh) account the request runs as, and refuse one that is neither
 /// Admin nor User. The authorization filter and the database's own CHECK constraint make such an account impossible
 /// over plain HTTP, so a test-only action filter — placed after the site's own filters, and only for requests that
-/// carry <c>X-Test-Ghost</c> — swaps the account on the controller's ViewBag for one with an unknown role.
+/// carry <c>X-Test-Ghost</c> — swaps the request's logged-in account (<c>HttpContext.Items</c>) for one with an unknown role.
 /// </summary>
 [Collection("Website Integration")]
 public class RoleMismatchContractTests(MaroikWebApplicationFactory factory)
@@ -22,19 +24,18 @@ public class RoleMismatchContractTests(MaroikWebApplicationFactory factory)
     /// <summary>Test-only action filter that swaps the signed-in account for one with an unknown role on request.</summary>
     private sealed class GhostRoleFilter : IAsyncActionFilter
     {
-        /// <summary>Replaces the logged-in account on the ViewBag with an unknown-role copy when the request carries <c>X-Test-Ghost</c>; otherwise just continues.</summary>
+        /// <summary>Replaces the request's logged-in account with an unknown-role copy when the request carries <c>X-Test-Ghost</c>; otherwise just continues.</summary>
         public Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            if (!context.HttpContext.Request.Headers.ContainsKey("X-Test-Ghost") || context.Controller is not Controller controller)
+            if (!context.HttpContext.Request.Headers.ContainsKey("X-Test-Ghost"))
             {
                 return next();
             }
-            object? current = controller.ViewBag.LoggedInAccount;
-            if (current is AccountResponse account)
-                controller.ViewBag.LoggedInAccount = new AccountResponse
-                {
-                    Email = account.Email, Nickname = account.Nickname, TimeZoneIanaId = account.TimeZoneIanaId, Role = "Ghost",
-                };
+            AccountResponse account = context.HttpContext.GetLoggedInAccount();
+            context.HttpContext.Items[HttpContextItemKeys.LoggedInAccount] = new AccountResponse
+            {
+                Email = account.Email, Nickname = account.Nickname, TimeZoneIanaId = account.TimeZoneIanaId, Role = "Ghost",
+            };
             return next();
         }
     }

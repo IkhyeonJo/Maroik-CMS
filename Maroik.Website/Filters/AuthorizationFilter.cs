@@ -241,8 +241,8 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
                 return;
             }
 
-            // Hand the freshly re-validated account to ViewBagPopulatorFilter (runs next in the
-            // pipeline) so it doesn't re-query the same row on every authenticated request.
+            // The one place the signed-in account is loaded per request: ViewBagPopulatorFilter (runs next
+            // in the pipeline) and, through HttpContext.GetLoggedInAccount(), every action read this copy.
             context.HttpContext.Items[HttpContextItemKeys.LoggedInAccount] = loggedInAccount;
         }
 

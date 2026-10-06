@@ -54,9 +54,9 @@ public class ManagementController(
 {
     /// <summary>
     /// E-mail of the signed-in administrator, passed to the admin write use cases so their audit log
-    /// records who made the change (ViewBag.LoggedInAccount is set by ViewBagPopulatorFilter).
+    /// records who made the change (resolved by ViewBagPopulatorFilter).
     /// </summary>
-    private string AdminEmail => ((AccountResponse)ViewBag.LoggedInAccount).Email!;
+    private string AdminEmail => HttpContext.GetLoggedInAccount().Email!;
 
     #region Profile
 
@@ -66,7 +66,7 @@ public class ManagementController(
     [HttpGet]
     public async Task<IActionResult> Profile()
     {
-        AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+        AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
         string? loggedInAccountTimeZoneIanaId = loggedInAccount.TimeZoneIanaId;
         AccountResponse? tempAccount = await profileService.GetProfileAsync(loggedInAccount.Email!, HttpContext.RequestAborted);
 
@@ -116,7 +116,7 @@ public class ManagementController(
             imageBytes = ms.ToArray();
         }
 
-        string? email = ((AccountResponse)ViewBag.LoggedInAccount).Email;
+        string? email = HttpContext.GetLoggedInAccount().Email;
 
         ServiceResult avatarResult = await profileService.UploadAndUpdateAvatarAsync(email!, imageBytes, extension, HttpContext.RequestAborted);
 
@@ -156,7 +156,7 @@ public class ManagementController(
             return RedirectToAction("Profile", "Management");
         }
 
-        string? email = ((AccountResponse)ViewBag.LoggedInAccount).Email;
+        string? email = HttpContext.GetLoggedInAccount().Email;
         try
         {
             await profileService.UpdateTimeZoneAsync(email!, profileInputViewModel.TimeZoneIanaId!, HttpContext.RequestAborted);
@@ -192,7 +192,7 @@ public class ManagementController(
         if (!ModelState.IsValid)
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
-        string? email = ((AccountResponse)ViewBag.LoggedInAccount).Email;
+        string? email = HttpContext.GetLoggedInAccount().Email;
         try
         {
             ServiceResult result = await profileService.UpdatePasswordAsync(
@@ -297,7 +297,7 @@ public class ManagementController(
             return View();
         }
 
-        string tz = ((AccountResponse)ViewBag.LoggedInAccount).TimeZoneIanaId!;
+        string tz = HttpContext.GetLoggedInAccount().TimeZoneIanaId!;
         var accounts = string.IsNullOrEmpty(wholeSearch)
             ? await managementAccountService.GetAllAccountsAsync(HttpContext.RequestAborted)
             : await managementAccountService.SearchAccountsAsync(wholeSearch, HttpContext.RequestAborted);
@@ -422,7 +422,7 @@ public class ManagementController(
     [RequiredHttpPostAccess(Role = Role.Admin)]
     public async Task<IActionResult> ExportExcelAccount(string fileName = "")
     {
-        AccountResponse account = ViewBag.LoggedInAccount;
+        AccountResponse account = HttpContext.GetLoggedInAccount();
         var accounts = await managementAccountService.GetAllAccountsAsync(HttpContext.RequestAborted);
         var stream = excelExportService.CreateAccountExcel(accounts, key => localizer[key].Value, account.TimeZoneIanaId!);
         string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, timeProvider.GetUtcNow().UtcDateTime);
@@ -797,7 +797,7 @@ public class ManagementController(
     [RequiredHttpPostAccess(Role = Role.Admin)]
     public async Task<IActionResult> ExportExcelMenu(string fileName = "")
     {
-        AccountResponse account = ViewBag.LoggedInAccount;
+        AccountResponse account = HttpContext.GetLoggedInAccount();
         var categories = await menuService.GetAllCategoriesAsync(HttpContext.RequestAborted);
         var subCats = await menuService.GetAllSubCategoriesAsync(HttpContext.RequestAborted);
         var stream = excelExportService.CreateMenuExcel(categories, subCats, key => localizer[key].Value);
@@ -834,7 +834,7 @@ public class ManagementController(
             // The DB-fresh, re-validated account ViewBagPopulatorFilter already loaded for this
             // request (via HttpContext.Items) — reuse it instead of re-reading the login-time
             // session snapshot, so a mid-session role change takes effect here immediately.
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
             if (loggedInAccount.Role is not (Role.Admin or Role.User))
                 return Json(new { result = false, error = localizer["Please Login to write board"].Value });
@@ -882,7 +882,7 @@ public class ManagementController(
                 return Json(new { result = false, error = localizer["Please enter a comment."].Value });
 
             // DB-fresh account already loaded by ViewBagPopulatorFilter for this request (see WritePrivateNoteBoard).
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
             if (loggedInAccount.Role is not (Role.Admin or Role.User))
                 return Json(new { result = false, error = localizer["Please Login to write comment."].Value });
 
@@ -925,7 +925,7 @@ public class ManagementController(
             return Ok(new { result = false, errorMessage = localizer["Please attach a file."].Value });
 
         // A refused upload is a security event: record who sent what (the attachment service logs its own refusals).
-        string uploaderEmail = ((AccountResponse)ViewBag.LoggedInAccount).Email!;
+        string uploaderEmail = HttpContext.GetLoggedInAccount().Email!;
         if (summernoteImageFile.Length <= 0 || summernoteImageFile.Length > serverSettings.Value.MaxAttachedFileSizeBytes)
         {
             logger.LogWarning("Editor image upload refused: size {Size} bytes is outside the {MaxBytes}-byte limit for {Email}",
@@ -978,7 +978,7 @@ public class ManagementController(
             // Write
             case "write":
             {
-                AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+                AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
                 // The view picks the role's page script (the editor) from LoggedInAccount.
                 PrivateNoteOutputViewModel privateNoteOutputViewModel = new()
                 {
@@ -992,10 +992,10 @@ public class ManagementController(
             // Detail view
             case "detail":
             {
-                // ViewBag.LoggedInAccount is re-fetched from the database by ViewBagPopulatorFilter
+                // The account from HttpContext.GetLoggedInAccount() is re-fetched from the database by ViewBagPopulatorFilter
                 // on every request (not the session-cached snapshot), so a mid-session Role change
                 // (e.g. an admin demotion) is reflected immediately in the CanView check below.
-                AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+                AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
                 if (boardId == null)
                 {
@@ -1077,9 +1077,9 @@ public class ManagementController(
                     EditBoardId = (int)boardId
                 };
 
-                // ViewBag.LoggedInAccount is re-fetched from the database by ViewBagPopulatorFilter
+                // The account from HttpContext.GetLoggedInAccount() is re-fetched from the database by ViewBagPopulatorFilter
                 // on every request (not the session-cached snapshot) — see the "detail" case above.
-                AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+                AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
                 try
                 {
@@ -1121,9 +1121,9 @@ public class ManagementController(
             // List
             default:
             {
-                // ViewBag.LoggedInAccount is re-fetched from the database by ViewBagPopulatorFilter
+                // The account from HttpContext.GetLoggedInAccount() is re-fetched from the database by ViewBagPopulatorFilter
                 // on every request (not the session-cached snapshot) — see the "detail" case above.
-                AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+                AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
                 #region Board default paging logic
 
@@ -1224,7 +1224,7 @@ public class ManagementController(
         try
         {
             // Re-fetched from the database by ViewBagPopulatorFilter on every request.
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
             (ServiceResult result, AttachmentDownload? file) = await boardService.OpenAttachedFileAsync(
                 boardId, BoardTypes.PrivateNote, loggedInAccount, HttpContext.RequestAborted);
             if (!result.Success)
@@ -1255,7 +1255,7 @@ public class ManagementController(
     {
         try
         {
-            string? nickname = ((AccountResponse)ViewBag.LoggedInAccount).Nickname;
+            string? nickname = HttpContext.GetLoggedInAccount().Nickname;
             BoardResponse? board = await boardService.GetBoardByIdAsync(id, BoardTypes.PrivateNote, HttpContext.RequestAborted);
 
             return board == null || board.Deleted || board.Writer != nickname
@@ -1292,7 +1292,7 @@ public class ManagementController(
             boardInputViewModel.Content ??= "";
 
             // DB-fresh account already loaded by ViewBagPopulatorFilter for this request (see WritePrivateNoteBoard).
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
             if (loggedInAccount.Role is not (Role.Admin or Role.User))
                 return Json(new { result = false, error = localizer["Please Login to edit board"].Value });
 
@@ -1335,9 +1335,9 @@ public class ManagementController(
     {
         try
         {
-            // ViewBag.LoggedInAccount is re-fetched from the database by ViewBagPopulatorFilter
+            // The account from HttpContext.GetLoggedInAccount() is re-fetched from the database by ViewBagPopulatorFilter
             // on every request (not the session-cached snapshot) — see the "detail" case above.
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
             // Private notes are single-owner: unlike the free forum, an admin may not delete
             // another account's private note board.
@@ -1372,9 +1372,9 @@ public class ManagementController(
     {
         try
         {
-            // ViewBag.LoggedInAccount is re-fetched from the database by ViewBagPopulatorFilter
+            // The account from HttpContext.GetLoggedInAccount() is re-fetched from the database by ViewBagPopulatorFilter
             // on every request (not the session-cached snapshot) — see the "detail" case above.
-            AccountResponse loggedInAccount = ViewBag.LoggedInAccount;
+            AccountResponse loggedInAccount = HttpContext.GetLoggedInAccount();
 
             ServiceResult result = await boardService.DeleteCommentAsync(
                 id,

@@ -2,7 +2,7 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Settings;
 using Maroik.Core.Domain.Account;
-using Maroik.Website.Contracts;
+using Maroik.Website.Extensions;
 using Maroik.Website.Filters;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
@@ -23,14 +23,10 @@ namespace Maroik.Website.Tests.Filters;
 /// </summary>
 public class ViewBagPopulatorFilterTests
 {
-    /// <summary>Mock <c>IAccountService</c> injected into the system under test.</summary>
-    private readonly Mock<IAccountService> _accountService = new();
     /// <summary>Mock <c>IDashboardService</c> injected into the system under test.</summary>
     private readonly Mock<IDashboardService> _dashboardService = new();
     /// <summary>Mock <c>ITimeZoneCatalogService</c> injected into the system under test.</summary>
     private readonly Mock<ITimeZoneCatalogService> _timeZoneCatalogService = new();
-    /// <summary>Mock <c>ISessionService</c> injected into the system under test.</summary>
-    private readonly Mock<ISessionService> _sessionService = new();
     /// <summary>Settings whose values the filter copies to the ViewBag.</summary>
     private readonly IOptions<ServerSetting> _serverSettings = Options.Create(new ServerSetting
     {
@@ -44,7 +40,14 @@ public class ViewBagPopulatorFilterTests
 
     /// <summary>The filter under test over the mocked dependencies.</summary>
     private ViewBagPopulatorFilter CreateSut() =>
-        new(_accountService.Object, _dashboardService.Object, _timeZoneCatalogService.Object, _serverSettings, _sessionService.Object, _timeProvider);
+        new(_dashboardService.Object, _timeZoneCatalogService.Object, _serverSettings, _timeProvider);
+
+    /// <summary>
+    /// Signs <paramref name="account"/> in for this request the way production does: AuthorizationFilter,
+    /// which runs first, stashes the DB-re-validated account on <c>HttpContext.Items</c>.
+    /// </summary>
+    private static void SignIn(ActionExecutingContext context, AccountResponse account) =>
+        context.HttpContext.Items[Constants.HttpContextItemKeys.LoggedInAccount] = account;
 
     /// <summary>An action context for a request to <paramref name="path"/>, optionally with a culture and route names.</summary>
     private static (ActionExecutingContext context, Controller controller) BuildContext(
@@ -105,6 +108,15 @@ public class ViewBagPopulatorFilterTests
             [],
             null!));
 
+    /// <summary>A signed-in User account whose notice counts the dashboard mock answers with 2/3/1/4.</summary>
+    private AccountResponse SignedInUserWithNotices()
+    {
+        _dashboardService
+            .Setup(d => d.GetNoticeCountsAsync("user@test.com", 7, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NotificationDto { FixedIncomesNoticed = 2, FixedExpendituresNoticed = 3, FixedIncomesExpired = 1, FixedExpendituresExpired = 4 });
+        return new AccountResponse { Email = "user@test.com", Role = Role.User };
+    }
+
     // -- ServerSettings -------------------------------------------------------
 
     /// <summary>An action on something that is not an MVC <c>Controller</c> (so it has no ViewBag) is passed straight through untouched.</summary>
@@ -122,14 +134,13 @@ public class ViewBagPopulatorFilterTests
         });
 
         Assert.True(ran);
-        _sessionService.Verify(s => s.GetAccount(), Times.Never);
+        Assert.False(context.HttpContext.Items.ContainsKey(Constants.HttpContextItemKeys.LoggedInAccount));
     }
 
     /// <summary>Verifies that <c>ViewBag.DomainName</c> is populated from server settings.</summary>
     [Fact]
     public async Task OnActionExecutionAsync_SetsDomainName_FromServerSettings()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
         var (context, controller) = BuildContext();
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
@@ -141,7 +152,6 @@ public class ViewBagPopulatorFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_SetsMaxAttachedFileSizeBytes_FromServerSettings()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
         var (context, controller) = BuildContext();
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
@@ -149,26 +159,27 @@ public class ViewBagPopulatorFilterTests
         Assert.Equal(10_485_760L, controller.ViewBag.MaxAttachedFileSizeBytes);
     }
 
-    // -- Anonymous session (no session account) --------------------------------
+    // -- Anonymous (nothing stashed by AuthorizationFilter) ----------------------
 
-    /// <summary>Verifies that <c>ViewBag.LoggedInAccount</c> defaults to anonymous when no session exists.</summary>
+    /// <summary>Without a signed-in account the request runs as the anonymous placeholder (<c>HttpContext.GetLoggedInAccount()</c>).</summary>
     [Fact]
-    public async Task OnActionExecutionAsync_SetsAnonymousAccount_WhenNoSession()
+    public async Task OnActionExecutionAsync_SetsAnonymousAccount_WhenNoOneIsSignedIn()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
-        var (context, controller) = BuildContext();
+        var (context, _) = BuildContext();
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
 
-        AccountResponse account = controller.ViewBag.LoggedInAccount;
+        AccountResponse account = context.HttpContext.GetLoggedInAccount();
         Assert.Equal(Role.Anonymous, account.Role);
+        Assert.Equal("Login", account.Nickname);
+        Assert.Equal("UTC", account.TimeZoneIanaId);
+        Assert.Equal("/anonymous/images/bg1.jpg", account.AvatarImagePath);
     }
 
-    /// <summary>Verifies that notice counts are zero when no session exists.</summary>
+    /// <summary>Notice counts are zero, and none are queried, when no one is signed in.</summary>
     [Fact]
-    public async Task OnActionExecutionAsync_SetsZeroNoticeCounts_WhenNoSession()
+    public async Task OnActionExecutionAsync_SetsZeroNoticeCounts_WhenNoOneIsSignedIn()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
         var (context, controller) = BuildContext();
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
@@ -177,32 +188,30 @@ public class ViewBagPopulatorFilterTests
         Assert.Equal(0, controller.ViewBag.FixedExpenditureNoticedCount);
         Assert.Equal(0, controller.ViewBag.FixedIncomesExpiredCount);
         Assert.Equal(0, controller.ViewBag.FixedExpenditureExpiredCount);
+        _dashboardService.Verify(
+            d => d.GetNoticeCountsAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
-    // -- Logged-in User session ------------------------------------------------
+    // -- Signed-in account --------------------------------------------------------
 
-    /// <summary>Verifies that <c>ViewBag.LoggedInAccount</c> is populated from the account service when session exists.</summary>
+    /// <summary>
+    /// The account AuthorizationFilter stashed (re-validated from the database) is the one the request runs
+    /// as — the same instance, not a copy or a re-query.
+    /// </summary>
     [Fact]
-    public async Task OnActionExecutionAsync_SetsLoggedInAccount_WhenSessionExists()
+    public async Task OnActionExecutionAsync_KeepsTheAccountAuthorizationFilterStashed()
     {
-        var sessionAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        var dbAccount = new AccountResponse { Email = "user@test.com", Nickname = "TestUser", Role = Role.User };
-
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
-        _accountService
-            .Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(dbAccount);
+        var stashedAccount = new AccountResponse { Email = "user@test.com", Nickname = "FromAuthFilter", Role = Role.User };
         _dashboardService
             .Setup(d => d.GetNoticeCountsAsync("user@test.com", 7, It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new NotificationDto { FixedIncomesNoticed = 2, FixedExpendituresNoticed = 3, FixedIncomesExpired = 1, FixedExpendituresExpired = 4 });
-
-        var (context, controller) = BuildContext();
+            .ReturnsAsync(new NotificationDto());
+        var (context, _) = BuildContext();
+        SignIn(context, stashedAccount);
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
 
-        AccountResponse account = controller.ViewBag.LoggedInAccount;
-        Assert.Equal("TestUser", account.Nickname);
-        Assert.Equal(Role.User, account.Role);
+        Assert.Same(stashedAccount, context.HttpContext.GetLoggedInAccount());
     }
 
     /// <summary>
@@ -213,60 +222,23 @@ public class ViewBagPopulatorFilterTests
     public async Task OnActionExecutionAsync_SetsCopyrightYear_FromTheClockInTheViewersTimeZone()
     {
         var account = new AccountResponse { Email = "user@test.com", Role = Role.User, TimeZoneIanaId = "Asia/Seoul" };
-        _sessionService.Setup(s => s.GetAccount()).Returns(account);
         _dashboardService
             .Setup(d => d.GetNoticeCountsAsync("user@test.com", 7, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new NotificationDto());
         var (context, controller) = BuildContext();
-        context.HttpContext.Items[Constants.HttpContextItemKeys.LoggedInAccount] = account;
+        SignIn(context, account);
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
 
         Assert.Equal(2042, (int)controller.ViewBag.CopyrightYear);
     }
 
-    /// <summary>
-    /// When AuthorizationFilter has already stashed the re-validated account on HttpContext.Items,
-    /// ViewBagPopulatorFilter must reuse it and NOT issue a second GetAccountByEmailAsync query.
-    /// </summary>
+    /// <summary>Verifies that notice counts are populated from the dashboard service for a signed-in user.</summary>
     [Fact]
-    public async Task OnActionExecutionAsync_ReusesStashedAccount_WithoutQueryingAgain()
+    public async Task OnActionExecutionAsync_SetsNoticeCounts_WhenUserIsSignedIn()
     {
-        var sessionAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        var stashedAccount = new AccountResponse { Email = "user@test.com", Nickname = "FromAuthFilter", Role = Role.User };
-
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
-        _dashboardService
-            .Setup(d => d.GetNoticeCountsAsync("user@test.com", 7, It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new NotificationDto());
-
         var (context, controller) = BuildContext();
-        context.HttpContext.Items[Constants.HttpContextItemKeys.LoggedInAccount] = stashedAccount;
-
-        await CreateSut().OnActionExecutionAsync(context, EmptyNext());
-
-        AccountResponse account = controller.ViewBag.LoggedInAccount;
-        Assert.Equal("FromAuthFilter", account.Nickname);
-        _accountService.Verify(
-            a => a.GetAccountByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    /// <summary>Verifies that notice counts are populated from the dashboard service for a logged-in user.</summary>
-    [Fact]
-    public async Task OnActionExecutionAsync_SetsNoticeCounts_WhenUserIsLoggedIn()
-    {
-        var sessionAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        var dbAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
-        _accountService
-            .Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(dbAccount);
-        _dashboardService
-            .Setup(d => d.GetNoticeCountsAsync("user@test.com", 7, It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new NotificationDto { FixedIncomesNoticed = 2, FixedExpendituresNoticed = 3, FixedIncomesExpired = 1, FixedExpendituresExpired = 4 });
-
-        var (context, controller) = BuildContext();
+        SignIn(context, SignedInUserWithNotices());
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
 
@@ -276,13 +248,27 @@ public class ViewBagPopulatorFilterTests
         Assert.Equal(4, controller.ViewBag.FixedExpenditureExpiredCount);
     }
 
+    /// <summary>Notice counts are a User-only feature: a signed-in Admin gets zeros and no query.</summary>
+    [Fact]
+    public async Task OnActionExecutionAsync_SetsZeroNoticeCounts_ForASignedInAdmin()
+    {
+        var (context, controller) = BuildContext();
+        SignIn(context, new AccountResponse { Email = "admin@test.com", Role = Role.Admin });
+
+        await CreateSut().OnActionExecutionAsync(context, EmptyNext());
+
+        Assert.Equal(0, controller.ViewBag.TotalNoticeCount);
+        _dashboardService.Verify(
+            d => d.GetNoticeCountsAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // -- Culture & ReturnUri --------------------------------------------------
 
     /// <summary>Verifies that <c>ViewBag.CurrentCulture</c> falls back to "en-US" when no culture feature is set.</summary>
     [Fact]
     public async Task OnActionExecutionAsync_DefaultsCultureToEnUs_WhenNoCultureFeature()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
         var (context, controller) = BuildContext();
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
@@ -294,7 +280,6 @@ public class ViewBagPopulatorFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_SetsCulture_FromRequestCultureFeature()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
         var (context, controller) = BuildContext(cultureName: "ko-KR");
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
@@ -306,7 +291,6 @@ public class ViewBagPopulatorFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_SetsReturnUri_FromRequestPath()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
         var (context, controller) = BuildContext(path: "/Forum/FreeForum");
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
@@ -322,7 +306,6 @@ public class ViewBagPopulatorFilterTests
     {
         var options = new List<TimeZoneOptionDto> { new() { IanaId = "Asia/Seoul", DisplayName = "Seoul" } };
         _timeZoneCatalogService.Setup(t => t.GetTimeZoneOptions()).Returns(options);
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
         var (context, controller) = BuildContext();
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
@@ -334,18 +317,8 @@ public class ViewBagPopulatorFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_SetsTotalNoticeCount_AsSumOfIndividualCounts()
     {
-        var sessionAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        var dbAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
-        _accountService
-            .Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(dbAccount);
-        _dashboardService
-            .Setup(d => d.GetNoticeCountsAsync("user@test.com", 7, It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new NotificationDto { FixedIncomesNoticed = 2, FixedExpendituresNoticed = 3, FixedIncomesExpired = 1, FixedExpendituresExpired = 4 });
-
         var (context, controller) = BuildContext();
+        SignIn(context, SignedInUserWithNotices());
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
 
@@ -358,18 +331,8 @@ public class ViewBagPopulatorFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_SetsPerTypeTotalNoticeCounts_AsSumOfNoticedAndExpired()
     {
-        var sessionAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        var dbAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
-        _accountService
-            .Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(dbAccount);
-        _dashboardService
-            .Setup(d => d.GetNoticeCountsAsync("user@test.com", 7, It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new NotificationDto { FixedIncomesNoticed = 2, FixedExpendituresNoticed = 3, FixedIncomesExpired = 1, FixedExpendituresExpired = 4 });
-
         var (context, controller) = BuildContext();
+        SignIn(context, SignedInUserWithNotices());
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
 
@@ -387,12 +350,8 @@ public class ViewBagPopulatorFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_PublishesNavigationMenusFromHttpContextItems_ToViewBag()
     {
-        var sessionAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        var dbAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
-        _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(dbAccount);
-
         var (context, controller) = BuildContext(controllerName: "AccountBook", actionName: "Income");
+        SignIn(context, new AccountResponse { Email = "user@test.com", Role = Role.User });
         var userCategories = new List<CategoryResponse>
         {
             new() { Id = 1, DisplayName = "AccountBook", Controller = "AccountBook", Action = "Income" }
@@ -415,12 +374,8 @@ public class ViewBagPopulatorFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_SetsActiveCategory_FromRolePublishedCategories()
     {
-        var sessionAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        var dbAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
-        _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(dbAccount);
-
         var (context, controller) = BuildContext(controllerName: "AccountBook", actionName: "Income");
+        SignIn(context, new AccountResponse { Email = "user@test.com", Role = Role.User });
         // Simulate AuthorizationFilter, which runs earlier in the pipeline, having already published these.
         controller.ViewBag.UserCategories = new List<CategoryResponse>
         {
@@ -439,12 +394,8 @@ public class ViewBagPopulatorFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_LeavesActiveCategoryUnset_WhenNoRouteMatch()
     {
-        var sessionAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        var dbAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
-        _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(dbAccount);
-
         var (context, controller) = BuildContext(controllerName: "Forum", actionName: "FreeForum");
+        SignIn(context, new AccountResponse { Email = "user@test.com", Role = Role.User });
         controller.ViewBag.UserCategories = new List<CategoryResponse>
         {
             new() { Id = 1, DisplayName = "AccountBook", Controller = "AccountBook", Action = "Income" }
@@ -460,7 +411,6 @@ public class ViewBagPopulatorFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_DoesNotThrow_WhenRoleCategoriesNotPublished()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
         var (context, controller) = BuildContext(controllerName: "Dashboard", actionName: "AnonymousIndex");
         // Deliberately do not set controller.ViewBag.AnonymousCategories/AnonymousSubCategories.
 
@@ -472,41 +422,15 @@ public class ViewBagPopulatorFilterTests
 
     // -- Resilience -----------------------------------------------------------
 
-    /// <summary>Verifies that a faulting account service does not throw — falls back to anonymous account.</summary>
-    [Fact]
-    public async Task OnActionExecutionAsync_FallsBackToAnonymous_WhenAccountServiceThrows()
-    {
-        var sessionAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
-        _accountService
-            .Setup(a => a.GetAccountByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("db down"));
-
-        var (context, controller) = BuildContext();
-
-        var ex = await Record.ExceptionAsync(() => CreateSut().OnActionExecutionAsync(context, EmptyNext()));
-
-        Assert.Null(ex);
-        AccountResponse account = controller.ViewBag.LoggedInAccount;
-        Assert.Equal(Role.Anonymous, account.Role);
-    }
-
     /// <summary>Verifies that a faulting dashboard service does not throw — notice counts stay zero.</summary>
     [Fact]
     public async Task OnActionExecutionAsync_KeepsZeroNoticeCounts_WhenDashboardServiceThrows()
     {
-        var sessionAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-        var dbAccount = new AccountResponse { Email = "user@test.com", Role = Role.User };
-
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
-        _accountService
-            .Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(dbAccount);
         _dashboardService
             .Setup(d => d.GetNoticeCountsAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("db down"));
-
         var (context, controller) = BuildContext();
+        SignIn(context, new AccountResponse { Email = "user@test.com", Role = Role.User });
 
         var ex = await Record.ExceptionAsync(() => CreateSut().OnActionExecutionAsync(context, EmptyNext()));
 
