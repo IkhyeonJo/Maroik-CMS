@@ -16,8 +16,8 @@ This repository is a portfolio snapshot of Maroik. The original Maroik repositor
 - Expense tracking and categorization
 - Income recording
 - Fixed (recurring) income and expenditure with deposit-day reminders — the next deposit is found across the year end (e.g. 28 Dec → 2 Jan), and a 29 February schedule is skipped in common years
-- Amounts are kept exactly to four decimal places (`numeric(20,4)`); a fifth decimal is rejected instead of silently rounded, so an asset's balance always equals the sum of what was recorded against it
-- Financial reports and analytics
+- Amounts are kept exactly to four decimal places (`numeric(20,4)`); a fifth decimal is rejected instead of silently rounded, so no recorded amount is ever changed by rounding
+- Every income and expenditure updates its asset's balance in the same transaction, under a row lock, so concurrent records never lose an update; the balance can also be corrected by hand when editing the asset- Financial reports and analytics
 - Export to Excel — amounts as numeric cells (they sum and sort in Excel), timestamps as `yyyy-MM-dd HH:mm:ss` in the viewer's time zone
 
 ### 2. Calendar and Schedule Management
