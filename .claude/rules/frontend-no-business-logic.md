@@ -100,7 +100,8 @@ script (no `import`/`export`); keep it that way.
   with jsdom tests in `TypeScripts.Tests/`. `wwwroot/**/site.js` is now generated
   (and, since 2026-09-27, git-ignored rather than committed).
 * `site.css` (2026-10-09): the page / layout stylesheets use native nesting and custom properties (no Sass or
-  other toolchain); a before/after comparison of every element's computed style in Chromium showed no change.
+  other toolchain); a before/after comparison of every element's computed style in Chromium showed no change, and
+  `Maroik.E2E.Tests/Flows/StylesheetFlowTests` pins each rule's computed effect on the real pages.
   They are not put in `@layer`: they override third-party CSS (AdminLTE / Bootstrap / FullCalendar) that loads
   unlayered, and a layered rule loses to every unlayered one. Layering would first need the vendor sheets
   imported into a layer of their own. The ASP.NET template's `wwwroot/{area}/css/site.css` was unused and is gone.

@@ -231,6 +231,9 @@ The goal is that a test fails whenever the behaviour it describes breaks — not
 - **Client scripts run as shipped.** Vitest + jsdom run the *compiled* `site.js` together with the real layout
   script, against fixtures that carry what the real views and replies carry. Guard tests keep `any` and type
   assertions out of the TypeScript, and a compile probe proves that untyped library values are rejected.
+- **Stylesheets are checked as the browser applies them.** `StylesheetFlowTests` read the computed style of the
+  elements each of the site's own CSS rules targets on the real pages, after the AdminLTE / Bootstrap / FullCalendar
+  stylesheets they override, so a rule that is removed, outranked or no longer loaded fails a test.
 - **Quality gates.** Line coverage >= 80 %, branch coverage >= 65 %, zero build warnings, and on-demand mutation
   testing with Stryker.NET (Domain 92 %, Service 96 % — the survivors left are equivalent mutants).
 
@@ -248,7 +251,7 @@ Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Tes
 | `Maroik.FileStorage.Tests` | the file-storage service | no |
 | `Maroik.Website.Tests` | controllers, filters, views and start-up through `WebApplicationFactory` against a real PostgreSQL | yes |
 | `Maroik.Website/TypeScripts.Tests` | every client script (Vitest + jsdom), run with `npm test` in `Maroik.Website/` | no |
-| `Maroik.E2E.Tests` | the running site in a real browser (Playwright) | yes |
+| `Maroik.E2E.Tests` | the running site in a real browser (Playwright), including the computed styles of the site's own stylesheets over the vendor CSS | yes |
 
 ```bash
 dotnet build Maroik.sln -p:RunClientScriptTests=false
