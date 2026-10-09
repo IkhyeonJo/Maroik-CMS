@@ -21,7 +21,17 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, parseJson, fieldValue, selectValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, parseJson, fieldValue, selectValue, optionalFieldValue, attribute } = window;
+
+    // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
+    const amountLabelReply = check.object({ result: check.boolean, label: check.string });
+    const fixedExpenditureReply = replies.read({
+        fixedExpenditure: check.object({
+            id: check.number, mainClass: check.string, subClass: check.string, content: check.string, amount: check.number,
+            paymentMethod: check.string, myDepositAsset: check.nullable(check.string), depositMonth: check.number, depositDay: check.number,
+            maturityDate: check.string, note: check.string, unpunctuality: check.boolean,
+        }),
+    });
     // Cached references: tab containers, grid search box, the two maturity-date
     // inputs, the deposit-asset wrapper divs, every field of both modals, the
     // amount labels, and the anti-forgery input.
@@ -326,7 +336,7 @@
         });
 
         $clsGridRow.each(function() {
-            if ((String(selectedRowId).valueOf() === String($(this).attr("data-id")).valueOf())) {
+            if ((String(selectedRowId).valueOf() === String(attribute($(this), "data-id")).valueOf())) {
                 $(this).addClass(selectedRowColor);
             }
         });
@@ -348,8 +358,8 @@
     // Double-click the highlighted row to open its edit modal.
     $(document).off("dblclick.FixedExpenditure", ".clsGridRow").on("dblclick.FixedExpenditure", ".clsGridRow", function() {
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                EditFixedExpenditureGridRow();
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                EditFixedExpenditureGridRow(attribute($btnEditFixedExpenditureGridRow, "data-errorMessageSelectGridRow"));
             }
         });
     });
@@ -431,7 +441,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     $createFixedExpenditureDialogModal.modal("hide");
 
@@ -442,7 +452,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
 
         return false;
@@ -457,18 +467,18 @@
      *
      * @param errorMessageSelectGridRow localized "pick a row first" text from a `data-*` attribute.
      */
-    function EditFixedExpenditureGridRow(errorMessageSelectGridRow?: string) {
+    function EditFixedExpenditureGridRow(errorMessageSelectGridRow: string) {
 
         let selectedRowId = "";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowId = $(this).attr("data-id")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowId = attribute($(this), "data-id");
             }
         });
 
         if (selectedRowId === "") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -478,7 +488,7 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: ReadReply<FixedExpenditurePayload>) {
+            success: onReply(fixedExpenditureReply, function(data) {
                 if (data.result) {
 
                     $editFixedExpenditureId.val(data.fixedExpenditure.id);
@@ -517,7 +527,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
     }
 
@@ -563,7 +573,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     $editFixedExpenditureDialogModal.modal("hide");
 
@@ -574,24 +584,24 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
         return false;
     }
 
     /** "Delete" button: require a selected row, then just open the confirmation modal. */
-    function ConfirmDeleteFixedExpenditure(errorMessageSelectGridRow?: string) {
+    function ConfirmDeleteFixedExpenditure(errorMessageSelectGridRow: string) {
 
         let selectedRowId = "";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowId = $(this).attr("data-id")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowId = attribute($(this), "data-id");
             }
         });
 
         if (selectedRowId === "") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -605,18 +615,18 @@
     }
 
     /** Confirmed delete: re-check selection, confirm the record exists, then POST `DeleteFixedExpenditure`. */
-    function DeleteFixedExpenditure(errorMessageSelectGridRow?: string) {
+    function DeleteFixedExpenditure(errorMessageSelectGridRow: string) {
 
         let selectedRowId = "";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowId = $(this).attr("data-id")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowId = attribute($(this), "data-id");
             }
         });
 
         if (selectedRowId === "") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -626,7 +636,7 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: ReadReply<FixedExpenditurePayload>) {
+            success: onReply(fixedExpenditureReply, function(data) {
                 if (data.result) {
 
                     let paramValue = JSON.stringify({
@@ -640,7 +650,7 @@
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
-                        success: function(data: ActionReply) {
+                        success: onReply(replies.action, function(data) {
                             if (data.result) {
                                 $confirmDeleteFixedExpenditureDialogModal.modal("hide");
 
@@ -651,12 +661,12 @@
                             } else {
                                 toastr.error(data.error);
                             }
-                        }
+                        })
                     });
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
     }
 
@@ -696,13 +706,13 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: AmountLabelReply) {
+            success: onReply(amountLabelReply, function(data) {
                 if (data.result) {
                     $labelCreateFixedExpenditureAmount.text(data.label);
                 } else {
                     $labelCreateFixedExpenditureAmount.text(data.label);
                 }
-            },
+            }),
             error: function() {
                 toastr.error(failedToLoadAmountLabelMessage);
             }
@@ -717,13 +727,13 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: AmountLabelReply) {
+            success: onReply(amountLabelReply, function(data) {
                 if (data.result) {
                     $labelEditFixedExpenditureAmount.text(data.label);
                 } else {
                     $labelEditFixedExpenditureAmount.text(data.label);
                 }
-            },
+            }),
             error: function() {
                 toastr.error(failedToLoadAmountLabelMessage);
             }
@@ -732,11 +742,11 @@
 
     // --- Button / form / select wiring --------------------------------
     $btnEditFixedExpenditureGridRow.off("click").on("click", function() {
-        EditFixedExpenditureGridRow($(this).attr("data-errorMessageSelectGridRow"));
+        EditFixedExpenditureGridRow(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $btnConfirmDeleteFixedExpenditure.off("click").on("click", function() {
-        ConfirmDeleteFixedExpenditure($(this).attr("data-errorMessageSelectGridRow"));
+        ConfirmDeleteFixedExpenditure(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $btnExportExcelFixedExpenditure.off("click").on("click", function() {
@@ -744,7 +754,7 @@
     });
 
     $btnDeleteFixedExpenditure.off("click").on("click", function() {
-        DeleteFixedExpenditure($(this).attr("data-errorMessageSelectGridRow"));
+        DeleteFixedExpenditure(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $formCreateFixedExpenditure.off("submit").on("submit", function() {

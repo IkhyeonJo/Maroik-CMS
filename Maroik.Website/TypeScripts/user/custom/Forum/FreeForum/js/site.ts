@@ -19,7 +19,15 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { fieldValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, instanceOf, fieldValue, optionalFieldValue, attribute } = window;
+
+    // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
+    const doneReply = check.oneOf(check.object({ result: check.literal(true) }), replies.failed);
+    const commentWrittenReply = check.oneOf(check.object({ result: check.literal(true), boardId: check.number, page: check.number }), replies.failed);
+    const uploadImageReply = check.oneOf(
+        check.object({ result: check.literal(true), file: check.object({ fileContents: check.string, contentType: check.string }), filePath: check.string }),
+        check.object({ result: check.literal(false), errorMessage: check.string }));
+    const freeBoardReply = replies.read({ freeBoard: check.object({ id: check.number }) });
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
     // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
     // missing or unparseable.
@@ -126,7 +134,7 @@
      * clear the input) if it exceeds `maxFileSize`, otherwise stash it in
      * `writeUploadedFile` for `WriteBoard` to send.
      */
-    function WriteUploadFile(obj: HTMLInputElement, errorMessage?: string) {
+    function WriteUploadFile(obj: HTMLInputElement, errorMessage: string) {
         if (!obj.files || obj.files.length === 0) {
             // The picker was cancelled: the input is empty, so nothing may be sent.
             writeUploadedFile = undefined;
@@ -143,7 +151,7 @@
     }
 
     /** Same as `WriteUploadFile` for the edit form. */
-    function EditUploadFile(obj: HTMLInputElement, errorMessage?: string) {
+    function EditUploadFile(obj: HTMLInputElement, errorMessage: string) {
         if (!obj.files || obj.files.length === 0) {
             // The picker was cancelled: the input is empty, so nothing may be sent.
             editUploadedFile = undefined;
@@ -208,7 +216,7 @@
             contentType: false,
             dataType: "json",
             cache: false,
-            success: function(data: UploadImageReply) {
+            success: onReply(uploadImageReply, function(data) {
                 if (data.result) {
                     const imgURL = URL.createObjectURL(base64ToBlob(data.file.fileContents, data.file.contentType));
                     const imgNode = document.createElement("img");
@@ -228,7 +236,7 @@
                 } else {
                     alert(data.errorMessage);
                 }
-            }
+            })
         });
     }
 
@@ -248,7 +256,7 @@
             contentType: false,
             dataType: "json",
             cache: false,
-            success: function(data: UploadImageReply) {
+            success: onReply(uploadImageReply, function(data) {
                 if (data.result) {
                     const imgURL = URL.createObjectURL(base64ToBlob(data.file.fileContents, data.file.contentType));
                     const imgNode = document.createElement("img");
@@ -268,7 +276,7 @@
                 } else {
                     alert(data.errorMessage);
                 }
-            }
+            })
         });
     }
 
@@ -302,7 +310,7 @@
             data: formData,
             contentType: false,
             processData: false,
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     alert(data.message);
                     window.location.href = "/Forum/FreeForum";
@@ -310,7 +318,7 @@
                     toastr.error(data.error);
                     $loading.hide();
                 }
-            }
+            })
         });
 
         return false;
@@ -323,7 +331,7 @@
      * @param editBoardId    id of the post being edited (from a `data-*` attribute).
      * @param editCurrentPage list page to return to.
      */
-    function EditBoard(editBoardId?: string, editCurrentPage?: string) {
+    function EditBoard(editBoardId: string, editCurrentPage: string) {
 
         if (!$formEditBoard.valid()) {
             return false;
@@ -348,7 +356,7 @@
             data: formData,
             contentType: false,
             processData: false,
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     alert(data.message);
                     window.location.href = "/Forum/FreeForum?method=detail" + "&boardId=" + editBoardId + "&page=" + editCurrentPage;
@@ -356,7 +364,7 @@
                     toastr.error(data.error);
                     $loading.hide();
                 }
-            }
+            })
         });
 
         return false;
@@ -378,7 +386,7 @@
      * POST `DeleteBoard` with the server's current id. Nested so a stale id in
      * the markup can't be used.
      */
-    function DeleteBoard(detailBoardId?: string) {
+    function DeleteBoard(detailBoardId: string) {
 
         $.ajax({
             url: "/Forum/IsBoardExists" + "?id=" + detailBoardId,
@@ -386,7 +394,7 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: ReadReply<FreeBoardPayload>) {
+            success: onReply(freeBoardReply, function(data) {
                 if (data.result) {
 
                     let paramValue = JSON.stringify({
@@ -400,7 +408,7 @@
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
-                        success: function(data: ActionReply) {
+                        success: onReply(replies.action, function(data) {
                             if (data.result) {
                                 $confirmDeleteBoardDialogModal.modal("hide");
                                 alert(data.message);
@@ -408,12 +416,12 @@
                             } else {
                                 toastr.error(data.error);
                             }
-                        }
+                        })
                     });
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
     }
 
@@ -422,7 +430,7 @@
      * (the server rejects blank comments too); on success reloads the detail
      * view so the new comment appears.
      */
-    function WriteFreeComment(detailBoardId?: string, detailCurrentPage?: string, errorMessage?: string) {
+    function WriteFreeComment(detailBoardId: string, detailCurrentPage: string, errorMessage: string) {
 
         let content = $writeFreeCommentContent.val();
 
@@ -444,33 +452,33 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: CommentWrittenReply) {
+            success: onReply(commentWrittenReply, function(data) {
                 if (data.result) {
                     window.location.href = "/Forum/FreeForum?method=detail" + "&boardId=" + data.boardId + "&page=" + data.page;
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
 
         return false;
     }
 
     /** Deletes one comment by id, then reloads the detail view. */
-    function DeleteComment(commentId?: string, boardId?: string, page?: string) {
+    function DeleteComment(commentId: string, boardId: string, page: string) {
         $.ajax({
             url: "/Forum/DeleteComment" + "?id=" + commentId,
             type: "POST",
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(doneReply, function(data) {
                 if (data.result) {
                     window.location.href = "/Forum/FreeForum?method=detail" + "&boardId=" + boardId + "&page=" + page;
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
     }
 
@@ -483,7 +491,7 @@
     });
 
     $btnFreeForumModify.off("click").on("click", function() {
-        location.href = $(this).attr("data-link")!;
+        location.href = attribute($(this), "data-link");
     });
 
     $btnFreeForumConfirmDeleteBoard.off("click").on("click", function() {
@@ -491,7 +499,7 @@
     });
 
     $btnFreeForumList.off("click").on("click", function() {
-        location.href = $(this).attr("data-link")!;
+        location.href = attribute($(this), "data-link");
     });
 
     $btnFreeForumSubmitModify.off("click").on("click", function() {
@@ -507,7 +515,7 @@
     });
 
     $btnFreeForumDeleteBoard.off("click").on("click", function() {
-        DeleteBoard($(this).attr("data-boardId"));
+        DeleteBoard(attribute($(this), "data-boardId"));
     });
 
     // Enter in the search box runs the search.
@@ -520,11 +528,11 @@
     // Per-comment delete links (a NodeList, hence the class selector).
     $(".aFreeForumDeleteComment").off("click").on("click", function(event) {
         event.preventDefault();
-        DeleteComment($(this).attr("data-commentId"), $(this).attr("data-detailBoardId"), $(this).attr("data-detailCurrentPage"));
+        DeleteComment(attribute($(this), "data-commentId"), attribute($(this), "data-detailBoardId"), attribute($(this), "data-detailCurrentPage"));
     });
 
     $formWriteFreeComment.off("submit").on("submit", function() {
-        return WriteFreeComment($(this).attr("data-detailBoardId"), $(this).attr("data-detailCurrentPage"), $(this).attr("data-errorMessage"));
+        return WriteFreeComment(attribute($(this), "data-detailBoardId"), attribute($(this), "data-detailCurrentPage"), attribute($(this), "data-errorMessage"));
     });
 
     $formWriteBoard.off("submit").on("submit", function() {
@@ -532,16 +540,16 @@
     });
 
     $formEditBoard.off("submit").on("submit", function() {
-        return EditBoard($(this).attr("data-editBoardId"), $(this).attr("data-editCurrentPage"));
+        return EditBoard(attribute($(this), "data-editBoardId"), attribute($(this), "data-editCurrentPage"));
     });
 
     // Attachment inputs: validate + stash on selection.
     $writeUploadedFile.off("change").on("change", function(event) {
-        return WriteUploadFile(event.currentTarget as HTMLInputElement, $(event.currentTarget).attr("data-errorMessage"));
+        return WriteUploadFile(instanceOf(event.currentTarget, HTMLInputElement, "the file input"), attribute($(event.currentTarget), "data-errorMessage"));
     });
 
     $editUploadedFile.off("change").on("change", function(event) {
-        return EditUploadFile(event.currentTarget as HTMLInputElement, $(event.currentTarget).attr("data-errorMessage"));
+        return EditUploadFile(instanceOf(event.currentTarget, HTMLInputElement, "the file input"), attribute($(event.currentTarget), "data-errorMessage"));
     });
 
     // --- On ready: rehydrate embedded images + wire attachment download ---
@@ -601,11 +609,12 @@
         // the file; a refusal comes back as JSON `{ result, error }` instead of a file.
         function DownloadAttachedFile(this: HTMLElement, event: JQuery.TriggeredEvent) {
             event.preventDefault();
+            // A link with nothing attached yet names no id: nothing to download.
             let boardId = $(this).attr("data-boardid");
-            let name = $(this).attr("data-name");
             if (!boardId) {
                 return;
             }
+            let name = attribute($(this), "data-name");
 
             $.ajax({
                 url: "/Forum/DownloadFreeBoardAttachedFile",
@@ -616,7 +625,7 @@
                 // Without a declared dataType jQuery infers "json" from a refusal's Content-Type and fails to
                 // parse the Blob (parsererror -> the layout's ajaxError redirect); "binary" hands back the Blob as is.
                 dataType: "binary",
-                success: function(data: Blob) {
+                success: onReply(check.instance(Blob), function(data) {
                     if (data.type.indexOf("application/json") === 0) {
                         data.text().then(function(text) {
                             toastr.error((JSON.parse(text) as FailedReply).error);
@@ -628,14 +637,14 @@
                     let a = document.createElement("a");
                     try {
                         a.href = url;
-                        a.download = name!;
+                        a.download = name;
                         a.click();
                     } finally {
                         // Revoke after a tick so the download has started; drop the <a>.
                         setTimeout(() => URL.revokeObjectURL(url), 100);
                         a.remove();
                     }
-                }
+                })
             });
         }
 

@@ -507,6 +507,8 @@ interface CheckBuilders {
     /** A plain object with (at least) the fields of `shape`. */
     object<S extends Record<string, Check<unknown>>>(shape: S): Check<CheckedFields<S>>;
     oneOf<A, B>(first: Check<A>, second: Check<B>): Check<A | B>;
+    /** An instance of `type` (`instanceof`). */
+    instance<T>(type: Constructor<T>): Check<T>;
     /** A string holding JSON that passes `content` (some replies nest their rows as JSON text). */
     jsonText<T>(content: Check<T>): Check<string>;
 }

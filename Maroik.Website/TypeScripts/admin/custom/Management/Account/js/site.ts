@@ -19,7 +19,15 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { fieldValue, attribute } = window;
+    const { check, replies, onReply, fieldValue, attribute } = window;
+
+    // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
+    const accountReply = replies.read({
+        account: check.object({
+            email: check.string, nickname: check.string, role: check.string, timeZoneIanaId: check.string, locked: check.boolean,
+            emailConfirmed: check.boolean, agreedServiceTerms: check.boolean, message: check.nullable(check.string), deleted: check.boolean,
+        }),
+    });
     // Cached references: the jQuery-UI tab containers, the grid search box, and
     // every field of the creation / edit modals plus the anti-forgery input.
     const $createAccountTabs = $("#createAccountTabs");
@@ -72,7 +80,7 @@
         });
 
         $clsGridRow.each(function() {
-            if ((String(selectedRowEmail).valueOf() === String($(this).attr("data-email")).valueOf())) {
+            if ((String(selectedRowEmail).valueOf() === String(attribute($(this), "data-email")).valueOf())) {
                 $(this).addClass(selectedRowColor);
             }
         });
@@ -95,8 +103,8 @@
     // rows are re-rendered on every grid reload).
     $(document).off("dblclick.Account", ".clsGridRow").on("dblclick.Account", ".clsGridRow", function() {
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                EditAccountGridRow();
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                EditAccountGridRow(attribute($btnEditAccountGridRow, "data-errorMessageSelectGridRow"));
             }
         });
     });
@@ -136,7 +144,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     $createAccountDialogModal.modal("hide");
 
@@ -147,7 +155,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
 
         return false;
@@ -162,18 +170,18 @@
      *
      * @param errorMessageSelectGridRow localized "pick a row first" text from a `data-*` attribute.
      */
-    function EditAccountGridRow(errorMessageSelectGridRow?: string) {
+    function EditAccountGridRow(errorMessageSelectGridRow: string) {
 
         let selectedRowEmail = "";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowEmail = $(this).attr("data-email")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowEmail = attribute($(this), "data-email");
             }
         });
 
         if (selectedRowEmail === "") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -183,7 +191,7 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: ReadReply<AccountPayload>) {
+            success: onReply(accountReply, function(data) {
                 if (data.result) {
 
                     $editAccountEmail.val(data.account.email);
@@ -209,7 +217,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
     }
 
@@ -248,7 +256,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     $editAccountDialogModal.modal("hide");
 
@@ -259,24 +267,24 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
         return false;
     }
 
     /** "Delete" button: require a selected row, then just open the confirmation modal. */
-    function ConfirmDeleteAccount(errorMessageSelectGridRow?: string) {
+    function ConfirmDeleteAccount(errorMessageSelectGridRow: string) {
 
         let selectedRowEmail = "";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowEmail = $(this).attr("data-email")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowEmail = attribute($(this), "data-email");
             }
         });
 
         if (selectedRowEmail === "") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -290,18 +298,18 @@
     }
 
     /** Confirmed delete: re-check selection, confirm the record exists, then POST `DeleteAccount`. */
-    function DeleteAccount(errorMessageSelectGridRow?: string) {
+    function DeleteAccount(errorMessageSelectGridRow: string) {
 
         let selectedRowEmail = "";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowEmail = $(this).attr("data-email")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowEmail = attribute($(this), "data-email");
             }
         });
 
         if (selectedRowEmail === "") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -311,7 +319,7 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: ReadReply<AccountPayload>) {
+            success: onReply(accountReply, function(data) {
                 if (data.result) {
 
                     let paramValue = JSON.stringify({
@@ -325,7 +333,7 @@
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
-                        success: function(data: ActionReply) {
+                        success: onReply(replies.action, function(data) {
                             if (data.result) {
                                 $confirmDeleteAccountDialogModal.modal("hide");
 
@@ -336,12 +344,12 @@
                             } else {
                                 toastr.error(data.error);
                             }
-                        }
+                        })
                     });
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
     }
 
@@ -373,11 +381,11 @@
 
     // --- Button wiring ---------------------------------------------------
     $btnEditAccountGridRow.off("click").on("click", function() {
-        EditAccountGridRow($(this).attr("data-errorMessageSelectGridRow"));
+        EditAccountGridRow(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $btnConfirmDeleteAccount.off("click").on("click", function() {
-        ConfirmDeleteAccount($(this).attr("data-errorMessageSelectGridRow"));
+        ConfirmDeleteAccount(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $btnExportExcelAccount.off("click").on("click", function() {
@@ -385,7 +393,7 @@
     });
 
     $btnDeleteAccount.off("click").on("click", function() {
-        DeleteAccount($(this).attr("data-errorMessageSelectGridRow"));
+        DeleteAccount(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $formCreateAccount.off("submit").on("submit", function() {

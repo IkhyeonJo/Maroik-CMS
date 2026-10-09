@@ -83,6 +83,12 @@ export function describeToolkit(area: "admin" | "user" | "anonymous"): void {
             expect(idOrName.problem(true, "id")).toBe("id: expected a number, got boolean / id: expected a string, got boolean");
         });
 
+        it("check.instance accepts an instance of its type (a downloaded file is a Blob)", () => {
+            const { check, Blob } = load().win;
+            expect(check.instance(Blob).is(new Blob(["x"]))).toBe(true);
+            expect(check.instance(Blob).problem("x", "reply")).toBe("reply: expected a Blob, got string");
+        });
+
         it("check.jsonText accepts a string whose JSON passes its content check", () => {
             const { check } = load().win;
             const events = check.jsonText(check.array(check.number));

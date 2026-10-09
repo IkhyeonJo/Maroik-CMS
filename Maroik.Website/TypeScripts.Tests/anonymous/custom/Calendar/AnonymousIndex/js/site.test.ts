@@ -50,6 +50,8 @@ function makeCalendarEventPayload(overrides: Partial<Record<string, unknown>> = 
             allDay: true,
             displayStartDate: "2024-01-01",
             displayEndDate: "2024-01-02",
+            startDateTimeZoneIanaId: "UTC",
+            endDateTimeZoneIanaId: "UTC",
             location: "",
             description: "<p>hello</p>",
             calendarEventAttachedFile: null,
@@ -107,7 +109,7 @@ describe("Calendar/AnonymousIndex", () => {
         expect(innerCall.url).toBe("/Calendar/GetOtherCalendars");
         expect(innerCall.async).not.toBe(false);
 
-        innerCall.success?.({ result: true, tempOtherCalendars: [{ id: 5, name: "Shared" }] });
+        innerCall.success?.({ result: true, tempOtherCalendars: [{ id: 5, name: "Shared", htmlColorCode: "#123456" }] });
         innerCall.complete?.();
 
         // Only set inside showViewCalendarEventModal, which now runs from `complete`.
@@ -314,7 +316,7 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
     /** Settles the follow-up calendar-list request (success, then complete). */
     const finish = (h: ReturnType<typeof load>) => {
         const inner = h.lastAjax();
-        inner.success?.({ result: true, tempOtherCalendars: [{ id: 5, name: "Shared" }] });
+        inner.success?.({ result: true, tempOtherCalendars: [{ id: 5, name: "Shared", htmlColorCode: "#123456" }] });
         inner.complete?.();
     };
 
@@ -476,7 +478,7 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         open(h);
         h.lastAjax().success!(reply({ calendarId: 6 }));
         const inner = h.lastAjax();
-        inner.success!({ result: true, tempOtherCalendars: [{ id: 5, name: "A" }, { id: 6, name: "B" }] });
+        inner.success!({ result: true, tempOtherCalendars: [{ id: 5, name: "A", htmlColorCode: "#123456" }, { id: 6, name: "B", htmlColorCode: "#123456" }] });
         expect(h.$("#viewCalendarEventMyCalendar option").map((_, o) => o.textContent).get()).toEqual(["A", "B"]);
         expect(h.$("#viewCalendarEventMyCalendar").val()).toBe("6");
     });
@@ -498,11 +500,11 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         const h = load();
         open(h);
         const reminders = [
-            { Method: "Email", MinutesBeforeEvent: 5, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: null },
-            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: 2, DaysBeforeEvent: null, WeeksBeforeEvent: null },
-            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 3, WeeksBeforeEvent: null },
-            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: 1 },
-            { Method: "Notification", MinutesBeforeEvent: 15, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: null },
+            { Method: "Email", MinutesBeforeEvent: 5, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: null },
+            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: 2, DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: null },
+            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 3, WeeksBeforeEvent: null, TimesBeforeEvent: null },
+            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: 1, TimesBeforeEvent: null },
+            { Method: "Notification", MinutesBeforeEvent: 15, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: null },
         ];
         h.lastAjax().success!(reply({ serializedCalendarReminders: JSON.stringify(reminders) }));
         finish(h);
@@ -521,9 +523,9 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
             fixtureWith().replace(hidden("reminderTimeIntervals", "[&quot;09:00&quot;,&quot;18:30&quot;]"), hidden("reminderTimeIntervals", "[&quot;08:00&quot;,&quot;09:30&quot;]")));
         open(h);
         const reminders = [
-            { Method: "Email", DaysBeforeEvent: 1, WeeksBeforeEvent: null, TimesBeforeEvent: "08:00:00" },
-            { Method: "Notification", DaysBeforeEvent: 2, WeeksBeforeEvent: null, TimesBeforeEvent: "09:30:00" },
-            { Method: "Notification", DaysBeforeEvent: null, WeeksBeforeEvent: 3, TimesBeforeEvent: "08:00:00" },
+            { Method: "Email", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 1, WeeksBeforeEvent: null, TimesBeforeEvent: "08:00:00" },
+            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 2, WeeksBeforeEvent: null, TimesBeforeEvent: "09:30:00" },
+            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: 3, TimesBeforeEvent: "08:00:00" },
         ];
         h.lastAjax().success!(reply({
             allDay: true,

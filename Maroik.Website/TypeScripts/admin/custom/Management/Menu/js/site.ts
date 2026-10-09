@@ -19,7 +19,21 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { fieldValue, attribute } = window;
+    const { check, replies, onReply, fieldValue, attribute } = window;
+
+    // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
+    const categoryReply = replies.read({
+        category: check.object({
+            id: check.number, name: check.string, displayName: check.string, iconPath: check.string, controller: check.string,
+            action: check.nullable(check.string), role: check.string, order: check.number,
+        }),
+    });
+    const subCategoryReply = replies.read({
+        subCategory: check.object({
+            id: check.number, categoryId: check.number, name: check.string, displayName: check.string, iconPath: check.string,
+            action: check.string, role: check.string, order: check.number,
+        }),
+    });
     // Cached references: jQuery-UI tab containers, the grid search box, and every
     // field of the four modals (create category / sub, edit category / sub) plus
     // the anti-forgery input.
@@ -99,7 +113,7 @@
         });
 
         $clsGridRow.each(function() {
-            if ((String(selectedRowId).valueOf() === String($(this).attr("data-id")).valueOf()) && (String(selectedRowCategoryId).valueOf() === String($(this).attr("data-categoryid")).valueOf())) {
+            if ((String(selectedRowId).valueOf() === String(attribute($(this), "data-id")).valueOf()) && (String(selectedRowCategoryId).valueOf() === String(attribute($(this), "data-categoryid")).valueOf())) {
                 $(this).addClass(selectedRowColor);
             }
         });
@@ -121,8 +135,8 @@
     // Double-click the highlighted row to open its edit modal.
     $(document).off("dblclick.Menu", ".clsGridRow").on("dblclick.Menu", ".clsGridRow", function() {
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                EditMenuGridRow();
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                EditMenuGridRow(attribute($btnEditMenuGridRow, "data-errorMessageSelectGridRow"));
             }
         });
     });
@@ -166,7 +180,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     $createMenuDialogModal.modal("hide");
 
@@ -177,7 +191,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
         return false;
     }
@@ -217,7 +231,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     $createMenuDialogModal.modal("hide");
 
@@ -228,7 +242,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
         return false;
     }
@@ -241,20 +255,20 @@
      *
      * @param errorMessageSelectGridRow localized "pick a row first" text from a `data-*` attribute.
      */
-    function EditMenuGridRow(errorMessageSelectGridRow?: string) {
+    function EditMenuGridRow(errorMessageSelectGridRow: string) {
 
         let selectedRowId = "-1";
         let selectedRowCategoryId = "-1";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowId = $(this).attr("data-id")!;
-                selectedRowCategoryId = $(this).attr("data-categoryid")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowId = attribute($(this), "data-id");
+                selectedRowCategoryId = attribute($(this), "data-categoryid");
             }
         });
 
         if (selectedRowId === "-1") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -266,7 +280,7 @@
                 headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(data: ReadReply<CategoryPayload>) {
+                success: onReply(categoryReply, function(data) {
                     if (data.result) {
 
                         $editCategoryId.val(data.category.id);
@@ -288,7 +302,7 @@
                     } else {
                         toastr.error(data.error);
                     }
-                }
+                })
             });
         } else {
             // Subcategory.
@@ -298,7 +312,7 @@
                 headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(data: ReadReply<SubCategoryPayload>) {
+                success: onReply(subCategoryReply, function(data) {
                     if (data.result) {
 
                         $editSubCategoryId.val(data.subCategory.id);
@@ -320,7 +334,7 @@
                     } else {
                         toastr.error(data.error);
                     }
-                }
+                })
             });
         }
     }
@@ -358,7 +372,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     $editCategoryDialogModal.modal("hide");
 
@@ -369,7 +383,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
         return false;
     }
@@ -407,7 +421,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     $editSubCategoryDialogModal.modal("hide");
 
@@ -418,24 +432,24 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
         return false;
     }
 
     /** "Delete" button: require a selected row, then just open the confirmation modal. */
-    function ConfirmDeleteMenu(errorMessageSelectGridRow?: string) {
+    function ConfirmDeleteMenu(errorMessageSelectGridRow: string) {
 
         let selectedRowId = "-1";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowId = $(this).attr("data-id")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowId = attribute($(this), "data-id");
             }
         });
 
         if (selectedRowId === "-1") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -455,19 +469,19 @@
      * a SubCategory goes through `IsSubCategoryExists` / `DeleteSubCategory`.
      * Nested so the delete always uses the server's current record.
      */
-    function DeleteMenu(errorMessageSelectGridRow?: string) {
+    function DeleteMenu(errorMessageSelectGridRow: string) {
         let selectedRowId = "-1";
         let selectedRowCategoryId = "-1";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowId = $(this).attr("data-id")!;
-                selectedRowCategoryId = $(this).attr("data-categoryid")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowId = attribute($(this), "data-id");
+                selectedRowCategoryId = attribute($(this), "data-categoryid");
             }
         });
 
         if (selectedRowId === "-1") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -479,7 +493,7 @@
                 headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(data: ReadReply<CategoryPayload>) {
+                success: onReply(categoryReply, function(data) {
                     if (data.result) {
 
                         let paramValue = JSON.stringify({
@@ -500,7 +514,7 @@
                             dataType: "json",
                             data: paramValue,
                             contentType: "application/json; charset=utf-8",
-                            success: function(data: ActionReply) {
+                            success: onReply(replies.action, function(data) {
                                 if (data.result) {
                                     $confirmDeleteMenuDialogModal.modal("hide");
 
@@ -511,12 +525,12 @@
                                 } else {
                                     toastr.error(data.error);
                                 }
-                            }
+                            })
                         });
                     } else {
                         toastr.error(data.error);
                     }
-                }
+                })
             });
         } else {
             $.ajax({
@@ -525,7 +539,7 @@
                 headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(data: ReadReply<SubCategoryPayload>) {
+                success: onReply(subCategoryReply, function(data) {
                     if (data.result) {
 
                         let paramValue = JSON.stringify({
@@ -546,7 +560,7 @@
                             dataType: "json",
                             data: paramValue,
                             contentType: "application/json; charset=utf-8",
-                            success: function(data: ActionReply) {
+                            success: onReply(replies.action, function(data) {
                                 if (data.result) {
                                     $confirmDeleteMenuDialogModal.modal("hide");
 
@@ -557,12 +571,12 @@
                                 } else {
                                     toastr.error(data.error);
                                 }
-                            }
+                            })
                         });
                     } else {
                         toastr.error(data.error);
                     }
-                }
+                })
             });
         }
     }
@@ -595,11 +609,11 @@
 
     // --- Button / form wiring ------------------------------------------
     $btnEditMenuGridRow.off("click").on("click", function() {
-        EditMenuGridRow($(this).attr("data-errorMessageSelectGridRow"));
+        EditMenuGridRow(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $btnConfirmDeleteMenu.off("click").on("click", function() {
-        ConfirmDeleteMenu($(this).attr("data-errorMessageSelectGridRow"));
+        ConfirmDeleteMenu(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $btnExportExcelMenu.off("click").on("click", function() {
@@ -607,7 +621,7 @@
     });
 
     $btnDeleteMenu.off("click").on("click", function() {
-        DeleteMenu($(this).attr("data-errorMessageSelectGridRow"));
+        DeleteMenu(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $formCreateCategory.off("submit").on("submit", function() {

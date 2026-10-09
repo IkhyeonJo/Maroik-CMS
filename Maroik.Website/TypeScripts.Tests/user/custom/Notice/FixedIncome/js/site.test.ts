@@ -30,7 +30,7 @@ function fixture(): string {
      <form id="formCreateFixedIncome"></form><form id="formEditFixedIncome"></form>
      <button id="btnExportExcelFixedIncome"></button>
      <button id="btnEditFixedIncomeGridRow" data-errorMessageSelectGridRow="Please select grid row"></button>
-     <button id="btnConfirmDeleteFixedIncome"></button><button id="btnDeleteFixedIncome"></button>
+     <button id="btnConfirmDeleteFixedIncome" data-errorMessageSelectGridRow="L_SelectRow"></button><button id="btnDeleteFixedIncome" data-errorMessageSelectGridRow="L_SelectRow"></button>
      <select id="createFixedIncomeDepositMyAssetProductName"><option value="A" selected>A</option></select>
      <select id="editFixedIncomeDepositMyAssetProductName"><option value="A">A</option><option value="B">B</option></select>
      <span id="labelCreateFixedIncomeAmount"></span><span id="labelEditFixedIncomeAmount"></span>`

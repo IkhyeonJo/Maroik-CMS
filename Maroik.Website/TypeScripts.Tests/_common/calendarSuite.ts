@@ -44,7 +44,7 @@ export const extras = `
   <input id="editCalendarEventStatus2" />
   <input id="editCalendarEventAllDayUncheckedStartTime" value="09:05" /><input id="editCalendarEventAllDayUncheckedEndTime" value="10:10" />
   <input id="editCalendarEventAllDayUncheckedStartTimeZone" value="UTC" /><input id="editCalendarEventAllDayUncheckedEndTimeZone" value="UTC" />
-  <button id="btnDeleteCalendar"></button><input id="editCalendarId" /><input id="editCalendarName" /><input id="editCalendarDescription" /><input id="editCalendarHtmlColorCode" /><input id="editCalendarTimeZone" />`;
+  <button id="btnDeleteCalendar" data-errorMessageSelectGridRow="L_SelectRow"></button><input id="editCalendarId" /><input id="editCalendarName" /><input id="editCalendarDescription" /><input id="editCalendarHtmlColorCode" /><input id="editCalendarTimeZone" />`;
 
 /** JSON for a hidden `<input>` value attribute. */
 export const json = (value: unknown) => JSON.stringify(value).replace(/"/g, "&quot;");
@@ -437,7 +437,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             h.$("#btnDeleteCalendar").trigger("click");
 
             expect(h.lastAjax().url).toBe("/Calendar/IsCalendarExists?id=1");
-            h.lastAjax().success!({ result: true, calendar: { id: 1 } });
+            h.lastAjax().success!({ result: true, calendar: { id: 1, name: "Aaa", htmlColorCode: "#111111", description: null, timeZoneIanaId: "UTC" } });
             const del = h.lastAjax();
             expect(del.url).toBe("/Calendar/DeleteCalendar");
             expect(JSON.parse(String(del.data))).toEqual({ Calendars: [{ Id: 1 }] });
@@ -1190,7 +1190,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
     });
 
     /** Runs "my event → edit": the IsCalendarEventExists reply, then GetCalendars settles. */
-    const openEdit = (h: Handle, calendarEvent: Record<string, unknown>, calendars = [{ id: 1, name: "One" }]) => {
+    const openEdit = (h: Handle, calendarEvent: Record<string, unknown>, calendars = [{ id: 1, name: "One", htmlColorCode: "#123456" }]) => {
         click(h);
         h.$("#editCalendarEventPopup").trigger("click");
         h.lastAjax().success!(payload(calendarEvent));

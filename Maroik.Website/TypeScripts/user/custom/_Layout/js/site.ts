@@ -130,6 +130,9 @@
                 return secondProblem === null ? null : `${firstProblem} / ${secondProblem}`;
             });
         },
+        instance<T>(type: Constructor<T>): Check<T> {
+            return checkFrom<T>((value, path) => value instanceof type ? null : `${path}: expected a ${type.name}, got ${describeValue(value)}`);
+        },
         jsonText<T>(content: Check<T>): Check<string> {
             return checkFrom<string>((value, path) => {
                 if (typeof value !== "string") return `${path}: expected a string, got ${describeValue(value)}`;

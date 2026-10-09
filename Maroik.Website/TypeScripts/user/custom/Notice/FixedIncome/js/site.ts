@@ -17,7 +17,17 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, parseJson, fieldValue, selectValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, parseJson, fieldValue, selectValue, optionalFieldValue, attribute } = window;
+
+    // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
+    const amountLabelReply = check.object({ result: check.boolean, label: check.string });
+    const fixedIncomeReply = replies.read({
+        fixedIncome: check.object({
+            id: check.number, mainClass: check.string, subClass: check.string, content: check.string, amount: check.number,
+            depositMyAssetProductName: check.string, depositMonth: check.number, depositDay: check.number, maturityDate: check.string,
+            note: check.string, unpunctuality: check.boolean,
+        }),
+    });
     // Cached references: tab containers, grid search box, the two maturity-date
     // inputs, every field of both modals, the amount labels, and the
     // anti-forgery input. (`$btnEditFixedIncomeGridRow` is this page's "edit" button.)
@@ -303,7 +313,7 @@
         });
 
         $clsGridRow.each(function() {
-            if ((String(selectedRowId).valueOf() === String($(this).attr("data-id")).valueOf())) {
+            if ((String(selectedRowId).valueOf() === String(attribute($(this), "data-id")).valueOf())) {
                 $(this).addClass(selectedRowColor);
             }
         });
@@ -325,8 +335,8 @@
     // Double-click the highlighted row to open its edit modal.
     $(document).off("dblclick.FixedIncome", ".clsGridRow").on("dblclick.FixedIncome", ".clsGridRow", function() {
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                EditFixedIncomeGridRow();
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                EditFixedIncomeGridRow(attribute($btnEditFixedIncomeGridRow, "data-errorMessageSelectGridRow"));
             }
         });
     });
@@ -394,7 +404,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     $createFixedIncomeDialogModal.modal("hide");
 
@@ -405,7 +415,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
 
         return false;
@@ -419,18 +429,18 @@
      *
      * @param errorMessageSelectGridRow localized "pick a row first" text from a `data-*` attribute.
      */
-    function EditFixedIncomeGridRow(errorMessageSelectGridRow?: string) {
+    function EditFixedIncomeGridRow(errorMessageSelectGridRow: string) {
 
         let selectedRowId = "";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowId = $(this).attr("data-id")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowId = attribute($(this), "data-id");
             }
         });
 
         if (selectedRowId === "") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -440,7 +450,7 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: ReadReply<FixedIncomePayload>) {
+            success: onReply(fixedIncomeReply, function(data) {
                 if (data.result) {
 
                     $editFixedIncomeId.val(data.fixedIncome.id);
@@ -470,7 +480,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
     }
 
@@ -514,7 +524,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     $editFixedIncomeDialogModal.modal("hide");
 
@@ -525,25 +535,25 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
 
         return false;
     }
 
     /** "Delete" button: require a selected row, then just open the confirmation modal. */
-    function ConfirmDeleteFixedIncome(errorMessageSelectGridRow?: string) {
+    function ConfirmDeleteFixedIncome(errorMessageSelectGridRow: string) {
 
         let selectedRowId = "";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowId = $(this).attr("data-id")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowId = attribute($(this), "data-id");
             }
         });
 
         if (selectedRowId === "") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -557,18 +567,18 @@
     }
 
     /** Confirmed delete: re-check selection, confirm the record exists, then POST `DeleteFixedIncome`. */
-    function DeleteFixedIncome(errorMessageSelectGridRow?: string) {
+    function DeleteFixedIncome(errorMessageSelectGridRow: string) {
 
         let selectedRowId = "";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowId = $(this).attr("data-id")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowId = attribute($(this), "data-id");
             }
         });
 
         if (selectedRowId === "") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -578,7 +588,7 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: ReadReply<FixedIncomePayload>) {
+            success: onReply(fixedIncomeReply, function(data) {
                 if (data.result) {
 
                     let paramValue = JSON.stringify({
@@ -592,7 +602,7 @@
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
-                        success: function(data: ActionReply) {
+                        success: onReply(replies.action, function(data) {
                             if (data.result) {
                                 $confirmDeleteFixedIncomeDialogModal.modal("hide");
 
@@ -603,12 +613,12 @@
                             } else {
                                 toastr.error(data.error);
                             }
-                        }
+                        })
                     });
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
     }
 
@@ -648,13 +658,13 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: AmountLabelReply) {
+            success: onReply(amountLabelReply, function(data) {
                 if (data.result) {
                     $labelCreateFixedIncomeAmount.text(data.label);
                 } else {
                     $labelCreateFixedIncomeAmount.text(data.label);
                 }
-            },
+            }),
             error: function() {
                 toastr.error(failedToLoadAmountLabelMessage);
             }
@@ -669,13 +679,13 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: AmountLabelReply) {
+            success: onReply(amountLabelReply, function(data) {
                 if (data.result) {
                     $labelEditFixedIncomeAmount.text(data.label);
                 } else {
                     $labelEditFixedIncomeAmount.text(data.label);
                 }
-            },
+            }),
             error: function() {
                 toastr.error(failedToLoadAmountLabelMessage);
             }
@@ -684,11 +694,11 @@
 
     // --- Button / form / select wiring --------------------------------
     $btnEditFixedIncomeGridRow.off("click").on("click", function() {
-        EditFixedIncomeGridRow($(this).attr("data-errorMessageSelectGridRow"));
+        EditFixedIncomeGridRow(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $btnConfirmDeleteFixedIncome.off("click").on("click", function() {
-        ConfirmDeleteFixedIncome($(this).attr("data-errorMessageSelectGridRow"));
+        ConfirmDeleteFixedIncome(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $btnExportExcelFixedIncome.off("click").on("click", function() {
@@ -696,7 +706,7 @@
     });
 
     $btnDeleteFixedIncome.off("click").on("click", function() {
-        DeleteFixedIncome($(this).attr("data-errorMessageSelectGridRow"));
+        DeleteFixedIncome(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $formCreateFixedIncome.off("submit").on("submit", function() {

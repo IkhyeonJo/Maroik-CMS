@@ -112,7 +112,7 @@ describe("user/Calendar/UserIndex", () => {
         const call = h.lastAjax();
         expect(call.async).not.toBe(false);
 
-        call.success?.({ result: true, calendars: [{ id: 1, name: "Cal 1" }] });
+        call.success?.({ result: true, calendars: [{ id: 1, name: "Cal 1", htmlColorCode: "#123456" }] });
         call.complete?.();
 
         expect(h.$("#createCalendarEventMyCalendar option").length).toBe(1);
@@ -157,6 +157,8 @@ describe("user/Calendar/UserIndex", () => {
                 allDay: true,
                 displayStartDate: "2024-01-01",
                 displayEndDate: "2024-01-02",
+                startDateTimeZoneIanaId: "UTC",
+                endDateTimeZoneIanaId: "UTC",
                 location: "",
                 description: "<p>hello</p>",
                 calendarEventAttachedFile: null,
@@ -179,7 +181,7 @@ describe("user/Calendar/UserIndex", () => {
         expect(call.url).toBe("/Calendar/GetCalendars");
         expect(call.async).not.toBe(false);
 
-        call.success?.({ result: true, calendars: [{ id: 1, name: "Cal 1" }] });
+        call.success?.({ result: true, calendars: [{ id: 1, name: "Cal 1", htmlColorCode: "#123456" }] });
         call.complete?.();
 
         expect(h.$("#createCalendarEventMyCalendar option").length).toBe(1);
@@ -215,7 +217,7 @@ describe("user/Calendar/UserIndex", () => {
         expect(innerCall.url).toBe("/Calendar/GetCalendars");
         expect(innerCall.async).not.toBe(false);
 
-        innerCall.success?.({ result: true, calendars: [{ id: 5, name: "Cal 5" }] });
+        innerCall.success?.({ result: true, calendars: [{ id: 5, name: "Cal 5", htmlColorCode: "#123456" }] });
         innerCall.complete?.();
 
         expect(h.$("#editCalendarEventStatus").val()).toBe("Confirmed");
@@ -334,7 +336,7 @@ describe("user/Calendar/UserIndex", () => {
         expect(innerCall.url).toBe("/Calendar/GetOtherCalendars");
         expect(innerCall.async).not.toBe(false);
 
-        innerCall.success?.({ result: true, tempOtherCalendars: [{ id: 5, name: "Shared" }] });
+        innerCall.success?.({ result: true, tempOtherCalendars: [{ id: 5, name: "Shared", htmlColorCode: "#123456" }] });
         innerCall.complete?.();
 
         expect(h.$("#viewCalendarEventStatus").val()).toBe("Confirmed");
@@ -370,6 +372,7 @@ describe("user/Calendar/UserIndex", () => {
         expect(call.url).toBe("/Calendar/CreateCalendar");
         call.success?.({
             result: true,
+            message: "created",
             calendar: { id: 1, name: "<img src=x alt=\"\">", htmlColorCode: "#3788d8" },
         });
 
@@ -555,7 +558,7 @@ describe("user/Calendar/UserIndex — calendars of interest", () => {
         openDialog(h);
         h.$("#formUpdateBrowseCalendarsOfInterest").trigger("submit");
         h.lastAjax().success!({ result: true, message: "saved" });
-        h.lastAjax().success!({ result: false });
+        h.lastAjax().success!({ result: false, error: "unavailable" });
         expect(modal).toHaveBeenCalledWith("hide");
         expect(h.toastr.error).not.toHaveBeenCalled();
     });
@@ -654,7 +657,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
         h.$("#viewOtherCalendarEventPopup").trigger("click");
         h.lastAjax().success!(payload(calendarEvent));
         const inner = h.lastAjax();
-        inner.success!({ result: true, tempOtherCalendars: [{ id: 1, name: "Shared" }] });
+        inner.success!({ result: true, tempOtherCalendars: [{ id: 1, name: "Shared", htmlColorCode: "#123456" }] });
         inner.complete!();
     };
 

@@ -27,8 +27,8 @@ function fixture(): string {
      <div id="divEditExpenditureMyDepositAsset" style="display:none"></div>
      <form id="formCreateExpenditure"></form><form id="formEditExpenditure"></form>
      <button id="btnExportExcelExpenditure"></button>
-     <button id="btnEditExpenditureGridRow"></button><button id="btnConfirmDeleteExpenditure"></button>
-     <button id="btnDeleteExpenditure"></button>
+     <button id="btnEditExpenditureGridRow" data-errorMessageSelectGridRow="L_SelectRow"></button><button id="btnConfirmDeleteExpenditure" data-errorMessageSelectGridRow="L_SelectRow"></button>
+     <button id="btnDeleteExpenditure" data-errorMessageSelectGridRow="L_SelectRow"></button>
      <select id="createExpenditurePaymentMethod"><option value="Card" selected>Card</option></select>
      <select id="editExpenditurePaymentMethod"><option value="Card">Card</option><option value="Cash">Cash</option></select>
      <span id="labelCreateExpenditureAmount"></span><span id="labelEditExpenditureAmount"></span>`
