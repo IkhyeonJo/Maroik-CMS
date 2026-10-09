@@ -259,7 +259,7 @@
 
                     if (popup.is(":visible") && currentEventId === arg.event.id) {
                         popup.hide();
-                        return;
+                        return undefined;
                     }
 
                     // Fill the popup from the event's `extendedProps` (already on
@@ -331,12 +331,12 @@
 
                                         // `displayStartDate` is "yyyy-MM-dd HH:mm" — split
                                         // into the date field and the HH:mm time field.
-                                        $viewCalendarEventAllDayUncheckedStartDate.val(data.calendarEvent.displayStartDate.split(" ")[0]);
-                                        $viewCalendarEventAllDayUncheckedStartTime.val(data.calendarEvent.displayStartDate.split(" ")[1].substring(0, 5));
+                                        $viewCalendarEventAllDayUncheckedStartDate.val(required(data.calendarEvent.displayStartDate.split(" ")[0], "part 0 of calendarEvent.displayStartDate"));
+                                        $viewCalendarEventAllDayUncheckedStartTime.val(required(data.calendarEvent.displayStartDate.split(" ")[1], "part 1 of calendarEvent.displayStartDate").substring(0, 5));
                                         $viewCalendarEventAllDayUncheckedStartTimeZone.val(data.calendarEvent.startDateTimeZoneIanaId);
 
-                                        $viewCalendarEventAllDayUncheckedEndDate.val(data.calendarEvent.displayEndDate.split(" ")[0]);
-                                        $viewCalendarEventAllDayUncheckedEndTime.val(data.calendarEvent.displayEndDate.split(" ")[1].substring(0, 5));
+                                        $viewCalendarEventAllDayUncheckedEndDate.val(required(data.calendarEvent.displayEndDate.split(" ")[0], "part 0 of calendarEvent.displayEndDate"));
+                                        $viewCalendarEventAllDayUncheckedEndTime.val(required(data.calendarEvent.displayEndDate.split(" ")[1], "part 1 of calendarEvent.displayEndDate").substring(0, 5));
                                         $viewCalendarEventAllDayUncheckedEndTimeZone.val(data.calendarEvent.endDateTimeZoneIanaId);
                                     }
 
@@ -377,9 +377,9 @@
 
                                         $aViewCalendarEventAttachedFile.attr("href", "#");
                                         $aViewCalendarEventAttachedFile.attr("data-calendareventid", data.calendarEvent.id);
-                                        $aViewCalendarEventAttachedFile.attr("data-name", `${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension}`);
+                                        $aViewCalendarEventAttachedFile.attr("data-name", `${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension ?? ""}`);
 
-                                        $aViewCalendarEventAttachedFile.text(`${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension}`);
+                                        $aViewCalendarEventAttachedFile.text(`${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension ?? ""}`);
 
                                         $spanViewCalendarEventAttachedFile.text(`${Math.round(data.calendarEvent.calendarEventAttachedFile.size / 1024).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}KB`);
                                     }
@@ -554,6 +554,7 @@
 
                     return false;
                 }
+                return undefined;
             }
         });
 
@@ -605,9 +606,7 @@
                     { Id: Number(attribute($(this).closest("label"), "id").replace("lblOtherCalendar", "")) }
                 ];
 
-                for (let i = 0; i < calendarsArray.length; i++) {
-                    paramValue.Calendars.push(calendarsArray[i]);
-                }
+                paramValue.Calendars.push(...calendarsArray);
             });
 
             $.ajax({

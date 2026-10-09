@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadSite, hidden, antiForgery } from "@tests/_common/harness";
+import { loadSite, hidden, antiForgery, present } from "@tests/_common/harness";
 
 // wwwroot/user/custom/Dashboard/UserIndex/js/site.js — 10 donut charts + period/unit controls.
 const CANVAS_IDS = [
@@ -25,13 +25,13 @@ function fixture(): string {
 
 describe("Dashboard/UserIndex", () => {
     it("loads and builds one Chart per donut canvas without throwing", () => {
-        // jsdom canvas.getContext returns null; the Chart global is stubbed. This asserts
-        // the 10-chart $(function) block survives that.
-        let h!: ReturnType<typeof loadSite>;
+        // The Chart global is stubbed (and jsdom's canvas context by the harness). This asserts the
+        // 10-chart $(function) block runs through.
+        let h: ReturnType<typeof loadSite> | undefined;
         expect(() => {
             h = loadSite("user", "Dashboard", "UserIndex", fixture());
         }).not.toThrow();
-        expect(h.charts).toHaveLength(CANVAS_IDS.length);
+        expect(present(h).charts).toHaveLength(CANVAS_IDS.length);
     });
 
     it("changing the year navigates to /Dashboard/UserIndex with year & month", () => {
@@ -54,7 +54,7 @@ describe("Dashboard/UserIndex", () => {
 // stays in step with it: value inputs get 1500, percentage inputs 12.5, localizers their own id.
 function fullFixture(): string {
     const source = readFileSync(resolve(__dirname, "../../../../../../wwwroot/user/custom/Dashboard/UserIndex/js/site.js"), "utf8");
-    const ids = [...new Set([...source.matchAll(/\$\("#(\w+)"\)/g)].map((m) => m[1]))];
+    const ids = [...new Set([...source.matchAll(/\$\("#(\w+)"\)/g)].map((m) => present(m[1])))];
     const base = fixture().replace(/<input[^>]*type="hidden"[^>]*id="regularIncome\w+Year"[^>]*>/g, "");
     const skip = new Set([...base.matchAll(/id="(\w+)"/g)].map((m) => m[1]));
     return (
@@ -70,7 +70,7 @@ describe("Dashboard/UserIndex — donut charts", () => {
         expect(h.charts).toHaveLength(10);
         for (const { cfg } of h.charts) {
             expect(cfg.type).toBe("doughnut");
-            const [dataset] = cfg.data.datasets;
+            const dataset = present(cfg.data.datasets[0]);
             expect(dataset.data.length).toBe(cfg.data.labels.length);
             expect(dataset.data.length).toBe(dataset.backgroundColor.length);
             expect(dataset.data.every((v: number) => v === 1500)).toBe(true);

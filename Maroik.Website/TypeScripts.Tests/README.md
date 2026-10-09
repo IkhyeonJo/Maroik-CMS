@@ -52,7 +52,9 @@ TypeScripts.Tests/
     harness.ts            loadSite() + fixture helpers + jsdom stubs   (test infra, no source counterpart)
     vitest.setup.ts       runs once before each test file
     *Suite.ts             behaviour shared by several scripts (see "Shared suites")
-    noExplicitAny.test.ts no explicit `any` in TypeScripts/ or this tree
+    noExplicitAny.test.ts no `any`, no `x as T` / `x!` in TypeScripts/ or this tree
+    toolkitSuite.ts       the _Layout scripts' runtime-check toolkit (window.check, onReply, fieldValue, …)
+    viewContract.test.ts  every localized text a script reads is rendered by its view
     noImplicitAnyLibs.d.ts JSON.parse / jQuery .data() / .prop("checked") answer `unknown` / the real type, not `any`
     noImplicitAny.test.ts compiles a probe with tsc: an untyped use of those values (or of `$.ajax` data) must fail
   {role}/custom/{Feature}/{Page}/js/site.test.ts   ⟷  wwwroot/{role}/custom/{Feature}/{Page}/js/site.js
@@ -112,9 +114,19 @@ asked to do: `calendarOptions` / `calendarInstances` (FullCalendar), `datepicker
 `opts.summernoteCode` supplies the editor's initial HTML).
 Also exported: `hidden(id, value)`, `antiForgery`, `hiddenByStyle(el)`,
 `fireNative(target, type, detail)`, and `stubPlugin(h, name, impl)` to replace one jQuery plugin method
-(e.g. `stubPlugin(h, "valid", () => false)`). Every capture is typed (`FakeCalendar`, `CapturedDatepickerOptions`,
-…), so a test needs no `any`: `_common/noExplicitAny.test.ts` fails on an explicit `any` in this tree or in
-`TypeScripts/`.
+(e.g. `stubPlugin(h, "valid", () => false)`).
+
+Like a page load, `loadSite` runs the role's real `_Layout` script before the page script (the account pages
+excepted — their layout has none), adds the layout's hidden `_LocalizerTemporaryError`, and fills in every
+`#localizer…` text the script reads that the fixture leaves out (as `L_<Key>`). Test fixtures carry what the
+real views and replies carry: a reply missing a field is refused by the page's check, just as in production.
+
+A test reads what a script left behind without type assertions (`noExplicitAny.test.ts` fails on `x as T` /
+`x!`): `present(value)`, `lastOf(items)`, `instanceOfType(value, Type)`, `successOf(call)` / `completeOf` /
+`errorOf`, `formDataOf(call)`, `firstCalendar(h)`, `calendarSelect(h, arg)` / `calendarEventClick(h, arg)`,
+and `eventProps(over)` for a FullCalendar event's extendedProps. Each throws — failing the test with a message
+naming the value — when it is missing or of another type. The captured widget options are checked by type guards
+when they are recorded.
 
 ### jsdom gotchas the tests work around
 

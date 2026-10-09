@@ -115,8 +115,8 @@
             return checkFrom<CheckedFields<S>>((value, path) => {
                 const fields = fieldsOf(value);
                 if (fields === null) return `${path}: expected an object, got ${describeValue(value)}`;
-                for (const name in shape) {
-                    const problem = shape[name].problem(fields.get(name), `${path}.${name}`);
+                for (const [name, field] of Object.entries<Check<unknown>>(shape)) {
+                    const problem = field.problem(fields.get(name), `${path}.${name}`);
                     if (problem !== null) return problem;
                 }
                 return null;

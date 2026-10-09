@@ -162,12 +162,14 @@ Client scripts
 - Each role (`admin` / `user` / `anonymous`) keeps its own script per view, even when two scripts are
   nearly identical. Do not merge them into shared scripts; the only shared helpers are the `window`
   globals each role's `_Layout` script defines.
-- No `any` in `TypeScripts/**` or `TypeScripts.Tests/**`: none written in code (pinned by
-  `TypeScripts.Tests/_common/noExplicitAny.test.ts`), and none taken from a library — `TypeScripts/global.d.ts` (and
-  `TypeScripts.Tests/_common/noImplicitAnyLibs.d.ts`) redeclare `JSON.parse`, `$.ajax`'s `success` data and jQuery's
-  `.data()` / `.prop("checked")` to answer `unknown` or the real type, so every `$.ajax` names its reply type. Types
-  shared by several scripts — the server payloads and the plugin typings' gaps — live in `global.d.ts`, which is
-  type-only (no runtime code). A controller's `Json(...)` shape change updates its reply type there too.
+- No `any` and no type assertion (`x as T`, `x!`; `as const` aside) in `TypeScripts/**` or `TypeScripts.Tests/**`
+  (pinned by `TypeScripts.Tests/_common/noExplicitAny.test.ts` / `noImplicitAny.test.ts`), with `strict` plus
+  `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` and the other strict options in both tsconfigs. A value
+  the code cannot prove goes through the runtime-check toolkit each role's `_Layout` script puts on `window`
+  (`fieldValue`, `parseJson`, `byId`, `required`, `onReply`, … — see `TypeScripts/README.md`): a missing element
+  throws, and an ajax reply that does not pass its check shows the generic "temporary error" toast. Each page
+  declares its reply checks to mirror the controller's `Json(...)` result field for field, so a controller's reply
+  change updates the page's check in the same change. `global.d.ts` is type-only (no runtime code).
 
 Code and tests
 - The DDD + Clean Architecture layering is deliberate preparation for growth, not over-engineering.

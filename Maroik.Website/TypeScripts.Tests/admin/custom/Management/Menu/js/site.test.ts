@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { loadSite, antiForgery, fireNative, stubPlugin } from "@tests/_common/harness";
+import { loadSite, antiForgery, fireNative, stubPlugin, present, lastOf, successOf } from "@tests/_common/harness";
 
 // wwwroot/admin/custom/Management/Menu/js/site.js
 function fixture(): string {
@@ -38,7 +38,7 @@ describe("Management/Menu (admin)", () => {
     it("Excel export targets /Management/ExportExcelMenu", () => {
         const h = loadSite("admin", "Management", "Menu", fixture());
         h.$("#btnExportExcelMenu").trigger("click");
-        expect(h.submittedForms.at(-1)!.action).toContain("/Management/ExportExcelMenu");
+        expect(lastOf(h.submittedForms).action).toContain("/Management/ExportExcelMenu");
     });
 });
 
@@ -66,7 +66,7 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
     const load = () => loadSite("admin", "Management", "Menu", menuFixture());
     /** Replaces `$.fn.modal` with a chainable spy and returns it. */
     const spyModal = (h: ReturnType<typeof load>) => {
-        const modal = vi.fn(function(this: JQuery) {
+        const modal = vi.fn(function(this: JQuery, _command?: unknown) {
             return this;
         });
         stubPlugin(h, "modal", modal);
@@ -74,7 +74,7 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
     };
     /** Whether the category row and the sub-category row are highlighted, in that order. */
     const selected = (h: ReturnType<typeof load>) =>
-        [categoryRow, subRow].map((s) => h.win.document.querySelector(s)!.classList.contains("table-primary"));
+        [categoryRow, subRow].map((s) => present(h.win.document.querySelector(s)).classList.contains("table-primary"));
 
     it("a category row (null CategoryId → \"\") and a same-id sub-category row are told apart by their parent id", () => {
         const h = load();
@@ -89,8 +89,8 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
         for (const type of ["reloadstart", "reloadend", "reloadfail", "gridconfigure"])
             expect(() => fireNative(h.win.document, type)).not.toThrow();
         h.$("#gridSearch").val("dash").trigger("input");
-        expect(h.MvcGridInstances.at(-1)!.url.searchParams.get("wholeSearch")).toBe("dash");
-        expect(h.MvcGridInstances.at(-1)!.reload).toHaveBeenCalled();
+        expect(lastOf(h.MvcGridInstances).url.searchParams.get("wholeSearch")).toBe("dash");
+        expect(lastOf(h.MvcGridInstances).reload).toHaveBeenCalled();
     });
 
     it.each([
@@ -108,13 +108,13 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
         expect(call.headers).toEqual({ RequestVerificationToken: "tok" });
         expect(submit.isDefaultPrevented()).toBe(true);
 
-        call.success!({ result: true, message: "ok" });
+        successOf(call)({ result: true, message: "ok" });
         expect(modal).toHaveBeenCalledWith("hide");
-        expect(h.MvcGridInstances.at(-1)!.reload).toHaveBeenCalled();
+        expect(lastOf(h.MvcGridInstances).reload).toHaveBeenCalled();
         expect(h.toastr.success).toHaveBeenCalledWith("ok");
 
         h.$(`#${form}`).trigger("submit");
-        h.lastAjax().success!({ result: false, error: "bad" });
+        successOf(h.lastAjax())({ result: false, error: "bad" });
         expect(h.toastr.error).toHaveBeenCalledWith("bad");
     });
 
@@ -133,24 +133,24 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
         fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: "" } });
         h.$("#btnEditMenuGridRow").trigger("click");
         expect(h.lastAjax().url).toBe("/Management/IsCategoryExists?id=10");
-        h.lastAjax().success!({ result: true, category });
+        successOf(h.lastAjax())({ result: true, category });
         expect(modal).toHaveBeenCalledWith("show");
 
         fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: "4" } });
         h.$("#btnEditMenuGridRow").trigger("click");
         expect(h.lastAjax().url).toBe("/Management/IsSubCategoryExists?id=10");
-        h.lastAjax().success!({ result: true, subCategory });
-        expect(modal.mock.calls.filter((c) => (c as unknown[])[0] === "show")).toHaveLength(2);
+        successOf(h.lastAjax())({ result: true, subCategory });
+        expect(modal.mock.calls.filter((c) => c[0] === "show")).toHaveLength(2);
     });
 
     it("Edit: a record that no longer exists is toasted", () => {
         const h = load();
         fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: "" } });
         h.$("#btnEditMenuGridRow").trigger("click");
-        h.lastAjax().success!({ result: false, error: "gone" });
+        successOf(h.lastAjax())({ result: false, error: "gone" });
         fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: "4" } });
         h.$("#btnEditMenuGridRow").trigger("click");
-        h.lastAjax().success!({ result: false, error: "gone too" });
+        successOf(h.lastAjax())({ result: false, error: "gone too" });
         expect(h.toastr.error).toHaveBeenCalledWith("gone");
         expect(h.toastr.error).toHaveBeenCalledWith("gone too");
     });
@@ -185,13 +185,13 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
         h.$("#btnDeleteMenu").trigger("click");
         expect(h.lastAjax().url).toBe(`/Management/${existsAction}?id=10`);
 
-        h.lastAjax().success!(reply);
+        successOf(h.lastAjax())(reply);
         expect(h.lastAjax().url).toBe(`/Management/${deleteAction}`);
-        expect((JSON.parse(String(h.lastAjax().data)) as { Id: number }).Id).toBe(10);
+        expect(JSON.parse(String(h.lastAjax().data))).toMatchObject({ Id: 10 });
 
-        h.lastAjax().success!({ result: true, message: "removed" });
+        successOf(h.lastAjax())({ result: true, message: "removed" });
         expect(modal).toHaveBeenCalledWith("hide");
-        expect(h.MvcGridInstances.at(-1)!.reload).toHaveBeenCalled();
+        expect(lastOf(h.MvcGridInstances).reload).toHaveBeenCalled();
         expect(h.toastr.success).toHaveBeenCalledWith("removed");
     });
 
@@ -202,13 +202,13 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
         const h = load();
         fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: String(categoryId) } });
         h.$("#btnDeleteMenu").trigger("click");
-        h.lastAjax().success!({ result: false, error: "vanished" });
+        successOf(h.lastAjax())({ result: false, error: "vanished" });
         expect(h.toastr.error).toHaveBeenCalledWith("vanished");
         expect(h.ajaxCalls).toHaveLength(1);
 
         h.$("#btnDeleteMenu").trigger("click");
-        h.lastAjax().success!({ result: true, category, subCategory });
-        h.lastAjax().success!({ result: false, error: "in use" });
+        successOf(h.lastAjax())({ result: true, category, subCategory });
+        successOf(h.lastAjax())({ result: false, error: "in use" });
         expect(h.toastr.error).toHaveBeenCalledWith("in use");
         expect(h.MvcGridInstances).toHaveLength(0);
     });

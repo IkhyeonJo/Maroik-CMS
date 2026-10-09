@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
-import { loadSite, antiForgery, hidden, eventProps } from "@tests/_common/harness";
+import { loadSite, antiForgery, hidden, eventProps, present, successOf, completeOf, errorOf, calendarSelect, calendarEventClick, firstCalendar } from "@tests/_common/harness";
 import {
     describeCalendarCommon,
     describeEditFormDetail,
@@ -140,7 +140,7 @@ describe("admin/Calendar/AdminIndex", () => {
         const call = h.lastAjax();
         call.success?.({ result: false });
         call.complete?.();
-        expect(h.win.document.getElementById("divSetCalendarShared")!.innerHTML.trim()).toBe("");
+        expect(present(h.win.document.getElementById("divSetCalendarShared")).innerHTML.trim()).toBe("");
     });
 
     // Regression: the "shared calendars" dialog used `async: false` to guarantee the row list
@@ -156,7 +156,7 @@ describe("admin/Calendar/AdminIndex", () => {
         call.success?.({ result: true, setCalendarShareds: [{ id: 1, name: "Cal 1", user: true, guest: false }] });
         call.complete?.();
 
-        expect(h.win.document.getElementById("divSetCalendarShared")!.innerHTML).toContain("Cal 1");
+        expect(present(h.win.document.getElementById("divSetCalendarShared")).innerHTML).toContain("Cal 1");
     });
 
     // Regression: a calendar name is free text the owner controls. It used to be interpolated
@@ -176,10 +176,10 @@ describe("admin/Calendar/AdminIndex", () => {
             calendar: { id: 1, name: "<img src=x alt=\"\">", htmlColorCode: "#3788d8" }
         });
 
-        const myCalendarsHtml = h.win.document.getElementById("myCalendars")!.innerHTML;
+        const myCalendarsHtml = present(h.win.document.getElementById("myCalendars")).innerHTML;
         expect(myCalendarsHtml).not.toContain("<img");
         expect(myCalendarsHtml).toContain("&lt;img src=x alt=\"\"&gt;");
-        expect(h.win.document.getElementById("myCalendars")!.querySelector("img")).toBeNull();
+        expect(present(h.win.document.getElementById("myCalendars")).querySelector("img")).toBeNull();
     });
 
     /** Minimal payload accepted by IsCalendarEventExists's success handler. */
@@ -210,7 +210,7 @@ describe("admin/Calendar/AdminIndex", () => {
     it("drag-selecting a date range fetches the calendar list asynchronously and opens the modal once settled", () => {
         const h = loadSite("admin", "Calendar", "AdminIndex", fixture());
 
-        h.calendarOptions[0].select({ start: new Date("2024-01-01"), end: new Date("2024-01-02") });
+        calendarSelect(h, { start: new Date("2024-01-01"), end: new Date("2024-01-02") });
 
         const call = h.lastAjax();
         expect(call.url).toBe("/Calendar/GetCalendars");
@@ -226,7 +226,7 @@ describe("admin/Calendar/AdminIndex", () => {
     function openEditPopup(h: ReturnType<typeof loadSite>): void {
         const eventEl = h.win.document.createElement("div");
         h.win.document.body.appendChild(eventEl);
-        h.calendarOptions[0].eventClick({
+        calendarEventClick(h, {
             el: eventEl,
             event: {
                 id: 1,
@@ -287,7 +287,7 @@ describe("admin/Calendar/AdminIndex", () => {
             setCalendarShareds: [{ id: 1, name: `<img src=x alt="">`, user: true, guest: false }],
         });
 
-        const html = h.win.document.getElementById("divSetCalendarShared")!.innerHTML;
+        const html = present(h.win.document.getElementById("divSetCalendarShared")).innerHTML;
         expect(html).not.toContain("<img");
         expect(html).toContain("&lt;img src=x alt=\"\"&gt;");
     });
@@ -319,8 +319,8 @@ describeCalendarExtras({ label: "admin/Calendar/AdminIndex", build });
 describe("admin/Calendar/AdminIndex — events on the grid", () => {
     it("seeds the grid with the admin's own events, coloured by their calendar", () => {
         const h = build({ my: [evt(1, 1), evt(2, 3)] });
-        const cal = h.calendarInstances[0];
-        expect(cal.addEvent.mock.calls.map((c) => [c[0].id, c[0].title, c[0].backgroundColor, c[0].extendedProps.calendarId])).toEqual([
+        const cal = firstCalendar(h);
+        expect(cal.addEvent.mock.calls.map((c) => [c[0]["id"], c[0]["title"], c[0]["backgroundColor"], c[0].extendedProps["calendarId"]])).toEqual([
             ["1", "Event 1", "#123456", 1], ["2", "Event 2", "#123456", 3]]);
         expect(cal.render).toHaveBeenCalled();
     });
@@ -328,27 +328,27 @@ describe("admin/Calendar/AdminIndex — events on the grid", () => {
     it("toggling a calendar clears the grid and requests exactly the checked calendars", () => {
         const h = build();
         h.$(".chkCalendar").first().trigger("change");
-        expect(h.calendarInstances[0].removeAllEvents).toHaveBeenCalledTimes(1);
-        expect(JSON.parse(String(eventCalls(h)[0].data))).toEqual({ Calendars: [{ Id: 1 }, { Id: 3 }] });
-        expect(eventCalls(h)[0].headers).toEqual({ RequestVerificationToken: "tok" });
+        expect(firstCalendar(h).removeAllEvents).toHaveBeenCalledTimes(1);
+        expect(JSON.parse(String(present(eventCalls(h)[0]).data))).toEqual({ Calendars: [{ Id: 1 }, { Id: 3 }] });
+        expect(present(eventCalls(h)[0]).headers).toEqual({ RequestVerificationToken: "tok" });
     });
 
     it("the reply's events are added; a stale reply that lands after a newer toggle is ignored", () => {
         const h = build();
-        const cal = h.calendarInstances[0];
+        const cal = firstCalendar(h);
         h.$(".chkCalendar").first().trigger("change");
         h.$(".chkCalendar").first().trigger("change");
         const [first, second] = eventCalls(h);
-        second.success!({ result: true, calendarEvents: JSON.stringify([evt(20, 1)]) });
-        first.success!({ result: true, calendarEvents: JSON.stringify([evt(10, 1)]) });
-        expect(cal.addEvent.mock.calls.map((c) => c[0].id)).toEqual(["20"]);
+        successOf(second)({ result: true, calendarEvents: JSON.stringify([evt(20, 1)]) });
+        successOf(first)({ result: true, calendarEvents: JSON.stringify([evt(10, 1)]) });
+        expect(cal.addEvent.mock.calls.map((c) => c[0]["id"])).toEqual(["20"]);
     });
 
     it("a refused reply adds nothing", () => {
         const h = build();
         h.$(".chkCalendar").first().trigger("change");
-        eventCalls(h)[0].success!({ result: false });
-        expect(h.calendarInstances[0].addEvent).not.toHaveBeenCalled();
+        successOf(present(eventCalls(h)[0]))({ result: false });
+        expect(firstCalendar(h).addEvent).not.toHaveBeenCalled();
     });
 });
 
@@ -356,7 +356,7 @@ describe("admin/Calendar/AdminIndex — sharing settings", () => {
     /** Opens the sharing dialog and answers it with two calendars (one with an HTML name). */
     const open = (h: ReturnType<typeof build>) => {
         h.$("#aUpdateCalendarShared").trigger("click");
-        h.lastAjax().success!({
+        successOf(h.lastAjax())({
             result: true,
             setCalendarShareds: [{ id: 1, name: "<b>Team</b>", user: true, guest: false }, { id: 2, name: "Private", user: false, guest: false }],
         });
@@ -367,11 +367,11 @@ describe("admin/Calendar/AdminIndex — sharing settings", () => {
         const modal = spyModal(h);
         h.$("#aUpdateCalendarShared").trigger("click");
         expect(h.lastAjax().url).toBe("/Calendar/GetCalendarShareds");
-        h.lastAjax().success!({
+        successOf(h.lastAjax())({
             result: true,
             setCalendarShareds: [{ id: 1, name: "<b>Team</b>", user: true, guest: false }, { id: 2, name: "Private", user: false, guest: true }]
         });
-        h.lastAjax().complete!();
+        completeOf(h.lastAjax())();
 
         expect(h.$(".setCalendarShared")).toHaveLength(2);
         expect(h.$(".setCalendarShared").map((_, r) => [h.$(r).find(".shareToUser").prop("checked"), h.$(r).find(".shareToGuest").prop("checked")].join()).get()).toEqual(["true,false", "false,true"]);
@@ -383,8 +383,8 @@ describe("admin/Calendar/AdminIndex — sharing settings", () => {
         const h = build();
         const modal = spyModal(h);
         h.$("#aUpdateCalendarShared").trigger("click");
-        h.lastAjax().error!();
-        h.lastAjax().complete!();
+        errorOf(h.lastAjax())();
+        completeOf(h.lastAjax())();
         expect(h.toastr.error).toHaveBeenCalledWith("L_FailedToLoadCalendars");
         expect(modal).toHaveBeenCalledWith("show");
     });
@@ -405,7 +405,7 @@ describe("admin/Calendar/AdminIndex — sharing settings", () => {
             { CalendarId: "2", User: false, Anonymous: true },
         ]);
 
-        call.success!({ result: true, message: "shared" });
+        successOf(call)({ result: true, message: "shared" });
         expect(modal).toHaveBeenCalledWith("hide");
         expect(h.toastr.success).toHaveBeenCalledWith("shared");
     });
@@ -415,7 +415,7 @@ describe("admin/Calendar/AdminIndex — sharing settings", () => {
         const modal = spyModal(h);
         open(h);
         h.$("#formUpdateCalendarShared").trigger("submit");
-        h.lastAjax().success!({ result: false, error: "not yours" });
+        successOf(h.lastAjax())({ result: false, error: "not yours" });
         expect(h.toastr.error).toHaveBeenCalledWith("not yours");
         expect(modal).not.toHaveBeenCalledWith("hide");
     });

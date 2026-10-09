@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { describeLayoutScript } from "@tests/_common/layoutSuite";
 import { describeToolkit } from "@tests/_common/toolkitSuite";
-import { loadSite, antiForgery, hidden } from "@tests/_common/harness";
+import { loadSite, antiForgery, hidden, instanceOfType } from "@tests/_common/harness";
 
 // wwwroot/user/custom/_Layout/js/site.js
 function fixture(): string {
@@ -25,7 +25,7 @@ describe("user/_Layout", () => {
 
     it("re-enables submit buttons on pageshow", () => {
         const h = loadSite("user", "_Layout", "", fixture());
-        const btn = h.win.document.getElementById("sbmt") as HTMLButtonElement;
+        const btn = instanceOfType(h.win.document.getElementById("sbmt"), HTMLButtonElement);
         h.$(h.win.document).trigger("ajaxSend", [{}, { type: "POST" }]);
         expect(btn.disabled).toBe(true);
         h.$(h.win).trigger("pageshow");

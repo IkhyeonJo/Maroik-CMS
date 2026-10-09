@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
-import { loadSite, antiForgery, fireNative } from "@tests/_common/harness";
+import { loadSite, antiForgery, fireNative, present, lastOf } from "@tests/_common/harness";
 
 // wwwroot/user/custom/AccountBook/Asset/js/site.js — grid CRUD, no policy map.
 function fixture(): string {
@@ -41,9 +41,9 @@ describe("AccountBook/Asset", () => {
     it("Excel export posts a form to /AccountBook/ExportExcelAsset (fileName=Asset)", () => {
         const h = loadSite("user", "AccountBook", "Asset", fixture());
         h.$("#btnExportExcelAsset").trigger("click");
-        const form = h.submittedForms.at(-1)!;
+        const form = lastOf(h.submittedForms);
         expect(form.action).toContain("/AccountBook/ExportExcelAsset");
-        expect(form.querySelector<HTMLInputElement>("input[name=\"fileName\"]")!.value).toBe("Asset");
+        expect(present(form.querySelector<HTMLInputElement>("input[name=\"fileName\"]")).value).toBe("Asset");
     });
 
     it("percent-encodes the selected product name in the IsAssetExists query", () => {

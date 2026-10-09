@@ -151,7 +151,7 @@
                             Number($("#percentageOfRegularIncomeOtherIncomeYear").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${percentages[index].toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -204,7 +204,7 @@
                             Number($("#percentageOfIrregularIncomeOtherIncomeYear").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${percentages[index].toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -255,7 +255,7 @@
                             Number($("#percentageOfRegularSavingsInvestmentYear").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${percentages[index].toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -318,7 +318,7 @@
                             Number($("#percentageOfNonConsumerSpendingNonProfitOrganizationTransferYear").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${percentages[index].toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -399,7 +399,7 @@
                             Number($("#percentageOfConsumerSpendingUnknownExpenditureYear").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${percentages[index].toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -463,7 +463,7 @@
                             Number($("#percentageOfRegularIncomeOtherIncomeYearMonth").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${percentages[index].toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -515,7 +515,7 @@
                             Number($("#percentageOfIrregularIncomeOtherIncomeYearMonth").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${percentages[index].toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -566,7 +566,7 @@
                             Number($("#percentageOfRegularSavingsInvestmentYearMonth").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${percentages[index].toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -629,7 +629,7 @@
                             Number($("#percentageOfNonConsumerSpendingNonProfitOrganizationTransferYearMonth").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${percentages[index].toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -710,7 +710,7 @@
                             Number($("#percentageOfConsumerSpendingUnknownExpenditureYearMonth").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${percentages[index].toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }

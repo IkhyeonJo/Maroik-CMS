@@ -15,7 +15,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, parseJson, conform, instanceOf, fieldValue, selectValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, parseJson, conform, required, instanceOf, fieldValue, selectValue, optionalFieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const amountLabelReply = check.object({ result: check.boolean, label: check.string });
@@ -205,7 +205,7 @@
     // whose `data-id` matches the clicked record.
     $(document).off("rowclick.Income").on("rowclick.Income", (e: JQuery.TriggeredEvent) => {
         let selectedRow = conform(e.detail, check.object({ data: check.record(check.string) }), "the rowclick detail");
-        let selectedRowId = selectedRow.data.Id;
+        let selectedRowId = selectedRow.data["Id"];
 
         let $clsGridRow = $(".clsGridRow");
 
@@ -368,10 +368,10 @@
                     // `created` is `YYYY-MM-DDTHH:mm:ss`; split into the date field
                     // and the hour / minute / second selects (`.trigger("change")` so any
                     // listener fires).
-                    $editIncomeDate.val(data.income.created.split("T")[0]);
-                    $editIncomeHour.val(parseInt(data.income.created.split("T")[1].substring(0, 2))).trigger("change");
-                    $editIncomeMinute.val(parseInt(data.income.created.split("T")[1].substring(3, 5))).trigger("change");
-                    $editIncomeSecond.val(parseInt(data.income.created.split("T")[1].substring(6, 8))).trigger("change");
+                    $editIncomeDate.val(required(data.income.created.split("T")[0], "part 0 of income.created"));
+                    $editIncomeHour.val(parseInt(required(data.income.created.split("T")[1], "part 1 of income.created").substring(0, 2))).trigger("change");
+                    $editIncomeMinute.val(parseInt(required(data.income.created.split("T")[1], "part 1 of income.created").substring(3, 5))).trigger("change");
+                    $editIncomeSecond.val(parseInt(required(data.income.created.split("T")[1], "part 1 of income.created").substring(6, 8))).trigger("change");
                     $editIncomeDepositMyAssetProductName.val(data.income.depositMyAssetProductName).trigger("change");
                     $editIncomeNote.val(data.income.note);
 
@@ -387,6 +387,7 @@
                 }
             })
         });
+        return undefined;
     }
 
     /** Edit-income modal submit: same shape as `CreateIncome` plus `ID`. */
@@ -471,6 +472,7 @@
 
         $confirmDeleteIncomeDialogModal.modal("toggle");
         $confirmDeleteIncomeDialogModal.modal("show");
+        return undefined;
     }
 
     /** Confirmed delete: re-check selection, confirm the record exists, then POST `DeleteIncome`. */
@@ -527,6 +529,7 @@
                 }
             })
         });
+        return undefined;
     }
 
     /**

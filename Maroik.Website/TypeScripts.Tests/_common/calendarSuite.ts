@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import realMoment from "moment";
-import { hidden, type SiteHandle, stubPlugin, eventProps } from "@tests/_common/harness";
+import { hidden, type SiteHandle, stubPlugin, eventProps, present, lastOf, successOf, completeOf, errorOf, formDataOf, instanceOfType, calendarSelect, calendarEventClick, firstCalendar } from "@tests/_common/harness";
 
 /** Short alias used by the calendar suites. */
 export type Handle = SiteHandle;
@@ -52,7 +52,7 @@ export { hidden };
 
 /** Replaces `$.fn.modal` with a chainable spy and returns it. */
 export const spyModal = (h: Handle) => {
-    const modal = vi.fn(function(this: JQuery) {
+    const modal = vi.fn(function(this: JQuery, _command?: unknown) {
         return this;
     });
     stubPlugin(h, "modal", modal);
@@ -88,7 +88,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const r = h.$(`.div${kind === "create" ? "Create" : "Edit"}EventNotification${checked ? "AllDayChecked" : "AllDayUnchecked"}Row`).last();
             const suffix = checked ? "AllDayChecked" : "AllDayUnchecked";
             r.find(`.${kind}CalendarEventSelNotificationNumber${suffix}`).trigger("input");
-            return { input: r.find(`.${kind}CalendarEventSelNotificationNumber${suffix}`)[0] as HTMLElement, message: r.find(".error-message") };
+            return { input: instanceOfType(r.find(`.${kind}CalendarEventSelNotificationNumber${suffix}`)[0], HTMLElement), message: r.find(".error-message") };
         };
 
         // (max: minutes 40320, hours 672, days 28, weeks 4 — the server-published fixture values)
@@ -165,15 +165,15 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             h.$("#formCreateCalendarEvent").trigger(ev);
             return ev;
         };
-        const created = (h: Handle) => h.ajaxCalls.find((c) => c.url === "/Calendar/CreateCalendarEvent")!;
+        const created = (h: Handle) => h.ajaxCalls.find((c) => c.url === "/Calendar/CreateCalendarEvent");
 
         it("a timed event posts multipart form data with joined date+time, both zones and its mapped reminders; the form never navigates", () => {
             const h = build({ body: withRows(timedRows) });
             setDates(h);
             const ev = submit(h);
-            const data = created(h).data as FormData;
+            const data = formDataOf(created(h));
             expect(ev.isDefaultPrevented()).toBe(true);
-            expect(created(h).headers).toEqual({ RequestVerificationToken: "tok" });
+            expect(present(created(h)).headers).toEqual({ RequestVerificationToken: "tok" });
             expect(data.get("Title")).toBe("Team lunch");
             expect(data.get("AllDay")).toBe("false");
             expect(data.get("StartDate")).toBe("2024-05-01 10:15");
@@ -207,7 +207,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             setDates(h);
             h.$("#createCalendarEventAllDay").prop("checked", true);
             submit(h);
-            const data = created(h).data as FormData;
+            const data = formDataOf(created(h));
             expect(data.get("AllDay")).toBe("true");
             expect(data.get("StartDate")).toBe("2024-06-01");
             expect(data.get("EndDate")).toBe("2024-06-03");
@@ -249,14 +249,14 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const timed = build({ body: (html) => html + timedRow("Email", "Hours", "2") + timedRow("Notification", "Days", "3") });
             setDates(timed);
             submit(timed);
-            expect(JSON.parse(String((created(timed).data as FormData).get("SerializedCalendarReminders")))).toEqual([
+            expect(JSON.parse(String(formDataOf(created(timed)).get("SerializedCalendarReminders")))).toEqual([
                 shape({ HoursBeforeEvent: "2" }), shape({ Method: "Notification", DaysBeforeEvent: "3" })]);
 
             const allDay = build({ body: (html) => strip(html) + dayRow("Days", "1", "07:00") + dayRow("Weeks", "2", "21:15") });
             setDates(allDay);
             allDay.$("#createCalendarEventAllDay").prop("checked", true);
             submit(allDay);
-            expect(JSON.parse(String((created(allDay).data as FormData).get("SerializedCalendarReminders")))).toEqual([
+            expect(JSON.parse(String(formDataOf(created(allDay)).get("SerializedCalendarReminders")))).toEqual([
                 shape({ DaysBeforeEvent: "1", TimesBeforeEvent: "07:00" }), shape({ WeeksBeforeEvent: "2", TimesBeforeEvent: "21:15" })]);
         });
 
@@ -279,20 +279,20 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const modal = spyModal(h);
             setDates(h);
             submit(h);
-            created(h).success!({ result: true, message: "created" });
-            expect(h.calendarInstances[0].removeAllEvents).toHaveBeenCalled();
-            expect(JSON.parse(String(eventCalls(h)[0].data))).toEqual({ Calendars: c.checkedIds });
-            eventCalls(h)[0].success!({ result: true, calendarEvents: JSON.stringify([evt(50, 1)]) });
-            expect(h.calendarInstances[0].addEvent.mock.calls.at(-1)![0].id).toBe("50");
+            successOf(created(h))({ result: true, message: "created" });
+            expect(firstCalendar(h).removeAllEvents).toHaveBeenCalled();
+            expect(JSON.parse(String(present(eventCalls(h)[0]).data))).toEqual({ Calendars: c.checkedIds });
+            successOf(present(eventCalls(h)[0]))({ result: true, calendarEvents: JSON.stringify([evt(50, 1)]) });
+            expect(lastOf(firstCalendar(h).addEvent.mock.calls)[0]["id"]).toBe("50");
             expect(h.toastr.success).toHaveBeenCalledWith("created");
             expect(modal).toHaveBeenCalledWith("hide");
-            eventCalls(h)[0].success!({ result: false, error: "no events for you" }); // the follow-up reload being refused is toasted with its own message
+            successOf(present(eventCalls(h)[0]))({ result: false, error: "no events for you" }); // the follow-up reload being refused is toasted with its own message
             expect(h.toastr.error).toHaveBeenCalledWith("no events for you");
 
             const h2 = build({ body: withRows(timedRows) });
             setDates(h2);
             submit(h2);
-            created(h2).success!({ result: false, error: "nope" });
+            successOf(created(h2))({ result: false, error: "nope" });
             expect(h2.toastr.error).toHaveBeenCalledWith("nope");
             expect(eventCalls(h2)).toHaveLength(0);
 
@@ -300,7 +300,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const h3 = build({ body: withRows(timedRows) });
             setDates(h3);
             submit(h3);
-            created(h3).success!({ result: false, error: "A temporary error occurred. Please try again later." });
+            successOf(created(h3))({ result: false, error: "A temporary error occurred. Please try again later." });
             expect(h3.toastr.error).toHaveBeenCalledWith("A temporary error occurred. Please try again later.");
         });
     });
@@ -319,7 +319,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(call.url).toBe("/Calendar/CreateCalendar");
             expect(JSON.parse(String(call.data))).toEqual({ Calendars: [{ Name: "Beta", Description: "", HtmlColorCode: "#3788d8", TimeZoneIanaId: "UTC" }] });
 
-            call.success!({ result: true, message: "made", calendar: { id: 7, name: "Beta", htmlColorCode: "#abcdef" } });
+            successOf(call)({ result: true, message: "made", calendar: { id: 7, name: "Beta", htmlColorCode: "#abcdef" } });
 
             expect(labels(h)).toEqual(["lblCalendar2", "lblCalendar7", "lblCalendar3", "lblCalendar1"]); // Alpha, Beta, Mid, Zeta
             expect(h.$("#lblCalendar7 input").css("accent-color")).toBe("rgb(171, 205, 239)"); // #abcdef, as jsdom normalizes it
@@ -330,7 +330,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const h = build();
             spyModal(h);
             h.$("#formCreateCalendar").trigger("submit");
-            h.lastAjax().success!({
+            successOf(h.lastAjax())({
                 result: true,
                 message: "made",
                 calendar: {
@@ -346,7 +346,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
         it("a refused create only toasts; an invalid form sends nothing", () => {
             const h = build();
             h.$("#formCreateCalendar").trigger("submit");
-            h.lastAjax().success!({ result: false, error: "duplicate" });
+            successOf(h.lastAjax())({ result: false, error: "duplicate" });
             expect(h.toastr.error).toHaveBeenCalledWith("duplicate");
             expect(labels(h)).toHaveLength(3);
 
@@ -361,7 +361,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const modal = spyModal(h);
             h.$(".edit-calendar").trigger("click");
             expect(h.lastAjax().url).toBe("/Calendar/IsCalendarExists?id=1");
-            h.lastAjax().success!({ result: true, calendar: { id: 1, name: "Zeta", description: "d", htmlColorCode: "#111111", timeZoneIanaId: "UTC" } });
+            successOf(h.lastAjax())({ result: true, calendar: { id: 1, name: "Zeta", description: "d", htmlColorCode: "#111111", timeZoneIanaId: "UTC" } });
             expect(h.$("#editCalendarName").val()).toBe("Zeta");
             expect(modal).toHaveBeenCalledWith({ keyboard: false, backdrop: "static" });
 
@@ -373,13 +373,13 @@ export function describeCalendarCommon(c: CalendarCommon): void {
         it("the pencil toasts when the calendar is gone; the icons highlight on hover", () => {
             const h = build();
             h.$(".edit-calendar").trigger("click");
-            h.lastAjax().success!({ result: false, error: "gone" });
+            successOf(h.lastAjax())({ result: false, error: "gone" });
             expect(h.toastr.error).toHaveBeenCalledWith("gone");
             for (const cls of [".edit-calendar", ".delete-calendar"]) {
                 h.$(cls).trigger("mouseenter");
-                expect((h.$(cls)[0] as HTMLElement).style.color).toBe("blue");
+                expect((instanceOfType(h.$(cls)[0], HTMLElement)).style.color).toBe("blue");
                 h.$(cls).trigger("mouseleave");
-                expect((h.$(cls)[0] as HTMLElement).style.color).toBe("");
+                expect((instanceOfType(h.$(cls)[0], HTMLElement)).style.color).toBe("");
             }
         });
 
@@ -389,7 +389,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             try {
                 spyModal(h);
                 const setProp = vi.fn();
-                h.calendarInstances[0].getEvents = () => [{ extendedProps: eventProps({ calendarId: 1 }), setProp }, {
+                firstCalendar(h).getEvents = () => [{ extendedProps: eventProps({ calendarId: 1 }), setProp }, {
                     extendedProps: eventProps({ calendarId: 2 }),
                     setProp: vi.fn()
                 }];
@@ -398,9 +398,9 @@ export function describeCalendarCommon(c: CalendarCommon): void {
                 h.$("#formEditCalendar").trigger("submit");
                 const call = h.lastAjax();
                 expect(call.url).toBe("/Calendar/UpdateCalendar");
-                expect((JSON.parse(String(call.data)) as { Calendars: object[] }).Calendars[0]).toMatchObject({ Id: "1", Name: "Aaa" });
+                expect(JSON.parse(String(call.data))).toMatchObject({ Calendars: [{ Id: "1", Name: "Aaa" }] });
 
-                call.success!({ result: true, message: "saved", calendar: { id: 1, name: "Aaa", htmlColorCode: "#222222" } });
+                successOf(call)({ result: true, message: "saved", calendar: { id: 1, name: "Aaa", htmlColorCode: "#222222" } });
                 vi.runAllTimers();
 
                 expect(h.$("#lblCalendar1 > label").text()).toBe("Aaa");
@@ -416,7 +416,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
         it("a refused edit toasts; an invalid edit form sends nothing", () => {
             const h = build();
             h.$("#formEditCalendar").trigger("submit");
-            h.lastAjax().success!({ result: false, error: "no" });
+            successOf(h.lastAjax())({ result: false, error: "no" });
             expect(h.toastr.error).toHaveBeenCalledWith("no");
             const h2 = build();
             stubPlugin(h2, "valid", () => false);
@@ -429,7 +429,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const modal = spyModal(h);
             const remove1 = vi.fn();
             const remove2 = vi.fn();
-            h.calendarInstances[0].getEvents = () => [{ extendedProps: eventProps({ calendarId: 1 }), remove: remove1 }, {
+            firstCalendar(h).getEvents = () => [{ extendedProps: eventProps({ calendarId: 1 }), remove: remove1 }, {
                 extendedProps: eventProps({ calendarId: 2 }),
                 remove: remove2
             }];
@@ -437,12 +437,12 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             h.$("#btnDeleteCalendar").trigger("click");
 
             expect(h.lastAjax().url).toBe("/Calendar/IsCalendarExists?id=1");
-            h.lastAjax().success!({ result: true, calendar: { id: 1, name: "Aaa", htmlColorCode: "#111111", description: null, timeZoneIanaId: "UTC" } });
+            successOf(h.lastAjax())({ result: true, calendar: { id: 1, name: "Aaa", htmlColorCode: "#111111", description: null, timeZoneIanaId: "UTC" } });
             const del = h.lastAjax();
             expect(del.url).toBe("/Calendar/DeleteCalendar");
             expect(JSON.parse(String(del.data))).toEqual({ Calendars: [{ Id: 1 }] });
 
-            del.success!({ result: true, message: "deleted", calendar: { id: 1 } });
+            successOf(del)({ result: true, message: "deleted", calendar: { id: 1 } });
             expect(h.$("#lblCalendar1")).toHaveLength(0);
             expect(remove1).toHaveBeenCalled();
             expect(remove2).not.toHaveBeenCalled();
@@ -454,12 +454,12 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const h = build();
             h.$(".delete-calendar").trigger("click");
             h.$("#btnDeleteCalendar").trigger("click");
-            h.lastAjax().success!({ result: false, error: "already gone" });
+            successOf(h.lastAjax())({ result: false, error: "already gone" });
             expect(h.toastr.error).toHaveBeenCalledWith("already gone");
 
             h.$("#btnDeleteCalendar").trigger("click");
-            h.lastAjax().success!({ result: true, calendar: { id: 1 } });
-            h.lastAjax().success!({ result: false, error: "in use" });
+            successOf(h.lastAjax())({ result: true, calendar: { id: 1 } });
+            successOf(h.lastAjax())({ result: false, error: "in use" });
             expect(h.toastr.error).toHaveBeenCalledWith("in use");
             expect(h.$("#lblCalendar1")).toHaveLength(1);
         });
@@ -479,11 +479,11 @@ export function describeCalendarCommon(c: CalendarCommon): void {
                     displayEndDateTimeZone: "KST"
                 }), ...over
             };
-            const result = h.calendarOptions[0].eventClick({ el, event });
+            const result = calendarEventClick(h, { el, event });
             return { event, result, el };
         };
         /** The inline `display` style of the element matching `id` (jsdom does no layout). */
-        const display = (h: Handle, id: string) => (h.$(id)[0] as HTMLElement).style.display;
+        const display = (h: Handle, id: string) => (instanceOfType(h.$(id)[0], HTMLElement)).style.display;
 
         it("clicking my own timed event opens its popup with the local start/end and both zones", () => {
             const h = build();
@@ -513,12 +513,12 @@ export function describeCalendarCommon(c: CalendarCommon): void {
 
         it("clicking the same event again while its popup is open closes it", () => {
             const h = build();
-            Object.assign(h.$("#calendarEventPopup")[0], { getClientRects: () => [1] }); // jsdom has no layout
+            Object.assign(present(h.$("#calendarEventPopup")[0]), { getClientRects: () => [1] }); // jsdom has no layout
             const el = h.win.document.createElement("div");
             h.win.document.body.appendChild(el);
             const event = { id: "55", title: "Mine", allDay: false, extendedProps: eventProps({ calendarType: "My" }) };
-            h.calendarOptions[0].eventClick({ el, event });
-            expect(h.calendarOptions[0].eventClick({ el, event })).toBeUndefined();
+            calendarEventClick(h, { el, event });
+            expect(calendarEventClick(h, { el, event })).toBeUndefined();
             expect(display(h, "#calendarEventPopup")).toBe("none");
         });
 
@@ -534,7 +534,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(h.win.confirm).toHaveBeenCalledWith("L_ConfirmDelete");
             const call = h.lastAjax();
             expect(call.url).toBe("/Calendar/DeleteCalendarEvent?id=55");
-            call.success!({ result: true, message: "deleted" });
+            successOf(call)({ result: true, message: "deleted" });
             expect(event.remove).toHaveBeenCalled();
             expect(h.toastr.success).toHaveBeenCalledWith("deleted");
         });
@@ -543,7 +543,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const h = build();
             const { event } = clickEvent(h);
             h.$("#deleteCalendarEventPopup").trigger("click");
-            h.lastAjax().success!({ result: false, error: "not yours" });
+            successOf(h.lastAjax())({ result: false, error: "not yours" });
             expect(h.toastr.error).toHaveBeenCalledWith("not yours");
             expect(event.remove).not.toHaveBeenCalled();
         });
@@ -553,7 +553,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             clickEvent(h);
             h.$("#editCalendarEventPopup").trigger("click");
             expect(h.lastAjax().url).toBe("/Calendar/IsCalendarEventExists?id=55");
-            h.lastAjax().success!({ result: false, error: "gone" });
+            successOf(h.lastAjax())({ result: false, error: "gone" });
             expect(h.toastr.error).toHaveBeenCalledWith("gone");
         });
 
@@ -562,7 +562,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             spyModal(h);
             clickEvent(h);
             h.$("#editCalendarEventPopup").trigger("click");
-            h.lastAjax().success!({
+            successOf(h.lastAjax())({
                 result: true, calendarEvent: {
                     id: 55, title: "Mine", allDay: false, displayStartDate: "2024-05-01 09:05:00", displayEndDate: "2024-05-02 10:10:00",
                     startDateTimeZoneIanaId: "UTC", endDateTimeZoneIanaId: "Asia/Seoul", location: "Room 2", description: "<p>d</p>",
@@ -590,13 +590,13 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             h.$("#editCalendarEventMyCalendar").html("<option value=\"1\" selected>c</option>");
             return h;
         };
-        const updateCall = (h: Handle) => h.ajaxCalls.find((a) => a.url === "/Calendar/UpdateCalendarEvent")!;
+        const updateCall = (h: Handle) => h.ajaxCalls.find((a) => a.url === "/Calendar/UpdateCalendarEvent");
 
         it("saving an edited timed event posts the joined dates, zones and its mapped reminders", () => {
             const h = buildEdit();
             const ev = h.$.Event("submit");
             h.$("#formEditCalendarEvent").trigger(ev);
-            const data = updateCall(h).data as FormData;
+            const data = formDataOf(updateCall(h));
             expect(ev.isDefaultPrevented()).toBe(true);
             expect(data.get("Id")).toBe("55");
             expect(data.get("Title")).toBe("Edited");
@@ -621,7 +621,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             h.$("#editCalendarEventAllDayCheckedStartDate").val("2024-06-01");
             h.$("#editCalendarEventAllDayCheckedEndDate").val("2024-06-03");
             h.$("#formEditCalendarEvent").trigger("submit");
-            const data = updateCall(h).data as FormData;
+            const data = formDataOf(updateCall(h));
             expect(data.get("AllDay")).toBe("true");
             expect(data.get("StartDate")).toBe("2024-06-01");
             expect(data.get("StartDateTimeZoneIanaId")).toBe("");
@@ -643,15 +643,15 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const h = buildEdit();
             const modal = spyModal(h);
             h.$("#formEditCalendarEvent").trigger("submit");
-            updateCall(h).success!({ result: true, message: "updated" });
-            expect(h.calendarInstances[0].removeAllEvents).toHaveBeenCalled();
+            successOf(updateCall(h))({ result: true, message: "updated" });
+            expect(firstCalendar(h).removeAllEvents).toHaveBeenCalled();
             expect(eventCalls(h)).toHaveLength(1);
             expect(h.toastr.success).toHaveBeenCalledWith("updated");
             expect(modal).toHaveBeenCalledWith("hide");
 
             const h2 = buildEdit();
             h2.$("#formEditCalendarEvent").trigger("submit");
-            updateCall(h2).success!({ result: false, error: "no" });
+            successOf(updateCall(h2))({ result: false, error: "no" });
             expect(h2.toastr.error).toHaveBeenCalledWith("no");
         });
 
@@ -673,13 +673,13 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             h.$("#createCalendarEventAllDayUncheckedEndDate").val("2024-05-02");
             h.$("#formCreateCalendarEvent").trigger("submit");
             const created = h.ajaxCalls.find((a) => a.url === "/Calendar/CreateCalendarEvent");
-            expect(((created?.data as FormData | undefined)?.get("CalendarEventUploadedFile") as File | null)?.name).toBe("ok.zip");
+            expect(instanceOfType(formDataOf(created).get("CalendarEventUploadedFile"), File).name).toBe("ok.zip");
         });
 
         // ---- the attachment sent is always the one the form shows ------------------------------------------
         /** Puts `size` bytes named `name` (or nothing, for `null`) into the `which` attachment input and fires its change. */
         const choose = (h: Handle, which: string, file: { size: number; name: string } | null) => {
-            const input = h.$(`#${which}CalendarEventAttachment`)[0] as HTMLInputElement;
+            const input = instanceOfType(h.$(`#${which}CalendarEventAttachment`)[0], HTMLInputElement);
             const files = file ? [new h.win.File([new Uint8Array(file.size)], file.name)] : [];
             Object.defineProperty(input, "files", { configurable: true, value: files });
             h.$(input).trigger("change");
@@ -691,7 +691,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             h.$(which === "create" ? "#formCreateCalendarEvent" : "#formEditCalendarEvent").trigger("submit");
             const calls = h.ajaxCalls.filter((a) => a.url === url);
             expect(calls).toHaveLength(before + 1);
-            return { call: calls.at(-1)!, file: (calls.at(-1)!.data as FormData).get("CalendarEventUploadedFile") };
+            return { call: lastOf(calls), file: (instanceOfType(lastOf(calls).data, FormData)).get("CalendarEventUploadedFile") };
         };
         /** An event form ready to submit. */
         const ready = (which: string) => {
@@ -721,12 +721,12 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             spyModal(h);
             choose(h, which, { size: 10, name: "first.zip" });
             const first = sentFile(h, which);
-            expect((first.file as File).name).toBe("first.zip");
-            first.call.success!({ result: true, message: "ok" });
+            expect((instanceOfType(first.file, File)).name).toBe("first.zip");
+            successOf(first.call)({ result: true, message: "ok" });
             first.call.complete?.();
 
             expect(sentFile(h, which).file).not.toBeInstanceOf(h.win.File);
-            expect((h.$(`#${which}CalendarEventAttachment`)[0] as HTMLInputElement).value).toBe("");
+            expect((instanceOfType(h.$(`#${which}CalendarEventAttachment`)[0], HTMLInputElement)).value).toBe("");
         });
 
         it.each(["create", "edit"])("%s: after a refused submit the form keeps its file, so correcting the form and resubmitting sends it again", (which) => {
@@ -734,23 +734,23 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             spyModal(h);
             choose(h, which, { size: 10, name: "first.zip" });
             const first = sentFile(h, which);
-            first.call.success!({ result: false, error: "Title is too long." });
+            successOf(first.call)({ result: false, error: "Title is too long." });
             first.call.complete?.();
 
             expect(h.toastr.error).toHaveBeenCalledWith("Title is too long.");
-            expect((sentFile(h, which).file as File).name).toBe("first.zip");
+            expect((instanceOfType(sentFile(h, which).file, File)).name).toBe("first.zip");
         });
 
         it("opening the create-event modal (drag-select or 'add event') starts without the file chosen for an earlier event", () => {
             for (const open of [
-                (h: Handle) => h.calendarOptions[0].select({ start: new Date("2024-01-01"), end: new Date("2024-01-02") }),
+                (h: Handle) => calendarSelect(h, { start: new Date("2024-01-01"), end: new Date("2024-01-02") }),
                 (h: Handle) => h.$("#aCreateCalendarEvent").trigger("click"),
             ]) {
                 const h = ready("create");
                 spyModal(h);
                 choose(h, "create", { size: 10, name: "earlier.zip" });
                 open(h);
-                h.ajaxCalls.filter((a) => a.url === "/Calendar/GetCalendars").at(-1)!.complete?.();
+                lastOf(h.ajaxCalls.filter((a) => a.url === "/Calendar/GetCalendars")).complete?.();
                 h.$("#createCalendarEventAllDayUncheckedStartDate").val("2024-05-01");
                 h.$("#createCalendarEventAllDayUncheckedEndDate").val("2024-05-02");
 
@@ -764,29 +764,29 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             choose(h, "edit", { size: 10, name: "other-event.zip" });
             clickEvent(h);
             h.$("#editCalendarEventPopup").trigger("click");
-            h.lastAjax().success!({
+            successOf(h.lastAjax())({
                 result: true, calendarEvent: {
                     id: 55, title: "Mine", allDay: false, displayStartDate: "2024-05-01 09:05:00", displayEndDate: "2024-05-02 10:10:00",
                     startDateTimeZoneIanaId: "UTC", endDateTimeZoneIanaId: "Asia/Seoul", location: "", description: "<p>d</p>",
                     calendarEventAttachedFile: null, calendarId: 1, status: "Busy", serializedCalendarReminders: "[]"
                 }
             });
-            h.ajaxCalls.filter((a) => a.url === "/Calendar/GetCalendars").at(-1)!.complete?.();
+            lastOf(h.ajaxCalls.filter((a) => a.url === "/Calendar/GetCalendars")).complete?.();
 
             expect(sentFile(h, "edit").file).not.toBeInstanceOf(h.win.File);
         });
 
         it.each([["create", 0], ["edit", 1]])("the %s editor uploads a dropped image and inserts it with the stored path as alt; a refusal alerts", (which, index) => {
             const h = build();
-            h.summernoteInits[index].options.callbacks.onImageUpload([new h.win.File([new Uint8Array(4)], "p.png", { type: "image/png" })]);
+            present(present(present(h.summernoteInits[index]).options.callbacks).onImageUpload)([new h.win.File([new Uint8Array(4)], "p.png", { type: "image/png" })]);
             expect(h.lastAjax().url).toBe("/Calendar/UploadImageFile");
-            h.lastAjax().success!({ result: true, file: { fileContents: btoa("abc"), contentType: "image/png" }, filePath: "enc" });
+            successOf(h.lastAjax())({ result: true, file: { fileContents: btoa("abc"), contentType: "image/png" }, filePath: "enc" });
             const insert = h.summernoteCalls.find((c) => c.args[0] === "insertNode");
             expect(insert?.el?.id).toBe(`${which}CalendarEventDescription`);
-            expect((insert!.args[1] as HTMLImageElement).getAttribute("alt")).toBe("enc");
+            expect((instanceOfType(present(insert).args[1], HTMLImageElement)).getAttribute("alt")).toBe("enc");
 
-            h.summernoteInits[index].options.callbacks.onImageUpload([new h.win.File([new Uint8Array(1)], "q.png")]);
-            h.lastAjax().success!({ result: false, errorMessage: "png only" });
+            present(present(present(h.summernoteInits[index]).options.callbacks).onImageUpload)([new h.win.File([new Uint8Array(1)], "q.png")]);
+            successOf(h.lastAjax())({ result: false, errorMessage: "png only" });
             expect(h.win.alert).toHaveBeenCalledWith("png only");
         });
 
@@ -794,7 +794,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
         it.each(["create", "edit"])("the %s all-day box switches the date and reminder blocks", (which) => {
             const h = build();
             const box = h.$(`#${which}CalendarEventAllDay`);
-            const cap = which[0].toUpperCase() + which.slice(1);
+            const cap = which.charAt(0).toUpperCase() + which.slice(1);
             box.prop("checked", false).trigger("click"); // a click toggles: false → true
             expect(display(h, `#div${cap}EventAllDayChecked`)).not.toBe("none");
             expect(display(h, `#div${cap}EventAllDayUnchecked`)).toBe("none");
@@ -811,13 +811,13 @@ export function describeCalendarCommon(c: CalendarCommon): void {
                 body: (html) => html.replace(`<div id="div${which === "create" ? "Create" : "Edit"}EventNotification${suffix}"></div>`,
                     `<div id="div${which === "create" ? "Create" : "Edit"}EventNotification${suffix}"><a id="${which}CalendarEventNotification${suffix}"></a></div>`)
             });
-            const cap = which[0].toUpperCase() + which.slice(1);
+            const cap = which.charAt(0).toUpperCase() + which.slice(1);
             const before = h.$(`.div${cap}EventNotification${suffix}Row`).length; // some fixtures already carry a row
             h.$(`#${which}CalendarEventNotification${suffix}`).trigger("click");
             const rows = h.$(`.div${cap}EventNotification${suffix}Row`);
             expect(rows).toHaveLength(before + 1);
             const row = h.$(`#div${cap}EventNotification${suffix} .div${cap}EventNotification${suffix}Row`); // the inserted one lives in the block
-            const units = row.find(`.${which}CalendarEventSelNotificationTimeType${suffix} option`).map((_, o) => (o as HTMLOptionElement).value).get();
+            const units = row.find(`.${which}CalendarEventSelNotificationTimeType${suffix} option`).map((_, o) => (instanceOfType(o, HTMLOptionElement)).value).get();
             expect(units).toEqual(allDay ? ["Days", "Weeks"] : ["Minutes", "Hours", "Days", "Weeks"]);
             expect(row.find(`.${which}CalendarEventSelNotificationNumber${suffix}`).attr("max")).toBe(allDay ? "28" : "40320");
             if (allDay) expect(row.find(`.${which}CalendarEventSelNotificationTimeAllDayChecked option[selected]`).val()).toBe("09:00");
@@ -833,10 +833,10 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const dates = new Map<string, Date | null>();
             const options: { id: string; args: unknown[] }[] = [];
             stubPlugin(h, "datepicker", function(this: JQuery, cmd?: string, ...args: unknown[]) {
-                const id = this[0]?.id as string;
+                const id = present(this[0], "the datepicker's element").id;
                 if (cmd === "getDate") return dates.get(id) ?? null;
                 if (cmd === "setDate") {
-                    dates.set(id, args[0] as Date);
+                    dates.set(id, instanceOfType(args[0], Date));
                     return this;
                 }
                 if (cmd === "option") {
@@ -850,7 +850,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
         const pick = (h: Handle, id: string) => {
             const init = h.datepickerInits.find((i) => i.el?.id === id);
             expect(init, `a datepicker is attached to #${id}`).toBeDefined();
-            init!.options.onSelect!.call(init!.el);
+            present(present(init).options.onSelect).call(present(init).el);
         };
         const day = (d: number) => new Date(2024, 4, d);
 
@@ -920,7 +920,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
 export function describeCalendarExtras(c: { label: string; build: Build }): void {
     const { label, build } = c;
     /** The inline `display` style of the element matching `id` (jsdom does no layout). */
-    const display = (h: Handle, id: string) => (h.$(id)[0] as HTMLElement).style.display;
+    const display = (h: Handle, id: string) => (instanceOfType(h.$(id)[0], HTMLElement)).style.display;
 
     describe(`${label} — create/edit forms opened with the all-day box already checked`, () => {
         it.each(["create", "edit"])("shows the %s form's all-day layout at load", (which) => {
@@ -937,11 +937,11 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
         it("drag-selecting a range: a failed calendar list is toasted and the modal still opens", () => {
             const h = build();
             const modal = spyModal(h);
-            h.calendarOptions[0].select({ start: new Date("2024-01-01"), end: new Date("2024-01-02") });
+            calendarSelect(h, { start: new Date("2024-01-01"), end: new Date("2024-01-02") });
             const call = h.lastAjax();
             expect(call.url).toBe("/Calendar/GetCalendars");
-            call.error!();
-            call.complete!();
+            errorOf(call)();
+            completeOf(call)();
             expect(h.toastr.error).toHaveBeenCalledWith("L_FailedToLoadCalendars");
             expect(modal).toHaveBeenCalledWith("show");
         });
@@ -951,14 +951,14 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
         // every zone — east of UTC (Seoul), west of it (New York) and on it.
         it.each(["Asia/Seoul", "America/New_York", "UTC"])(
             "drag-selecting Jan 5–7 pre-fills the create form with 2024-01-05 → 2024-01-07 in %s", (zone) => {
-                const originalZone = process.env.TZ;
-                process.env.TZ = zone;
+                const originalZone = process.env["TZ"];
+                process.env["TZ"] = zone;
                 try {
                     const h = build();
                     spyModal(h);
                     // The harness stubs moment to a fixed date; this test is about the real date arithmetic.
                     Object.assign(h.win, { moment: realMoment });
-                    h.calendarOptions[0].select({ start: new Date(2024, 0, 5), end: new Date(2024, 0, 8) });
+                    calendarSelect(h, { start: new Date(2024, 0, 5), end: new Date(2024, 0, 8) });
 
                     for (const layout of ["AllDayUnchecked", "AllDayChecked"]) {
                         expect(h.$(`#createCalendarEvent${layout}StartDate`).val()).toBe("2024-01-05");
@@ -966,8 +966,8 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
                     }
                 } finally {
                     // Assigning undefined would store the string "undefined" as the zone.
-                    if (originalZone === undefined) delete process.env.TZ;
-                    else process.env.TZ = originalZone;
+                    if (originalZone === undefined) delete process.env["TZ"];
+                    else process.env["TZ"] = originalZone;
                 }
             });
 
@@ -978,7 +978,7 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
             spyModal(h);
             const create = (id: number, name: string) => {
                 h.$("#formCreateCalendar").trigger("submit");
-                h.lastAjax().success!({ result: true, message: "made", calendar: { id, name, htmlColorCode: "#111111" } });
+                successOf(h.lastAjax())({ result: true, message: "made", calendar: { id, name, htmlColorCode: "#111111" } });
             };
             create(7, "Zeta");   // equal to the existing "Zeta"
             create(8, "Zzz");    // after every existing name
@@ -992,12 +992,12 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
             vi.useFakeTimers(); // after build: loadSite manages its own fake timers while it evaluates the script
             try {
                 spyModal(h);
-                h.calendarInstances[0].getEvents = () => [];
+                firstCalendar(h).getEvents = () => [];
                 const edit = (name: string) => {
                     h.$("#editCalendarId").val("1");
                     h.$("#editCalendarName").val(name);
                     h.$("#formEditCalendar").trigger("submit");
-                    h.lastAjax().success!({ result: true, message: "ok", calendar: { id: 1, name, htmlColorCode: "#222222" } });
+                    successOf(h.lastAjax())({ result: true, message: "ok", calendar: { id: 1, name, htmlColorCode: "#222222" } });
                     vi.runAllTimers();
                 };
                 edit("Alpha"); // equal to calendar 2
@@ -1014,15 +1014,15 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
         const labels = (h: Handle) => h.$("#myCalendars > label").map((_, l) => l.id).get();
         it("a refused calendar list leaves the create-event calendar select as it was (drag-select and 'add event')", () => {
             for (const open of [
-                (h: Handle) => h.calendarOptions[0].select({ start: new Date("2024-01-01"), end: new Date("2024-01-02") }),
+                (h: Handle) => calendarSelect(h, { start: new Date("2024-01-01"), end: new Date("2024-01-02") }),
                 (h: Handle) => h.$("#aCreateCalendarEvent").trigger("click"),
             ]) {
                 const h = build();
                 spyModal(h);
                 h.$("#createCalendarEventMyCalendar").html("<option value=\"9\" selected>kept</option>");
                 open(h);
-                const call = h.ajaxCalls.filter((a) => a.url === "/Calendar/GetCalendars").at(-1)!;
-                call.success!({ result: false, error: "no" });
+                const call = lastOf(h.ajaxCalls.filter((a) => a.url === "/Calendar/GetCalendars"));
+                successOf(call)({ result: false, error: "no" });
                 call.complete?.();
                 expect(h.$("#createCalendarEventMyCalendar option").map((_, o) => o.textContent).get()).toEqual(["kept"]);
             }
@@ -1033,13 +1033,13 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
             vi.useFakeTimers();
             try {
                 spyModal(h);
-                h.calendarInstances[0].getEvents = () => [];
+                firstCalendar(h).getEvents = () => [];
                 const before = labels(h).sort();
                 h.$("#editCalendarId").val("1");
                 h.$("#editCalendarName").val("Ghost");
                 h.$("#formEditCalendar").trigger("submit");
                 expect(() => {
-                    h.lastAjax().success!({ result: true, message: "ok", calendar: { id: 999, name: "Ghost", htmlColorCode: "#333333" } });
+                    successOf(h.lastAjax())({ result: true, message: "ok", calendar: { id: 999, name: "Ghost", htmlColorCode: "#333333" } });
                     vi.runAllTimers();
                 }).not.toThrow();
                 expect(labels(h).sort()).toEqual(before);
@@ -1053,7 +1053,7 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
             const h = build();
             const el = h.win.document.createElement("div");
             h.win.document.body.appendChild(el);
-            h.calendarOptions[0].eventClick({
+            calendarEventClick(h, {
                 el,
                 event: {
                     id: "55",
@@ -1100,7 +1100,7 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
                 const call = h.ajaxCalls.find((a) => a.url === url);
                 if (call) {
                     submitted++;
-                    expect(JSON.parse(String((call.data as FormData).get("SerializedCalendarReminders")))).toEqual([]);
+                    expect(JSON.parse(String((instanceOfType(call.data, FormData)).get("SerializedCalendarReminders")))).toEqual([]);
                 }
             }
             expect(submitted).toBeGreaterThan(0); // (a form whose validation refuses the unit sends nothing at all)
@@ -1109,8 +1109,8 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
 
     describe(`${label} — inline images in the event editors`, () => {
         const upload = (h: Handle, id: string) => {
-            const init = h.summernoteInits.find((i) => (i.el as HTMLElement | undefined)?.id === id)!;
-            init.options.callbacks.onImageUpload([new h.win.File([new Uint8Array(4)], "p.png", { type: "image/png" })]);
+            const init = present(h.summernoteInits.find((i) => i.el?.id === id));
+            present(present(init.options.callbacks).onImageUpload)([new h.win.File([new Uint8Array(4)], "p.png", { type: "image/png" })]);
         };
 
         it.each([["create", "createCalendarEventDescription"], ["edit", "editCalendarEventDescription"]])(
@@ -1122,12 +1122,12 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
                     upload(h, id);
                     const call = h.lastAjax();
                     expect(call.url).toBe("/Calendar/UploadImageFile");
-                    call.success!({ result: true, file: { fileContents: btoa("abc"), contentType: "image/png" }, filePath: "enc-cal" });
-                    const insert = h.summernoteCalls.find((x) => x.args[0] === "insertNode" && (x.el as HTMLElement | undefined)?.id === id)!;
-                    const img = insert.args[1] as HTMLImageElement;
+                    successOf(call)({ result: true, file: { fileContents: btoa("abc"), contentType: "image/png" }, filePath: "enc-cal" });
+                    const insert = present(h.summernoteCalls.find((x) => x.args[0] === "insertNode" && x.el?.id === id));
+                    const img = instanceOfType(insert.args[1], HTMLImageElement);
                     expect(img.getAttribute("alt")).toBe("enc-cal");
                     expect(revoke).not.toHaveBeenCalled();
-                    (img[event] as () => void)();
+                    img.dispatchEvent(new Event(event.slice(2))); // fires the onload / onerror handler
                     expect(revoke).toHaveBeenCalledWith("blob:cal-upload");
                 }
             });
@@ -1135,7 +1135,7 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
         it.each([["create", "createCalendarEventDescription"], ["edit", "editCalendarEventDescription"]])("the %s editor alerts the server's message when an image is refused", (_which, id) => {
             const h = build();
             upload(h, id);
-            h.lastAjax().success!({ result: false, errorMessage: "png only" });
+            successOf(h.lastAjax())({ result: false, errorMessage: "png only" });
             expect(h.win.alert).toHaveBeenCalledWith("png only");
         });
     });
@@ -1154,7 +1154,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
     <div id="divEditEventNotificationAllDayChecked"><div class="divEditEventNotificationAllDayCheckedRow">stale</div><div id="editCalendarEventNotificationAllDayChecked"></div></div>
     <div id="divEditEventNotificationAllDayUnchecked"><div class="divEditEventNotificationAllDayUncheckedRow">stale</div><div id="editCalendarEventNotificationAllDayUnchecked"></div></div>`;
     /** The inline `display` style of the element matching `id` (jsdom does no layout). */
-    const display = (h: Handle, id: string) => (h.$(id)[0] as HTMLElement).style.display;
+    const display = (h: Handle, id: string) => (instanceOfType(h.$(id)[0], HTMLElement)).style.display;
     /** Loads the page with {@link editDom}, stubbed object URLs and a modal spy. */
     const setup = () => {
         // the base fixture already has empty edit-reminder containers; swap them for ones with a stale row and an insertion anchor
@@ -1171,7 +1171,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
     const click = (h: Handle) => {
         const el = h.win.document.createElement("div");
         h.win.document.body.appendChild(el);
-        return h.calendarOptions[0].eventClick({ el, event: { id: "55", title: "T", allDay: false, extendedProps: eventProps({ calendarType: "My" }) } });
+        return calendarEventClick(h, { el, event: { id: "55", title: "T", allDay: false, extendedProps: eventProps({ calendarType: "My" }) } });
     };
     /** A stored attachment as the event reply describes it. */
     const attachment = { name: "spec", extension: ".pdf", size: 2_500_000 };
@@ -1193,10 +1193,10 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
     const openEdit = (h: Handle, calendarEvent: Record<string, unknown>, calendars = [{ id: 1, name: "One", htmlColorCode: "#123456" }]) => {
         click(h);
         h.$("#editCalendarEventPopup").trigger("click");
-        h.lastAjax().success!(payload(calendarEvent));
+        successOf(h.lastAjax())(payload(calendarEvent));
         const inner = h.lastAjax();
-        inner.success!({ result: true, calendars });
-        inner.complete!();
+        successOf(inner)({ result: true, calendars });
+        completeOf(inner)();
     };
 
     describe(`${label} — edit form in detail`, () => {
@@ -1238,6 +1238,13 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             expect(h.$(".divEditEventNotificationAllDayUncheckedRow")).toHaveLength(0);
         });
 
+        it("a file stored without an extension shows its bare name (not the name followed by \"null\")", () => {
+            const h = setup();
+            openEdit(h, { calendarEventAttachedFile: { ...attachment, extension: null } });
+            expect(h.$("#aEditCalendarEventAttachedFile").text()).toBe("spec");
+            expect(h.$("#aEditCalendarEventAttachedFile").attr("data-name")).toBe("spec");
+        });
+
         it("an attached file shows its link, a comma-grouped size in KB and the event it is downloaded for — not the file's bytes", () => {
             const h = setup();
             openEdit(h, { calendarEventAttachedFile: attachment });
@@ -1259,8 +1266,8 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
         it("inline images in the description are rebuilt from their embedded data into object URLs before the editor gets the HTML", () => {
             const h = setup();
             openEdit(h, { description: `<p>x</p><img data-file="${png}" data-contenttype="image/png" alt=""><img src="keep.png" alt="">` });
-            const code = h.summernoteCalls.filter((c) => (c.el as HTMLElement | undefined)?.id === "editCalendarEventDescription" && c.args[0] === "code").pop();
-            const html = String(code!.args[1]);
+            const code = h.summernoteCalls.filter((c) => c.el?.id === "editCalendarEventDescription" && c.args[0] === "code").pop();
+            const html = String(present(code).args[1]);
             expect(html).toContain("src=\"blob:fake\"");
             expect(html).not.toContain("data-file");
             expect(html).not.toContain("data-contenttype");
@@ -1277,9 +1284,9 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             spyModal(h);
             openEdit(h, { description: `<img data-file="${png}" data-contenttype="image/png" alt="">` });
             const revoke = (h.win.URL.revokeObjectURL = vi.fn());
-            const img = h.$(".note-editor img")[0] as HTMLImageElement;
+            const img = instanceOfType(h.$(".note-editor img")[0], HTMLImageElement);
 
-            (img[event] as () => void)();
+            img.dispatchEvent(new Event(event.slice(2))); // fires the onload / onerror handler
 
             expect(revoke).toHaveBeenCalledWith("blob:live");
         });
@@ -1287,20 +1294,20 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
         it("an inline image with no content type is left exactly as stored", () => {
             const h = setup();
             openEdit(h, { description: `<img data-file="${png}" alt="">` });
-            const code = h.summernoteCalls.filter((c) => (c.el as HTMLElement | undefined)?.id === "editCalendarEventDescription" && c.args[0] === "code").pop();
-            expect(String(code!.args[1])).toContain("data-file");
-            expect(String(code!.args[1])).not.toContain("blob:");
+            const code = h.summernoteCalls.filter((c) => c.el?.id === "editCalendarEventDescription" && c.args[0] === "code").pop();
+            expect(String(present(code).args[1])).toContain("data-file");
+            expect(String(present(code).args[1])).not.toContain("blob:");
         });
 
         it("a failing calendar list toasts but the modal still opens", () => {
             const h = setup();
             click(h);
             h.$("#editCalendarEventPopup").trigger("click");
-            h.lastAjax().success!(payload());
+            successOf(h.lastAjax())(payload());
             const inner = h.lastAjax();
-            inner.success!({ result: false });
-            inner.error!();
-            inner.complete!();
+            successOf(inner)({ result: false });
+            errorOf(inner)();
+            completeOf(inner)();
             expect(h.toastr.error).toHaveBeenCalledWith("L_FailedToLoadCalendars");
             expect(h.$("#editCalendarEventStatus").val()).toBe("Busy");
         });
@@ -1340,7 +1347,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             h.$("#editCalendarEventMyCalendar").html("<option value=\"1\" selected>c</option>");
             h.$("#formEditCalendarEvent").trigger("submit");
             const call = h.ajaxCalls.find((a) => a.url === "/Calendar/UpdateCalendarEvent");
-            return { h, call, reminders: call ? JSON.parse(String((call.data as FormData).get("SerializedCalendarReminders"))) : undefined };
+            return { h, call, reminders: call ? JSON.parse(String((instanceOfType(call.data, FormData)).get("SerializedCalendarReminders"))) : undefined };
         };
         const shape = (o: Record<string, unknown>) => ({
             Method: "Email",
@@ -1377,14 +1384,14 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
 
         it("after an accepted edit the reloaded events are added to the grid with their display fields; an empty reload only toasts", () => {
             const { h, call } = submitEdit(timedRow("Email", "Hours", "1"), false);
-            call!.success!({ result: true, message: "updated" });
-            const reload = eventCalls(h)[0];
-            reload.success!({ result: true, calendarEvents: JSON.stringify([evt(50, 1)]) });
-            const added = h.calendarInstances[0].addEvent.mock.calls.at(-1)![0];
+            successOf(present(call))({ result: true, message: "updated" });
+            const reload = present(eventCalls(h)[0]);
+            successOf(reload)({ result: true, calendarEvents: JSON.stringify([evt(50, 1)]) });
+            const added = lastOf(firstCalendar(h).addEvent.mock.calls)[0];
             expect(added).toMatchObject({ id: "50", title: "Event 50", backgroundColor: "#123456" });
             expect(added.extendedProps).toMatchObject({ calendarId: 1, displayStartDate: "2024-05-01 10:00:00", displayEndDateTimeZone: "UTC" });
 
-            reload.success!({ result: false, error: "no events for you" });
+            successOf(reload)({ result: false, error: "no events for you" });
             expect(h.toastr.error).toHaveBeenCalledWith("no events for you"); // the reload's own message, not the (successful) edit reply's
         });
 
@@ -1414,8 +1421,8 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             try {
                 h.respond(0, new h.win.Blob(["pdf-bytes"], { type: "application/pdf" }));
                 expect(clicked).toHaveLength(1);
-                expect(clicked[0].download).toBe("spec.pdf");
-                expect(clicked[0].href).toBe("blob:fake");
+                expect(present(clicked[0]).download).toBe("spec.pdf");
+                expect(present(clicked[0]).href).toBe("blob:fake");
                 expect(h.win.URL.revokeObjectURL).not.toHaveBeenCalled();
                 vi.advanceTimersByTime(100);
                 expect(h.win.URL.revokeObjectURL).toHaveBeenCalledWith("blob:fake");
@@ -1447,7 +1454,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
         it("the calendar menu icon toggles the menu, a click outside or on a menu link hides it, and 'create calendar' opens its dialog", () => {
             const h = build({ body: (html) => html.replace("<div id=\"dropdown-content\"></div>", "<div id=\"dropdown-content\"><a id=\"aInMenu\" href=\"#\">x</a></div>") });
             const modal = spyModal(h);
-            const hidden = () => (h.$("#dropdown-content")[0] as HTMLElement).style.display === "none";
+            const hidden = () => (instanceOfType(h.$("#dropdown-content")[0], HTMLElement)).style.display === "none";
             h.$("#dropdown-icon").trigger("click");
             expect(hidden()).toBe(true); // toggle() on jsdom's non-laid-out element hides it first
             h.$("#dropdown-icon").trigger("click");

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import describeBoardScript from "@tests/_common/boardSuite";
-import { loadSite, hidden, antiForgery } from "@tests/_common/harness";
+import { loadSite, hidden, antiForgery, lastOf, instanceOfType } from "@tests/_common/harness";
 
 // wwwroot/user/custom/Management/PrivateNote/js/site.js
 const fixture =
@@ -31,7 +31,7 @@ describe("user/Management/PrivateNote", () => {
     it("search navigates to /Management/PrivateNote with the encoded query", () => {
         const h = loadSite("user", "Management", "PrivateNote", fixture);
         h.$("#btnPrivateNoteSearchBoard").trigger("click");
-        const url = h.navigations.at(-1)!;
+        const url = lastOf(h.navigations);
         expect(url).toContain("/Management/PrivateNote?searchType=Title");
         expect(url).toContain("searchText=hello");
     });
@@ -42,7 +42,7 @@ describe("user/Management/PrivateNote", () => {
         const call = h.lastAjax();
         expect(call.url).toBe("/Management/WritePrivateNoteBoard");
         expect(call.data).toBeInstanceOf(h.win.FormData);
-        expect((call.data as FormData).get("Title")).toBe("t");
+        expect((instanceOfType(call.data, FormData)).get("Title")).toBe("t");
     });
 
     it("the list button navigates to its data-link", () => {

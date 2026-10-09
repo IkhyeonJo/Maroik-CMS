@@ -7,7 +7,7 @@
  * script under test is the compiled one at the matching wwwroot path.
  */
 import { describe, it, expect, vi } from "vitest";
-import { loadSite, fireNative, type SiteHandle, stubPlugin } from "@tests/_common/harness";
+import { loadSite, fireNative, type SiteHandle, stubPlugin, present, lastOf, successOf, instanceOfType } from "@tests/_common/harness";
 
 /** What one grid page supplies to {@link describeGridCrudScript}. */
 export interface GridCrudConfig {
@@ -60,17 +60,17 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
     const rowClasses = (h: SiteHandle) =>
         [...h.win.document.querySelectorAll<HTMLElement>(`.clsGridRow[${attr}^="suite-row"]`)].map((r) => r.classList.contains("table-primary"));
     /** The most recently constructed MvcGrid stub. */
-    const lastGrid = (h: SiteHandle) => h.MvcGridInstances.at(-1)!;
+    const lastGrid = (h: SiteHandle) => lastOf(h.MvcGridInstances);
     /** Replaces `$.fn.modal` with a chainable spy and returns it. */
     const spyModal = (h: SiteHandle) => {
-        const modal = vi.fn(function(this: JQuery) {
+        const modal = vi.fn(function(this: JQuery, _command?: unknown) {
             return this;
         });
         stubPlugin(h, "modal", modal);
         return modal;
     };
     /** The row key as a camelCase query-string name, e.g. "productName". */
-    const recordKey = c.rowKey[0].toLowerCase() + c.rowKey.slice(1);
+    const recordKey = c.rowKey.charAt(0).toLowerCase() + c.rowKey.slice(1);
     /** The IsXExists URL the script requests for `key` (non-numeric keys URL-encoded). */
     const existsUrl = (key: string) =>
         `/${c.controller}/Is${N}Exists?${recordKey}=${c.rowKey === "Id" ? key : encodeURIComponent(key)}`;
@@ -119,11 +119,11 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
             selectRow(h, KEYS[0]);
             h.$(`#btnEdit${N}GridRow`).trigger("click");
 
-            const call = h.ajaxCalls.find((a) => String(a.url).includes(`Is${N}Exists`))!;
+            const call = present(h.ajaxCalls.find((a) => String(a.url).includes(`Is${N}Exists`)));
             expect(call.url).toBe(existsUrl(KEYS[0]));
             expect(call.headers).toEqual({ RequestVerificationToken: "tok" });
 
-            call.success!({ result: true, [c.existsKey]: c.record });
+            successOf(call)({ result: true, [c.existsKey]: c.record });
 
             expect(modal).toHaveBeenCalledWith({ keyboard: false, backdrop: "static" });
             expect(modal).toHaveBeenCalledWith("show");
@@ -142,7 +142,7 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
                 const modal = spyModal(h);
                 selectRow(h, KEYS[0]);
                 h.$(`#btnEdit${N}GridRow`).trigger("click");
-                h.ajaxCalls.find((a) => String(a.url).includes(`Is${N}Exists`))!.success!({
+                successOf(present(h.ajaxCalls.find((a) => String(a.url).includes(`Is${N}Exists`))))({
                     result: true,
                     [c.existsKey]: { ...c.record, mainClass: "NoSuchClass" }
                 });
@@ -155,7 +155,7 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
             const modal = spyModal(h);
             selectRow(h, KEYS[0]);
             h.$(`#btnEdit${N}GridRow`).trigger("click");
-            h.ajaxCalls.find((a) => String(a.url).includes(`Is${N}Exists`))!.success!({ result: false, error: "gone" });
+            successOf(present(h.ajaxCalls.find((a) => String(a.url).includes(`Is${N}Exists`))))({ result: false, error: "gone" });
             expect(h.toastr.error).toHaveBeenCalledWith("gone");
             expect(modal).not.toHaveBeenCalledWith("show");
         });
@@ -188,13 +188,13 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
             const submit = h.$.Event("submit");
             h.$(`#form${verb === "Create" ? "Create" : "Edit"}${N}`).trigger(submit);
 
-            const call = h.ajaxCalls.find((a) => a.url === `/${c.controller}/${verb}${N}`)!;
+            const call = present(h.ajaxCalls.find((a) => a.url === `/${c.controller}/${verb}${N}`));
             expect(call).toBeDefined();
             expect(call.headers).toEqual({ RequestVerificationToken: "tok" });
             expect(() => JSON.parse(String(call.data))).not.toThrow();
             expect(submit.isDefaultPrevented()).toBe(true);
 
-            call.success!({ result: true, message: "done" });
+            successOf(call)({ result: true, message: "done" });
 
             expect(modal).toHaveBeenCalledWith("hide");
             expect(lastGrid(h).reload).toHaveBeenCalled();
@@ -205,15 +205,15 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
         it.each([["Create"], ["Update"]])("%s: a server fault's temporary-error message is toasted exactly as sent", (verb) => {
             const h = load();
             h.$(`#form${verb === "Create" ? "Create" : "Edit"}${N}`).trigger("submit");
-            h.ajaxCalls.find((a) => a.url === `/${c.controller}/${verb}${N}`)!.success!({ result: false, error: "A temporary error occurred. Please try again later." });
+            successOf(present(h.ajaxCalls.find((a) => a.url === `/${c.controller}/${verb}${N}`)))({ result: false, error: "A temporary error occurred. Please try again later." });
             expect(h.toastr.error).toHaveBeenCalledWith("A temporary error occurred. Please try again later.");
         });
 
         it.each([["Create"], ["Update"]])("%s: a refusal is toasted and the grid is not reloaded", (verb) => {
             const h = load();
             h.$(`#form${verb === "Create" ? "Create" : "Edit"}${N}`).trigger("submit");
-            const call = h.ajaxCalls.find((a) => a.url === `/${c.controller}/${verb}${N}`)!;
-            call.success!({ result: false, error: "rejected" });
+            const call = present(h.ajaxCalls.find((a) => a.url === `/${c.controller}/${verb}${N}`));
+            successOf(call)({ result: false, error: "rejected" });
             expect(h.toastr.error).toHaveBeenCalledWith("rejected");
             expect(h.MvcGridInstances).toHaveLength(0);
         });
@@ -236,15 +236,15 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
             selectRow(h, KEYS[1]);
             h.$(`#btnDelete${N}`).trigger("click");
 
-            const exists = h.ajaxCalls.find((a) => String(a.url).includes(`Is${N}Exists`))!;
+            const exists = present(h.ajaxCalls.find((a) => String(a.url).includes(`Is${N}Exists`)));
             expect(exists.url).toBe(existsUrl(KEYS[1]));
             // A key unlike the selected row's, typed like the real one (a numeric Id, or a name / e-mail).
             const returnedKey = c.rowKey === "Id" ? 424242 : "returned-key";
-            exists.success!({ result: true, [c.existsKey]: { ...c.record, [recordKey]: returnedKey } });
+            successOf(exists)({ result: true, [c.existsKey]: { ...c.record, [recordKey]: returnedKey } });
 
-            const del = h.ajaxCalls.find((a) => a.url === `/${c.controller}/Delete${N}`)!;
+            const del = present(h.ajaxCalls.find((a) => a.url === `/${c.controller}/Delete${N}`));
             expect(JSON.parse(String(del.data))).toEqual(deleteBody(returnedKey));
-            del.success!({ result: true, message: "removed" });
+            successOf(del)({ result: true, message: "removed" });
 
             expect(modal).toHaveBeenCalledWith("hide");
             expect(lastGrid(h).reload).toHaveBeenCalled();
@@ -255,14 +255,14 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
             const h = load();
             selectRow(h, KEYS[1]);
             h.$(`#btnDelete${N}`).trigger("click");
-            h.ajaxCalls.find((a) => String(a.url).includes(`Is${N}Exists`))!.success!({ result: false, error: "vanished" });
+            successOf(present(h.ajaxCalls.find((a) => String(a.url).includes(`Is${N}Exists`))))({ result: false, error: "vanished" });
             expect(h.toastr.error).toHaveBeenCalledWith("vanished");
             expect(h.ajaxCalls.find((a) => a.url === `/${c.controller}/Delete${N}`)).toBeUndefined();
 
             h.$(`#btnDelete${N}`).trigger("click");
-            const exists = h.ajaxCalls.filter((a) => String(a.url).includes(`Is${N}Exists`)).at(-1)!;
-            exists.success!({ result: true, [c.existsKey]: c.record });
-            h.ajaxCalls.find((a) => a.url === `/${c.controller}/Delete${N}`)!.success!({ result: false, error: "in use" });
+            const exists = lastOf(h.ajaxCalls.filter((a) => String(a.url).includes(`Is${N}Exists`)));
+            successOf(exists)({ result: true, [c.existsKey]: c.record });
+            successOf(present(h.ajaxCalls.find((a) => a.url === `/${c.controller}/Delete${N}`)))({ result: false, error: "in use" });
             expect(h.toastr.error).toHaveBeenCalledWith("in use");
             expect(h.MvcGridInstances).toHaveLength(0);
         });
@@ -279,29 +279,29 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
                 const sets: { id: string; date: Date }[] = [];
                 stubPlugin(h, "datepicker", function(this: JQuery, cmd?: string, arg?: unknown) {
                     if (cmd === "widget") return h.$(widget);
-                    if (cmd === "setDate") sets.push({ id: this[0]?.id, date: arg as Date });
+                    if (cmd === "setDate") sets.push({ id: present(this[0], "the datepicker's element").id, date: instanceOfType(arg, Date) });
                     return this;
                 });
                 return { pane, sets };
             };
-            const [nmYear, nmMonth, nmDay] = (c.noMaturityDate ?? "9999-12-31").split("-").map(Number);
+            const noMaturityDate = new Date(`${c.noMaturityDate ?? "9999-12-31"}T00:00:00`); // local midnight of that day
 
             it("localizes the pickers (yy-mm-dd, month after year)", () => {
                 const h = load();
-                const defaults = h.datepickerStatics.setDefaults.mock.calls[0][0];
+                const defaults = present(h.datepickerStatics.setDefaults.mock.calls[0])[0];
                 expect(defaults).toMatchObject({ dateFormat: "yy-mm-dd", showMonthAfterYear: true });
-                expect(defaults.monthNames).toHaveLength(12);
-                expect(defaults.dayNamesMin).toHaveLength(7);
+                expect(defaults["monthNames"]).toHaveLength(12);
+                expect(defaults["dayNamesMin"]).toHaveLength(7);
             });
 
-            it.each(c.maturityPickers!)("%s: opening the picker adds 'No maturity date' and 'Today' buttons; each sets its value", (id) => {
+            it.each(present(c.maturityPickers))("%s: opening the picker adds 'No maturity date' and 'Today' buttons; each sets its value", (id) => {
                 const h = load();
                 const { pane, sets } = fake(h);
                 vi.useFakeTimers(); // after load: loadSite manages its own fake timers while it evaluates the script
                 try {
                     const init = h.datepickerInits.find((i) => i.el?.id === id);
                     expect(init, `a datepicker is attached to #${id}`).toBeDefined();
-                    init!.options.beforeShow!(init!.el);
+                    present(present(init).options.beforeShow)(present(init).el);
                     vi.runAllTimers();
                 } finally {
                     vi.useRealTimers();
@@ -310,33 +310,33 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
                 const buttons = [...pane.querySelectorAll("button")];
                 expect(buttons).toHaveLength(2);
 
-                buttons[0].click(); // "No maturity date" → the far-future sentinel the server published
-                expect(sets.at(-1)!.date).toEqual(new Date(nmYear, nmMonth - 1, nmDay));
+                present(buttons[0]).click(); // "No maturity date" → the far-future sentinel the server published
+                expect(lastOf(sets).date).toEqual(noMaturityDate);
 
                 const before = Date.now();
-                buttons[1].click(); // "Today"
-                expect(Math.abs(sets.at(-1)!.date.getTime() - before)).toBeLessThan(5000);
+                present(buttons[1]).click(); // "Today"
+                expect(Math.abs(lastOf(sets).date.getTime() - before)).toBeLessThan(5000);
                 expect(h.datepickerStatics._clearDate).toHaveBeenCalledTimes(2);
             });
 
-            it.each(c.maturityPickers!)("%s: changing the month/year re-adds the same two buttons, and they work", (id) => {
+            it.each(present(c.maturityPickers))("%s: changing the month/year re-adds the same two buttons, and they work", (id) => {
                 const h = load();
                 const { pane, sets } = fake(h);
                 vi.useFakeTimers();
                 try {
-                    const init = h.datepickerInits.find((i) => i.el?.id === id)!;
-                    init.options.onChangeMonthYear!(2030, 5, { input: init.el });
+                    const init = present(h.datepickerInits.find((i) => i.el?.id === id));
+                    present(init.options.onChangeMonthYear)(2030, 5, { input: init.el });
                     vi.runAllTimers();
                 } finally {
                     vi.useRealTimers();
                 }
                 const buttons = [...pane.querySelectorAll("button")];
                 expect(buttons).toHaveLength(2);
-                buttons[0].click();
-                expect(sets.at(-1)!.date).toEqual(new Date(nmYear, nmMonth - 1, nmDay));
+                present(buttons[0]).click();
+                expect(lastOf(sets).date).toEqual(noMaturityDate);
                 const before = Date.now();
-                buttons[1].click();
-                expect(Math.abs(sets.at(-1)!.date.getTime() - before)).toBeLessThan(5000);
+                present(buttons[1]).click();
+                expect(Math.abs(lastOf(sets).date.getTime() - before)).toBeLessThan(5000);
             });
         });
     }

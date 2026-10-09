@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
-import { loadSite, antiForgery, fireNative } from "@tests/_common/harness";
+import { loadSite, antiForgery, fireNative, present, lastOf } from "@tests/_common/harness";
 
 // wwwroot/admin/custom/Management/Account/js/site.js
 function fixture(): string {
@@ -39,9 +39,9 @@ describe("Management/Account (admin)", () => {
     it("Excel export targets /Management/ExportExcelAccount (fileName=Account)", () => {
         const h = loadSite("admin", "Management", "Account", fixture());
         h.$("#btnExportExcelAccount").trigger("click");
-        const form = h.submittedForms.at(-1)!;
+        const form = lastOf(h.submittedForms);
         expect(form.action).toContain("/Management/ExportExcelAccount");
-        expect(form.querySelector<HTMLInputElement>("input[name=\"fileName\"]")!.value).toBe("Account");
+        expect(present(form.querySelector<HTMLInputElement>("input[name=\"fileName\"]")).value).toBe("Account");
     });
 
     it("percent-encodes the selected e-mail in the IsAccountExists query (a '+' or '&' must survive)", () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { describeLayoutScript } from "@tests/_common/layoutSuite";
 import { describeToolkit } from "@tests/_common/toolkitSuite";
-import { loadSite, antiForgery, hidden } from "@tests/_common/harness";
+import { loadSite, antiForgery, hidden, present, instanceOfType } from "@tests/_common/harness";
 
 // wwwroot/admin/custom/_Layout/js/site.js
 function fixture(): string {
@@ -24,12 +24,12 @@ describe("admin/_Layout", () => {
         expect(call.url).toBe("/Dashboard/CultureManagement");
         expect(call.type).toBe("POST");
         expect(JSON.parse(String(call.data))).toEqual({ Culture: "ko-KR" });
-        expect(call.headers!.RequestVerificationToken).toBe("tok");
+        expect(present(call.headers)["RequestVerificationToken"]).toBe("tok");
     });
 
     it("disables submit buttons while a POST is in flight and re-enables them after", () => {
         const h = loadSite("admin", "_Layout", "", fixture());
-        const btn = h.win.document.getElementById("sbmt") as HTMLButtonElement;
+        const btn = instanceOfType(h.win.document.getElementById("sbmt"), HTMLButtonElement);
 
         h.$(h.win.document).trigger("ajaxSend", [{}, { type: "POST" }]);
         expect(btn.disabled).toBe(true);

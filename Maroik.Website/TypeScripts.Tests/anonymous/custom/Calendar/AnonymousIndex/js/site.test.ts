@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
-import { loadSite, antiForgery, hidden, stubPlugin, eventProps } from "@tests/_common/harness";
+import { loadSite, antiForgery, hidden, stubPlugin, eventProps, lastOf, successOf, completeOf, instanceOfType, calendarEventClick, firstCalendar, present } from "@tests/_common/harness";
 
 // wwwroot/anonymous/custom/Calendar/AnonymousIndex/js/site.js  (read-only calendar view)
 function fixture(): string {
@@ -83,7 +83,7 @@ describe("Calendar/AnonymousIndex", () => {
     function openViewPopup(h: ReturnType<typeof loadSite>): void {
         const eventEl = h.win.document.createElement("div");
         h.win.document.body.appendChild(eventEl);
-        h.calendarOptions[0].eventClick({
+        calendarEventClick(h, {
             el: eventEl,
             event: {
                 id: "other-1",
@@ -167,9 +167,9 @@ const otherEvent = (o: Record<string, unknown> = {}) => ({
 describe("Calendar/AnonymousIndex — seeded and refreshed events", () => {
     it("seeds the calendar with every server-rendered event, typed as 'Other' and coloured", () => {
         const h = load([seededEvent(1), seededEvent(2)]);
-        const cal = h.calendarInstances[0];
+        const cal = firstCalendar(h);
         expect(cal.addEvent).toHaveBeenCalledTimes(2);
-        expect(cal.addEvent.mock.calls[0][0]).toMatchObject({
+        expect(present(cal.addEvent.mock.calls[0])[0]).toMatchObject({
             id: "1", title: "Event 1", allDay: false, backgroundColor: "#ff0000", borderColor: "#ff0000",
             extendedProps: { calendarId: 5, calendarType: "Other", displayStartDate: "2024-05-01 10:00:00" },
         });
@@ -189,7 +189,7 @@ describe("Calendar/AnonymousIndex — seeded and refreshed events", () => {
     it("toggling a calendar clears the grid and asks for the events of exactly the checked calendars", () => {
         const h = withCheckboxes();
         h.$(".chkOtherCalendar").first().trigger("change");
-        expect(h.calendarInstances[0].removeAllEvents).toHaveBeenCalledTimes(1);
+        expect(firstCalendar(h).removeAllEvents).toHaveBeenCalledTimes(1);
         const call = h.lastAjax();
         expect(call.url).toBe("/Calendar/GetCalendarEvents");
         expect(JSON.parse(String(call.data))).toEqual({ Calendars: [{ Id: 7 }, { Id: 9 }] });
@@ -198,11 +198,11 @@ describe("Calendar/AnonymousIndex — seeded and refreshed events", () => {
 
     it("the returned events are added with their own calendar type; a refused reply adds nothing", () => {
         const h = withCheckboxes();
-        const cal = h.calendarInstances[0];
+        const cal = firstCalendar(h);
         h.$(".chkOtherCalendar").first().trigger("change");
         h.respond(0, { result: true, calendarEvents: JSON.stringify([seededEvent(3), seededEvent(4)]) });
         expect(cal.addEvent).toHaveBeenCalledTimes(2);
-        expect(cal.addEvent.mock.calls.at(-1)![0].extendedProps.calendarType).toBe("Other");
+        expect(lastOf(cal.addEvent.mock.calls)[0].extendedProps["calendarType"]).toBe("Other");
 
         cal.addEvent.mockClear();
         h.$(".chkOtherCalendar").first().trigger("change");
@@ -212,15 +212,15 @@ describe("Calendar/AnonymousIndex — seeded and refreshed events", () => {
 
     it("a stale reply that lands after a newer toggle is ignored (it must not resurrect unchecked calendars)", () => {
         const h = withCheckboxes();
-        const cal = h.calendarInstances[0];
+        const cal = firstCalendar(h);
         h.$(".chkOtherCalendar").first().trigger("change"); // request 1
         h.$(".chkOtherCalendar").last().trigger("change");  // request 2
         const [first, second] = h.ajaxCalls.filter((c) => c.url === "/Calendar/GetCalendarEvents");
 
-        second.success!({ result: true, calendarEvents: JSON.stringify([seededEvent(20)]) });
-        first.success!({ result: true, calendarEvents: JSON.stringify([seededEvent(10)]) });
+        successOf(second)({ result: true, calendarEvents: JSON.stringify([seededEvent(20)]) });
+        successOf(first)({ result: true, calendarEvents: JSON.stringify([seededEvent(10)]) });
 
-        const ids = cal.addEvent.mock.calls.map((c) => c[0].id);
+        const ids = cal.addEvent.mock.calls.map((c) => c[0]["id"]);
         expect(ids).toEqual(["20"]);
     });
 });
@@ -230,10 +230,10 @@ describe("Calendar/AnonymousIndex — the 'other event' popup", () => {
     const click = (h: ReturnType<typeof load>, event = otherEvent(), el?: HTMLElement) => {
         const anchor = el ?? h.win.document.createElement("div");
         if (!el) h.win.document.body.appendChild(anchor);
-        return h.calendarOptions[0].eventClick({ el: anchor, event });
+        return calendarEventClick(h, { el: anchor, event });
     };
     /** The inline `display` style of the element matching `id` (jsdom does no layout). */
-    const display = (h: ReturnType<typeof load>, id: string) => (h.$(id)[0] as HTMLElement).style.display;
+    const display = (h: ReturnType<typeof load>, id: string) => (instanceOfType(h.$(id)[0], HTMLElement)).style.display;
 
     it("only 'Other' events open the popup", () => {
         const h = load();
@@ -265,7 +265,7 @@ describe("Calendar/AnonymousIndex — the 'other event' popup", () => {
 
     it("clicking the same event again closes the popup; the close button and a click elsewhere close it too", () => {
         const h = load();
-        const popup = h.$("#otherCalendarEventPopup")[0] as HTMLElement;
+        const popup = instanceOfType(h.$("#otherCalendarEventPopup")[0], HTMLElement);
         Object.assign(popup, { getClientRects: () => [1] }); // jsdom has no layout: make it count as visible
         const anchor = h.win.document.createElement("div");
         h.win.document.body.appendChild(anchor);
@@ -305,7 +305,7 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
     const open = (h: ReturnType<typeof load>) => {
         const el = h.win.document.createElement("div");
         h.win.document.body.appendChild(el);
-        h.calendarOptions[0].eventClick({ el, event: otherEvent({ id: "77" }) });
+        calendarEventClick(h, { el, event: otherEvent({ id: "77" }) });
         h.$("#viewOtherCalendarEventPopup").trigger("click");
     };
     /** An accepted event reply for a timed UTC → Asia/Seoul event, with `overrides` merged in. */
@@ -324,16 +324,16 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         const h = load();
         open(h);
         expect(h.lastAjax().url).toBe("/Calendar/IsOtherCalendarEventExists?id=77");
-        expect((h.$("#otherCalendarEventPopup")[0] as HTMLElement).style.display).toBe("none");
+        expect((instanceOfType(h.$("#otherCalendarEventPopup")[0], HTMLElement)).style.display).toBe("none");
     });
 
     it("a refused calendar list leaves the view's calendar select empty but the modal is still built", () => {
         const h = load();
         open(h);
-        h.lastAjax().success!(reply());
+        successOf(h.lastAjax())(reply());
         const inner = h.lastAjax();
-        inner.success!({ result: false });
-        inner.complete!();
+        successOf(inner)({ result: false });
+        completeOf(inner)();
         expect(h.$("#viewCalendarEventMyCalendar option")).toHaveLength(0);
         expect(h.$("#viewCalendarEventStatus").val()).toBe("Confirmed");
     });
@@ -341,7 +341,7 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
     it("an inline image with no content type is left as stored", () => {
         const h = load();
         open(h);
-        h.lastAjax().success!(reply({ description: `<img data-file="${btoa("abc")}" alt="">` }));
+        successOf(h.lastAjax())(reply({ description: `<img data-file="${btoa("abc")}" alt="">` }));
         const setCode = h.summernoteCalls.find((c) => c.args[0] === "code");
         expect(String(setCode?.args[1])).toContain("data-file");
     });
@@ -349,7 +349,7 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
     it("an event that can no longer be found is toasted and no modal is built", () => {
         const h = load();
         open(h);
-        h.lastAjax().success!({ result: false, error: "gone" });
+        successOf(h.lastAjax())({ result: false, error: "gone" });
         expect(h.toastr.error).toHaveBeenCalledWith("gone");
         expect(h.ajaxCalls).toHaveLength(1);
     });
@@ -357,28 +357,28 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
     it("a timed event fills the date, HH:mm time and zone fields for both ends", () => {
         const h = load();
         open(h);
-        h.lastAjax().success!(reply());
+        successOf(h.lastAjax())(reply());
         expect(h.$("#viewCalendarEventAllDayUncheckedStartDate").val()).toBe("2024-05-01");
         expect(h.$("#viewCalendarEventAllDayUncheckedStartTime").val()).toBe("10:30");
         expect(h.$("#viewCalendarEventAllDayUncheckedEndTime").val()).toBe("11:45");
         expect(h.$("#viewCalendarEventAllDayUncheckedEndTimeZone").val()).toBe("Asia/Seoul");
         expect(h.$("#viewCalendarEventLocation").val()).toBe("Room 1");
-        expect((h.$("#divViewEventAllDayUnchecked")[0] as HTMLElement).style.display).not.toBe("none");
+        expect((instanceOfType(h.$("#divViewEventAllDayUnchecked")[0], HTMLElement)).style.display).not.toBe("none");
     });
 
     it("an all-day event fills the all-day fields", () => {
         const h = load();
         open(h);
-        h.lastAjax().success!(reply({ allDay: true, displayStartDate: "2024-05-01", displayEndDate: "2024-05-03" }));
+        successOf(h.lastAjax())(reply({ allDay: true, displayStartDate: "2024-05-01", displayEndDate: "2024-05-03" }));
         expect(h.$("#viewCalendarEventAllDayCheckedStartDate").val()).toBe("2024-05-01");
         expect(h.$("#viewCalendarEventAllDayCheckedEndDate").val()).toBe("2024-05-03");
-        expect((h.$("#divViewEventAllDayChecked")[0] as HTMLElement).style.display).not.toBe("none");
+        expect((instanceOfType(h.$("#divViewEventAllDayChecked")[0], HTMLElement)).style.display).not.toBe("none");
     });
 
     it("the description's inline images are rehydrated into the disabled rich-text viewer", () => {
         const h = load();
         open(h);
-        h.lastAjax().success!(reply({ description: `<p>hi</p><img data-file="${btoa("abc")}" data-contenttype="image/png" alt="">` }));
+        successOf(h.lastAjax())(reply({ description: `<p>hi</p><img data-file="${btoa("abc")}" data-contenttype="image/png" alt="">` }));
         const setCode = h.summernoteCalls.find((c) => c.args[0] === "code");
         expect(String(setCode?.args[1])).toContain("blob:");
         expect(String(setCode?.args[1])).not.toContain("data-file");
@@ -388,25 +388,33 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
     it.each(["onload", "onerror"] as const)("a rebuilt description image's %s releases the object URL it was given", (event) => {
         const h = load(); // (the fixture's editor container already holds an image, as summernote's own DOM would after `code` is set)
         open(h);
-        h.lastAjax().success!(reply({ description: `<img data-file="${btoa("abc")}" data-contenttype="image/png" alt="">` }));
+        successOf(h.lastAjax())(reply({ description: `<img data-file="${btoa("abc")}" data-contenttype="image/png" alt="">` }));
         const revoke = (h.win.URL.revokeObjectURL = vi.fn());
-        const img = h.$(".note-editor img")[0] as HTMLImageElement;
+        const img = instanceOfType(h.$(".note-editor img")[0], HTMLImageElement);
 
-        (img[event] as () => void)();
+        img.dispatchEvent(new Event(event.slice(2))); // fires the onload / onerror handler
 
         expect(revoke).toHaveBeenCalledWith("blob:live");
+    });
+
+    it("an attachment stored without an extension shows its bare name", () => {
+        const h = load();
+        open(h);
+        successOf(h.lastAjax())(reply({ id: 77, calendarEventAttachedFile: { name: "report", extension: null, size: 10 } }));
+        expect(h.$("#aViewCalendarEventAttachedFile").text()).toBe("report");
+        expect(h.$("#aViewCalendarEventAttachedFile").attr("data-name")).toBe("report");
     });
 
     it("an attachment shows its name and a rounded KB size with thousands separators, and its link names the event — not the file's bytes", () => {
         const h = load();
         open(h);
-        h.lastAjax().success!(reply({ id: 77, calendarEventAttachedFile: { name: "report", extension: ".zip", size: 2_048_000 } }));
+        successOf(h.lastAjax())(reply({ id: 77, calendarEventAttachedFile: { name: "report", extension: ".zip", size: 2_048_000 } }));
         expect(h.$("#aViewCalendarEventAttachedFile").text()).toBe("report.zip");
         expect(h.$("#aViewCalendarEventAttachedFile").attr("data-name")).toBe("report.zip");
         expect(h.$("#aViewCalendarEventAttachedFile").attr("data-calendareventid")).toBe("77");
         expect(h.$("#aViewCalendarEventAttachedFile").attr("data-file")).toBeUndefined();
         expect(h.$("#spanViewCalendarEventAttachedFile").text()).toBe("2,000KB");
-        expect((h.$("#divViewCalendarEventAttachedFile")[0] as HTMLElement).style.display).not.toBe("none");
+        expect((instanceOfType(h.$("#divViewCalendarEventAttachedFile")[0], HTMLElement)).style.display).not.toBe("none");
     });
 
     /** The page with an attachment link for event 77 named "report.zip". */
@@ -442,7 +450,7 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
             try {
                 h.respond(0, new h.win.Blob(["zip-bytes"], { type: "application/zip" }));
                 expect(click).toHaveBeenCalledTimes(1);
-                expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("report.zip");
+                expect((instanceOfType(click.mock.contexts[0], HTMLAnchorElement)).download).toBe("report.zip");
                 expect(revoke).not.toHaveBeenCalled();
                 vi.advanceTimersByTime(100);
                 expect(revoke).toHaveBeenCalledWith("blob:attachment");
@@ -476,21 +484,21 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
     it("the calendar select is filled from the visible calendars and set to the event's own calendar", () => {
         const h = load();
         open(h);
-        h.lastAjax().success!(reply({ calendarId: 6 }));
+        successOf(h.lastAjax())(reply({ calendarId: 6 }));
         const inner = h.lastAjax();
-        inner.success!({ result: true, tempOtherCalendars: [{ id: 5, name: "A", htmlColorCode: "#123456" }, { id: 6, name: "B", htmlColorCode: "#123456" }] });
+        successOf(inner)({ result: true, tempOtherCalendars: [{ id: 5, name: "A", htmlColorCode: "#123456" }, { id: 6, name: "B", htmlColorCode: "#123456" }] });
         expect(h.$("#viewCalendarEventMyCalendar option").map((_, o) => o.textContent).get()).toEqual(["A", "B"]);
         expect(h.$("#viewCalendarEventMyCalendar").val()).toBe("6");
     });
 
     it("the modal is opened static (no Esc) once the calendar list settles", () => {
         const h = load();
-        const modal = vi.fn(function(this: JQuery) {
+        const modal = vi.fn(function(this: JQuery, _command?: unknown) {
             return this;
         });
         open(h);
         stubPlugin(h, "modal", modal);
-        h.lastAjax().success!(reply());
+        successOf(h.lastAjax())(reply());
         finish(h);
         expect(modal).toHaveBeenCalledWith({ keyboard: false, backdrop: "static" });
         expect(modal).toHaveBeenCalledWith("show");
@@ -506,16 +514,16 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
             { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: 1, TimesBeforeEvent: null },
             { Method: "Notification", MinutesBeforeEvent: 15, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: null },
         ];
-        h.lastAjax().success!(reply({ serializedCalendarReminders: JSON.stringify(reminders) }));
+        successOf(h.lastAjax())(reply({ serializedCalendarReminders: JSON.stringify(reminders) }));
         finish(h);
 
         const rows = h.$(".divViewEventNotificationAllDayUncheckedRow");
         expect(rows).toHaveLength(4); // the Email one is skipped
         const units = rows.map((_, r) => h.$(r).find(".viewCalendarEventSelNotificationTimeTypeAllDayUnchecked option[selected]").val()).get();
         expect(units).toEqual(["Hours", "Days", "Weeks", "Minutes"]);
-        expect(rows.find("input").map((_, i) => (i as HTMLInputElement).value).get()).toEqual(["2", "3", "1", "15"]);
-        expect(rows.find("input").map((_, i) => (i as HTMLInputElement).max).get()).toEqual(["672", "28", "4", "40320"]);
-        expect(rows.find("select, input").toArray().every((e) => (e as HTMLInputElement).disabled)).toBe(true);
+        expect(rows.find("input").map((_, i) => (instanceOfType(i, HTMLInputElement)).value).get()).toEqual(["2", "3", "1", "15"]);
+        expect(rows.find("input").map((_, i) => (instanceOfType(i, HTMLInputElement)).max).get()).toEqual(["672", "28", "4", "40320"]);
+        expect(rows.find("select, input").toArray().every((e) => e.matches(":disabled"))).toBe(true);
     });
 
     it("all-day reminders show days/weeks lead time and the chosen HH:mm; Email ones are skipped", () => {
@@ -527,7 +535,7 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
             { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 2, WeeksBeforeEvent: null, TimesBeforeEvent: "09:30:00" },
             { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: 3, TimesBeforeEvent: "08:00:00" },
         ];
-        h.lastAjax().success!(reply({
+        successOf(h.lastAjax())(reply({
             allDay: true,
             displayStartDate: "2024-05-01",
             displayEndDate: "2024-05-02",
@@ -539,7 +547,7 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         expect(rows).toHaveLength(2);
         expect(rows.map((_, r) => h.$(r).find(".viewCalendarEventSelNotificationTimeAllDayChecked option[selected]").val()).get()).toEqual(["09:30", "08:00"]);
         expect(rows.map((_, r) => h.$(r).find(".viewCalendarEventSelNotificationTimeTypeAllDayChecked option[selected]").val()).get()).toEqual(["Days", "Weeks"]);
-        expect(rows.find("input").map((_, i) => (i as HTMLInputElement).max).get()).toEqual(["28", "4"]);
+        expect(rows.find("input").map((_, i) => (instanceOfType(i, HTMLInputElement)).max).get()).toEqual(["28", "4"]);
     });
 });
 

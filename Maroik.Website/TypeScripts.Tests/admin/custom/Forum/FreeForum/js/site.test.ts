@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import describeBoardScript from "@tests/_common/boardSuite";
-import { loadSite, hidden, antiForgery } from "@tests/_common/harness";
+import { loadSite, hidden, antiForgery, lastOf, instanceOfType } from "@tests/_common/harness";
 
 // wwwroot/admin/custom/Forum/FreeForum/js/site.js
 const fixture =
@@ -32,7 +32,7 @@ describe("admin/Forum/FreeForum", () => {
     it("search navigates to /Forum/FreeForum with the encoded query", () => {
         const h = loadSite("admin", "Forum", "FreeForum", fixture);
         h.$("#btnFreeForumSearchBoard").trigger("click");
-        const url = h.navigations.at(-1)!;
+        const url = lastOf(h.navigations);
         expect(url).toContain("/Forum/FreeForum?searchType=Title");
         expect(url).toContain("searchText=q1");
     });
@@ -43,7 +43,7 @@ describe("admin/Forum/FreeForum", () => {
         const call = h.lastAjax();
         expect(call.url).toBe("/Forum/WriteFreeBoard");
         expect(call.data).toBeInstanceOf(h.win.FormData);
-        expect((call.data as FormData).get("Title")).toBe("hi");
+        expect((instanceOfType(call.data, FormData)).get("Title")).toBe("hi");
     });
 
     it("WriteUploadFile/EditUploadFile do not throw when change fires with no file selected", () => {

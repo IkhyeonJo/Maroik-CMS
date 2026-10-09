@@ -4,6 +4,7 @@
 // the ones TypeScript picks (say a typings upgrade reorders them), so this compiles a probe that uses each
 // value without stating a type, with the project's own `tsc`, and expects every use to be refused.
 import { execFileSync } from "node:child_process";
+import { present } from "@tests/_common/harness";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -32,7 +33,8 @@ function compileProbe(declarations: string, types: string[]): string[] {
                 declarations, probe], { cwd: websiteRoot, encoding: "utf8", stdio: "pipe" });
             return [];
         } catch (error) {
-            return String((error as { stdout?: string }).stdout).split("\n").filter((line) => line.includes("probe.ts("));
+            const stdout = error instanceof Error && "stdout" in error ? String(error.stdout) : "";
+            return stdout.split("\n").filter((line) => line.includes("probe.ts("));
         }
     } finally {
         rmSync(dir, { recursive: true, force: true });
@@ -41,7 +43,7 @@ function compileProbe(declarations: string, types: string[]): string[] {
 
 /** The probe lines (1-based) that tsc refused. */
 function refusedLines(diagnostics: string[]): number[] {
-    return [...new Set(diagnostics.map((line) => Number(/probe\.ts\((\d+),/.exec(line)![1])))].sort((a, b) => a - b);
+    return [...new Set(diagnostics.map((line) => Number(present(/probe\.ts\((\d+),/.exec(line), "the diagnostic's line")[1])))].sort((a, b) => a - b);
 }
 
 describe("no implicit any from the libraries", () => {
