@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { loadSite, antiForgery, hidden, hiddenByStyle } from "@tests/_common/harness";
+import { loadSite, antiForgery, hidden, hiddenByStyle, stubPlugin } from "@tests/_common/harness";
 
 // wwwroot/anonymous/custom/Account/js/site.js
 function fixture(): string {
@@ -26,7 +26,7 @@ describe("anonymous/Account", () => {
 
     it("hides the loading spinner when the login form is invalid", () => {
         const h = loadSite("anonymous", "Account", "", fixture());
-        (h.$.fn as any).valid = () => false;
+        stubPlugin(h, "valid", () => false);
         h.$("#loading").show();
 
         h.$("#btnSignIn").trigger("click");
@@ -54,10 +54,10 @@ describe("anonymous/Account", () => {
     ])("%s shows the loading overlay only when %s validates", (button, formId) => {
         const h = loadSite("anonymous", "Account", "", fixture());
         const validated: string[] = [];
-        (h.$.fn as any).valid = function(this: JQuery) {
+        stubPlugin(h, "valid", function(this: JQuery) {
             validated.push(this.attr("id")!);
             return validated.length > 1; // first call: invalid, second call: valid
-        };
+        });
 
         h.$("#loading").show();
         h.$(button).trigger("click");

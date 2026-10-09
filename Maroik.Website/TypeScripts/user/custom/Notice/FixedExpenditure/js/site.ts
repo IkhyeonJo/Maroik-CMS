@@ -115,10 +115,11 @@
             : $divEditFixedExpenditureMyDepositAsset.hide();
     }
 
-    // Localized month / day names for the datepicker plus the two extra button
-    // captions and the maturity-date error message. `any` avoids ~45 `.val()`
-    // casts; `PrevText` / `NextText` are read PascalCase to match the keys.
-    const localizer: any = {
+    // Localized month / day names for the datepicker plus the two extra button captions and the
+    // maturity-date error message (asserted `Record<string, string>`: each holds a string, which
+    // `.val()` types as a wider union); `PrevText` / `NextText` are read PascalCase to match the
+    // keys.
+    const localizer = {
         PrevText: $("#localizerPrevText").val(),
         NextText: $("#localizerNextText").val(),
         January: $("#localizerJanuary").val(),
@@ -169,7 +170,7 @@
         NoMaturityDate: $("#localizerNoMaturityDate").val(),
         Today: $("#localizerToday").val(),
         MaturityDateError: $("#localizerMaturityDateError").val(),
-    };
+    } as Record<string, string>;
 
     // Apply the localized names to every datepicker on the page.
     $.datepicker.setDefaults({
@@ -192,8 +193,7 @@
         // `onChangeMonthYear` (deferred a tick with `setTimeout`) append two
         // custom buttons: "No maturity date" -> the far-future `NO_MATURITY_DATE`
         // sentinel, and "Today". `_clearDate` is an undocumented jQuery-UI
-        // internal (hence `as any`), and the whole options object is cast `as
-        // any` because `@types/jqueryui` rejects void-returning callbacks.
+        // internal (typed in global.d.ts) that wipes the field first.
         $createFixedExpenditureMaturityDate.datepicker({
             showButtonPanel: true,
             minDate: 0,
@@ -206,7 +206,7 @@
                     $("<button>", {
                         text: localizer.NoMaturityDate,
                         click: function() {
-                            ($.datepicker as any)._clearDate(input);
+                            $.datepicker._clearDate(input);
                             $createFixedExpenditureMaturityDate.datepicker("setDate", NO_MATURITY_DATE);
                         }
                     }).appendTo(buttonPane).addClass("ui-datepicker-clear ui-state-default ui-priority-primary ui-corner-all");
@@ -214,14 +214,14 @@
                     $("<button>", {
                         text: localizer.Today,
                         click: function() {
-                            ($.datepicker as any)._clearDate(input);
+                            $.datepicker._clearDate(input);
                             $createFixedExpenditureMaturityDate.datepicker("setDate", new Date());
                         }
                     }).appendTo(buttonPane).addClass("ui-datepicker-clear ui-state-default ui-priority-primary ui-corner-all");
 
                 }, 1);
             },
-            onChangeMonthYear: function(_year: number, _month: number, instance: any) {
+            onChangeMonthYear: function(_year: number, _month: number, instance: DatepickerInstance) {
                 setTimeout(function() {
                     let buttonPane = $(instance)
                         .datepicker("widget")
@@ -230,7 +230,7 @@
                     $("<button>", {
                         text: localizer.NoMaturityDate,
                         click: function() {
-                            ($.datepicker as any)._clearDate(instance.input);
+                            $.datepicker._clearDate(instance.input);
                             $createFixedExpenditureMaturityDate.datepicker("setDate", NO_MATURITY_DATE);
                         }
                     }).appendTo(buttonPane).addClass("ui-datepicker-clear ui-state-default ui-priority-primary ui-corner-all");
@@ -238,14 +238,14 @@
                     $("<button>", {
                         text: localizer.Today,
                         click: function() {
-                            ($.datepicker as any)._clearDate(instance.input);
+                            $.datepicker._clearDate(instance.input);
                             $createFixedExpenditureMaturityDate.datepicker("setDate", new Date());
                         }
                     }).appendTo(buttonPane).addClass("ui-datepicker-clear ui-state-default ui-priority-primary ui-corner-all");
 
                 }, 1);
             }
-        } as any);
+        });
 
         $editFixedExpenditureMaturityDate.datepicker({
             showButtonPanel: true,
@@ -259,7 +259,7 @@
                     $("<button>", {
                         text: localizer.NoMaturityDate,
                         click: function() {
-                            ($.datepicker as any)._clearDate(input);
+                            $.datepicker._clearDate(input);
                             $editFixedExpenditureMaturityDate.datepicker("setDate", NO_MATURITY_DATE);
                         }
                     }).appendTo(buttonPane).addClass("ui-datepicker-clear ui-state-default ui-priority-primary ui-corner-all");
@@ -267,14 +267,14 @@
                     $("<button>", {
                         text: localizer.Today,
                         click: function() {
-                            ($.datepicker as any)._clearDate(input);
+                            $.datepicker._clearDate(input);
                             $editFixedExpenditureMaturityDate.datepicker("setDate", new Date());
                         }
                     }).appendTo(buttonPane).addClass("ui-datepicker-clear ui-state-default ui-priority-primary ui-corner-all");
 
                 }, 1);
             },
-            onChangeMonthYear: function(_year: number, _month: number, instance: any) {
+            onChangeMonthYear: function(_year: number, _month: number, instance: DatepickerInstance) {
                 setTimeout(function() {
                     let buttonPane = $(instance)
                         .datepicker("widget")
@@ -283,7 +283,7 @@
                     $("<button>", {
                         text: localizer.NoMaturityDate,
                         click: function() {
-                            ($.datepicker as any)._clearDate(instance.input);
+                            $.datepicker._clearDate(instance.input);
                             $editFixedExpenditureMaturityDate.datepicker("setDate", NO_MATURITY_DATE);
                         }
                     }).appendTo(buttonPane).addClass("ui-datepicker-clear ui-state-default ui-priority-primary ui-corner-all");
@@ -291,14 +291,14 @@
                     $("<button>", {
                         text: localizer.Today,
                         click: function() {
-                            ($.datepicker as any)._clearDate(instance.input);
+                            $.datepicker._clearDate(instance.input);
                             $editFixedExpenditureMaturityDate.datepicker("setDate", new Date());
                         }
                     }).appendTo(buttonPane).addClass("ui-datepicker-clear ui-state-default ui-priority-primary ui-corner-all");
 
                 }, 1);
             }
-        } as any);
+        });
 
         // Default both pickers to today.
         $createFixedExpenditureMaturityDate.datepicker("setDate", new Date());
@@ -313,8 +313,8 @@
     let selectedRowColor = "table-primary";
 
     // MvcGrid `rowclick`: move the highlight to the row whose `data-id` matches.
-    $(document).off("rowclick.FixedExpenditure").on("rowclick.FixedExpenditure", (e: any) => {
-        let selectedRow = e.detail;
+    $(document).off("rowclick.FixedExpenditure").on("rowclick.FixedExpenditure", (e: JQuery.TriggeredEvent) => {
+        let selectedRow = e.detail as unknown as MvcGridRowClickDetail;
         let selectedRowId = selectedRow.data.Id;
 
         let $clsGridRow = $(".clsGridRow");
@@ -475,7 +475,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {
@@ -624,7 +623,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {
@@ -695,7 +693,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {
@@ -717,7 +714,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {

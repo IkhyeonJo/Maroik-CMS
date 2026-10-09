@@ -81,8 +81,8 @@
     // MvcGrid `rowclick`: highlight the row matching the compound key
     // (ID + CategoryId). An empty CategoryId is normalized to "-1" so the
     // comparison is stable for Category rows.
-    $(document).off("rowclick.Menu").on("rowclick.Menu", (e: any) => {
-        let selectedRow = e.detail;
+    $(document).off("rowclick.Menu").on("rowclick.Menu", (e: JQuery.TriggeredEvent) => {
+        let selectedRow = e.detail as unknown as MvcGridRowClickDetail;
         let selectedRowId = selectedRow.data.Id;
         let selectedRowCategoryId = selectedRow.data.CategoryId;
 
@@ -263,7 +263,6 @@
                 type: "POST",
                 headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                 dataType: "json",
-                data: null as any,
                 contentType: "application/json; charset=utf-8",
                 success: function(data) {
                     if (data.result) {
@@ -296,7 +295,6 @@
                 type: "POST",
                 headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                 dataType: "json",
-                data: null as any,
                 contentType: "application/json; charset=utf-8",
                 success: function(data) {
                     if (data.result) {
@@ -478,7 +476,6 @@
                 type: "POST",
                 headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                 dataType: "json",
-                data: null as any,
                 contentType: "application/json; charset=utf-8",
                 success: function(data) {
                     if (data.result) {
@@ -525,7 +522,6 @@
                 type: "POST",
                 headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                 dataType: "json",
-                data: null as any,
                 contentType: "application/json; charset=utf-8",
                 success: function(data) {
                     if (data.result) {

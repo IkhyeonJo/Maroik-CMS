@@ -36,7 +36,7 @@
     // insertion instead of relying solely on the response header.
     // Shared with every other admin-area page via admin/_Layout/js/site.ts (loaded first on every
     // admin page) instead of being redefined here.
-    const escapeHtml: (value: string) => string = (window as any).escapeHtml;
+    const escapeHtml: (value: string) => string = window.escapeHtml;
 
     // --- Element cache: every field of the creation/edit-calendar,
     // create/edit-event and share modals, plus the event popup and the
@@ -139,7 +139,7 @@
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
     // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
     // missing or unparseable.
-    const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || (window as any).MaroikDefaultMaxAttachedFileSizeBytes;
+    const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || window.MaroikDefaultMaxAttachedFileSizeBytes;
     // Authoritative in CalendarReminderPolicy (server); rendered into hidden inputs by the view.
     const maxMinutesBeforeEvent = parseInt($("#maxMinutesBeforeEvent").val() as string, 10);
     const maxHoursBeforeEvent = parseInt($("#maxHoursBeforeEvent").val() as string, 10);
@@ -177,10 +177,10 @@
         });
     }
 
-    // Localized FullCalendar UI strings, month/day names, reminder labels and
-    // validation messages — each from a hidden input the view rendered from the
-    // resource files. Typed `any` so the ~80 `.val()` unions don't each need a cast.
-    const localizer: any = {
+    // Localized FullCalendar UI strings, month/day names, reminder labels and validation messages
+    // — each from a hidden input the view rendered from the resource files (asserted
+    // `Record<string, string>`: each holds a string, which `.val()` types as a wider union).
+    const localizer = {
         Email: $("#localizerEmail").val(),
         Notification: $("#localizerNotification").val(),
         Minutes: $("#localizerMinutes").val(),
@@ -262,7 +262,7 @@
         ErrorRangeDay: $("#localizerErrorRangeDay").val(),
         ErrorRangeWeek: $("#localizerErrorRangeWeek").val(),
         FailedToLoadCalendars: $("#localizerFailedToLoadCalendars").val()
-    };
+    } as Record<string, string>;
 
     // Apply the localized names to every jQuery-UI datepicker on the page.
     $.datepicker.setDefaults({
@@ -286,9 +286,10 @@
     $createCalendarEventDescription.summernote({
         lang: localizer.IETFLanguageTag,
         callbacks: {
-            onImageUpload: function(files: any) {
+            onImageUpload: function(files: Blob[]) {
                 for (let i = 0; i < files.length; i++) {
-                    CreateUploadImageFile(files[i]);
+                    // summernote hands over the dropped / pasted File objects (@types/summernote says Blob[]).
+                    CreateUploadImageFile(files[i] as File);
                 }
                 $createCalendarEventTaskDialogModal.css("overflow", "scroll");
             }
@@ -298,9 +299,10 @@
     $editCalendarEventDescription.summernote({
         lang: localizer.IETFLanguageTag,
         callbacks: {
-            onImageUpload: function(files: any) {
+            onImageUpload: function(files: Blob[]) {
                 for (let i = 0; i < files.length; i++) {
-                    EditUploadImageFile(files[i]);
+                    // summernote hands over the dropped / pasted File objects (@types/summernote says Blob[]).
+                    EditUploadImageFile(files[i] as File);
                 }
                 $editCalendarEventTaskDialogModal.css("overflow", "scroll");
             }
@@ -308,8 +310,8 @@
     });
 
     // The attachment chosen in each event form, held until the form is submitted.
-    let createCalendarEventUploadedFile: any;
-    let editCalendarEventUploadedFile: any;
+    let createCalendarEventUploadedFile: File | undefined;
+    let editCalendarEventUploadedFile: File | undefined;
 
     /**
      * `change` handler for the create-event attachment input: reject + clear the
@@ -388,8 +390,7 @@
         // fell behind and sets its `minDate`; each end picker's `onSelect` snaps
         // back to the start if the user picked an earlier day. The empty
         // `setTimeout(fn, 1)` in `beforeShow` / `onChangeMonthYear` is a jQuery-UI
-        // repaint nudge. The options object is cast `as any` because
-        // `@types/jqueryui` rejects the void-returning callbacks.
+        // repaint nudge.
         $createCalendarEventAllDayUncheckedStartDate.datepicker({
             showButtonPanel: true,
             beforeShow: function() {
@@ -400,7 +401,7 @@
                 setTimeout(function() {
                 }, 1);
             },
-            onSelect: function(this: any) {
+            onSelect: function(this: HTMLInputElement) {
                 let startDate = $(this).datepicker("getDate");
                 let endDate = $createCalendarEventAllDayUncheckedEndDate.datepicker("getDate");
                 if (endDate && endDate < startDate) {
@@ -408,7 +409,7 @@
                 }
                 $createCalendarEventAllDayUncheckedEndDate.datepicker("option", "minDate", startDate);
             }
-        } as any);
+        });
 
         $createCalendarEventAllDayUncheckedEndDate.datepicker({
             showButtonPanel: true,
@@ -420,14 +421,14 @@
                 setTimeout(function() {
                 }, 1);
             },
-            onSelect: function(this: any) {
+            onSelect: function(this: HTMLInputElement) {
                 let endDate = $(this).datepicker("getDate");
                 let startDate = $createCalendarEventAllDayUncheckedStartDate.datepicker("getDate");
                 if (startDate && endDate < startDate) {
                     $(this).datepicker("setDate", startDate);
                 }
             }
-        } as any);
+        });
 
         $createCalendarEventAllDayCheckedStartDate.datepicker({
             showButtonPanel: true,
@@ -439,7 +440,7 @@
                 setTimeout(function() {
                 }, 1);
             },
-            onSelect: function(this: any) {
+            onSelect: function(this: HTMLInputElement) {
                 let startDate = $(this).datepicker("getDate");
                 let endDate = $createCalendarEventAllDayCheckedEndDate.datepicker("getDate");
                 if (endDate && endDate < startDate) {
@@ -447,7 +448,7 @@
                 }
                 $createCalendarEventAllDayCheckedEndDate.datepicker("option", "minDate", startDate);
             }
-        } as any);
+        });
 
         $createCalendarEventAllDayCheckedEndDate.datepicker({
             showButtonPanel: true,
@@ -459,14 +460,14 @@
                 setTimeout(function() {
                 }, 1);
             },
-            onSelect: function(this: any) {
+            onSelect: function(this: HTMLInputElement) {
                 let endDate = $(this).datepicker("getDate");
                 let startDate = $createCalendarEventAllDayCheckedStartDate.datepicker("getDate");
                 if (startDate && endDate < startDate) {
                     $(this).datepicker("setDate", startDate);
                 }
             }
-        } as any);
+        });
 
         $editCalendarEventAllDayUncheckedStartDate.datepicker({
             showButtonPanel: true,
@@ -478,7 +479,7 @@
                 setTimeout(function() {
                 }, 1);
             },
-            onSelect: function(this: any) {
+            onSelect: function(this: HTMLInputElement) {
                 let startDate = $(this).datepicker("getDate");
                 let endDate = $editCalendarEventAllDayUncheckedEndDate.datepicker("getDate");
                 if (endDate && endDate < startDate) {
@@ -486,7 +487,7 @@
                 }
                 $editCalendarEventAllDayUncheckedEndDate.datepicker("option", "minDate", startDate);
             }
-        } as any);
+        });
 
         $editCalendarEventAllDayUncheckedEndDate.datepicker({
             showButtonPanel: true,
@@ -498,14 +499,14 @@
                 setTimeout(function() {
                 }, 1);
             },
-            onSelect: function(this: any) {
+            onSelect: function(this: HTMLInputElement) {
                 let endDate = $(this).datepicker("getDate");
                 let startDate = $editCalendarEventAllDayUncheckedStartDate.datepicker("getDate");
                 if (startDate && endDate < startDate) {
                     $(this).datepicker("setDate", startDate);
                 }
             }
-        } as any);
+        });
 
         $editCalendarEventAllDayCheckedStartDate.datepicker({
             showButtonPanel: true,
@@ -517,7 +518,7 @@
                 setTimeout(function() {
                 }, 1);
             },
-            onSelect: function(this: any) {
+            onSelect: function(this: HTMLInputElement) {
                 let startDate = $(this).datepicker("getDate");
                 let endDate = $editCalendarEventAllDayCheckedEndDate.datepicker("getDate");
                 if (endDate && endDate < startDate) {
@@ -525,7 +526,7 @@
                 }
                 $editCalendarEventAllDayCheckedEndDate.datepicker("option", "minDate", startDate);
             }
-        } as any);
+        });
 
         $editCalendarEventAllDayCheckedEndDate.datepicker({
             showButtonPanel: true,
@@ -537,14 +538,14 @@
                 setTimeout(function() {
                 }, 1);
             },
-            onSelect: function(this: any) {
+            onSelect: function(this: HTMLInputElement) {
                 let endDate = $(this).datepicker("getDate");
                 let startDate = $editCalendarEventAllDayCheckedStartDate.datepicker("getDate");
                 if (startDate && endDate < startDate) {
                     $(this).datepicker("setDate", startDate);
                 }
             }
-        } as any);
+        });
 
         // Hide the date picker's built-in "Close" / "Today" buttons via injected CSS.
         $("<style> .ui-datepicker-close { display: none; } </style>").appendTo("head");
@@ -593,8 +594,7 @@
         // --- The FullCalendar instance --------------------------------------
         // Read-only grid (`editable: false`) but `selectable` so a drag opens the
         // create-event modal. `calendar` is block-scoped here and closed over by
-        // the form handlers below and `RefreshCalendarEvents`. Cast `as any` —
-        // the global `<script>` build is loosely typed.
+        // the form handlers below and `RefreshCalendarEvents`.
         let calendar = new FullCalendar.Calendar(document.getElementById("calendar")!, {
             locale: localizer.IETFLanguageTag,
             headerToolbar: {
@@ -615,7 +615,7 @@
             // fields (UTC, +1 day on the start to match the grid), load the
             // user's calendars into the "my calendar" select, default the
             // timezone to the signed-in account's, and open the modal.
-            select: function(arg: any) {
+            select: function(arg: FullCalendarDateSelectArg) {
                 // FullCalendar hands back local-time dates (no `timeZone` option), with `end` exclusive:
                 // format them in local time and step `end` back one day to the last selected date.
                 const selectedStartDate = moment(arg.start).format("YYYY-MM-DD");
@@ -631,13 +631,12 @@
                     method: "POST",
                     headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                     dataType: "json",
-                    data: null as any,
                     contentType: "application/json; charset=utf-8",
                     success: function(response) {
                         if (response.result) {
                             $createCalendarEventMyCalendar.empty();
 
-                            $.each(response.calendars, function(_, calendar: any) {
+                            $.each(response.calendars, function(_, calendar: CalendarSummary) {
                                 $createCalendarEventMyCalendar.append($("<option>", {
                                     value: calendar.id,
                                     text: calendar.name
@@ -671,7 +670,7 @@
             //     `serializedCalendarReminders`).
             //   • delete -> `confirm()` then POST `DeleteCalendarEvent` and remove
             //     the event from the grid.
-            eventClick: function(arg: any) {
+            eventClick: function(arg: FullCalendarEventClickArg) {
                 let eventEl = $(arg.el);
                 let offset = eventEl.offset()!;
                 let popup = $calendarEventPopup;
@@ -723,7 +722,6 @@
                         type: "POST",
                         headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                         dataType: "json",
-                        data: null as any,
                         contentType: "application/json; charset=utf-8",
                         success: function(data) {
                             if (data.result) {
@@ -805,7 +803,7 @@
                                         if (data.calendarEvent.serializedCalendarReminders !== "[]") {
                                             const timeIntervals = reminderTimeIntervals;
 
-                                            JSON.parse(data.calendarEvent.serializedCalendarReminders).forEach((reminder: any) => {
+                                            JSON.parse(data.calendarEvent.serializedCalendarReminders).forEach((reminder: CalendarReminderJson) => {
 
                                                 const selectedMethodOption = `
                                                 <option value='Email' ${reminder.Method === "Email" ? "selected" : ""}>${localizer.Email}</option>
@@ -834,7 +832,7 @@
 
                                                 <label style='padding-left:5px;padding-right:5px;'>${localizer.BeforeAt}</label>
                                                 <select class='form-control-sm editCalendarEventSelNotificationTimeAllDayChecked' style='width:11%;text-overflow:ellipsis;'>
-                                                    ${timeIntervals.map((time: any) => time === `${reminder.TimesBeforeEvent.substring(0, 5)}` ? `<option value='${time}' selected>${time}</option>` : `<option value='${time}'>${time}</option>`).join("")}
+                                                    ${timeIntervals.map((time: string) => time === `${reminder.TimesBeforeEvent!.substring(0, 5)}` ? `<option value='${time}' selected>${time}</option>` : `<option value='${time}'>${time}</option>`).join("")}
                                                 </select>
                                                 <a class='hover aEditCalendarDeleteNotificationAllDayChecked' href='#' style='width:10%;'>
                                                     <i class='fa fa-trash' aria-hidden='true' style='margin-left: 7px;'></i>
@@ -853,7 +851,7 @@
 
                                         if (data.calendarEvent.serializedCalendarReminders !== "[]") {
 
-                                            JSON.parse(data.calendarEvent.serializedCalendarReminders).forEach((reminder: any) => {
+                                            JSON.parse(data.calendarEvent.serializedCalendarReminders).forEach((reminder: CalendarReminderJson) => {
 
                                                 const selectedMethodOption = `
                                                 <option value='Email' ${reminder.Method === "Email" ? "selected" : ""}>${localizer.Email}</option>
@@ -915,13 +913,12 @@
                                     method: "POST",
                                     headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                                     dataType: "json",
-                                    data: null as any,
                                     contentType: "application/json; charset=utf-8",
                                     success: function(response) {
                                         if (response.result) {
                                             $editCalendarEventMyCalendar.empty();
 
-                                            $.each(response.calendars, function(_, calendar: any) {
+                                            $.each(response.calendars, function(_, calendar: CalendarSummary) {
                                                 $editCalendarEventMyCalendar.append($("<option>", {
                                                     value: calendar.id,
                                                     text: calendar.name
@@ -954,7 +951,6 @@
                             type: "POST",
                             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                             dataType: "json",
-                            data: null as any,
                             contentType: "application/json; charset=utf-8",
                             success: function(data) {
                                 if (data.result) {
@@ -971,14 +967,14 @@
 
                 return false;
             }
-        } as any);
+        });
 
         // Seed the calendar with the events the server rendered into the hidden
         // input, then render. `extendedProps` carries the pre-formatted display
         // strings the popup shows.
-        JSON.parse($calendarEventOutputViewModels.val() as string).forEach((item: any) => {
+        JSON.parse($calendarEventOutputViewModels.val() as string).forEach((item: CalendarEventJson) => {
             calendar.addEvent({
-                id: item.Id,
+                id: String(item.Id),
                 title: item.Title,
                 allDay: item.AllDay,
                 start: item.StartDate,
@@ -1012,7 +1008,7 @@
 
             const requestSeq = ++calendarEventsRequestSeq;
 
-            let paramValue: any = {
+            let paramValue: CalendarEventsRequest = {
                 Calendars: []
             };
 
@@ -1041,9 +1037,9 @@
                         return;
                     }
                     if (response.result) {
-                        JSON.parse(response.calendarEvents).forEach((item: any) => {
+                        JSON.parse(response.calendarEvents).forEach((item: CalendarEventJson) => {
                             calendar.addEvent({
-                                id: item.Id,
+                                id: String(item.Id),
                                 title: item.Title,
                                 allDay: item.AllDay,
                                 start: item.StartDate,
@@ -1072,7 +1068,7 @@
         // server re-checks every reminder on save.
         function ValidateCreateEventInputAllDayChecked(row: JQuery) {
             let numberInput = row.find(".createCalendarEventSelNotificationNumberAllDayChecked");
-            let value: any = (numberInput.val() as string).trim();
+            let value: string | number = (numberInput.val() as string).trim();
             let timeType = row.find(".createCalendarEventSelNotificationTimeTypeAllDayChecked").val();
             let isValid = true;
             let errorMessage = "";
@@ -1080,7 +1076,7 @@
             if (value === "") {
                 isValid = false;
                 errorMessage = `${localizer.ThisFieldRequired}`;
-            } else if (isNaN(value)) {
+            } else if (isNaN(Number(value))) {
                 isValid = false;
                 errorMessage = `${localizer.ErrorInvalidNumber}`;
             } else {
@@ -1112,7 +1108,7 @@
         // Create modal, timed (all-day unchecked) reminder row — see the group comment above.
         function ValidateCreateEventInputAllDayUnchecked(row: JQuery) {
             let numberInput = row.find(".createCalendarEventSelNotificationNumberAllDayUnchecked");
-            let value: any = (numberInput.val() as string).trim();
+            let value: string | number = (numberInput.val() as string).trim();
             let timeType = row.find(".createCalendarEventSelNotificationTimeTypeAllDayUnchecked").val();
             let isValid = true;
             let errorMessage = "";
@@ -1120,7 +1116,7 @@
             if (value === "") {
                 isValid = false;
                 errorMessage = `${localizer.ThisFieldRequired}`;
-            } else if (isNaN(value)) {
+            } else if (isNaN(Number(value))) {
                 isValid = false;
                 errorMessage = `${localizer.ErrorInvalidNumber}`;
             } else {
@@ -1162,7 +1158,7 @@
         // Edit modal, timed (all-day unchecked) reminder row — see the group comment above.
         function ValidateEditEventInputAllDayUnchecked(row: JQuery) {
             let numberInput = row.find(".editCalendarEventSelNotificationNumberAllDayUnchecked");
-            let value: any = (numberInput.val() as string).trim();
+            let value: string | number = (numberInput.val() as string).trim();
             let timeType = row.find(".editCalendarEventSelNotificationTimeTypeAllDayUnchecked").val();
             let isValid = true;
             let errorMessage = "";
@@ -1170,7 +1166,7 @@
             if (value === "") {
                 isValid = false;
                 errorMessage = `${localizer.ThisFieldRequired}`;
-            } else if (isNaN(value)) {
+            } else if (isNaN(Number(value))) {
                 isValid = false;
                 errorMessage = `${localizer.ErrorInvalidNumber}`;
             } else {
@@ -1212,7 +1208,7 @@
         // Edit modal, all-day (all-day checked) reminder row — see the group comment above.
         function ValidateEditEventInputAllDayChecked(row: JQuery) {
             let numberInput = row.find(".editCalendarEventSelNotificationNumberAllDayChecked");
-            let value: any = (numberInput.val() as string).trim();
+            let value: string | number = (numberInput.val() as string).trim();
             let timeType = row.find(".editCalendarEventSelNotificationTimeTypeAllDayChecked").val();
             let isValid = true;
             let errorMessage = "";
@@ -1220,7 +1216,7 @@
             if (value === "") {
                 isValid = false;
                 errorMessage = `${localizer.ThisFieldRequired}`;
-            } else if (isNaN(value)) {
+            } else if (isNaN(Number(value))) {
                 isValid = false;
                 errorMessage = `${localizer.ErrorInvalidNumber}`;
             } else {
@@ -1310,7 +1306,6 @@
         // for all-day, the reminder list (one shape per unit), the description,
         // and the stashed attachment — all into `FormData` (multipart). On
         // success, reload the visible events, toast and close the modal.
-        // `as any` on the `FormData.append` values because it wants `string|Blob`.
         $formCreateCalendarEvent.off("submit").on("submit", function(event) {
             event.preventDefault();
 
@@ -1335,8 +1330,8 @@
             let calendarEventName = $createCalendarEventName.val();
             let allDay = $createCalendarEventAllDay.is(":checked");
 
-            let startDate: any;
-            let endDate: any;
+            let startDate: FormFieldValue;
+            let endDate: FormFieldValue;
 
             if ($createCalendarEventAllDay.is(":checked")) {
                 startDate = $createCalendarEventAllDayCheckedStartDate.val();
@@ -1346,8 +1341,8 @@
                 endDate = $createCalendarEventAllDayUncheckedEndDate.val() + " " + $createCalendarEventAllDayUncheckedEndTime.val();
             }
 
-            let startDateTimeZoneIanaId: any;
-            let endDateTimeZoneIanaId: any;
+            let startDateTimeZoneIanaId: FormFieldValue;
+            let endDateTimeZoneIanaId: FormFieldValue;
 
             if ($createCalendarEventAllDay.is(":checked")) {
                 startDateTimeZoneIanaId = "";
@@ -1363,7 +1358,7 @@
             let calendarId = $createCalendarEventMyCalendar.val();
             let status = $createCalendarEventStatus.val();
 
-            let calendarReminders: any[] = [];
+            let calendarReminders: CalendarReminderFormValue[] = [];
 
             if ($createCalendarEventAllDay.is(":checked")) {
                 $(".divCreateEventNotificationAllDayCheckedRow").each(function() {
@@ -1439,22 +1434,22 @@
             }
 
             let formData = new FormData();
-            formData.append("Title", calendarEventName as any);
-            formData.append("AllDay", allDay as any);
+            formData.append("Title", calendarEventName);
+            formData.append("AllDay", allDay);
 
-            formData.append("StartDate", startDate as any);
-            formData.append("EndDate", endDate as any);
+            formData.append("StartDate", startDate);
+            formData.append("EndDate", endDate);
 
-            formData.append("StartDateTimeZoneIanaId", startDateTimeZoneIanaId as any);
-            formData.append("EndDateTimeZoneIanaId", endDateTimeZoneIanaId as any);
+            formData.append("StartDateTimeZoneIanaId", startDateTimeZoneIanaId);
+            formData.append("EndDateTimeZoneIanaId", endDateTimeZoneIanaId);
 
-            formData.append("Location", location as any);
-            formData.append("Description", description as any);
+            formData.append("Location", location);
+            formData.append("Description", description);
 
             formData.append("CalendarEventUploadedFile", createCalendarEventUploadedFile);
 
-            formData.append("CalendarId", calendarId as any);
-            formData.append("Status", status as any);
+            formData.append("CalendarId", calendarId);
+            formData.append("Status", status);
 
             formData.append("SerializedCalendarReminders", JSON.stringify(calendarReminders));
 
@@ -1474,7 +1469,7 @@
 
                         calendar.removeAllEvents();
 
-                        let paramValue: any = {
+                        let paramValue: CalendarEventsRequest = {
                             Calendars: []
                         };
                         $myCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
@@ -1496,9 +1491,9 @@
                             contentType: "application/json; charset=utf-8",
                             success: function(response) {
                                 if (response.result) {
-                                    JSON.parse(response.calendarEvents).forEach((item: any) => {
+                                    JSON.parse(response.calendarEvents).forEach((item: CalendarEventJson) => {
                                         calendar.addEvent({
-                                            id: item.Id,
+                                            id: String(item.Id),
                                             title: item.Title,
                                             allDay: item.AllDay,
                                             start: item.StartDate,
@@ -1561,8 +1556,8 @@
             let calendarEventName = $editCalendarEventName.val();
             let allDay = $editCalendarEventAllDay.is(":checked");
 
-            let startDate: any;
-            let endDate: any;
+            let startDate: FormFieldValue;
+            let endDate: FormFieldValue;
 
             if ($editCalendarEventAllDay.is(":checked")) {
                 startDate = $editCalendarEventAllDayCheckedStartDate.val();
@@ -1572,8 +1567,8 @@
                 endDate = $editCalendarEventAllDayUncheckedEndDate.val() + " " + $editCalendarEventAllDayUncheckedEndTime.val();
             }
 
-            let startDateTimeZoneIanaId: any;
-            let endDateTimeZoneIanaId: any;
+            let startDateTimeZoneIanaId: FormFieldValue;
+            let endDateTimeZoneIanaId: FormFieldValue;
 
             if ($editCalendarEventAllDay.is(":checked")) {
                 startDateTimeZoneIanaId = "";
@@ -1590,7 +1585,7 @@
             let calendarId = $editCalendarEventMyCalendar.val();
             let status = $editCalendarEventStatus.val();
 
-            let calendarReminders: any[] = [];
+            let calendarReminders: CalendarReminderFormValue[] = [];
 
             if ($editCalendarEventAllDay.is(":checked")) {
                 $(".divEditEventNotificationAllDayCheckedRow").each(function() {
@@ -1666,23 +1661,23 @@
             }
 
             let formData = new FormData();
-            formData.append("Id", id as any);
-            formData.append("CalendarId", calendarId as any);
+            formData.append("Id", id);
+            formData.append("CalendarId", calendarId);
 
-            formData.append("Title", calendarEventName as any);
-            formData.append("AllDay", allDay as any);
+            formData.append("Title", calendarEventName);
+            formData.append("AllDay", allDay);
 
-            formData.append("StartDate", startDate as any);
-            formData.append("EndDate", endDate as any);
+            formData.append("StartDate", startDate);
+            formData.append("EndDate", endDate);
 
-            formData.append("StartDateTimeZoneIanaId", startDateTimeZoneIanaId as any);
-            formData.append("EndDateTimeZoneIanaId", endDateTimeZoneIanaId as any);
+            formData.append("StartDateTimeZoneIanaId", startDateTimeZoneIanaId);
+            formData.append("EndDateTimeZoneIanaId", endDateTimeZoneIanaId);
 
-            formData.append("Location", location as any);
-            formData.append("Description", description as any);
+            formData.append("Location", location);
+            formData.append("Description", description);
 
             formData.append("CalendarEventUploadedFile", editCalendarEventUploadedFile);
-            formData.append("Status", status as any);
+            formData.append("Status", status);
 
             formData.append("SerializedCalendarReminders", JSON.stringify(calendarReminders));
 
@@ -1702,7 +1697,7 @@
 
                         calendar.removeAllEvents();
 
-                        let paramValue: any = {
+                        let paramValue: CalendarEventsRequest = {
                             Calendars: []
                         };
 
@@ -1725,9 +1720,9 @@
                             contentType: "application/json; charset=utf-8",
                             success: function(response) {
                                 if (response.result) {
-                                    JSON.parse(response.calendarEvents).forEach((item: any) => {
+                                    JSON.parse(response.calendarEvents).forEach((item: CalendarEventJson) => {
                                         calendar.addEvent({
-                                            id: item.Id,
+                                            id: String(item.Id),
                                             title: item.Title,
                                             allDay: item.AllDay,
                                             start: item.StartDate,
@@ -1784,7 +1779,7 @@
                 { Id: id, Name: name, Description: description, HtmlColorCode: htmlColorCode, TimeZoneIanaId: timeZoneIanaId }
             ];
 
-            let paramValue: any = {
+            let paramValue: CalendarFormRequest = {
                 Calendars: []
             };
 
@@ -1833,7 +1828,7 @@
                                 return 0;
                             });
 
-                            $.each(calendars, function(_, label: any) {
+                            $.each(calendars, function(_, label: HTMLElement) {
                                 $myCalendars.append(label);
                             });
                         }, 0);
@@ -1865,7 +1860,6 @@
                 type: "POST",
                 headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                 dataType: "json",
-                data: null as any,
                 contentType: "application/json; charset=utf-8",
                 success: function(data) {
                     if (data.result) {
@@ -1874,7 +1868,7 @@
                             { Id: data.calendar.id }
                         ];
 
-                        let paramValue: any = {
+                        let paramValue: CalendarEventsRequest = {
                             Calendars: []
                         };
 
@@ -2029,7 +2023,7 @@
             { Name: name, Description: description, HtmlColorCode: htmlColorCode, TimeZoneIanaId: timeZoneIanaId }
         ];
 
-        let paramValue: any = {
+        let paramValue: CalendarFormRequest = {
             Calendars: []
         };
 
@@ -2061,7 +2055,7 @@
                         return 0;
                     });
 
-                    $.each(calendars, function(_, label: any) {
+                    $.each(calendars, function(_, label: HTMLElement) {
                         $myCalendars.append(label);
                     });
 
@@ -2090,13 +2084,12 @@
             method: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(response) {
                 if (response.result) {
                     $createCalendarEventMyCalendar.empty();
 
-                    $.each(response.calendars, function(_, calendar: any) {
+                    $.each(response.calendars, function(_, calendar: CalendarSummary) {
                         $createCalendarEventMyCalendar.append($("<option>", {
                             value: calendar.id,
                             text: calendar.name
@@ -2186,7 +2179,7 @@
             </select>
             <label style='padding-left:5px;padding-right:5px;'>${localizer.BeforeAt}</label>
             <select class='form-control-sm createCalendarEventSelNotificationTimeAllDayChecked' style='width:11%;text-overflow:ellipsis;'>
-                ${reminderTimeIntervals.map((time: any) => time === `${defaultBeforeAt}` ? `<option value='${time}' selected>${time}</option>` : `<option value='${time}'>${time}</option>`).join("")}
+                ${reminderTimeIntervals.map((time: string) => time === `${defaultBeforeAt}` ? `<option value='${time}' selected>${time}</option>` : `<option value='${time}'>${time}</option>`).join("")}
             </select>
             <a class='hover aCreateCalendarDeleteNotificationAllDayChecked' href='#' style='width:10%;'>
                 <i class='fa fa-trash' aria-hidden='true' style='margin-left: 7px;'></i>
@@ -2244,7 +2237,7 @@
             </select>
             <label style='padding-left:5px;padding-right:5px;'>${localizer.BeforeAt}</label>
             <select class='form-control-sm editCalendarEventSelNotificationTimeAllDayChecked' style='width:11%;text-overflow:ellipsis;'>
-                ${reminderTimeIntervals.map((time: any) => time === `${defaultBeforeAt}` ? `<option value='${time}' selected>${time}</option>` : `<option value='${time}'>${time}</option>`).join("")}
+                ${reminderTimeIntervals.map((time: string) => time === `${defaultBeforeAt}` ? `<option value='${time}' selected>${time}</option>` : `<option value='${time}'>${time}</option>`).join("")}
             </select>
             <a class='hover aEditCalendarDeleteNotificationAllDayChecked' href='#' style='width:10%;'>
                 <i class='fa fa-trash' aria-hidden='true' style='margin-left: 7px;'></i>
@@ -2335,12 +2328,11 @@
             method: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(response) {
                 if (response.result) {
                     let htmlString = "";
-                    $.each(response.setCalendarShareds, function(_, setCalendarShared: any) {
+                    $.each(response.setCalendarShareds, function(_, setCalendarShared: CalendarSharedSummary) {
                         htmlString += String.raw`
                             <div class='form-row setCalendarShared' style='margin-top: 20px;'>
                                 <div id='divSetCalendarShared${setCalendarShared.id}' class='form-group col-md-4 mb-4 text-center'>
@@ -2376,7 +2368,7 @@
     $formUpdateCalendarShared.off("submit").on("submit", function(event) {
         event.preventDefault();
 
-        let calendarBeShared: any[] = [];
+        let calendarBeShared: CalendarSharedFormValue[] = [];
 
         $divSetCalendarShared.children(".setCalendarShared").each(function() {
             calendarBeShared.push({
@@ -2422,7 +2414,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {

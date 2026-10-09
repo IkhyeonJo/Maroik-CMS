@@ -100,11 +100,11 @@
             : $divEditExpenditureMyDepositAsset.hide();
     }
 
-    // Localized month / day names for the datepicker, from hidden inputs the view
-    // rendered from the resource files. Typed `any` so the ~40 `.val()` unions
-    // don't each need a cast. `PrevText` / `NextText` are read PascalCase to
-    // match the object keys.
-    const localizer: any = {
+    // Localized month / day names for the datepicker, from hidden inputs the view rendered from
+    // the resource files (asserted `Record<string, string>`: each holds a string, which `.val()`
+    // types as a wider union). `PrevText` / `NextText` are read PascalCase to match the object
+    // keys.
+    const localizer = {
         PrevText: $("#localizerPrevText").val(),
         NextText: $("#localizerNextText").val(),
         January: $("#localizerJanuary").val(),
@@ -152,7 +152,7 @@
         Fr: $("#localizerFr").val(),
         Sa: $("#localizerSa").val(),
         YearSuffix: $("#localizerYearSuffix").val()
-    };
+    } as Record<string, string>;
 
     // Apply the localized names to every datepicker on the page.
     $.datepicker.setDefaults({
@@ -172,8 +172,7 @@
         $createExpenditureTabs.tabs();
         $editExpenditureTabs.tabs();
         // The empty `setTimeout(fn, 1)` callbacks are a jQuery-UI datepicker
-        // nudge (defer a repaint so the button panel lays out). Cast `as any`
-        // because `@types/jqueryui` insists these return `DatepickerOptions`.
+        // nudge (defer a repaint so the button panel lays out).
         $createExpenditureDate.datepicker({
             showButtonPanel: true,
             beforeShow: function() {
@@ -186,7 +185,7 @@
 
                 }, 1);
             }
-        } as any);
+        });
 
         $editExpenditureDate.datepicker({
             showButtonPanel: true,
@@ -200,7 +199,7 @@
 
                 }, 1);
             }
-        } as any);
+        });
 
         // Hide the datepicker's built-in "Close" / "Today" buttons via injected CSS.
         $("<style> .ui-datepicker-close { display: none; } </style>").appendTo("head");
@@ -211,8 +210,8 @@
     let selectedRowColor = "table-primary";
 
     // MvcGrid `rowclick`: move the highlight to the row whose `data-id` matches.
-    $(document).off("rowclick.Expenditure").on("rowclick.Expenditure", (e: any) => {
-        let selectedRow = e.detail;
+    $(document).off("rowclick.Expenditure").on("rowclick.Expenditure", (e: JQuery.TriggeredEvent) => {
+        let selectedRow = e.detail as unknown as MvcGridRowClickDetail;
         let selectedRowId = selectedRow.data.Id;
 
         let $clsGridRow = $(".clsGridRow");
@@ -364,7 +363,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {
@@ -524,7 +522,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {
@@ -596,7 +593,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {
@@ -618,7 +614,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {

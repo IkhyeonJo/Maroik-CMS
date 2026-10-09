@@ -52,6 +52,7 @@ TypeScripts.Tests/
     harness.ts            loadSite() + fixture helpers + jsdom stubs   (test infra, no source counterpart)
     vitest.setup.ts       runs once before each test file
     *Suite.ts             behaviour shared by several scripts (see "Shared suites")
+    noExplicitAny.test.ts no explicit `any` in TypeScripts/ or this tree
   {role}/custom/{Feature}/{Page}/js/site.test.ts   ⟷  wwwroot/{role}/custom/{Feature}/{Page}/js/site.js
   tsconfig.json           standalone (the main tsconfig excludes this tree)
 ```
@@ -103,11 +104,15 @@ reads the same from any depth. It's declared twice, keep them in sync:
 
 Returned `SiteHandle`: `$`, `win`, `ajaxCalls` / `respond` / `lastAjax`, `toastr`,
 `charts`, `submittedForms`, `navigations`, `MvcGridInstances`, plus what the vendored widgets were
-asked to do: `calendarOptions` / `calendarInstances` (FullCalendar), `datepickerInits`,
+asked to do: `calendarOptions` / `calendarInstances` (FullCalendar), `datepickerStatics` (`$.datepicker.setDefaults` /
+`_clearDate` spies), `datepickerInits`,
 `summernoteInits` / `summernoteCalls` (editor callbacks and `code` / `insertNode` calls;
 `opts.summernoteCode` supplies the editor's initial HTML).
 Also exported: `hidden(id, value)`, `antiForgery`, `hiddenByStyle(el)`,
-`fireNative(target, type, detail)`.
+`fireNative(target, type, detail)`, and `stubPlugin(h, name, impl)` to replace one jQuery plugin method
+(e.g. `stubPlugin(h, "valid", () => false)`). Every capture is typed (`FakeCalendar`, `CapturedDatepickerOptions`,
+…), so a test needs no `any`: `_common/noExplicitAny.test.ts` fails on an explicit `any` in this tree or in
+`TypeScripts/`.
 
 ### jsdom gotchas the tests work around
 

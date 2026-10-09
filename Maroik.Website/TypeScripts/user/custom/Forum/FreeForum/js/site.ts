@@ -21,7 +21,7 @@
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
     // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
     // missing or unparseable.
-    const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || (window as any).MaroikDefaultMaxAttachedFileSizeBytes;
+    const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || window.MaroikDefaultMaxAttachedFileSizeBytes;
     const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
     // Cached element references. Many exist only on one sub-view, so `.length` is
     // checked before use.
@@ -80,11 +80,11 @@
         });
     }
 
-    // Only the Summernote UI language is needed here; `any` avoids typing a
-    // one-off bag of `.val()` strings.
-    const localizer: any = {
+    // Only the Summernote UI language is needed here (asserted `Record<string, string>`: each
+    // holds a string, which `.val()` types as a wider union).
+    const localizer = {
         IETFLanguageTag: $("#localizerIETFLanguageTag").val()
-    };
+    } as Record<string, string>;
 
     // Rich-text editor for the "write" body. `onImageUpload` fires for every
     // image the user drops/pastes; each is uploaded and re-inserted below.
@@ -92,9 +92,10 @@
         height: 300,
         lang: localizer.IETFLanguageTag,
         callbacks: {
-            onImageUpload: function(files: any) {
+            onImageUpload: function(files: Blob[]) {
                 for (let i = 0; i < files.length; i++) {
-                    WriteUploadImageFile(files[i]);
+                    // summernote hands over the dropped / pasted File objects (@types/summernote says Blob[]).
+                    WriteUploadImageFile(files[i] as File);
                 }
             }
         }
@@ -105,17 +106,18 @@
         height: 300,
         lang: localizer.IETFLanguageTag,
         callbacks: {
-            onImageUpload: function(files: any) {
+            onImageUpload: function(files: Blob[]) {
                 for (let i = 0; i < files.length; i++) {
-                    EditUploadImageFile(files[i]);
+                    // summernote hands over the dropped / pasted File objects (@types/summernote says Blob[]).
+                    EditUploadImageFile(files[i] as File);
                 }
             }
         }
     });
 
     // The attachment chosen in each form, held until the form is submitted.
-    let writeUploadedFile: any;
-    let editUploadedFile: any;
+    let writeUploadedFile: File | undefined;
+    let editUploadedFile: File | undefined;
 
     /**
      * `change` handler for the write-form attachment input: reject the file (and
@@ -272,8 +274,7 @@
      * Submits a new post. Validates, builds multipart `FormData` (title, body
      * HTML, the locked flag, and the stashed attachment) and POSTs it. On
      * success alerts and returns to the list; on failure toasts and hides the
-     * overlay. The `as any` casts are because `FormData.append` wants
-     * `string | Blob`. Returns `false` so the form never navigates itself.
+     * overlay. Returns `false` so the form never navigates itself.
      */
     function WriteBoard() {
 
@@ -286,9 +287,9 @@
         let locked = $writeBoardLocked.is(":checked");
 
         let formData = new FormData();
-        formData.append("Title", title as any);
-        formData.append("Content", content as any);
-        formData.append("Locked", locked as any);
+        formData.append("Title", title);
+        formData.append("Content", content);
+        formData.append("Locked", locked);
         formData.append("UploadedFile", writeUploadedFile);
 
         $.ajax({
@@ -331,10 +332,10 @@
         let locked = $editBoardLocked.is(":checked");
 
         let formData = new FormData();
-        formData.append("Id", editBoardId as any);
-        formData.append("Title", title as any);
-        formData.append("Locked", locked as any);
-        formData.append("Content", content as any);
+        formData.append("Id", editBoardId);
+        formData.append("Title", title);
+        formData.append("Locked", locked);
+        formData.append("Content", content);
         formData.append("UploadedFile", editUploadedFile);
 
         $.ajax({
@@ -382,7 +383,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {
@@ -461,7 +461,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {

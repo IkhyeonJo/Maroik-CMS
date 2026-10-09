@@ -18,15 +18,14 @@
  * beyond `Number(...)` and `toLocaleString()` for display.
  *
  * Every chart block has the identical shape (see the first one, which is fully
- * commented); the rest carry only a one-line marker. `donutChartCanvas* /
- * donutData* / donutOptions*` are typed `any` because Chart.js 2's config
- * objects and the `getContext('2d')` result are awkward to type precisely and
- * gain nothing here. IIFE-wrapped, no `import` / `export`.
+ * commented); the rest carry only a one-line marker. The data / options objects
+ * are typed with Chart.js 2's `Chart.ChartData` / `Chart.ChartOptions`.
+ * IIFE-wrapped, no `import` / `export`.
  */
 (function() {
     // Localized category names, read from hidden inputs the view rendered from
     // the resource files. Used as the chart slice labels below.
-    const localizer: any = {
+    const localizer = {
         LaborIncome: $("#localizerLaborIncome").val(),
         BusinessIncome: $("#localizerBusinessIncome").val(),
         PensionIncome: $("#localizerPensionIncome").val(),
@@ -53,7 +52,7 @@
         ProtectionTypeInsurance: $("#localizerProtectionTypeInsurance").val(),
         OtherExpenses: $("#localizerOtherExpenses").val(),
         UnknownExpenditure: $("#localizerUnknownExpenditure").val()
-    };
+    } as Record<string, string>;
 
     // --- Period / currency pickers -------------------------------------
     // Year / month changes just reload the dashboard for the new period.
@@ -100,8 +99,8 @@
 
         // 2. Grab the <canvas> 2D context and build the Chart.js data object
         //    (localized labels + one dataset of the values, with fixed colors).
-        let donutChartCanvasRegularIncomeYear: any = ($("#regularIncomeYear").get(0) as HTMLCanvasElement).getContext("2d");
-        let donutDataRegularIncomeYear: any = {
+        let donutChartCanvasRegularIncomeYear = ($("#regularIncomeYear").get(0) as HTMLCanvasElement).getContext("2d")!;
+        let donutDataRegularIncomeYear: Chart.ChartData = {
             labels: [
                 localizer.LaborIncome,
                 localizer.BusinessIncome,
@@ -121,7 +120,7 @@
         // 3. Options: white legend text; the tooltip `label` callback formats
         //    each slice as "Label: 1,234 (12.34%)" using the server-supplied
         //    percentage for that slice index.
-        let donutOptionsRegularIncomeYear: any = {
+        let donutOptionsRegularIncomeYear: Chart.ChartOptions = {
             maintainAspectRatio: false,
             responsive: true,
             legend: {
@@ -132,10 +131,10 @@
             },
             tooltips: {
                 callbacks: {
-                    label: function(tooltipItem: any, data: any) {
-                        const index = tooltipItem.index;
-                        const label = data.labels[index];
-                        const value = Number(data.datasets[0].data[index]);
+                    label: function(tooltipItem: Chart.ChartTooltipItem, data: Chart.ChartData) {
+                        const index = tooltipItem.index!;
+                        const label = data.labels![index];
+                        const value = Number(data.datasets![0].data![index]);
 
                         const percentages = [
                             Number($("#percentageOfRegularIncomeLaborIncomeYear").val()),
@@ -163,8 +162,8 @@
         let irregularIncomeLaborIncomeYear = Number($("#irregularIncomeLaborIncomeYear").val());
         let irregularIncomeOtherIncomeYear = Number($("#irregularIncomeOtherIncomeYear").val());
 
-        let donutChartCanvasIrregularIncomeYear: any = ($("#irregularIncomeYear").get(0) as HTMLCanvasElement).getContext("2d");
-        let donutDataIrregularIncomeYear: any = {
+        let donutChartCanvasIrregularIncomeYear = ($("#irregularIncomeYear").get(0) as HTMLCanvasElement).getContext("2d")!;
+        let donutDataIrregularIncomeYear: Chart.ChartData = {
             labels: [
                 localizer.LaborIncome,
                 localizer.OtherIncome,
@@ -177,7 +176,7 @@
             ]
         };
 
-        let donutOptionsIrregularIncomeYear: any = {
+        let donutOptionsIrregularIncomeYear: Chart.ChartOptions = {
             maintainAspectRatio: false,
             responsive: true,
             legend: {
@@ -188,10 +187,10 @@
             },
             tooltips: {
                 callbacks: {
-                    label: function(tooltipItem: any, data: any) {
-                        const index = tooltipItem.index;
-                        const label = data.labels[index];
-                        const value = Number(data.datasets[0].data[index]);
+                    label: function(tooltipItem: Chart.ChartTooltipItem, data: Chart.ChartData) {
+                        const index = tooltipItem.index!;
+                        const label = data.labels![index];
+                        const value = Number(data.datasets![0].data![index]);
 
                         const percentages = [
                             Number($("#percentageOfIrregularIncomeLaborIncomeYear").val()),
@@ -214,8 +213,8 @@
         let regularSavingsDepositYear = Number($("#regularSavingsDepositYear").val());
         let regularSavingsInvestmentYear = Number($("#regularSavingsInvestmentYear").val());
 
-        let donutChartCanvasRegularSavingsYear: any = ($("#regularSavingsYear").get(0) as HTMLCanvasElement).getContext("2d");
-        let donutDataRegularSavingsYear: any = {
+        let donutChartCanvasRegularSavingsYear = ($("#regularSavingsYear").get(0) as HTMLCanvasElement).getContext("2d")!;
+        let donutDataRegularSavingsYear: Chart.ChartData = {
             labels: [
                 localizer.Deposit,
                 localizer.Investment,
@@ -227,7 +226,7 @@
                 }
             ]
         };
-        let donutOptionsRegularSavingsYear: any = {
+        let donutOptionsRegularSavingsYear: Chart.ChartOptions = {
             maintainAspectRatio: false,
             responsive: true,
             legend: {
@@ -238,10 +237,10 @@
             },
             tooltips: {
                 callbacks: {
-                    label: function(tooltipItem: any, data: any) {
-                        const index = tooltipItem.index;
-                        const label = data.labels[index];
-                        const value = Number(data.datasets[0].data[index]);
+                    label: function(tooltipItem: Chart.ChartTooltipItem, data: Chart.ChartData) {
+                        const index = tooltipItem.index!;
+                        const label = data.labels![index];
+                        const value = Number(data.datasets![0].data![index]);
 
                         const percentages = [
                             Number($("#percentageOfRegularSavingsDepositYear").val()),
@@ -268,8 +267,8 @@
         let nonConsumerSpendingInterHouseholdTransferExpensesYear = Number($("#nonConsumerSpendingInterHouseholdTransferExpensesYear").val());
         let nonConsumerSpendingNonProfitOrganizationTransferYear = Number($("#nonConsumerSpendingNonProfitOrganizationTransferYear").val());
 
-        let donutChartCanvasNonConsumerSpendingYear: any = ($("#nonConsumerSpendingYear").get(0) as HTMLCanvasElement).getContext("2d");
-        let donutDataNonConsumerSpendingYear: any = {
+        let donutChartCanvasNonConsumerSpendingYear = ($("#nonConsumerSpendingYear").get(0) as HTMLCanvasElement).getContext("2d")!;
+        let donutDataNonConsumerSpendingYear: Chart.ChartData = {
             labels: [
                 localizer.PublicPension,
                 localizer.DebtRepayment,
@@ -285,7 +284,7 @@
                 }
             ]
         };
-        let donutOptionsNonConsumerSpendingYear: any = {
+        let donutOptionsNonConsumerSpendingYear: Chart.ChartOptions = {
             maintainAspectRatio: false,
             responsive: true,
             legend: {
@@ -296,10 +295,10 @@
             },
             tooltips: {
                 callbacks: {
-                    label: function(tooltipItem: any, data: any) {
-                        const index = tooltipItem.index;
-                        const label = data.labels[index];
-                        const value = Number(data.datasets[0].data[index]);
+                    label: function(tooltipItem: Chart.ChartTooltipItem, data: Chart.ChartData) {
+                        const index = tooltipItem.index!;
+                        const label = data.labels![index];
+                        const value = Number(data.datasets![0].data![index]);
 
                         const percentages = [
                             Number($("#percentageOfNonConsumerSpendingPublicPensionYear").val()),
@@ -336,8 +335,8 @@
         let consumerSpendingOtherExpensesYear = Number($("#consumerSpendingOtherExpensesYear").val());
         let consumerSpendingUnknownExpenditureYear = Number($("#consumerSpendingUnknownExpenditureYear").val());
 
-        let donutChartCanvasConsumerSpendingYear: any = ($("#consumerSpendingYear").get(0) as HTMLCanvasElement).getContext("2d");
-        let donutDataConsumerSpendingYear: any = {
+        let donutChartCanvasConsumerSpendingYear = ($("#consumerSpendingYear").get(0) as HTMLCanvasElement).getContext("2d")!;
+        let donutDataConsumerSpendingYear: Chart.ChartData = {
             labels: [
                 localizer.MealOrEatOutExpenses,
                 localizer.HousingOrSuppliesCost,
@@ -359,7 +358,7 @@
                 }
             ]
         };
-        let donutOptionsConsumerSpendingYear: any = {
+        let donutOptionsConsumerSpendingYear: Chart.ChartOptions = {
             maintainAspectRatio: false,
             responsive: true,
             legend: {
@@ -370,10 +369,10 @@
             },
             tooltips: {
                 callbacks: {
-                    label: function(tooltipItem: any, data: any) {
-                        const index = tooltipItem.index;
-                        const label = data.labels[index];
-                        const value = Number(data.datasets[0].data[index]);
+                    label: function(tooltipItem: Chart.ChartTooltipItem, data: Chart.ChartData) {
+                        const index = tooltipItem.index!;
+                        const label = data.labels![index];
+                        const value = Number(data.datasets![0].data![index]);
 
                         const percentages = [
                             Number($("#percentageOfConsumerSpendingMealOrEatOutExpensesYear").val()),
@@ -410,8 +409,8 @@
         let regularIncomeRentalIncomeYearMonth = Number($("#regularIncomeRentalIncomeYearMonth").val());
         let regularIncomeOtherIncomeYearMonth = Number($("#regularIncomeOtherIncomeYearMonth").val());
 
-        let donutChartCanvasRegularIncomeYearMonth: any = ($("#regularIncomeYearMonth").get(0) as HTMLCanvasElement).getContext("2d");
-        let donutDataRegularIncomeYearMonth: any = {
+        let donutChartCanvasRegularIncomeYearMonth = ($("#regularIncomeYearMonth").get(0) as HTMLCanvasElement).getContext("2d")!;
+        let donutDataRegularIncomeYearMonth: Chart.ChartData = {
             labels: [
                 localizer.LaborIncome,
                 localizer.BusinessIncome,
@@ -428,7 +427,7 @@
             ]
         };
 
-        let donutOptionsRegularIncomeYearMonth: any = {
+        let donutOptionsRegularIncomeYearMonth: Chart.ChartOptions = {
             maintainAspectRatio: false,
             responsive: true,
             legend: {
@@ -439,10 +438,10 @@
             },
             tooltips: {
                 callbacks: {
-                    label: function(tooltipItem: any, data: any) {
-                        const index = tooltipItem.index;
-                        const label = data.labels[index];
-                        const value = Number(data.datasets[0].data[index]);
+                    label: function(tooltipItem: Chart.ChartTooltipItem, data: Chart.ChartData) {
+                        const index = tooltipItem.index!;
+                        const label = data.labels![index];
+                        const value = Number(data.datasets![0].data![index]);
 
                         const percentages = [
                             Number($("#percentageOfRegularIncomeLaborIncomeYearMonth").val()),
@@ -469,8 +468,8 @@
         let irregularIncomeLaborIncomeYearMonth = Number($("#irregularIncomeLaborIncomeYearMonth").val());
         let irregularIncomeOtherIncomeYearMonth = Number($("#irregularIncomeOtherIncomeYearMonth").val());
 
-        let donutChartCanvasIrregularIncomeYearMonth: any = ($("#irregularIncomeYearMonth").get(0) as HTMLCanvasElement).getContext("2d");
-        let donutDataIrregularIncomeYearMonth: any = {
+        let donutChartCanvasIrregularIncomeYearMonth = ($("#irregularIncomeYearMonth").get(0) as HTMLCanvasElement).getContext("2d")!;
+        let donutDataIrregularIncomeYearMonth: Chart.ChartData = {
             labels: [
                 localizer.LaborIncome,
                 localizer.OtherIncome,
@@ -483,7 +482,7 @@
             ]
         };
 
-        let donutOptionsIrregularIncomeYearMonth: any = {
+        let donutOptionsIrregularIncomeYearMonth: Chart.ChartOptions = {
             maintainAspectRatio: false,
             responsive: true,
             legend: {
@@ -494,10 +493,10 @@
             },
             tooltips: {
                 callbacks: {
-                    label: function(tooltipItem: any, data: any) {
-                        const index = tooltipItem.index;
-                        const label = data.labels[index];
-                        const value = Number(data.datasets[0].data[index]);
+                    label: function(tooltipItem: Chart.ChartTooltipItem, data: Chart.ChartData) {
+                        const index = tooltipItem.index!;
+                        const label = data.labels![index];
+                        const value = Number(data.datasets![0].data![index]);
 
                         const percentages = [
                             Number($("#percentageOfIrregularIncomeLaborIncomeYearMonth").val()),
@@ -520,8 +519,8 @@
         let regularSavingsDepositYearMonth = Number($("#regularSavingsDepositYearMonth").val());
         let regularSavingsInvestmentYearMonth = Number($("#regularSavingsInvestmentYearMonth").val());
 
-        let donutChartCanvasRegularSavingsYearMonth: any = ($("#regularSavingsYearMonth").get(0) as HTMLCanvasElement).getContext("2d");
-        let donutDataRegularSavingsYearMonth: any = {
+        let donutChartCanvasRegularSavingsYearMonth = ($("#regularSavingsYearMonth").get(0) as HTMLCanvasElement).getContext("2d")!;
+        let donutDataRegularSavingsYearMonth: Chart.ChartData = {
             labels: [
                 localizer.Deposit,
                 localizer.Investment,
@@ -533,7 +532,7 @@
                 }
             ]
         };
-        let donutOptionsRegularSavingsYearMonth: any = {
+        let donutOptionsRegularSavingsYearMonth: Chart.ChartOptions = {
             maintainAspectRatio: false,
             responsive: true,
             legend: {
@@ -544,10 +543,10 @@
             },
             tooltips: {
                 callbacks: {
-                    label: function(tooltipItem: any, data: any) {
-                        const index = tooltipItem.index;
-                        const label = data.labels[index];
-                        const value = Number(data.datasets[0].data[index]);
+                    label: function(tooltipItem: Chart.ChartTooltipItem, data: Chart.ChartData) {
+                        const index = tooltipItem.index!;
+                        const label = data.labels![index];
+                        const value = Number(data.datasets![0].data![index]);
 
                         const percentages = [
                             Number($("#percentageOfRegularSavingsDepositYearMonth").val()),
@@ -574,8 +573,8 @@
         let nonConsumerSpendingInterHouseholdTransferExpensesYearMonth = Number($("#nonConsumerSpendingInterHouseholdTransferExpensesYearMonth").val());
         let nonConsumerSpendingNonProfitOrganizationTransferYearMonth = Number($("#nonConsumerSpendingNonProfitOrganizationTransferYearMonth").val());
 
-        let donutChartCanvasNonConsumerSpendingYearMonth: any = ($("#nonConsumerSpendingYearMonth").get(0) as HTMLCanvasElement).getContext("2d");
-        let donutDataNonConsumerSpendingYearMonth: any = {
+        let donutChartCanvasNonConsumerSpendingYearMonth = ($("#nonConsumerSpendingYearMonth").get(0) as HTMLCanvasElement).getContext("2d")!;
+        let donutDataNonConsumerSpendingYearMonth: Chart.ChartData = {
             labels: [
                 localizer.PublicPension,
                 localizer.DebtRepayment,
@@ -591,7 +590,7 @@
                 }
             ]
         };
-        let donutOptionsNonConsumerSpendingYearMonth: any = {
+        let donutOptionsNonConsumerSpendingYearMonth: Chart.ChartOptions = {
             maintainAspectRatio: false,
             responsive: true,
             legend: {
@@ -602,10 +601,10 @@
             },
             tooltips: {
                 callbacks: {
-                    label: function(tooltipItem: any, data: any) {
-                        const index = tooltipItem.index;
-                        const label = data.labels[index];
-                        const value = Number(data.datasets[0].data[index]);
+                    label: function(tooltipItem: Chart.ChartTooltipItem, data: Chart.ChartData) {
+                        const index = tooltipItem.index!;
+                        const label = data.labels![index];
+                        const value = Number(data.datasets![0].data![index]);
 
                         const percentages = [
                             Number($("#percentageOfNonConsumerSpendingPublicPensionYearMonth").val()),
@@ -642,8 +641,8 @@
         let consumerSpendingOtherExpensesYearMonth = Number($("#consumerSpendingOtherExpensesYearMonth").val());
         let consumerSpendingUnknownExpenditureYearMonth = Number($("#consumerSpendingUnknownExpenditureYearMonth").val());
 
-        let donutChartCanvasConsumerSpendingYearMonth: any = ($("#consumerSpendingYearMonth").get(0) as HTMLCanvasElement).getContext("2d");
-        let donutDataConsumerSpendingYearMonth: any = {
+        let donutChartCanvasConsumerSpendingYearMonth = ($("#consumerSpendingYearMonth").get(0) as HTMLCanvasElement).getContext("2d")!;
+        let donutDataConsumerSpendingYearMonth: Chart.ChartData = {
             labels: [
                 localizer.MealOrEatOutExpenses,
                 localizer.HousingOrSuppliesCost,
@@ -665,7 +664,7 @@
                 }
             ]
         };
-        let donutOptionsConsumerSpendingYearMonth: any = {
+        let donutOptionsConsumerSpendingYearMonth: Chart.ChartOptions = {
             maintainAspectRatio: false,
             responsive: true,
             legend: {
@@ -676,10 +675,10 @@
             },
             tooltips: {
                 callbacks: {
-                    label: function(tooltipItem: any, data: any) {
-                        const index = tooltipItem.index;
-                        const label = data.labels[index];
-                        const value = Number(data.datasets[0].data[index]);
+                    label: function(tooltipItem: Chart.ChartTooltipItem, data: Chart.ChartData) {
+                        const index = tooltipItem.index!;
+                        const label = data.labels![index];
+                        const value = Number(data.datasets![0].data![index]);
 
                         const percentages = [
                             Number($("#percentageOfConsumerSpendingMealOrEatOutExpensesYearMonth").val()),

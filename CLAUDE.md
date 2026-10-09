@@ -162,6 +162,9 @@ Client scripts
 - Each role (`admin` / `user` / `anonymous`) keeps its own script per view, even when two scripts are
   nearly identical. Do not merge them into shared scripts; the only shared helpers are the `window`
   globals each role's `_Layout` script defines.
+- No explicit `any` in `TypeScripts/**` or `TypeScripts.Tests/**` (pinned by
+  `TypeScripts.Tests/_common/noExplicitAny.test.ts`). Types shared by several scripts — the server payloads and the
+  plugin typings' gaps — live in `TypeScripts/global.d.ts`, which is type-only (no runtime code).
 
 Code and tests
 - The DDD + Clean Architecture layering is deliberate preparation for growth, not over-engineering.

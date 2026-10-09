@@ -317,8 +317,8 @@ describe("admin/Calendar/AdminIndex — events on the grid", () => {
     it("seeds the grid with the admin's own events, coloured by their calendar", () => {
         const h = build({ my: [evt(1, 1), evt(2, 3)] });
         const cal = h.calendarInstances[0];
-        expect(cal.addEvent.mock.calls.map((c: any[]) => [c[0].id, c[0].title, c[0].backgroundColor, c[0].extendedProps.calendarId])).toEqual([
-            [1, "Event 1", "#123456", 1], [2, "Event 2", "#123456", 3]]);
+        expect(cal.addEvent.mock.calls.map((c) => [c[0].id, c[0].title, c[0].backgroundColor, c[0].extendedProps.calendarId])).toEqual([
+            ["1", "Event 1", "#123456", 1], ["2", "Event 2", "#123456", 3]]);
         expect(cal.render).toHaveBeenCalled();
     });
 
@@ -338,7 +338,7 @@ describe("admin/Calendar/AdminIndex — events on the grid", () => {
         const [first, second] = eventCalls(h);
         second.success!({ result: true, calendarEvents: JSON.stringify([evt(20, 1)]) });
         first.success!({ result: true, calendarEvents: JSON.stringify([evt(10, 1)]) });
-        expect(cal.addEvent.mock.calls.map((c: any[]) => c[0].id)).toEqual([20]);
+        expect(cal.addEvent.mock.calls.map((c) => c[0].id)).toEqual(["20"]);
     });
 
     it("a refused reply adds nothing", () => {
