@@ -79,12 +79,12 @@
     // "Notify at HH:MM" options for all-day reminders and the default selection, both published
     // by the server (CalendarViewModelMapper / CalendarReminderPolicy). Was regenerated inline
     // as Array.from({length:96}) in several places.
-    const reminderTimeIntervals = JSON.parse(($("#reminderTimeIntervals").val() as string) || "[]");
+    const reminderTimeIntervals = JSON.parse(($("#reminderTimeIntervals").val() as string) || "[]") as string[];
 
     /** base64 -> Blob, for turning the server-embedded inline-image payloads into object URLs. */
     function base64ToBlob(base64: string, mime: string) {
         const byteCharacters = atob(base64);
-        const byteNumbers = new Array(byteCharacters.length);
+        const byteNumbers = new Array<number>(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
             byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
@@ -221,7 +221,7 @@
             // Clicking an "Other" event: show a small summary popup anchored to
             // the event element. Clicking again on the same event closes it.
             eventClick: function(arg: FullCalendarEventClickArg) {
-                if (arg.event.extendedProps.calendarType === "Other") {
+                if ((arg.event.extendedProps as CalendarEventExtendedProps).calendarType === "Other") {
                     let eventEl = $(arg.el);
                     let offset = eventEl.offset()!;
                     let popup = $otherCalendarEventPopup;
@@ -239,14 +239,14 @@
                     $divOtherCalendarEventPopupAllDayUnchecked.hide();
 
                     if (arg.event.allDay === true) {
-                        $otherCalendarEventPopupStartAllDayChecked.text(arg.event.extendedProps.displayStartDate);
-                        $otherCalendarEventPopupEndAllDayChecked.text(arg.event.extendedProps.displayEndDate);
+                        $otherCalendarEventPopupStartAllDayChecked.text((arg.event.extendedProps as CalendarEventExtendedProps).displayStartDate);
+                        $otherCalendarEventPopupEndAllDayChecked.text((arg.event.extendedProps as CalendarEventExtendedProps).displayEndDate);
                         $divOtherCalendarEventPopupAllDayChecked.show();
                     } else {
-                        $otherCalendarEventPopupStartAllDayUnchecked.text(arg.event.extendedProps.displayStartDate);
-                        $otherCalendarEventPopupStartTimeZoneAllDayUnchecked.text(`(${arg.event.extendedProps.displayStartDateTimeZone})`);
-                        $otherCalendarEventPopupEndAllDayUnchecked.text(arg.event.extendedProps.displayEndDate);
-                        $otherCalendarEventPopupEndTimeZoneAllDayUnchecked.text(`(${arg.event.extendedProps.displayEndDateTimeZone})`);
+                        $otherCalendarEventPopupStartAllDayUnchecked.text((arg.event.extendedProps as CalendarEventExtendedProps).displayStartDate);
+                        $otherCalendarEventPopupStartTimeZoneAllDayUnchecked.text(`(${(arg.event.extendedProps as CalendarEventExtendedProps).displayStartDateTimeZone})`);
+                        $otherCalendarEventPopupEndAllDayUnchecked.text((arg.event.extendedProps as CalendarEventExtendedProps).displayEndDate);
+                        $otherCalendarEventPopupEndTimeZoneAllDayUnchecked.text(`(${(arg.event.extendedProps as CalendarEventExtendedProps).displayEndDateTimeZone})`);
                         $divOtherCalendarEventPopupAllDayUnchecked.show();
                     }
 
@@ -278,7 +278,7 @@
                             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                             dataType: "json",
                             contentType: "application/json; charset=utf-8",
-                            success: function(data) {
+                            success: function(data: ReadReply<CalendarEventPayload>) {
                                 if (data.result) {
                                     // --- Fill the read-only modal from `data.calendarEvent` ---
                                     $viewCalendarEventId.val(data.calendarEvent.id);
@@ -363,7 +363,7 @@
                                     // a failed fetch. `data` here is the outer `success(data)`
                                     // param — valid, captured by the closure below.
                                     function showViewCalendarEventModal() {
-                                        $viewCalendarEventStatus.val(data.calendarEvent.status);
+                                        $viewCalendarEventStatus.val((data as SucceededReply<CalendarEventPayload>).calendarEvent.status);
 
                                         // --- Rebuild the reminder rows (read-only) ---
                                         // Every generated control is `disabled`, and `Email`-method
@@ -371,14 +371,14 @@
                                         $divViewEventNotificationAllDayChecked.hide();
                                         $divViewEventNotificationAllDayUnchecked.hide();
 
-                                        if (data.calendarEvent.allDay === true) {
+                                        if ((data as SucceededReply<CalendarEventPayload>).calendarEvent.allDay === true) {
                                             $divViewEventNotificationAllDayChecked.find(".divViewEventNotificationAllDayCheckedRow").remove();
                                             $divViewEventNotificationAllDayChecked.show();
 
-                                            if (data.calendarEvent.serializedCalendarReminders !== "[]") {
+                                            if ((data as SucceededReply<CalendarEventPayload>).calendarEvent.serializedCalendarReminders !== "[]") {
                                                 const timeIntervals = reminderTimeIntervals;
 
-                                                JSON.parse(data.calendarEvent.serializedCalendarReminders).forEach((reminder: CalendarReminderJson) => {
+                                                (JSON.parse((data as SucceededReply<CalendarEventPayload>).calendarEvent.serializedCalendarReminders) as CalendarReminderJson[]).forEach((reminder: CalendarReminderJson) => {
                                                     if (reminder.Method !== "Email") {
                                                         // (a visitor only ever sees Notification reminders, so that is the method shown)
                                                         const selectedMethodOption = `
@@ -425,9 +425,9 @@
                                             $divViewEventNotificationAllDayUnchecked.find(".divViewEventNotificationAllDayUncheckedRow").remove();
                                             $divViewEventNotificationAllDayUnchecked.show();
 
-                                            if (data.calendarEvent.serializedCalendarReminders !== "[]") {
+                                            if ((data as SucceededReply<CalendarEventPayload>).calendarEvent.serializedCalendarReminders !== "[]") {
 
-                                                JSON.parse(data.calendarEvent.serializedCalendarReminders).forEach((reminder: CalendarReminderJson) => {
+                                                (JSON.parse((data as SucceededReply<CalendarEventPayload>).calendarEvent.serializedCalendarReminders) as CalendarReminderJson[]).forEach((reminder: CalendarReminderJson) => {
                                                     if (reminder.Method !== "Email") {
                                                         // (a visitor only ever sees Notification reminders, so that is the method shown)
                                                         const selectedMethodOption = `
@@ -489,7 +489,7 @@
                                         headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                                         dataType: "json",
                                         contentType: "application/json; charset=utf-8",
-                                        success: function(response) {
+                                        success: function(response: ReadReply<OtherCalendarsPayload>) {
                                             if (response.result) {
                                                 $viewCalendarEventMyCalendar.empty();
 
@@ -525,7 +525,7 @@
         });
 
         // --- Seed the calendar with the server-rendered events ---------------
-        JSON.parse($otherCalendarEventOutputViewModels.val() as string).forEach((item: CalendarEventJson) => {
+        (JSON.parse($otherCalendarEventOutputViewModels.val() as string) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
             calendar.addEvent({
                 id: String(item.Id),
                 title: item.Title,
@@ -584,7 +584,7 @@
                 dataType: "json",
                 data: JSON.stringify(paramValue),
                 contentType: "application/json; charset=utf-8",
-                success: function(response) {
+                success: function(response: ReadReply<CalendarEventsPayload>) {
                     // A newer RefreshCalendarEvents call already ran (and removed/re-added events)
                     // since this request went out — applying this stale response now would put
                     // back events the newer call's own removeAllEvents() just cleared.
@@ -592,7 +592,7 @@
                         return;
                     }
                     if (response.result) {
-                        JSON.parse(response.calendarEvents).forEach((item: CalendarEventJson) => {
+                        (JSON.parse(response.calendarEvents) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
                             calendar.addEvent({
                                 id: String(item.Id),
                                 title: item.Title,
@@ -647,7 +647,7 @@
             success: function(data: Blob) {
                 if (data.type.indexOf("application/json") === 0) {
                     data.text().then(function(text) {
-                        toastr.error(JSON.parse(text).error);
+                        toastr.error((JSON.parse(text) as FailedReply).error);
                     });
                     return;
                 }

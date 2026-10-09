@@ -59,8 +59,8 @@
 
     // Server-published rules (FixedIncome.cshtml). Authoritative in IncomeClassPolicy /
     // FixedSchedulePolicy; mirrored here for form UX only, the server re-validates on save.
-    const incomeSubClassMap = JSON.parse(($("#incomeSubClassMap").val() as string) || "{}");
-    const maxDepositDayByMonth = JSON.parse(($("#maxDepositDayByMonth").val() as string) || "{}");
+    const incomeSubClassMap = JSON.parse(($("#incomeSubClassMap").val() as string) || "{}") as Record<string, string[]>;
+    const maxDepositDayByMonth = JSON.parse(($("#maxDepositDayByMonth").val() as string) || "{}") as Record<string, number>;
     // Far-future stand-in for "no maturity date", published by the server (FixedSchedulePolicy)
     // as a yyyy-MM-dd string so the client and server never drift on the value.
     const noMaturityIso = $("#noMaturityDate").val() as string;
@@ -84,7 +84,7 @@
 
     // The valid deposit-day option values ("1".."maxDay") for the given deposit month.
     function DepositDayValues(monthValue: string) {
-        const maxDay = parseInt(maxDepositDayByMonth[String(monthValue)], 10);
+        const maxDay = maxDepositDayByMonth[String(monthValue)];
         const values = [];
         for (let day = 1; day <= maxDay; day++) {
             values.push(String(day));
@@ -392,7 +392,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $createFixedIncomeDialogModal.modal("hide");
 
@@ -438,7 +438,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ReadReply<FixedIncomePayload>) {
                 if (data.result) {
 
                     $editFixedIncomeId.val(data.fixedIncome.id);
@@ -512,7 +512,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $editFixedIncomeDialogModal.modal("hide");
 
@@ -576,7 +576,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ReadReply<FixedIncomePayload>) {
                 if (data.result) {
 
                     let paramValue = JSON.stringify({
@@ -590,7 +590,7 @@
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
-                        success: function(data) {
+                        success: function(data: ActionReply) {
                             if (data.result) {
                                 $confirmDeleteFixedIncomeDialogModal.modal("hide");
 
@@ -646,7 +646,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: AmountLabelReply) {
                 if (data.result) {
                     $labelCreateFixedIncomeAmount.text(data.label);
                 } else {
@@ -667,7 +667,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: AmountLabelReply) {
                 if (data.result) {
                     $labelEditFixedIncomeAmount.text(data.label);
                 } else {

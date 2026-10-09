@@ -29,7 +29,7 @@
     const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || window.MaroikDefaultMaxAttachedFileSizeBytes;
     // Accepted avatar image MIME types, published by Profile.cshtml (ImageUploadPolicy). The
     // server re-validates by extension; this is the client mirror.
-    const allowedImageContentTypes = (JSON.parse(($("#allowedImageContentTypes").val() as string) || "[]")).map(function(t: string) {
+    const allowedImageContentTypes = (JSON.parse(($("#allowedImageContentTypes").val() as string) || "[]") as string[]).map(function(t: string) {
         return t.toLowerCase();
     });
 
@@ -75,7 +75,7 @@
                         contentType: false,
                         dataType: "json",
                         cache: false,
-                        success: function(data) {
+                        success: function(data: AvatarReply) {
                             if (data.result) {
                                 window.location.href = "/Management/Profile";
                             } else {
@@ -124,7 +124,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     // Changing the password signs every session of the account out — this one
                     // included (the server already dropped it). `alert` blocks until the user

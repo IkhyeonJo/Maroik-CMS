@@ -76,7 +76,7 @@
                 DefaultMonetaryUnit: $("#monetaryUnit").find(":selected").val()
             }),
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     window.location.href = "/Dashboard/UserIndex?year=" + $("#year").find(":selected").val() + "&month=" + $("#month").find(":selected").val();
                 } else {

@@ -187,7 +187,7 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
 
         h.lastAjax().success!(reply);
         expect(h.lastAjax().url).toBe(`/Management/${deleteAction}`);
-        expect(JSON.parse(String(h.lastAjax().data)).Id).toBe(10);
+        expect((JSON.parse(String(h.lastAjax().data)) as { Id: number }).Id).toBe(10);
 
         h.lastAjax().success!({ result: true, message: "removed" });
         expect(modal).toHaveBeenCalledWith("hide");

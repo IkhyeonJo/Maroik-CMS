@@ -398,7 +398,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
                 h.$("#formEditCalendar").trigger("submit");
                 const call = h.lastAjax();
                 expect(call.url).toBe("/Calendar/UpdateCalendar");
-                expect(JSON.parse(String(call.data)).Calendars[0]).toMatchObject({ Id: "1", Name: "Aaa" });
+                expect((JSON.parse(String(call.data)) as { Calendars: object[] }).Calendars[0]).toMatchObject({ Id: "1", Name: "Aaa" });
 
                 call.success!({ result: true, message: "saved", calendar: { id: 1, name: "Aaa", htmlColorCode: "#222222" } });
                 vi.runAllTimers();

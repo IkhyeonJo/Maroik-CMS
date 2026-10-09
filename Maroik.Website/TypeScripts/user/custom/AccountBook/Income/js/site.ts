@@ -61,7 +61,7 @@
     // Income main-class -> allowed subclasses. Authoritative in IncomeClassPolicy (server),
     // serialized into the page by Income.cshtml. Mirrored here for form UX only; the server
     // re-validates every combination on save.
-    const incomeSubClassMap = JSON.parse(($("#incomeSubClassMap").val() as string) || "{}");
+    const incomeSubClassMap = JSON.parse(($("#incomeSubClassMap").val() as string) || "{}") as Record<string, string[]>;
     // Localized toast shown when the amount-label request itself fails (transport error).
     const failedToLoadAmountLabelMessage = $("#localizerFailedToLoadAmountLabel").val() as string;
 
@@ -298,7 +298,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $createIncomeDialogModal.modal("hide");
 
@@ -344,7 +344,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ReadReply<IncomePayload>) {
                 if (data.result) {
 
                     $editIncomeId.val(data.income.id);
@@ -421,7 +421,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $editIncomeDialogModal.modal("hide");
 
@@ -484,7 +484,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ReadReply<IncomePayload>) {
                 if (data.result) {
 
                     let paramValue = JSON.stringify({
@@ -498,7 +498,7 @@
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
-                        success: function(data) {
+                        success: function(data: ActionReply) {
                             if (data.result) {
                                 $confirmDeleteIncomeDialogModal.modal("hide");
 
@@ -557,7 +557,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: AmountLabelReply) {
                 $labelCreateIncomeAmount.text(data.label);
             },
             error: function() {
@@ -574,7 +574,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: AmountLabelReply) {
                 $labelEditIncomeAmount.text(data.label);
             },
             error: function() {

@@ -68,8 +68,8 @@
 
     // Server-published expenditure taxonomy (Expenditure.cshtml). Authoritative in
     // ExpenditureClassPolicy; mirrored here for form UX only, the server re-validates on save.
-    const expenditureSubClassMap = JSON.parse(($("#expenditureSubClassMap").val() as string) || "{}");
-    const expenditureDepositAssetSubClasses = JSON.parse(($("#expenditureDepositAssetSubClasses").val() as string) || "[]");
+    const expenditureSubClassMap = JSON.parse(($("#expenditureSubClassMap").val() as string) || "{}") as Record<string, string[]>;
+    const expenditureDepositAssetSubClasses = JSON.parse(($("#expenditureDepositAssetSubClasses").val() as string) || "[]") as string[];
 
     // Enables/shows only the options in allowedValues (disabling+hiding the rest) and selects
     // valueToSelect when it is allowed, otherwise the first allowed option.
@@ -318,7 +318,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $createExpenditureDialogModal.modal("hide");
 
@@ -364,7 +364,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ReadReply<ExpenditurePayload>) {
                 if (data.result) {
 
                     $editExpenditureId.val(data.expenditure.id);
@@ -460,7 +460,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $editExpenditureDialogModal.modal("hide");
 
@@ -523,7 +523,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ReadReply<ExpenditurePayload>) {
                 if (data.result) {
 
                     let paramValue = JSON.stringify({
@@ -537,7 +537,7 @@
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
-                        success: function(data) {
+                        success: function(data: ActionReply) {
                             if (data.result) {
                                 $confirmDeleteExpenditureDialogModal.modal("hide");
 
@@ -594,7 +594,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: AmountLabelReply) {
                 if (data.result) {
                     $labelCreateExpenditureAmount.text(data.label);
                 } else {
@@ -615,7 +615,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: AmountLabelReply) {
                 if (data.result) {
                     $labelEditExpenditureAmount.text(data.label);
                 } else {

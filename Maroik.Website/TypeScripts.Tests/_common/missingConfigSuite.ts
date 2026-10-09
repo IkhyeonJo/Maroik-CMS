@@ -24,7 +24,7 @@ export function describeMissingServerConstants(area: "admin" | "anonymous" | "us
             const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
             try {
                 expect(() => loadSite(area, feature, page, html)).not.toThrow();
-                expect(warn.mock.calls.filter((c) => String(c[0]).includes("jQuery.Deferred exception"))).toEqual([]);
+                expect(warn.mock.calls.filter((c: unknown[]) => String(c[0]).includes("jQuery.Deferred exception"))).toEqual([]);
             } finally {
                 warn.mockRestore();
             }

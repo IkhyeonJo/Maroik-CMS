@@ -73,7 +73,7 @@
 
     // `ajaxSend` fires just before every request; guard POSTs only (GETs are
     // safe to repeat).
-    $(document).off("ajaxSend._Layout").on("ajaxSend._Layout", function(_event, _xhr, settings: JQuery.AjaxSettings) {
+    $(document).off("ajaxSend._Layout").on("ajaxSend._Layout", function(_event, _xhr: JQuery.jqXHR, settings: JQuery.AjaxSettings) {
         if ((settings.type || "GET").toUpperCase() !== "POST") return;
         inFlightPostCount++;
         $("button[type=\"submit\"], input[type=\"submit\"]").prop("disabled", true);
@@ -81,7 +81,7 @@
 
     // `ajaxComplete` fires after each request (success or error); re-enable the
     // submit controls once nothing is in flight.
-    $(document).off("ajaxComplete._Layout").on("ajaxComplete._Layout", function(_event, _xhr, settings: JQuery.AjaxSettings) {
+    $(document).off("ajaxComplete._Layout").on("ajaxComplete._Layout", function(_event, _xhr: JQuery.jqXHR, settings: JQuery.AjaxSettings) {
         if ((settings.type || "GET").toUpperCase() !== "POST") return;
         inFlightPostCount = Math.max(0, inFlightPostCount - 1);
         if (inFlightPostCount === 0) {

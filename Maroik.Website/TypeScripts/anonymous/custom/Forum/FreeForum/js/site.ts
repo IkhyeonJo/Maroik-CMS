@@ -40,7 +40,7 @@
      */
     function base64ToBlob(base64: string, mime: string) {
         const byteCharacters = atob(base64);
-        const byteNumbers = new Array(byteCharacters.length);
+        const byteNumbers = new Array<number>(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
             byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
@@ -178,7 +178,7 @@
                 success: function(data: Blob) {
                     if (data.type.indexOf("application/json") === 0) {
                         data.text().then(function(text) {
-                            toastr.error(JSON.parse(text).error);
+                            toastr.error((JSON.parse(text) as FailedReply).error);
                         });
                         return;
                     }
