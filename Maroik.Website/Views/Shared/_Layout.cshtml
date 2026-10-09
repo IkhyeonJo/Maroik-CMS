@@ -157,6 +157,8 @@ to get the desired effect
     @Html.AntiForgeryToken()
     @*Language change return URI*@
     @Html.Hidden($"{nameof(returnUri)}",returnUri)
+    @*Generic error the client scripts show when a reply is not what they expect (window.onReply)*@
+    <input id="_LocalizerTemporaryError" type="hidden" value="@(Localizer["A temporary error occurred. Please try again later."].Value)" />
     @*NonFactors Localizer*@
     <input id="_LocalizerNonFactorsIRS" type="hidden" value="@(Localizer["Invalid response status"].Value)" />
     <input id="_LocalizerNonFactorsGPSOIGD" type="hidden" value="@(Localizer["Grid partial should only include grid declaration."].Value)" />

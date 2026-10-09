@@ -28,6 +28,8 @@
  * handler is namespaced `.AdminIndex` and re-bound with `.off().on()`.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { check, parseJson, fieldValue, optionalFieldValue } = window;
     // Escapes text before it's interpolated into a raw HTML template literal (as opposed to
     // jQuery .text()/.attr(), which already escape on their own). Calendar names are free text a
     // calendar owner controls; the CSP (script-src with no 'unsafe-inline') already blocks any
@@ -139,17 +141,17 @@
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
     // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
     // missing or unparseable.
-    const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || window.MaroikDefaultMaxAttachedFileSizeBytes;
+    const maxFileSize = parseInt(optionalFieldValue($("#maxAttachedFileSizeBytes")) ?? "") || window.MaroikDefaultMaxAttachedFileSizeBytes;
     // Authoritative in CalendarReminderPolicy (server); rendered into hidden inputs by the view.
-    const maxMinutesBeforeEvent = parseInt($("#maxMinutesBeforeEvent").val() as string, 10);
-    const maxHoursBeforeEvent = parseInt($("#maxHoursBeforeEvent").val() as string, 10);
-    const maxDaysBeforeEvent = parseInt($("#maxDaysBeforeEvent").val() as string, 10);
-    const maxWeeksBeforeEvent = parseInt($("#maxWeeksBeforeEvent").val() as string, 10);
+    const maxMinutesBeforeEvent = parseInt(optionalFieldValue($("#maxMinutesBeforeEvent")) ?? "", 10);
+    const maxHoursBeforeEvent = parseInt(optionalFieldValue($("#maxHoursBeforeEvent")) ?? "", 10);
+    const maxDaysBeforeEvent = parseInt(optionalFieldValue($("#maxDaysBeforeEvent")) ?? "", 10);
+    const maxWeeksBeforeEvent = parseInt(optionalFieldValue($("#maxWeeksBeforeEvent")) ?? "", 10);
     // "Notify at HH:MM" options for all-day reminders and the default selection, both published
     // by the server (CalendarViewModelMapper / CalendarReminderPolicy). Was regenerated inline
     // as Array.from({length:96}) in several places.
-    const reminderTimeIntervals = JSON.parse(($("#reminderTimeIntervals").val() as string) || "[]") as string[];
-    const defaultBeforeAt = ($("#defaultReminderTimeOfDay").val() as string) || "09:00";
+    const reminderTimeIntervals = parseJson(optionalFieldValue($("#reminderTimeIntervals")) || "[]", check.array(check.string), "#reminderTimeIntervals");
+    const defaultBeforeAt = optionalFieldValue($("#defaultReminderTimeOfDay")) || "09:00";
 
     /** base64 -> Blob, for turning server-embedded inline-image payloads into object URLs. */
     function base64ToBlob(base64: string, mime: string) {
@@ -629,7 +631,7 @@
                 $.ajax({
                     url: "/Calendar/GetCalendars",
                     method: "POST",
-                    headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                    headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                     dataType: "json",
                     contentType: "application/json; charset=utf-8",
                     success: function(response: ReadReply<CalendarsPayload>) {
@@ -650,8 +652,8 @@
                     complete: function() {
                         // Kept out of `success` so the modal still opens (with a stale/empty
                         // calendar list rather than not opening at all) even if this fetch fails.
-                        $createCalendarEventAllDayUncheckedStartTimeZone.val($loggedInAccountTimeZoneIanaId.val() as string);
-                        $createCalendarEventAllDayUncheckedEndTimeZone.val($loggedInAccountTimeZoneIanaId.val() as string);
+                        $createCalendarEventAllDayUncheckedStartTimeZone.val(fieldValue($loggedInAccountTimeZoneIanaId));
+                        $createCalendarEventAllDayUncheckedEndTimeZone.val(fieldValue($loggedInAccountTimeZoneIanaId));
 
                         ResetCreateCalendarEventAttachment();
                         $createCalendarEventTaskDialogModal.modal("show");
@@ -720,7 +722,7 @@
                     $.ajax({
                         url: "/Calendar/IsCalendarEventExists" + "?id=" + popup.data("event-id"),
                         type: "POST",
-                        headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                        headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                         dataType: "json",
                         contentType: "application/json; charset=utf-8",
                         success: function(data: ReadReply<CalendarEventPayload>) {
@@ -911,7 +913,7 @@
                                 $.ajax({
                                     url: "/Calendar/GetCalendars",
                                     method: "POST",
-                                    headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                                    headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                                     dataType: "json",
                                     contentType: "application/json; charset=utf-8",
                                     success: function(response: ReadReply<CalendarsPayload>) {
@@ -949,7 +951,7 @@
                         $.ajax({
                             url: "/Calendar/DeleteCalendarEvent?id=" + popup.data("event-id"),
                             type: "POST",
-                            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                             dataType: "json",
                             contentType: "application/json; charset=utf-8",
                             success: function(data: ActionReply) {
@@ -972,7 +974,7 @@
         // Seed the calendar with the events the server rendered into the hidden
         // input, then render. `extendedProps` carries the pre-formatted display
         // strings the popup shows.
-        (JSON.parse($calendarEventOutputViewModels.val() as string) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
+        (JSON.parse(fieldValue($calendarEventOutputViewModels)) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
             calendar.addEvent({
                 id: String(item.Id),
                 title: item.Title,
@@ -1025,7 +1027,7 @@
             $.ajax({
                 url: "/Calendar/GetCalendarEvents",
                 method: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 data: JSON.stringify(paramValue),
                 contentType: "application/json; charset=utf-8",
@@ -1068,7 +1070,7 @@
         // server re-checks every reminder on save.
         function ValidateCreateEventInputAllDayChecked(row: JQuery) {
             let numberInput = row.find(".createCalendarEventSelNotificationNumberAllDayChecked");
-            let value: string | number = (numberInput.val() as string).trim();
+            let value: string | number = fieldValue(numberInput).trim();
             let timeType = row.find(".createCalendarEventSelNotificationTimeTypeAllDayChecked").val();
             let isValid = true;
             let errorMessage = "";
@@ -1108,7 +1110,7 @@
         // Create modal, timed (all-day unchecked) reminder row — see the group comment above.
         function ValidateCreateEventInputAllDayUnchecked(row: JQuery) {
             let numberInput = row.find(".createCalendarEventSelNotificationNumberAllDayUnchecked");
-            let value: string | number = (numberInput.val() as string).trim();
+            let value: string | number = fieldValue(numberInput).trim();
             let timeType = row.find(".createCalendarEventSelNotificationTimeTypeAllDayUnchecked").val();
             let isValid = true;
             let errorMessage = "";
@@ -1158,7 +1160,7 @@
         // Edit modal, timed (all-day unchecked) reminder row — see the group comment above.
         function ValidateEditEventInputAllDayUnchecked(row: JQuery) {
             let numberInput = row.find(".editCalendarEventSelNotificationNumberAllDayUnchecked");
-            let value: string | number = (numberInput.val() as string).trim();
+            let value: string | number = fieldValue(numberInput).trim();
             let timeType = row.find(".editCalendarEventSelNotificationTimeTypeAllDayUnchecked").val();
             let isValid = true;
             let errorMessage = "";
@@ -1208,7 +1210,7 @@
         // Edit modal, all-day (all-day checked) reminder row — see the group comment above.
         function ValidateEditEventInputAllDayChecked(row: JQuery) {
             let numberInput = row.find(".editCalendarEventSelNotificationNumberAllDayChecked");
-            let value: string | number = (numberInput.val() as string).trim();
+            let value: string | number = fieldValue(numberInput).trim();
             let timeType = row.find(".editCalendarEventSelNotificationTimeTypeAllDayChecked").val();
             let isValid = true;
             let errorMessage = "";
@@ -1456,7 +1458,7 @@
             $.ajax({
                 url: "/Calendar/CreateCalendarEvent",
                 type: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 data: formData,
                 contentType: false,
@@ -1485,7 +1487,7 @@
                         $.ajax({
                             url: "/Calendar/GetCalendarEvents",
                             method: "POST",
-                            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                             dataType: "json",
                             data: JSON.stringify(paramValue),
                             contentType: "application/json; charset=utf-8",
@@ -1684,7 +1686,7 @@
             $.ajax({
                 url: "/Calendar/UpdateCalendarEvent",
                 type: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 data: formData,
                 contentType: false,
@@ -1714,7 +1716,7 @@
                         $.ajax({
                             url: "/Calendar/GetCalendarEvents",
                             method: "POST",
-                            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                             dataType: "json",
                             data: JSON.stringify(paramValue),
                             contentType: "application/json; charset=utf-8",
@@ -1790,7 +1792,7 @@
             $.ajax({
                 url: "/Calendar/UpdateCalendar",
                 type: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 data: JSON.stringify(paramValue),
                 contentType: "application/json; charset=utf-8",
@@ -1858,7 +1860,7 @@
             $.ajax({
                 url: "/Calendar/IsCalendarExists" + "?id=" + selectedCalendarId,
                 type: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
                 success: function(data: ReadReply<CalendarPayload>) {
@@ -1879,7 +1881,7 @@
                         $.ajax({
                             url: "/Calendar/DeleteCalendar",
                             type: "POST",
-                            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                             dataType: "json",
                             data: JSON.stringify(paramValue),
                             contentType: "application/json; charset=utf-8",
@@ -1931,7 +1933,7 @@
         $.ajax({
             url: "/Calendar/UploadImageFile",
             data: formData,
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             type: "POST",
             enctype: "multipart/form-data",
             processData: false,
@@ -1971,7 +1973,7 @@
         $.ajax({
             url: "/Calendar/UploadImageFile",
             data: formData,
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             type: "POST",
             enctype: "multipart/form-data",
             processData: false,
@@ -2034,7 +2036,7 @@
         $.ajax({
             url: "/Calendar/CreateCalendar",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: JSON.stringify(paramValue),
             contentType: "application/json; charset=utf-8",
@@ -2082,7 +2084,7 @@
         $.ajax({
             url: "/Calendar/GetCalendars",
             method: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(response: ReadReply<CalendarsPayload>) {
@@ -2101,8 +2103,8 @@
                 toastr.error(localizer.FailedToLoadCalendars);
             },
             complete: function() {
-                $createCalendarEventAllDayUncheckedStartTimeZone.val($loggedInAccountTimeZoneIanaId.val() as string);
-                $createCalendarEventAllDayUncheckedEndTimeZone.val($loggedInAccountTimeZoneIanaId.val() as string);
+                $createCalendarEventAllDayUncheckedStartTimeZone.val(fieldValue($loggedInAccountTimeZoneIanaId));
+                $createCalendarEventAllDayUncheckedEndTimeZone.val(fieldValue($loggedInAccountTimeZoneIanaId));
 
                 ResetCreateCalendarEventAttachment();
                 $createCalendarEventTaskDialogModal.modal("show");
@@ -2326,7 +2328,7 @@
         $.ajax({
             url: "/Calendar/GetCalendarShareds",
             method: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(response: ReadReply<CalendarSharedsPayload>) {
@@ -2381,7 +2383,7 @@
         $.ajax({
             url: "/Calendar/UpdateCalendarShared",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: JSON.stringify(calendarBeShared),
             contentType: "application/json; charset=utf-8",
@@ -2412,7 +2414,7 @@
         $.ajax({
             url: "/Calendar/IsCalendarExists" + "?id=" + selectedCalendarId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<CalendarPayload>) {
@@ -2485,7 +2487,7 @@
         $.ajax({
             url: "/Calendar/DownloadCalendarEventAttachedFile",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             data: { calendarEventId: calendarEventId },
             xhrFields: { responseType: "blob" },
             // Without a declared dataType jQuery infers "json" from a refusal's Content-Type and fails to

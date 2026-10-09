@@ -16,6 +16,8 @@
  * `$(function)` ready callback.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { fieldValue } = window;
     // Cached element references. `#free_forum_detail_updated` and the table only
     // exist on the relevant sub-view, so their `.length` is checked before use.
     const $freeForumDetailUpdated = $("#free_forum_detail_updated");
@@ -96,7 +98,7 @@
         // --- Search / navigation --------------------------------------------
         /** Reloads the list filtered by the chosen search type + text. */
         function SearchBoard() {
-            window.location.href = "/Forum/FreeForum?searchType=" + encodeURIComponent($searchType.val() as string) + "&searchText=" + encodeURIComponent($btnFreeForumSearchText.val() as string);
+            window.location.href = "/Forum/FreeForum?searchType=" + encodeURIComponent(fieldValue($searchType)) + "&searchText=" + encodeURIComponent(fieldValue($btnFreeForumSearchText));
         }
 
         $btnFreeForumSearchBoard.off("click").on("click", function() {
@@ -169,7 +171,7 @@
             $.ajax({
                 url: "/Forum/DownloadFreeBoardAttachedFile",
                 type: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 data: { boardId: boardId },
                 xhrFields: { responseType: "blob" },
                 // Without a declared dataType jQuery infers "json" from a refusal's Content-Type and fails to

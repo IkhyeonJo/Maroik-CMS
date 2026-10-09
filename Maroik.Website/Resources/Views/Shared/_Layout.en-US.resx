@@ -174,4 +174,7 @@
   <data name="or" xml:space="preserve">
     <value>or</value>
   </data>
+  <data name="A temporary error occurred. Please try again later." xml:space="preserve">
+    <value>A temporary error occurred. Please try again later.</value>
+  </data>
 </root>

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { describeLayoutScript } from "@tests/_common/layoutSuite";
+import { describeToolkit } from "@tests/_common/toolkitSuite";
 import { loadSite, antiForgery, hidden } from "@tests/_common/harness";
 
 // wwwroot/anonymous/custom/_Layout/js/site.js
@@ -29,3 +30,4 @@ describe("anonymous/_Layout", () => {
 });
 
 describeLayoutScript("anonymous");
+describeToolkit("anonymous");

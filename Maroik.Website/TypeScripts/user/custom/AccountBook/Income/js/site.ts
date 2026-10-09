@@ -14,6 +14,8 @@
  * IIFE-wrapped, no `import` / `export`.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { check, parseJson, fieldValue, selectValue, optionalFieldValue, attribute } = window;
     /** Zero-pads a 1-2 digit date/time component to 2 digits (e.g. `5` -> `"05"`). */
     function pad2(n: number): string {
         return n.toString().padStart(2, "0");
@@ -61,9 +63,9 @@
     // Income main-class -> allowed subclasses. Authoritative in IncomeClassPolicy (server),
     // serialized into the page by Income.cshtml. Mirrored here for form UX only; the server
     // re-validates every combination on save.
-    const incomeSubClassMap = JSON.parse(($("#incomeSubClassMap").val() as string) || "{}") as Record<string, string[]>;
+    const incomeSubClassMap = parseJson(optionalFieldValue($("#incomeSubClassMap")) || "{}", check.record(check.array(check.string)), "#incomeSubClassMap");
     // Localized toast shown when the amount-label request itself fails (transport error).
-    const failedToLoadAmountLabelMessage = $("#localizerFailedToLoadAmountLabel").val() as string;
+    const failedToLoadAmountLabelMessage = fieldValue($("#localizerFailedToLoadAmountLabel"));
 
     // Enables/shows only the options in allowedValues (disabling+hiding the rest) and selects
     // valueToSelect when it is allowed, otherwise the first allowed option.
@@ -270,12 +272,12 @@
         let content = $createIncomeContent.val();
         let amount = $createIncomeAmount.val();
 
-        let year = parseInt(($createIncomeDate.val() as string).substring(0, 4));
-        let month = parseInt(($createIncomeDate.val() as string).substring(5, 7));
-        let day = parseInt(($createIncomeDate.val() as string).substring(8, 10));
-        let hour = parseInt($createIncomeHour.val() as string);
-        let minute = parseInt($createIncomeMinute.val() as string);
-        let second = parseInt($createIncomeSecond.val() as string);
+        let year = parseInt(fieldValue($createIncomeDate).substring(0, 4));
+        let month = parseInt(fieldValue($createIncomeDate).substring(5, 7));
+        let day = parseInt(fieldValue($createIncomeDate).substring(8, 10));
+        let hour = parseInt(fieldValue($createIncomeHour));
+        let minute = parseInt(fieldValue($createIncomeMinute));
+        let second = parseInt(fieldValue($createIncomeSecond));
 
         let created = `${year}-${pad2(month)}-${pad2(day)} ${pad2(hour)}:${pad2(minute)}:${pad2(second)}`;
         let depositMyAssetProductName = $createIncomeDepositMyAssetProductName.val();
@@ -294,7 +296,7 @@
         $.ajax({
             url: "/AccountBook/CreateIncome",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -341,7 +343,7 @@
         $.ajax({
             url: "/AccountBook/IsIncomeExists" + "?id=" + selectedRowId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<IncomePayload>) {
@@ -391,12 +393,12 @@
         let content = $editIncomeContent.val();
         let amount = $editIncomeAmount.val();
 
-        let year = parseInt(($editIncomeDate.val() as string).substring(0, 4));
-        let month = parseInt(($editIncomeDate.val() as string).substring(5, 7));
-        let day = parseInt(($editIncomeDate.val() as string).substring(8, 10));
-        let hour = parseInt($editIncomeHour.val() as string);
-        let minute = parseInt($editIncomeMinute.val() as string);
-        let second = parseInt($editIncomeSecond.val() as string);
+        let year = parseInt(fieldValue($editIncomeDate).substring(0, 4));
+        let month = parseInt(fieldValue($editIncomeDate).substring(5, 7));
+        let day = parseInt(fieldValue($editIncomeDate).substring(8, 10));
+        let hour = parseInt(fieldValue($editIncomeHour));
+        let minute = parseInt(fieldValue($editIncomeMinute));
+        let second = parseInt(fieldValue($editIncomeSecond));
 
         // See CreateIncome — local wall-clock string, no client-side UTC conversion.
         let created = `${year}-${pad2(month)}-${pad2(day)} ${pad2(hour)}:${pad2(minute)}:${pad2(second)}`;
@@ -417,7 +419,7 @@
         $.ajax({
             url: "/AccountBook/UpdateIncome",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -481,7 +483,7 @@
         $.ajax({
             url: "/AccountBook/IsIncomeExists" + "?id=" + selectedRowId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<IncomePayload>) {
@@ -494,7 +496,7 @@
                     $.ajax({
                         url: "/AccountBook/DeleteIncome",
                         type: "POST",
-                        headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                        headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
@@ -531,7 +533,7 @@
         form.action = "/AccountBook/ExportExcelIncome";
 
         element1.name = "__RequestVerificationToken";
-        element1.value = $__RequestVerificationToken.val() as string;
+        element1.value = fieldValue($__RequestVerificationToken);
         form.appendChild(element1);
 
         element2.name = "fileName";
@@ -554,7 +556,7 @@
         $.ajax({
             url: "/AccountBook/GetIncomeAmountLabel" + "?productName=" + encodeURIComponent(productName),
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: AmountLabelReply) {
@@ -571,7 +573,7 @@
         $.ajax({
             url: "/AccountBook/GetIncomeAmountLabel" + "?productName=" + encodeURIComponent(productName),
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: AmountLabelReply) {
@@ -634,6 +636,10 @@
 
     // On load, set the create-form amount label for whichever asset is preselected.
     $(function() {
-        ChangeCreateIncomeAmountLabel($createIncomeDepositMyAssetProductName.find("option:selected").val() as string);
+        // An account without assets has nothing preselected, and so no label to ask for.
+        const preselected = selectValue($createIncomeDepositMyAssetProductName);
+        if (preselected !== null) {
+            ChangeCreateIncomeAmountLabel(preselected);
+        }
     });
 })();

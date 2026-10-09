@@ -18,10 +18,12 @@
  * controller re-validates everything.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { fieldValue, optionalFieldValue, attribute } = window;
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
     // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
     // missing or unparseable.
-    const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || window.MaroikDefaultMaxAttachedFileSizeBytes;
+    const maxFileSize = parseInt(optionalFieldValue($("#maxAttachedFileSizeBytes")) ?? "") || window.MaroikDefaultMaxAttachedFileSizeBytes;
     const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
     // Cached element references. Many exist only on one sub-view, so `.length` is
     // checked before use.
@@ -159,7 +161,7 @@
 
     /** Reloads the list filtered by the chosen search type + text. */
     function SearchBoard() {
-        window.location.href = "/Forum/FreeForum?searchType=" + encodeURIComponent($searchType.val() as string) + "&searchText=" + encodeURIComponent($btnFreeForumSearchText.val() as string);
+        window.location.href = "/Forum/FreeForum?searchType=" + encodeURIComponent(fieldValue($searchType)) + "&searchText=" + encodeURIComponent(fieldValue($btnFreeForumSearchText));
     }
 
     /** Write form: show the `#loading` overlay only if the form validates. */
@@ -199,7 +201,7 @@
         $.ajax({
             url: "/Forum/UploadImageFile",
             data: formData,
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             type: "POST",
             enctype: "multipart/form-data",
             processData: false,
@@ -239,7 +241,7 @@
         $.ajax({
             url: "/Forum/UploadImageFile",
             data: formData,
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             type: "POST",
             enctype: "multipart/form-data",
             processData: false,
@@ -295,7 +297,7 @@
         $.ajax({
             url: "/Forum/WriteFreeBoard",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: formData,
             contentType: false,
@@ -341,7 +343,7 @@
         $.ajax({
             url: "/Forum/EditFreeBoard",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: formData,
             contentType: false,
@@ -381,7 +383,7 @@
         $.ajax({
             url: "/Forum/IsBoardExists" + "?id=" + detailBoardId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<FreeBoardPayload>) {
@@ -394,7 +396,7 @@
                     $.ajax({
                         url: "/Forum/DeleteBoard",
                         type: "POST",
-                        headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                        headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
@@ -438,7 +440,7 @@
         $.ajax({
             url: "/Forum/WriteFreeComment",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -459,7 +461,7 @@
         $.ajax({
             url: "/Forum/DeleteComment" + "?id=" + commentId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ActionReply) {
@@ -608,7 +610,7 @@
             $.ajax({
                 url: "/Forum/DownloadFreeBoardAttachedFile",
                 type: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 data: { boardId: boardId },
                 xhrFields: { responseType: "blob" },
                 // Without a declared dataType jQuery infers "json" from a refusal's Content-Type and fails to

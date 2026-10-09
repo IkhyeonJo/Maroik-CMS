@@ -15,6 +15,8 @@
  * class combination on save. IIFE-wrapped, no `import` / `export`.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { check, parseJson, fieldValue, selectValue, optionalFieldValue, attribute } = window;
     /** Zero-pads a 1-2 digit date/time component to 2 digits (e.g. `5` -> `"05"`). */
     function pad2(n: number): string {
         return n.toString().padStart(2, "0");
@@ -43,7 +45,7 @@
     const $createExpenditureMyDepositAsset = $("#createExpenditureMyDepositAsset");
     const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
     // Localized toast shown when the amount-label request itself fails (transport error).
-    const failedToLoadAmountLabelMessage = $("#localizerFailedToLoadAmountLabel").val() as string;
+    const failedToLoadAmountLabelMessage = fieldValue($("#localizerFailedToLoadAmountLabel"));
     const $createExpenditureDialogModal = $("#createExpenditureDialogModal");
     const $editExpenditureId = $("#editExpenditureId");
     const $editExpenditureMainClass = $("#editExpenditureMainClass");
@@ -68,8 +70,8 @@
 
     // Server-published expenditure taxonomy (Expenditure.cshtml). Authoritative in
     // ExpenditureClassPolicy; mirrored here for form UX only, the server re-validates on save.
-    const expenditureSubClassMap = JSON.parse(($("#expenditureSubClassMap").val() as string) || "{}") as Record<string, string[]>;
-    const expenditureDepositAssetSubClasses = JSON.parse(($("#expenditureDepositAssetSubClasses").val() as string) || "[]") as string[];
+    const expenditureSubClassMap = parseJson(optionalFieldValue($("#expenditureSubClassMap")) || "{}", check.record(check.array(check.string)), "#expenditureSubClassMap");
+    const expenditureDepositAssetSubClasses = parseJson(optionalFieldValue($("#expenditureDepositAssetSubClasses")) || "[]", check.array(check.string), "#expenditureDepositAssetSubClasses");
 
     // Enables/shows only the options in allowedValues (disabling+hiding the rest) and selects
     // valueToSelect when it is allowed, otherwise the first allowed option.
@@ -87,15 +89,15 @@
     }
 
     // The "deposit asset" field is only relevant for transfer-type subclasses.
-    function ToggleCreateExpenditureMyDepositAsset(subClassValue: string) {
-        expenditureDepositAssetSubClasses.indexOf(subClassValue) !== -1
+    function ToggleCreateExpenditureMyDepositAsset(subClassValue: string | null) {
+        subClassValue !== null && expenditureDepositAssetSubClasses.indexOf(subClassValue) !== -1
             ? $divCreateExpenditureMyDepositAsset.show()
             : $divCreateExpenditureMyDepositAsset.hide();
     }
 
     /** Same as `ToggleCreateExpenditureMyDepositAsset` for the edit modal. */
-    function ToggleEditExpenditureMyDepositAsset(subClassValue: string) {
-        expenditureDepositAssetSubClasses.indexOf(subClassValue) !== -1
+    function ToggleEditExpenditureMyDepositAsset(subClassValue: string | null) {
+        subClassValue !== null && expenditureDepositAssetSubClasses.indexOf(subClassValue) !== -1
             ? $divEditExpenditureMyDepositAsset.show()
             : $divEditExpenditureMyDepositAsset.hide();
     }
@@ -258,7 +260,7 @@
     /** Create form main-class change: re-filter the subclass options and re-evaluate the deposit-asset block. */
     function CreateFormShowExpenditureSubClassBySelectedExpenditureMainClass(createExpenditureMainClass: HTMLSelectElement) {
         ApplyAllowedOptions($createExpenditureSubClass, expenditureSubClassMap[createExpenditureMainClass.value] || [], null);
-        ToggleCreateExpenditureMyDepositAsset($createExpenditureSubClass.val() as string);
+        ToggleCreateExpenditureMyDepositAsset(selectValue($createExpenditureSubClass));
     }
 
     /** Create form subclass change: show/hide the deposit-asset block for it. */
@@ -283,12 +285,12 @@
         let content = $createExpenditureContent.val();
         let amount = $createExpenditureAmount.val();
 
-        let year = parseInt(($createExpenditureDate.val() as string).substring(0, 4));
-        let month = parseInt(($createExpenditureDate.val() as string).substring(5, 7));
-        let day = parseInt(($createExpenditureDate.val() as string).substring(8, 10));
-        let hour = parseInt($createExpenditureHour.val() as string);
-        let minute = parseInt($createExpenditureMinute.val() as string);
-        let second = parseInt($createExpenditureSecond.val() as string);
+        let year = parseInt(fieldValue($createExpenditureDate).substring(0, 4));
+        let month = parseInt(fieldValue($createExpenditureDate).substring(5, 7));
+        let day = parseInt(fieldValue($createExpenditureDate).substring(8, 10));
+        let hour = parseInt(fieldValue($createExpenditureHour));
+        let minute = parseInt(fieldValue($createExpenditureMinute));
+        let second = parseInt(fieldValue($createExpenditureSecond));
 
         // Sent as the account's own local wall-clock time ("yyyy-MM-dd HH:mm:ss"), not converted
         // to UTC here: the server already knows the account's IANA time zone from the session and
@@ -314,7 +316,7 @@
         $.ajax({
             url: "/AccountBook/CreateExpenditure",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -361,7 +363,7 @@
         $.ajax({
             url: "/AccountBook/IsExpenditureExists" + "?id=" + selectedRowId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<ExpenditurePayload>) {
@@ -407,7 +409,7 @@
     /** Edit form main-class change: re-filter the subclass options and re-evaluate the deposit-asset block. */
     function EditFormShowExpenditureSubClassBySelectedExpenditureMainClass(editExpenditureMainClass: HTMLSelectElement) {
         ApplyAllowedOptions($editExpenditureSubClass, expenditureSubClassMap[editExpenditureMainClass.value] || [], null);
-        ToggleEditExpenditureMyDepositAsset($editExpenditureSubClass.val() as string);
+        ToggleEditExpenditureMyDepositAsset(selectValue($editExpenditureSubClass));
     }
 
     /** Edit form subclass change: show/hide the deposit-asset block for it. */
@@ -428,12 +430,12 @@
         let content = $editExpenditureContent.val();
         let amount = $editExpenditureAmount.val();
 
-        let year = parseInt(($editExpenditureDate.val() as string).substring(0, 4));
-        let month = parseInt(($editExpenditureDate.val() as string).substring(5, 7));
-        let day = parseInt(($editExpenditureDate.val() as string).substring(8, 10));
-        let hour = parseInt($editExpenditureHour.val() as string);
-        let minute = parseInt($editExpenditureMinute.val() as string);
-        let second = parseInt($editExpenditureSecond.val() as string);
+        let year = parseInt(fieldValue($editExpenditureDate).substring(0, 4));
+        let month = parseInt(fieldValue($editExpenditureDate).substring(5, 7));
+        let day = parseInt(fieldValue($editExpenditureDate).substring(8, 10));
+        let hour = parseInt(fieldValue($editExpenditureHour));
+        let minute = parseInt(fieldValue($editExpenditureMinute));
+        let second = parseInt(fieldValue($editExpenditureSecond));
 
         // See CreateExpenditure — local wall-clock string, no client-side UTC conversion.
         let created = `${year}-${pad2(month)}-${pad2(day)} ${pad2(hour)}:${pad2(minute)}:${pad2(second)}`;
@@ -456,7 +458,7 @@
         $.ajax({
             url: "/AccountBook/UpdateExpenditure",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -520,7 +522,7 @@
         $.ajax({
             url: "/AccountBook/IsExpenditureExists" + "?id=" + selectedRowId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<ExpenditurePayload>) {
@@ -533,7 +535,7 @@
                     $.ajax({
                         url: "/AccountBook/DeleteExpenditure",
                         type: "POST",
-                        headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                        headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
@@ -570,7 +572,7 @@
         form.action = "/AccountBook/ExportExcelExpenditure";
 
         element1.name = "__RequestVerificationToken";
-        element1.value = $__RequestVerificationToken.val() as string;
+        element1.value = fieldValue($__RequestVerificationToken);
         form.appendChild(element1);
 
         element2.name = "fileName";
@@ -591,7 +593,7 @@
         $.ajax({
             url: "/AccountBook/GetExpenditureAmountLabel" + "?productName=" + encodeURIComponent(productName),
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: AmountLabelReply) {
@@ -612,7 +614,7 @@
         $.ajax({
             url: "/AccountBook/GetExpenditureAmountLabel" + "?productName=" + encodeURIComponent(productName),
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: AmountLabelReply) {
@@ -691,6 +693,10 @@
 
     // On load, set the create-form amount label for whichever method is preselected.
     $(function() {
-        ChangeCreateExpenditureAmountLabel($createExpenditurePaymentMethod.find("option:selected").val() as string);
+        // An account without assets has nothing preselected, and so no label to ask for.
+        const preselected = selectValue($createExpenditurePaymentMethod);
+        if (preselected !== null) {
+            ChangeCreateExpenditureAmountLabel(preselected);
+        }
     });
 })();

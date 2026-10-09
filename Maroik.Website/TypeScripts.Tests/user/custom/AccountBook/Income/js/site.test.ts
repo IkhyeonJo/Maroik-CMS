@@ -19,7 +19,8 @@ function fixture(extra = ""): string {
         hidden("incomeSubClassMap", JSON.stringify(subClassMap).replace(/"/g, "&quot;")) +
         hidden("localizerFailedToLoadAmountLabel", "Failed to load the amount label.") +
         `<div id="createIncomeTabs"></div><div id="editIncomeTabs"></div>
-     <input id="createIncomeDate" /><input id="editIncomeDate" /><input id="gridSearch" />
+     <input id="createIncomeDate" /><input id="editIncomeDate" />
+     <select id="createIncomeHour"><option value="9" selected>9</option></select><select id="createIncomeMinute"><option value="30" selected>30</option></select><select id="createIncomeSecond"><option value="0" selected>0</option></select><select id="editIncomeHour"><option value="9" selected>9</option></select><select id="editIncomeMinute"><option value="30" selected>30</option></select><select id="editIncomeSecond"><option value="0" selected>0</option></select><input id="gridSearch" />
      <select id="createIncomeMainClass">
        <option value="Labor">Labor</option><option value="Business">Business</option>
      </select>
@@ -131,6 +132,7 @@ describeGridCrudScript({
 describeAmountLabel({
     label: "user/AccountBook/Income",
     load: () => loadSite("user", "AccountBook", "Income", fixture()),
+    loadWithoutCreateChoices: () => loadSite("user", "AccountBook", "Income", fixture().replace('<select id="createIncomeDepositMyAssetProductName"><option value="A" selected>A</option></select>', '<select id="createIncomeDepositMyAssetProductName"></select>')),
     url: "GetIncomeAmountLabel",
     create: { trigger: "#createIncomeDepositMyAssetProductName", span: "#labelCreateIncomeAmount" },
     edit: { trigger: "#editIncomeDepositMyAssetProductName", span: "#labelEditIncomeAmount" },

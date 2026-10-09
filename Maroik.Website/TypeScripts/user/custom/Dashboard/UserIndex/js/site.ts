@@ -23,6 +23,8 @@
  * IIFE-wrapped, no `import` / `export`.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { fieldValue } = window;
     // Localized category names, read from hidden inputs the view rendered from
     // the resource files. Used as the chart slice labels below.
     const localizer = {
@@ -70,7 +72,7 @@
         $.ajax({
             url: "/Dashboard/UserUpdateDefaultMonetary",
             type: "POST",
-            headers: { "RequestVerificationToken": $("input[name=\"__RequestVerificationToken\"]").val() as string },
+            headers: { "RequestVerificationToken": fieldValue($("input[name=\"__RequestVerificationToken\"]")) },
             dataType: "json",
             data: JSON.stringify({
                 DefaultMonetaryUnit: $("#monetaryUnit").find(":selected").val()

@@ -16,6 +16,8 @@
  * IIFE-wrapped, no `import` / `export`.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { check, parseJson, fieldValue, selectValue, optionalFieldValue, attribute } = window;
     // Cached references: tab containers, grid search box, the two maturity-date
     // inputs, every field of both modals, the amount labels, and the
     // anti-forgery input. (`$btnEditFixedIncomeGridRow` is this page's "edit" button.)
@@ -37,7 +39,7 @@
     const $createFixedIncomeDepositMyAssetProductName = $("#createFixedIncomeDepositMyAssetProductName");
     const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
     // Localized toast shown when the amount-label request itself fails (transport error).
-    const failedToLoadAmountLabelMessage = $("#localizerFailedToLoadAmountLabel").val() as string;
+    const failedToLoadAmountLabelMessage = fieldValue($("#localizerFailedToLoadAmountLabel"));
     const $createFixedIncomeDialogModal = $("#createFixedIncomeDialogModal");
     const $editFixedIncomeId = $("#editFixedIncomeId");
     const $editFixedIncomeMainClass = $("#editFixedIncomeMainClass");
@@ -59,11 +61,11 @@
 
     // Server-published rules (FixedIncome.cshtml). Authoritative in IncomeClassPolicy /
     // FixedSchedulePolicy; mirrored here for form UX only, the server re-validates on save.
-    const incomeSubClassMap = JSON.parse(($("#incomeSubClassMap").val() as string) || "{}") as Record<string, string[]>;
-    const maxDepositDayByMonth = JSON.parse(($("#maxDepositDayByMonth").val() as string) || "{}") as Record<string, number>;
+    const incomeSubClassMap = parseJson(optionalFieldValue($("#incomeSubClassMap")) || "{}", check.record(check.array(check.string)), "#incomeSubClassMap");
+    const maxDepositDayByMonth = parseJson(optionalFieldValue($("#maxDepositDayByMonth")) || "{}", check.record(check.number), "#maxDepositDayByMonth");
     // Far-future stand-in for "no maturity date", published by the server (FixedSchedulePolicy)
     // as a yyyy-MM-dd string so the client and server never drift on the value.
-    const noMaturityIso = $("#noMaturityDate").val() as string;
+    const noMaturityIso = fieldValue($("#noMaturityDate"));
     const [nmYear, nmMonth, nmDay] = noMaturityIso.split("-").map(Number);
     const NO_MATURITY_DATE = new Date(nmYear, nmMonth - 1, nmDay);
 
@@ -388,7 +390,7 @@
         $.ajax({
             url: "/Notice/CreateFixedIncome",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -435,7 +437,7 @@
         $.ajax({
             url: "/Notice/IsFixedIncomeExists" + "?id=" + selectedRowId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<FixedIncomePayload>) {
@@ -508,7 +510,7 @@
         $.ajax({
             url: "/Notice/UpdateFixedIncome",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -573,7 +575,7 @@
         $.ajax({
             url: "/Notice/IsFixedIncomeExists" + "?id=" + selectedRowId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<FixedIncomePayload>) {
@@ -586,7 +588,7 @@
                     $.ajax({
                         url: "/Notice/DeleteFixedIncome",
                         type: "POST",
-                        headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                        headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
@@ -623,7 +625,7 @@
         form.action = "/Notice/ExportExcelFixedIncome";
 
         element1.name = "__RequestVerificationToken";
-        element1.value = $__RequestVerificationToken.val() as string;
+        element1.value = fieldValue($__RequestVerificationToken);
         form.appendChild(element1);
 
         element2.name = "fileName";
@@ -643,7 +645,7 @@
         $.ajax({
             url: "/Notice/GetFixedIncomeAmountLabel" + "?productName=" + encodeURIComponent(productName),
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: AmountLabelReply) {
@@ -664,7 +666,7 @@
         $.ajax({
             url: "/Notice/GetFixedIncomeAmountLabel" + "?productName=" + encodeURIComponent(productName),
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: AmountLabelReply) {
@@ -731,6 +733,10 @@
 
     // On load, set the create-form amount label for whichever asset is preselected.
     $(function() {
-        ChangeCreateFixedIncomeAmountLabel($createFixedIncomeDepositMyAssetProductName.find("option:selected").val() as string);
+        // An account without assets has nothing preselected, and so no label to ask for.
+        const preselected = selectValue($createFixedIncomeDepositMyAssetProductName);
+        if (preselected !== null) {
+            ChangeCreateFixedIncomeAmountLabel(preselected);
+        }
     });
 })();

@@ -42,6 +42,25 @@ public class DashboardControllerTests
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>
+    /// The shared layout renders the generic "temporary error" text for the client scripts' runtime checks
+    /// (<c>window.onReply</c> shows it when a reply does not have the expected shape), in the visitor's culture.
+    /// </summary>
+    [Theory]
+    [InlineData("en-US", "A temporary error occurred. Please try again later.")]
+    [InlineData("ko-KR", "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")]
+    public async Task AnonymousIndex_Get_RendersTheTemporaryErrorTextForTheClientScripts(string culture, string text)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/Dashboard/AnonymousIndex");
+        request.Headers.Add("Cookie", $".AspNetCore.Culture=c={culture}|uic={culture}");
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        // Razor's encoder writes non-ASCII text as character references, so compare the decoded markup.
+        string html = System.Net.WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains($"<input id=\"_LocalizerTemporaryError\" type=\"hidden\" value=\"{text}\" />", html);
+    }
+
     /// <summary>Verifies that <c>DefaultRoute</c> get when returns200.</summary>
     [Fact]
     public async Task DefaultRoute_Get_Returns200()

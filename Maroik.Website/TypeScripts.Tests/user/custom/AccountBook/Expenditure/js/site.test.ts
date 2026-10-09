@@ -18,7 +18,8 @@ function fixture(): string {
         hidden("expenditureDepositAssetSubClasses", JSON.stringify(depositAssetSubClasses).replace(/"/g, "&quot;")) +
         hidden("localizerFailedToLoadAmountLabel", "Failed to load the amount label.") +
         `<div id="createExpenditureTabs"></div><div id="editExpenditureTabs"></div>
-     <input id="createExpenditureDate" value="2024-05-04" /><input id="editExpenditureDate" /><input id="gridSearch" />
+     <input id="createExpenditureDate" value="2024-05-04" /><input id="editExpenditureDate" />
+     <select id="createExpenditureHour"><option value="9" selected>9</option></select><select id="createExpenditureMinute"><option value="30" selected>30</option></select><select id="createExpenditureSecond"><option value="0" selected>0</option></select><select id="editExpenditureHour"><option value="9" selected>9</option></select><select id="editExpenditureMinute"><option value="30" selected>30</option></select><select id="editExpenditureSecond"><option value="0" selected>0</option></select><input id="gridSearch" />
      <select id="createExpenditureMainClass"><option value="Living">Living</option><option value="Transfer">Transfer</option></select>
      <select id="createExpenditureSubClass"><option value="Food">Food</option><option value="Rent">Rent</option><option value="ToSavings">ToSavings</option></select>
      <select id="editExpenditureMainClass"></select><select id="editExpenditureSubClass"></select>
@@ -101,6 +102,7 @@ describeGridCrudScript({
 describeAmountLabel({
     label: "user/AccountBook/Expenditure",
     load: () => loadSite("user", "AccountBook", "Expenditure", fixture()),
+    loadWithoutCreateChoices: () => loadSite("user", "AccountBook", "Expenditure", fixture().replace('<select id="createExpenditurePaymentMethod"><option value="Card" selected>Card</option></select>', '<select id="createExpenditurePaymentMethod"></select>')),
     url: "GetExpenditureAmountLabel",
     create: { trigger: "#createExpenditurePaymentMethod", span: "#labelCreateExpenditureAmount" },
     edit: { trigger: "#editExpenditurePaymentMethod", span: "#labelEditExpenditureAmount" },

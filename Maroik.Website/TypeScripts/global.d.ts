@@ -464,3 +464,116 @@ interface CalendarEventExtendedProps {
     /** "My" or "Other". */
     calendarType: string;
 }
+
+// ── Runtime checks — each role's _Layout script defines these on `window` ──────────────────────────
+// The page scripts read the values the view renders and the replies the controllers send through these
+// helpers instead of type assertions: a missing element or attribute throws, and a reply that does not
+// pass its check shows the generic "temporary error" toast (logging why).
+
+interface ArrayConstructor {
+    /** An array of values of unknown type (the library's typing says `any[]`). */
+    isArray(arg: unknown): arg is unknown[];
+}
+
+interface ObjectConstructor {
+    /** The own enumerable entries, values of unknown type (the library's typing says `any`). */
+    entries(o: object): [string, unknown][];
+}
+
+/** A runtime check that a value has type `T`. */
+interface Check<T> {
+    /** Where and why `value` is not a `T` (`"reply.asset.amount: expected a number, got string"`), or null when it is one. */
+    problem(value: unknown, path: string): string | null;
+    /** Whether `value` is a `T`. */
+    is(value: unknown): value is T;
+}
+
+/** The type a {@link Check} proves. */
+type Checked<C> = C extends Check<infer T> ? T : never;
+
+/** The fields a {@link CheckBuilders.object} check proves. */
+type CheckedFields<S extends Record<string, Check<unknown>>> = { [K in keyof S]: Checked<S[K]> };
+
+/** `window.check`: builds {@link Check}s. */
+interface CheckBuilders {
+    readonly string: Check<string>;
+    readonly number: Check<number>;
+    readonly boolean: Check<boolean>;
+    literal<const V extends string | number | boolean>(value: V): Check<V>;
+    nullable<T>(check: Check<T>): Check<T | null>;
+    array<T>(item: Check<T>): Check<T[]>;
+    /** A plain object whose every value passes `value`. */
+    record<T>(value: Check<T>): Check<Record<string, T>>;
+    /** A plain object with (at least) the fields of `shape`. */
+    object<S extends Record<string, Check<unknown>>>(shape: S): Check<CheckedFields<S>>;
+    oneOf<A, B>(first: Check<A>, second: Check<B>): Check<A | B>;
+    /** A string holding JSON that passes `content` (some replies nest their rows as JSON text). */
+    jsonText<T>(content: Check<T>): Check<string>;
+}
+
+/** The refusal every action answers with. */
+interface FailedReply {
+    result: false;
+    error: string;
+}
+
+/** `window.replies`: the reply shapes most actions share. */
+interface ReplyChecks {
+    readonly failed: Check<FailedReply>;
+    /** A write action's reply: a localized confirmation, or the refusal. */
+    readonly action: Check<{ result: true; message: string } | FailedReply>;
+    /** A read action's reply: the payload on success, or the refusal. */
+    read<S extends Record<string, Check<unknown>>>(payload: S): Check<({ result: true } & CheckedFields<S>) | FailedReply>;
+    /** A write action's reply that also returns what it wrote. */
+    write<S extends Record<string, Check<unknown>>>(payload: S): Check<({ result: true; message: string } & CheckedFields<S>) | FailedReply>;
+}
+
+/** A constructor `instanceof` can test against (`HTMLInputElement`, `File`, …). */
+type Constructor<T> = abstract new (...args: never[]) => T;
+
+interface Window {
+    check: CheckBuilders;
+    replies: ReplyChecks;
+
+    /**
+     * Wraps an ajax `success` handler: calls it with a reply that passes `check`; otherwise logs why and shows
+     * the generic "temporary error" toast.
+     */
+    onReply<T>(check: Check<T>, handler: (reply: T) => void): (reply: unknown) => void;
+
+    /** {@link onReply} for a reply that arrives as text (a refused file download): unparseable text counts as a mismatch. */
+    onReplyText<T>(check: Check<T>, handler: (reply: T) => void): (text: string) => void;
+
+    /** Parses JSON the view rendered; throws, naming `what`, when it is not JSON or does not pass `check`. */
+    parseJson<T>(text: string, check: Check<T>, what: string): T;
+
+    /** Returns `value` when it passes `check`; throws, naming `what`, otherwise. */
+    conform<T>(value: unknown, check: Check<T>, what: string): T;
+
+    /** Returns `value` unless it is null / undefined, which throws "`what` is missing". */
+    required<T>(value: T | null | undefined, what: string): T;
+
+    /** The element `#id`, which must be a `type`. */
+    byId<T extends Element>(id: string, type: Constructor<T>): T;
+
+    /** The first element of `$element`, which must be a `type`. */
+    elementOf<T extends Element>($element: JQuery, type: Constructor<T>): T;
+
+    /** `value`, which must be a `type`. */
+    instanceOf<T>(value: unknown, type: Constructor<T>, what: string): T;
+
+    /** The text of a field the view always renders. */
+    fieldValue($field: JQuery): string;
+
+    /** The chosen value of a select the view always renders; null when no option is chosen (all disabled, or none). */
+    selectValue($select: JQuery): string | null;
+
+    /** The text of a field the view may leave out (a server constant with a built-in fallback). */
+    optionalFieldValue($field: JQuery): string | undefined;
+
+    /** An attribute the element always carries. */
+    attribute($element: JQuery, name: string): string;
+
+    /** Moves a datepicker's earliest selectable date. */
+    setMinDate(picker: DatepickerMinDateSetter, date: Date | null): void;
+}

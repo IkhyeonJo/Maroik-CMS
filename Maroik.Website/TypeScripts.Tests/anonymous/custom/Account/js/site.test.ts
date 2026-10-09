@@ -44,6 +44,13 @@ describe("anonymous/Account", () => {
         expect(h.navigations.at(-1)).toBe("/back");
     });
 
+    it("refuses to navigate when the page lacks the field it returns to (the view and the script disagree)", () => {
+        const h = loadSite("anonymous", "Account", "", fixture().replace(hidden("returnUri", "/back"), ""));
+        h.$("#aChangeCultureEnUS").trigger("click");
+        expect(() => h.lastAjax().success!({})).toThrow("A required field is missing from the page");
+        expect(h.navigations).toEqual([]);
+    });
+
     // Each button drives the loading overlay for ITS OWN form: valid → shown, invalid → hidden.
     it.each([
         ["#btnSignIn", "loginForm"],
