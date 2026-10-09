@@ -53,6 +53,8 @@ TypeScripts.Tests/
     vitest.setup.ts       runs once before each test file
     *Suite.ts             behaviour shared by several scripts (see "Shared suites")
     noExplicitAny.test.ts no explicit `any` in TypeScripts/ or this tree
+    noImplicitAnyLibs.d.ts JSON.parse / jQuery .data() / .prop("checked") answer `unknown` / the real type, not `any`
+    noImplicitAny.test.ts compiles a probe with tsc: an untyped use of those values (or of `$.ajax` data) must fail
   {role}/custom/{Feature}/{Page}/js/site.test.ts   ⟷  wwwroot/{role}/custom/{Feature}/{Page}/js/site.js
   tsconfig.json           standalone (the main tsconfig excludes this tree)
 ```

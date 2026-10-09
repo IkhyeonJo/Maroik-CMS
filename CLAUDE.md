@@ -162,9 +162,12 @@ Client scripts
 - Each role (`admin` / `user` / `anonymous`) keeps its own script per view, even when two scripts are
   nearly identical. Do not merge them into shared scripts; the only shared helpers are the `window`
   globals each role's `_Layout` script defines.
-- No explicit `any` in `TypeScripts/**` or `TypeScripts.Tests/**` (pinned by
-  `TypeScripts.Tests/_common/noExplicitAny.test.ts`). Types shared by several scripts — the server payloads and the
-  plugin typings' gaps — live in `TypeScripts/global.d.ts`, which is type-only (no runtime code).
+- No `any` in `TypeScripts/**` or `TypeScripts.Tests/**`: none written in code (pinned by
+  `TypeScripts.Tests/_common/noExplicitAny.test.ts`), and none taken from a library — `TypeScripts/global.d.ts` (and
+  `TypeScripts.Tests/_common/noImplicitAnyLibs.d.ts`) redeclare `JSON.parse`, `$.ajax`'s `success` data and jQuery's
+  `.data()` / `.prop("checked")` to answer `unknown` or the real type, so every `$.ajax` names its reply type. Types
+  shared by several scripts — the server payloads and the plugin typings' gaps — live in `global.d.ts`, which is
+  type-only (no runtime code). A controller's `Json(...)` shape change updates its reply type there too.
 
 Code and tests
 - The DDD + Clean Architecture layering is deliberate preparation for growth, not over-engineering.

@@ -164,7 +164,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $createMenuDialogModal.modal("hide");
 
@@ -215,7 +215,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $createMenuDialogModal.modal("hide");
 
@@ -264,7 +264,7 @@
                 headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(data) {
+                success: function(data: ReadReply<CategoryPayload>) {
                     if (data.result) {
 
                         $editCategoryId.val(data.category.id);
@@ -296,7 +296,7 @@
                 headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(data) {
+                success: function(data: ReadReply<SubCategoryPayload>) {
                     if (data.result) {
 
                         $editSubCategoryId.val(data.subCategory.id);
@@ -356,7 +356,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $editCategoryDialogModal.modal("hide");
 
@@ -405,7 +405,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $editSubCategoryDialogModal.modal("hide");
 
@@ -477,7 +477,7 @@
                 headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(data) {
+                success: function(data: ReadReply<CategoryPayload>) {
                     if (data.result) {
 
                         let paramValue = JSON.stringify({
@@ -498,7 +498,7 @@
                             dataType: "json",
                             data: paramValue,
                             contentType: "application/json; charset=utf-8",
-                            success: function(data) {
+                            success: function(data: ActionReply) {
                                 if (data.result) {
                                     $confirmDeleteMenuDialogModal.modal("hide");
 
@@ -523,7 +523,7 @@
                 headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(data) {
+                success: function(data: ReadReply<SubCategoryPayload>) {
                     if (data.result) {
 
                         let paramValue = JSON.stringify({
@@ -544,7 +544,7 @@
                             dataType: "json",
                             data: paramValue,
                             contentType: "application/json; charset=utf-8",
-                            success: function(data) {
+                            success: function(data: ActionReply) {
                                 if (data.result) {
                                     $confirmDeleteMenuDialogModal.modal("hide");
 

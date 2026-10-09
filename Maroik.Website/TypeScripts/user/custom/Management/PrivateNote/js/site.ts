@@ -52,7 +52,7 @@
     /** base64 -> Blob, for turning server-embedded image payloads into object URLs. */
     function base64ToBlob(base64: string, mime: string) {
         const byteCharacters = atob(base64);
-        const byteNumbers = new Array(byteCharacters.length);
+        const byteNumbers = new Array<number>(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
             byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
@@ -195,7 +195,7 @@
             contentType: false,
             dataType: "json",
             cache: false,
-            success: function(data) {
+            success: function(data: UploadImageReply) {
                 if (data.result) {
                     const imgURL = URL.createObjectURL(base64ToBlob(data.file.fileContents, data.file.contentType));
                     const imgNode = document.createElement("img");
@@ -235,7 +235,7 @@
             contentType: false,
             dataType: "json",
             cache: false,
-            success: function(data) {
+            success: function(data: UploadImageReply) {
                 if (data.result) {
                     const imgURL = URL.createObjectURL(base64ToBlob(data.file.fileContents, data.file.contentType));
                     const imgNode = document.createElement("img");
@@ -288,7 +288,7 @@
             data: formData,
             contentType: false,
             processData: false,
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     alert(data.message);
                     window.location.href = "/Management/PrivateNote";
@@ -332,7 +332,7 @@
             data: formData,
             contentType: false,
             processData: false,
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     alert(data.message);
                     window.location.href = "/Management/PrivateNote?method=detail" + "&boardId=" + editBoardId + "&page=" + editCurrentPage;
@@ -369,7 +369,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ReadReply<PrivateNoteBoardPayload>) {
                 if (data.result) {
 
                     let paramValue = JSON.stringify({
@@ -383,7 +383,7 @@
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
-                        success: function(data) {
+                        success: function(data: ActionReply) {
                             if (data.result) {
                                 $confirmDeleteBoardDialogModal.modal("hide");
                                 alert(data.message);
@@ -426,7 +426,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: CommentWrittenReply) {
                 if (data.result) {
                     window.location.href = "/Management/PrivateNote?method=detail" + "&boardId=" + data.boardId + "&page=" + data.page;
                 } else {
@@ -446,7 +446,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     window.location.href = "/Management/PrivateNote?method=detail" + "&boardId=" + boardId + "&page=" + page;
                 } else {
@@ -600,7 +600,7 @@
                 success: function(data: Blob) {
                     if (data.type.indexOf("application/json") === 0) {
                         data.text().then(function(text) {
-                            toastr.error(JSON.parse(text).error);
+                            toastr.error((JSON.parse(text) as FailedReply).error);
                         });
                         return;
                     }

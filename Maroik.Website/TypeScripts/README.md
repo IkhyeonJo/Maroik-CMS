@@ -211,10 +211,16 @@ per file (just typed); there is deliberately no shared module.
 
 ### The recurring annotations
 
-There is no `any` anywhere in `TypeScripts/` or `TypeScripts.Tests/` (explicit `any` written in code; comments
-and strings do not count). `TypeScripts.Tests/_common/noExplicitAny.test.ts` fails on one, since `tsc` has no
-option that forbids it. Values a library or the server leaves untyped are given a type here: the shared
-ones (server payloads, plugin gaps) live in `global.d.ts`.
+There is no `any` anywhere in `TypeScripts/` or `TypeScripts.Tests/`: none written in code
+(`TypeScripts.Tests/_common/noExplicitAny.test.ts` fails on one, since `tsc` has no option that forbids it),
+and none handed over by a library either. The library calls whose typings answer `any` — `JSON.parse`,
+`$.ajax`'s `success` data, jQuery's `.data(key)` / `.prop("checked")` — are redeclared in `global.d.ts` (and,
+for the tests, `TypeScripts.Tests/_common/noImplicitAnyLibs.d.ts`) to answer `unknown` or the real type, so the
+strict compiler rejects any use that does not state a type. Each `$.ajax` names its reply
+(`success: function(data: ReadReply<AssetPayload>)`); the reply types mirror the controllers' `Json(...)`
+results, with `result: true | false` telling the success and failure shapes apart. The shared types (server
+payloads, plugin gaps) live in `global.d.ts`, which loads the jQuery typings first so its overloads are tried
+before the library's.
 
 | Original pattern                                                                                         | Becomes                                                                              | Reason                                                                                         |
 |----------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
@@ -226,15 +232,19 @@ ones (server payloads, plugin gaps) live in `global.d.ts`.
 | `.datepicker({ … beforeShow/onSelect … })` instance call                                                 | no cast; `onSelect: function (this: HTMLInputElement)`                               | `DatepickerSetupOptions` (`global.d.ts`) accepts the void `beforeShow` jQuery UI allows        |
 | `$.datepicker._clearDate(x)`                                                                             | as is                                                                                | the undocumented internal is declared on `JQueryUI.Datepicker` in `global.d.ts`                |
 | `new FullCalendar.Calendar(document.getElementById('calendar'), {…})`                                    | `… getElementById('calendar')!, {…}` + `FullCalendarEventClickArg` / `…DateSelectArg` | null-guard; FullCalendar's own types, aliased in `global.d.ts`                                 |
-| `JSON.parse(…).forEach((item) => …)` / `$.each(response.calendars, …)`                                   | `(item: CalendarEventJson)`, `(_, calendar: CalendarSummary)`, …                     | the calendar payloads, mirrored from the C# view models / DTOs in `global.d.ts`                |
+| `JSON.parse(…).forEach((item) => …)` / `$.each(response.calendars, …)`                                   | `(JSON.parse(…) as CalendarEventJson[]).forEach(…)`, `(_, calendar: CalendarSummary)` | the calendar payloads, mirrored from the C# view models / DTOs in `global.d.ts`                |
+| `success: function(data) { … data.asset.amount … }`                                                      | `success: function(data: ReadReply<AssetPayload>)`                                   | `$.ajax` hands `success` an `unknown` until the call names its reply type                      |
+| a hoisted `function show…Modal() { … data.calendarEvent … }` inside `if (data.result)`                   | `(data as SucceededReply<CalendarEventPayload>).calendarEvent`                       | the `data.result` narrowing does not reach a hoisted function declaration                      |
 | `formData.append("X", value)` with a `.val()` / boolean / missing file                                   | as is                                                                                | `global.d.ts` adds the `FormData.append` overload for the values it stringifies                |
 | `let x;` (no initialiser) / `let arr = [];` reused                                                       | `let x: FormFieldValue;` / `let arr: CalendarReminderFormValue[] = [];`              | `noImplicitAny` on evolving types                                                              |
 | `htmlDoc.querySelectorAll('img[data-file]')` then `imgTag.src`                                           | `.querySelectorAll<HTMLImageElement>('img[data-file]')`                              | `Element` has no `.src`                                                                        |
 
-Typing the scripts this way changed the compiled `site.js` in three places, none of them in behaviour:
+Typing the scripts this way changed the compiled `site.js` in a few places, none of them in behaviour:
 `data: null` is no longer passed to `$.ajax` (jQuery only tests `data` for truthiness), a calendar event's
-`id` is passed as `String(item.Id)` (FullCalendar 5 runs `id` through `String` itself), and the reminder
-validators call `isNaN(Number(value))` (global `isNaN` applies the same `ToNumber`).
+`id` is passed as `String(item.Id)` (FullCalendar 5 runs `id` through `String` itself), the reminder
+validators call `isNaN(Number(value))` (global `isNaN` applies the same `ToNumber`), and the deposit-day
+lists read the month's maximum day straight from `maxDepositDayByMonth` instead of through `parseInt` (the
+values are already integers; a missing month still yields no days).
 
 ### Deliberate post-port changes
 

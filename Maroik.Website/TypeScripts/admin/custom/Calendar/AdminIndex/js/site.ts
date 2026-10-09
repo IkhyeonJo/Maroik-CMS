@@ -148,13 +148,13 @@
     // "Notify at HH:MM" options for all-day reminders and the default selection, both published
     // by the server (CalendarViewModelMapper / CalendarReminderPolicy). Was regenerated inline
     // as Array.from({length:96}) in several places.
-    const reminderTimeIntervals = JSON.parse(($("#reminderTimeIntervals").val() as string) || "[]");
+    const reminderTimeIntervals = JSON.parse(($("#reminderTimeIntervals").val() as string) || "[]") as string[];
     const defaultBeforeAt = ($("#defaultReminderTimeOfDay").val() as string) || "09:00";
 
     /** base64 -> Blob, for turning server-embedded inline-image payloads into object URLs. */
     function base64ToBlob(base64: string, mime: string) {
         const byteCharacters = atob(base64);
-        const byteNumbers = new Array(byteCharacters.length);
+        const byteNumbers = new Array<number>(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
             byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
@@ -407,7 +407,7 @@
                 if (endDate && endDate < startDate) {
                     $createCalendarEventAllDayUncheckedEndDate.datepicker("setDate", startDate);
                 }
-                $createCalendarEventAllDayUncheckedEndDate.datepicker("option", "minDate", startDate);
+                ($createCalendarEventAllDayUncheckedEndDate as DatepickerMinDateSetter).datepicker("option", "minDate", startDate);
             }
         });
 
@@ -446,7 +446,7 @@
                 if (endDate && endDate < startDate) {
                     $createCalendarEventAllDayCheckedEndDate.datepicker("setDate", startDate);
                 }
-                $createCalendarEventAllDayCheckedEndDate.datepicker("option", "minDate", startDate);
+                ($createCalendarEventAllDayCheckedEndDate as DatepickerMinDateSetter).datepicker("option", "minDate", startDate);
             }
         });
 
@@ -485,7 +485,7 @@
                 if (endDate && endDate < startDate) {
                     $editCalendarEventAllDayUncheckedEndDate.datepicker("setDate", startDate);
                 }
-                $editCalendarEventAllDayUncheckedEndDate.datepicker("option", "minDate", startDate);
+                ($editCalendarEventAllDayUncheckedEndDate as DatepickerMinDateSetter).datepicker("option", "minDate", startDate);
             }
         });
 
@@ -524,7 +524,7 @@
                 if (endDate && endDate < startDate) {
                     $editCalendarEventAllDayCheckedEndDate.datepicker("setDate", startDate);
                 }
-                $editCalendarEventAllDayCheckedEndDate.datepicker("option", "minDate", startDate);
+                ($editCalendarEventAllDayCheckedEndDate as DatepickerMinDateSetter).datepicker("option", "minDate", startDate);
             }
         });
 
@@ -632,7 +632,7 @@
                     headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                     dataType: "json",
                     contentType: "application/json; charset=utf-8",
-                    success: function(response) {
+                    success: function(response: ReadReply<CalendarsPayload>) {
                         if (response.result) {
                             $createCalendarEventMyCalendar.empty();
 
@@ -686,14 +686,14 @@
                 $divCalendarEventPopupAllDayUnchecked.hide();
 
                 if (arg.event.allDay === true) {
-                    $calendarEventPopupStartAllDayChecked.text(arg.event.extendedProps.displayStartDate);
-                    $calendarEventPopupEndAllDayChecked.text(arg.event.extendedProps.displayEndDate);
+                    $calendarEventPopupStartAllDayChecked.text((arg.event.extendedProps as CalendarEventExtendedProps).displayStartDate);
+                    $calendarEventPopupEndAllDayChecked.text((arg.event.extendedProps as CalendarEventExtendedProps).displayEndDate);
                     $divCalendarEventPopupAllDayChecked.show();
                 } else {
-                    $calendarEventPopupStartAllDayUnchecked.text(arg.event.extendedProps.displayStartDate);
-                    $calendarEventPopupStartTimeZoneAllDayUnchecked.text(`(${arg.event.extendedProps.displayStartDateTimeZone})`);
-                    $calendarEventPopupEndAllDayUnchecked.text(arg.event.extendedProps.displayEndDate);
-                    $calendarEventPopupEndTimeZoneAllDayUnchecked.text(`(${arg.event.extendedProps.displayEndDateTimeZone})`);
+                    $calendarEventPopupStartAllDayUnchecked.text((arg.event.extendedProps as CalendarEventExtendedProps).displayStartDate);
+                    $calendarEventPopupStartTimeZoneAllDayUnchecked.text(`(${(arg.event.extendedProps as CalendarEventExtendedProps).displayStartDateTimeZone})`);
+                    $calendarEventPopupEndAllDayUnchecked.text((arg.event.extendedProps as CalendarEventExtendedProps).displayEndDate);
+                    $calendarEventPopupEndTimeZoneAllDayUnchecked.text(`(${(arg.event.extendedProps as CalendarEventExtendedProps).displayEndDateTimeZone})`);
                     $divCalendarEventPopupAllDayUnchecked.show();
                 }
 
@@ -723,7 +723,7 @@
                         headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                         dataType: "json",
                         contentType: "application/json; charset=utf-8",
-                        success: function(data) {
+                        success: function(data: ReadReply<CalendarEventPayload>) {
                             if (data.result) {
                                 $editCalendarEventId.val(data.calendarEvent.id);
 
@@ -791,19 +791,19 @@
                                 }
 
                                 function showEditCalendarEventModal() {
-                                    $editCalendarEventStatus.val(data.calendarEvent.status);
+                                    $editCalendarEventStatus.val((data as SucceededReply<CalendarEventPayload>).calendarEvent.status);
 
                                     $divEditEventNotificationAllDayChecked.hide();
                                     $divEditEventNotificationAllDayUnchecked.hide();
 
-                                    if (data.calendarEvent.allDay === true) {
+                                    if ((data as SucceededReply<CalendarEventPayload>).calendarEvent.allDay === true) {
                                         $divEditEventNotificationAllDayChecked.find(".divEditEventNotificationAllDayCheckedRow").remove();
                                         $divEditEventNotificationAllDayChecked.show();
 
-                                        if (data.calendarEvent.serializedCalendarReminders !== "[]") {
+                                        if ((data as SucceededReply<CalendarEventPayload>).calendarEvent.serializedCalendarReminders !== "[]") {
                                             const timeIntervals = reminderTimeIntervals;
 
-                                            JSON.parse(data.calendarEvent.serializedCalendarReminders).forEach((reminder: CalendarReminderJson) => {
+                                            (JSON.parse((data as SucceededReply<CalendarEventPayload>).calendarEvent.serializedCalendarReminders) as CalendarReminderJson[]).forEach((reminder: CalendarReminderJson) => {
 
                                                 const selectedMethodOption = `
                                                 <option value='Email' ${reminder.Method === "Email" ? "selected" : ""}>${localizer.Email}</option>
@@ -849,9 +849,9 @@
                                         $divEditEventNotificationAllDayUnchecked.find(".divEditEventNotificationAllDayUncheckedRow").remove();
                                         $divEditEventNotificationAllDayUnchecked.show();
 
-                                        if (data.calendarEvent.serializedCalendarReminders !== "[]") {
+                                        if ((data as SucceededReply<CalendarEventPayload>).calendarEvent.serializedCalendarReminders !== "[]") {
 
-                                            JSON.parse(data.calendarEvent.serializedCalendarReminders).forEach((reminder: CalendarReminderJson) => {
+                                            (JSON.parse((data as SucceededReply<CalendarEventPayload>).calendarEvent.serializedCalendarReminders) as CalendarReminderJson[]).forEach((reminder: CalendarReminderJson) => {
 
                                                 const selectedMethodOption = `
                                                 <option value='Email' ${reminder.Method === "Email" ? "selected" : ""}>${localizer.Email}</option>
@@ -914,7 +914,7 @@
                                     headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                                     dataType: "json",
                                     contentType: "application/json; charset=utf-8",
-                                    success: function(response) {
+                                    success: function(response: ReadReply<CalendarsPayload>) {
                                         if (response.result) {
                                             $editCalendarEventMyCalendar.empty();
 
@@ -952,7 +952,7 @@
                             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                             dataType: "json",
                             contentType: "application/json; charset=utf-8",
-                            success: function(data) {
+                            success: function(data: ActionReply) {
                                 if (data.result) {
                                     arg.event.remove();
                                     toastr.success(data.message);
@@ -972,7 +972,7 @@
         // Seed the calendar with the events the server rendered into the hidden
         // input, then render. `extendedProps` carries the pre-formatted display
         // strings the popup shows.
-        JSON.parse($calendarEventOutputViewModels.val() as string).forEach((item: CalendarEventJson) => {
+        (JSON.parse($calendarEventOutputViewModels.val() as string) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
             calendar.addEvent({
                 id: String(item.Id),
                 title: item.Title,
@@ -1029,7 +1029,7 @@
                 dataType: "json",
                 data: JSON.stringify(paramValue),
                 contentType: "application/json; charset=utf-8",
-                success: function(response) {
+                success: function(response: ReadReply<CalendarEventsPayload>) {
                     // A newer RefreshCalendarEvents call already ran (and removed/re-added events)
                     // since this request went out — applying this stale response now would put
                     // back events the newer call's own removeAllEvents() just cleared.
@@ -1037,7 +1037,7 @@
                         return;
                     }
                     if (response.result) {
-                        JSON.parse(response.calendarEvents).forEach((item: CalendarEventJson) => {
+                        (JSON.parse(response.calendarEvents) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
                             calendar.addEvent({
                                 id: String(item.Id),
                                 title: item.Title,
@@ -1461,7 +1461,7 @@
                 data: formData,
                 contentType: false,
                 processData: false,
-                success: function(data) {
+                success: function(data: ActionReply) {
                     if (data.result) {
                         // Accepted: the file has been stored and must not go out with the next submit. A refused
                         // submit keeps it, since the form still shows it and editing without a file clears the attachment.
@@ -1489,9 +1489,9 @@
                             dataType: "json",
                             data: JSON.stringify(paramValue),
                             contentType: "application/json; charset=utf-8",
-                            success: function(response) {
+                            success: function(response: ReadReply<CalendarEventsPayload>) {
                                 if (response.result) {
-                                    JSON.parse(response.calendarEvents).forEach((item: CalendarEventJson) => {
+                                    (JSON.parse(response.calendarEvents) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
                                         calendar.addEvent({
                                             id: String(item.Id),
                                             title: item.Title,
@@ -1689,7 +1689,7 @@
                 data: formData,
                 contentType: false,
                 processData: false,
-                success: function(data) {
+                success: function(data: ActionReply) {
                     if (data.result) {
                         // Accepted: the file has been stored and must not go out with the next submit. A refused
                         // submit keeps it, since the form still shows it and editing without a file clears the attachment.
@@ -1718,9 +1718,9 @@
                             dataType: "json",
                             data: JSON.stringify(paramValue),
                             contentType: "application/json; charset=utf-8",
-                            success: function(response) {
+                            success: function(response: ReadReply<CalendarEventsPayload>) {
                                 if (response.result) {
-                                    JSON.parse(response.calendarEvents).forEach((item: CalendarEventJson) => {
+                                    (JSON.parse(response.calendarEvents) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
                                         calendar.addEvent({
                                             id: String(item.Id),
                                             title: item.Title,
@@ -1794,7 +1794,7 @@
                 dataType: "json",
                 data: JSON.stringify(paramValue),
                 contentType: "application/json; charset=utf-8",
-                success: function(data) {
+                success: function(data: WriteReply<CalendarPayload>) {
                     if (data.result) {
                         $editCalendarDialogModal.modal("hide");
                         let $lblCalendarId = $("#lblCalendar" + data.calendar.id);
@@ -1810,7 +1810,7 @@
                         }
 
                         calendar.getEvents().forEach(function(event) {
-                            if (event.extendedProps.calendarId === data.calendar.id) {
+                            if ((event.extendedProps as CalendarEventExtendedProps).calendarId === data.calendar.id) {
                                 event.setProp("backgroundColor", data.calendar.htmlColorCode);
                                 event.setProp("borderColor", data.calendar.htmlColorCode);
                             }
@@ -1861,7 +1861,7 @@
                 headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(data) {
+                success: function(data: ReadReply<CalendarPayload>) {
                     if (data.result) {
 
                         let calendarsArray = [
@@ -1883,14 +1883,14 @@
                             dataType: "json",
                             data: JSON.stringify(paramValue),
                             contentType: "application/json; charset=utf-8",
-                            success: function(data) {
+                            success: function(data: WriteReply<CalendarPayload>) {
                                 if (data.result) {
                                     $confirmDeleteCalendarDialogModal.modal("hide");
 
                                     $("#lblCalendar" + data.calendar.id).remove();
 
                                     calendar.getEvents().forEach(function(event) {
-                                        if (event.extendedProps.calendarId === data.calendar.id) {
+                                        if ((event.extendedProps as CalendarEventExtendedProps).calendarId === data.calendar.id) {
                                             event.remove();
                                         }
                                     });
@@ -1938,7 +1938,7 @@
             contentType: false,
             dataType: "json",
             cache: false,
-            success: function(data) {
+            success: function(data: UploadImageReply) {
                 if (data.result) {
                     const imgURL = URL.createObjectURL(base64ToBlob(data.file.fileContents, data.file.contentType));
                     const imgNode = document.createElement("img");
@@ -1978,7 +1978,7 @@
             contentType: false,
             dataType: "json",
             cache: false,
-            success: function(data) {
+            success: function(data: UploadImageReply) {
                 if (data.result) {
                     const imgURL = URL.createObjectURL(base64ToBlob(data.file.fileContents, data.file.contentType));
                     const imgNode = document.createElement("img");
@@ -2038,7 +2038,7 @@
             dataType: "json",
             data: JSON.stringify(paramValue),
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: WriteReply<CalendarPayload>) {
                 if (data.result) {
                     $createCalendarDialogModal.modal("hide");
 
@@ -2085,7 +2085,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(response) {
+            success: function(response: ReadReply<CalendarsPayload>) {
                 if (response.result) {
                     $createCalendarEventMyCalendar.empty();
 
@@ -2329,7 +2329,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(response) {
+            success: function(response: ReadReply<CalendarSharedsPayload>) {
                 if (response.result) {
                     let htmlString = "";
                     $.each(response.setCalendarShareds, function(_, setCalendarShared: CalendarSharedSummary) {
@@ -2385,7 +2385,7 @@
             dataType: "json",
             data: JSON.stringify(calendarBeShared),
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $setCalendarSharedDialogModal.modal("hide");
                     toastr.success(data.message);
@@ -2415,7 +2415,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ReadReply<CalendarPayload>) {
                 if (data.result) {
                     $editCalendarId.val(data.calendar.id);
                     $editCalendarName.val(data.calendar.name);
@@ -2494,7 +2494,7 @@
             success: function(data: Blob) {
                 if (data.type.indexOf("application/json") === 0) {
                     data.text().then(function(text) {
-                        toastr.error(JSON.parse(text).error);
+                        toastr.error((JSON.parse(text) as FailedReply).error);
                     });
                     return;
                 }

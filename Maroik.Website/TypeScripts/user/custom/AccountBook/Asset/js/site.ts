@@ -144,7 +144,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $createAssetDialogModal.modal("hide");
 
@@ -192,7 +192,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ReadReply<AssetPayload>) {
                 if (data.result) {
 
                     $editAssetOriginalProductName.val(data.asset.productName);
@@ -255,7 +255,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $editAssetDialogModal.modal("hide");
 
@@ -325,7 +325,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ReadReply<AssetPayload>) {
                 if (data.result) {
 
                     let paramValue = JSON.stringify({
@@ -339,7 +339,7 @@
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
-                        success: function(data) {
+                        success: function(data: ActionReply) {
                             if (data.result) {
                                 $confirmDeleteAssetDialogModal.modal("hide");
 

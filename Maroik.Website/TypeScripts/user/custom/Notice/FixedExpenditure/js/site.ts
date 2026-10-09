@@ -67,9 +67,9 @@
 
     // Server-published rules (FixedExpenditure.cshtml). Authoritative in ExpenditureClassPolicy /
     // FixedSchedulePolicy; mirrored here for form UX only, the server re-validates on save.
-    const expenditureSubClassMap = JSON.parse(($("#expenditureSubClassMap").val() as string) || "{}");
-    const expenditureDepositAssetSubClasses = JSON.parse(($("#expenditureDepositAssetSubClasses").val() as string) || "[]");
-    const maxDepositDayByMonth = JSON.parse(($("#maxDepositDayByMonth").val() as string) || "{}");
+    const expenditureSubClassMap = JSON.parse(($("#expenditureSubClassMap").val() as string) || "{}") as Record<string, string[]>;
+    const expenditureDepositAssetSubClasses = JSON.parse(($("#expenditureDepositAssetSubClasses").val() as string) || "[]") as string[];
+    const maxDepositDayByMonth = JSON.parse(($("#maxDepositDayByMonth").val() as string) || "{}") as Record<string, number>;
     // Far-future stand-in for "no maturity date", published by the server (FixedSchedulePolicy)
     // as a yyyy-MM-dd string so the client and server never drift on the value.
     const noMaturityIso = $("#noMaturityDate").val() as string;
@@ -93,7 +93,7 @@
 
     // The valid deposit-day option values ("1".."maxDay") for the given deposit month.
     function DepositDayValues(monthValue: string) {
-        const maxDay = parseInt(maxDepositDayByMonth[String(monthValue)], 10);
+        const maxDay = maxDepositDayByMonth[String(monthValue)];
         const values = [];
         for (let day = 1; day <= maxDay; day++) {
             values.push(String(day));
@@ -429,7 +429,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $createFixedExpenditureDialogModal.modal("hide");
 
@@ -476,7 +476,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ReadReply<FixedExpenditurePayload>) {
                 if (data.result) {
 
                     $editFixedExpenditureId.val(data.fixedExpenditure.id);
@@ -561,7 +561,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ActionReply) {
                 if (data.result) {
                     $editFixedExpenditureDialogModal.modal("hide");
 
@@ -624,7 +624,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: ReadReply<FixedExpenditurePayload>) {
                 if (data.result) {
 
                     let paramValue = JSON.stringify({
@@ -638,7 +638,7 @@
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
-                        success: function(data) {
+                        success: function(data: ActionReply) {
                             if (data.result) {
                                 $confirmDeleteFixedExpenditureDialogModal.modal("hide");
 
@@ -694,7 +694,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: AmountLabelReply) {
                 if (data.result) {
                     $labelCreateFixedExpenditureAmount.text(data.label);
                 } else {
@@ -715,7 +715,7 @@
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data) {
+            success: function(data: AmountLabelReply) {
                 if (data.result) {
                     $labelEditFixedExpenditureAmount.text(data.label);
                 } else {
