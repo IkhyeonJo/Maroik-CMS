@@ -1,7 +1,18 @@
+/*
+ * Calendar page (admin/AdminIndex): the event popup and the FullCalendar adjustments.
+ * Loaded after FullCalendar's main.css, which these rules override, so they stay outside a cascade layer
+ * (a layered rule loses to every unlayered one, whatever its specificity).
+ */
+:root {
+    --calendar-popup-border: #ccc;
+    --calendar-popup-shadow: rgba(0, 0, 0, 0.2);
+    --calendar-weekend-tint: rgba(80, 180, 255, 0.15);
+}
+
 .event-popup {
     background-color: white;
-    border: 1px solid #ccc;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--calendar-popup-border);
+    box-shadow: 0 0 15px var(--calendar-popup-shadow);
     width: 170px;
     z-index: 10000;
     padding: 10px;
@@ -14,12 +25,12 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
-}
 
-    .popup-header h5 {
+    & h5 {
         margin: 0;
         font-size: 16px;
     }
+}
 
 #closeCalendarEventPopup {
     background: none;
@@ -29,9 +40,14 @@
     cursor: pointer;
 }
 
-.popup-body p {
-    margin: 5px 0;
-    font-size: 14px;
+.popup-body {
+    overflow: hidden;
+    max-height: 200px;
+
+    & p {
+        margin: 5px 0;
+        font-size: 14px;
+    }
 }
 
 .popup-footer {
@@ -41,27 +57,21 @@
     margin-top: 10px;
 }
 
-.popup-body {
-    overflow: hidden;
-    max-height: 200px;
-}
-
-.fc-day-sun {
-    background-color: rgba(80, 180, 255, 0.15);
-}
-
+/* Weekends are tinted. */
+.fc-day-sun,
 .fc-day-sat {
-    background-color: rgba(80, 180, 255, 0.15);
+    background-color: var(--calendar-weekend-tint);
 }
 
+/* The grid shows months only, so its view switcher is hidden. */
 .fc-dayGridMonth-button {
     display: none !important;
 }
 
 .fc-event {
     cursor: pointer;
-  }
-  
-  .fc-event .fc-event-title {
-    cursor: pointer;
-  }
+
+    & .fc-event-title {
+        cursor: pointer;
+    }
+}

@@ -27,7 +27,7 @@ public class StaticAssetExtensionsTests(MaroikWebApplicationFactory factory)
     [Fact]
     public async Task StaticFile_Css_HasExplicitTextCssContentType()
     {
-        var response = await _client.GetAsync("/anonymous/css/site.css", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync("/anonymous/custom/_Layout/css/site.css", TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/css", response.Content.Headers.ContentType?.MediaType);
@@ -37,7 +37,7 @@ public class StaticAssetExtensionsTests(MaroikWebApplicationFactory factory)
     [Fact]
     public async Task StaticFile_Response_IncludesNoSniffHeader()
     {
-        var response = await _client.GetAsync("/anonymous/css/site.css", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync("/anonymous/custom/_Layout/css/site.css", TestContext.Current.CancellationToken);
 
         Assert.True(response.Headers.TryGetValues("X-Content-Type-Options", out var values));
         Assert.Contains("nosniff", values);
