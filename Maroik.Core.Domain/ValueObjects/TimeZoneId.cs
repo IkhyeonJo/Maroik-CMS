@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Core.Domain.ValueObjects;
@@ -30,7 +30,7 @@ public sealed class TimeZoneId : ValueObject
     public static ErrorOr<TimeZoneId> Create(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            return LocalizableError.Validation("TimeZoneId.Empty", "Time-zone ID cannot be empty.");
+            return DomainError.Validation("TimeZoneId.Empty", "Time-zone ID cannot be empty.");
 
         try
         {
@@ -38,7 +38,7 @@ public sealed class TimeZoneId : ValueObject
         }
         catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
         {
-            return LocalizableError.Validation("TimeZoneId.Invalid", "'{0}' is not a recognised time-zone ID.", value);
+            return DomainError.Validation("TimeZoneId.Invalid", "'{0}' is not a recognised time-zone ID.", value);
         }
 
         return new TimeZoneId(value);

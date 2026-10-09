@@ -244,7 +244,7 @@ public class CalendarService(
             // "Calendar_AccountEmail_Name_unique" constraint (caught below) is what actually
             // closes the race; this check only avoids the round trip in the common case.
             if (calendars.Any(c => c.Name == request.Name))
-                return await unitOfWork.FailAsync(ServiceResult.Conflict("Calendar.NameExists", "The calendar already exists."), ct);
+                return await unitOfWork.FailAsync(ServiceResult.Conflict("Calendar.NameExists", ServiceErrorKeys.CalendarExists), ct);
 
             var calendarResult = Calendar.Create(accountEmail, request.Name, request.Description, request.TimeZoneIanaId, request.HtmlColorCode, utcNow);
             if (calendarResult.IsError)
@@ -265,7 +265,7 @@ public class CalendarService(
         catch (Exception ex) when (ex.IsPostgresUniqueViolationOn(NameUniqueConstraint))
         {
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Conflict("Calendar.NameExists", "The calendar already exists.");
+            return ServiceResult.Conflict("Calendar.NameExists", ServiceErrorKeys.CalendarExists);
         }
         catch (Exception ex)
         {
@@ -288,7 +288,7 @@ public class CalendarService(
             // UpdateEntityAsync's full-row snapshot below.
             Calendar? previous = await calendarRepository.FindByIdForUpdateAsync(request.Id, ct);
             if (previous == null || previous.AccountEmail.Value != accountEmail)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Calendar.NotFound", "The calendar could not be found."), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("Calendar.NotFound", ServiceErrorKeys.CalendarNotFound), ct);
 
             var updateResult = previous.Update(request.Name, request.Description, request.TimeZoneIanaId, request.HtmlColorCode, utcNow);
             if (updateResult.IsError)
@@ -304,7 +304,7 @@ public class CalendarService(
             // same "Calendar_AccountEmail_Name_unique" constraint CreateCalendarAsync guards
             // against -- report the same friendly conflict instead of the generic fallback below.
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Conflict("Calendar.NameExists", "The calendar already exists.");
+            return ServiceResult.Conflict("Calendar.NameExists", ServiceErrorKeys.CalendarExists);
         }
         catch (Exception ex)
         {
@@ -323,7 +323,7 @@ public class CalendarService(
             List<Calendar> calendars = await calendarRepository.GetByAccountEmailAsync(accountEmail, ct);
             Calendar? existing = calendars.FirstOrDefault(c => c.Id == request.Id);
             if (existing == null)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Calendar.NotFound", "The calendar could not be found."), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("Calendar.NotFound", ServiceErrorKeys.CalendarNotFound), ct);
 
             await calendarRepository.DeleteByIdAsync(existing.Id, ct);
             await unitOfWork.CommitAsync(ct);
@@ -417,7 +417,7 @@ public class CalendarService(
                 if (!shareableCalendarIds.Contains(req.CalendarId))
                 {
                     await unitOfWork.RollbackAsync(ct);
-                    return ServiceResult.Failure("Calendar.UpdateOtherCalendarsFailed", "Input is invalid");
+                    return ServiceResult.Failure("Calendar.UpdateOtherCalendarsFailed", ServiceErrorKeys.InputInvalid);
                 }
 
                 var createResult = OtherCalendar.Create(email, req.CalendarId);
@@ -448,7 +448,7 @@ public class CalendarService(
         List<Calendar> ownedCalendars = await calendarRepository.GetByAccountEmailAsync(email, ct);
         if (calendarSharedRequests.Any(req => ownedCalendars.All(c => c.Id != req.CalendarId)))
         {
-            return ServiceResult.Validation("CalendarShared.InvalidTarget", "Input is invalid");
+            return ServiceResult.Validation("CalendarShared.InvalidTarget", ServiceErrorKeys.InputInvalid);
         }
 
         // As in EnsureCalendarSharedAsync, the unlocked read below cannot stop a concurrent caller
@@ -523,7 +523,7 @@ public class CalendarService(
             if (calendars.All(c => c.Id != request.CalendarId))
             {
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.NotFound("Calendar.NotFound", "The calendar does not exists.");
+                return ServiceResult.NotFound("Calendar.NotFound", ServiceErrorKeys.CalendarDoesNotExist);
             }
 
             var eventResult = CalendarEvent.Create(request.CalendarId, request.Title, description,
@@ -587,7 +587,7 @@ public class CalendarService(
             if (calendars.All(c => c.Id != request.CalendarId))
             {
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.NotFound("Calendar.NotFound", "The calendar does not exists.");
+                return ServiceResult.NotFound("Calendar.NotFound", ServiceErrorKeys.CalendarDoesNotExist);
             }
 
             // Row lock (FOR UPDATE) held until commit/rollback below, so a concurrent update to the
@@ -600,7 +600,7 @@ public class CalendarService(
             if (existing == null || existing.Id <= 0 || calendars.All(c => c.Id != existing.CalendarId))
             {
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.Validation("CalendarEvent.InvalidRequest", "Input is invalid");
+                return ServiceResult.Validation("CalendarEvent.InvalidRequest", ServiceErrorKeys.InputInvalid);
             }
 
             var updateResult = existing.Update(request.Title, description, request.AllDay,
@@ -652,13 +652,13 @@ public class CalendarService(
         {
             List<Calendar> calendars = await calendarRepository.GetByAccountEmailAsync(email, ct);
             if (calendars.Count == 0)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Calendar.None", "No calendar exists."), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("Calendar.None", ServiceErrorKeys.NoCalendarExists), ct);
 
             CalendarEvent? evt = await calendarEventRepository.FindByIdAsync(calendarEventId, ct);
 
             // Ensure the event exists and belongs to one of the requesting user's calendars.
             if (evt == null || calendars.All(c => c.Id != evt.CalendarId))
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("CalendarEvent.NotFound", "The calendar event could not be found."), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("CalendarEvent.NotFound", ServiceErrorKeys.CalendarEventNotFound), ct);
 
             await calendarEventRepository.DeleteByIdAsync(evt.Id, ct);
             await unitOfWork.CommitAsync(ct);
@@ -799,12 +799,12 @@ public class CalendarService(
         {
             logger.LogWarning("Attachment download refused: calendar event {CalendarEventId} is missing or not visible to {Viewer}",
                 calendarEventId, viewer?.Email ?? Role.Anonymous);
-            return (ServiceResult.NotFound("CalendarEvent.NotFound", "The calendar event could not be found."), null);
+            return (ServiceResult.NotFound("CalendarEvent.NotFound", ServiceErrorKeys.CalendarEventNotFound), null);
         }
 
         CalendarEventAttachedFile? attachedFile = await calendarEventAttachedFileRepository.FindByCalendarEventIdAsync(calendarEventId, ct);
         if (attachedFile == null || string.IsNullOrEmpty(attachedFile.Path))
-            return (ServiceResult.NotFound("CalendarEvent.AttachedFileNotFound", "The attached file could not be found."), null);
+            return (ServiceResult.NotFound("CalendarEvent.AttachedFileNotFound", ServiceErrorKeys.AttachedFileNotFound), null);
 
         // OpenFileAsync logs its own failure (with the storage path) where it happens.
         Stream? content = await attachmentContent.OpenFileAsync(attachedFile.Path, ct);

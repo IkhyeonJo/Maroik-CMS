@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Core.Domain.Board;
@@ -127,25 +127,25 @@ public sealed class Board : AggregateRoot<long>
         DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(type))
-            return LocalizableError.Validation("Board.TypeEmpty", "Board type cannot be empty.");
+            return DomainError.Validation("Board.TypeEmpty", "Board type cannot be empty.");
 
         // Constrain to the known taxonomy here rather than trusting the caller: BuildAttachedFilePath
         // in the service layer interpolates this value into a file-storage path, and otherwise the DB
         // Board_Type_check constraint would be the only thing rejecting anything else.
         if (!BoardTypes.IsKnown(type))
-            return LocalizableError.Validation("Board.TypeInvalid", "Board type is not a recognised value.");
+            return DomainError.Validation("Board.TypeInvalid", "Board type is not a recognised value.");
 
         if (string.IsNullOrWhiteSpace(title))
-            return LocalizableError.Validation("Board.TitleEmpty", "Post title cannot be empty.");
+            return DomainError.Validation("Board.TitleEmpty", "Post title cannot be empty.");
 
         if (title.Length > TitledContentPolicy.MaxTitleLength)
-            return LocalizableError.Validation("Board.TitleTooLong", "Post title must be {0} characters or fewer.", TitledContentPolicy.MaxTitleLength);
+            return DomainError.Validation("Board.TitleTooLong", "Post title must be {0} characters or fewer.", TitledContentPolicy.MaxTitleLength);
 
         if (content?.Length > TitledContentPolicy.MaxBodyLength)
-            return LocalizableError.Validation("Board.ContentTooLong", "Post content must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
+            return DomainError.Validation("Board.ContentTooLong", "Post content must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
 
         if (string.IsNullOrWhiteSpace(writer))
-            return LocalizableError.Validation("Board.WriterEmpty", "Post author (writer) cannot be empty.");
+            return DomainError.Validation("Board.WriterEmpty", "Post author (writer) cannot be empty.");
 
         var board = new Board(0, type, title, content, writer, utcNow);
         return board;
@@ -159,16 +159,16 @@ public sealed class Board : AggregateRoot<long>
     public ErrorOr<Success> Update(string? title, string? content, DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(title))
-            return LocalizableError.Validation("Board.TitleEmpty", "Post title cannot be empty.");
+            return DomainError.Validation("Board.TitleEmpty", "Post title cannot be empty.");
 
         if (title.Length > TitledContentPolicy.MaxTitleLength)
-            return LocalizableError.Validation("Board.TitleTooLong", "Post title must be {0} characters or fewer.", TitledContentPolicy.MaxTitleLength);
+            return DomainError.Validation("Board.TitleTooLong", "Post title must be {0} characters or fewer.", TitledContentPolicy.MaxTitleLength);
 
         if (content?.Length > TitledContentPolicy.MaxBodyLength)
-            return LocalizableError.Validation("Board.ContentTooLong", "Post content must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
+            return DomainError.Validation("Board.ContentTooLong", "Post content must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
 
         if (Deleted)
-            return LocalizableError.Conflict("Board.Deleted", "Cannot update a deleted post.");
+            return DomainError.Conflict("Board.Deleted", "Cannot update a deleted post.");
 
         Title = title;
         Content = content;
@@ -189,13 +189,13 @@ public sealed class Board : AggregateRoot<long>
     public ErrorOr<Success> AddComment(BoardComment comment, DateTime utcNow, string? commenterNickname = null, bool isAdmin = false)
     {
         if (Locked && !((commenterNickname != null && IsOwnedBy(commenterNickname)) || isAdmin))
-            return LocalizableError.Conflict("Board.Locked", "Cannot add a comment to a locked post.");
+            return DomainError.Conflict("Board.Locked", "Cannot add a comment to a locked post.");
 
         if (Deleted)
-            return LocalizableError.Conflict("Board.Deleted", "Cannot add a comment to a deleted post.");
+            return DomainError.Conflict("Board.Deleted", "Cannot add a comment to a deleted post.");
 
         if (comment.BoardId != Id)
-            return LocalizableError.Validation("Board.CommentMismatch", "Comment does not belong to this post.");
+            return DomainError.Validation("Board.CommentMismatch", "Comment does not belong to this post.");
 
         _comments.Add(comment);
         Updated = utcNow;
@@ -234,7 +234,7 @@ public sealed class Board : AggregateRoot<long>
     public ErrorOr<Success> SoftDelete(DateTime utcNow)
     {
         if (Deleted)
-            return LocalizableError.Conflict("Board.AlreadyDeleted", "Post is already deleted.");
+            return DomainError.Conflict("Board.AlreadyDeleted", "Post is already deleted.");
 
         Deleted = true;
         Updated = utcNow;

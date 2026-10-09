@@ -1,5 +1,5 @@
 using Maroik.Core.Domain.Finance;
-using DomainLocalizableError = Maroik.Core.Domain.Localization.LocalizableError;
+using Maroik.Core.Domain.Errors;
 namespace Maroik.Core.Domain.Tests.Finance;
 
 /// <summary>
@@ -50,7 +50,7 @@ public class FinanceAmountRangeTests
     {
         var error = FinanceAmountPolicy.ValidateWithinRange(OverMax).FirstError;
 
-        var args = (object[])error.Metadata![DomainLocalizableError.ResourceArgsMetadataKey];
+        var args = (object[])error.Metadata![DomainError.MessageArgsMetadataKey];
         Assert.Equal("9,999,999,999,999,999.9999", args[0]);
         Assert.Contains("9,999,999,999,999,999.9999", error.Description);
     }

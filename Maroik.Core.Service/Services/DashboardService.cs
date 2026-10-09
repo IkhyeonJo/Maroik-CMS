@@ -3,7 +3,7 @@ using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Settings;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.Domain.Finance;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Time;
 using Maroik.Core.Domain.ValueObjects;
 using Maroik.Core.Service.Mappers;
 using Microsoft.Extensions.Options;

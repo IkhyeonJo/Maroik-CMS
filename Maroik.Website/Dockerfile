@@ -4,7 +4,6 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 
 EXPOSE 80
-EXPOSE 443
 
 # Compile the custom client scripts (TypeScripts/**/*.ts -> wwwroot/**/*.js). The .NET
 # SDK image has no Node, so this dedicated stage generates them (they are git-ignored,

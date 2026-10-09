@@ -59,8 +59,6 @@ public sealed class PlaywrightWebApplicationFactory : WebApplicationFactory<Prog
 
         _configOverrides = new Dictionary<string, string?>
         {
-            ["ServerSetting:DockerCertPath"] = "",
-            ["ServerSetting:DockerKeyPath"] = "",
             ["ServerSetting:DomainName"] = "https://www.localhost",
             ["ServerSetting:SessionExpireMinutes"] = "60",
             ["ServerSetting:MaxLoginAttempt"] = "5",

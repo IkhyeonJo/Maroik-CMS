@@ -1,13 +1,12 @@
 // Maroik.Website - Program.cs
 // Entry point for the Maroik web application.
 // Configures DI services (repositories, services, clients, session, antiforgery, CORS, localization),
-// sets up hot-swap TLS certificate polling for Docker deployments, and builds the ASP.NET Core pipeline.
+// and builds the ASP.NET Core pipeline. TLS ends at Cloudflare (Cloudflare Tunnel); Kestrel serves plain HTTP.
 
 using System.Globalization;
 using Maroik.Core.Client.Extensions;
 using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Localization;
 using Maroik.Core.Repository.Extensions;
 using Maroik.Core.Service.Extensions;
 using Maroik.Website.Constants;
@@ -17,9 +16,9 @@ using Maroik.Website.Middlewares;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.AspNetCore.Session;
 using Serilog;
@@ -34,7 +33,6 @@ Log.Logger = new LoggerConfiguration()
 try
 {
     var builder = WebApplication.CreateBuilder(args);
-    WebApplication? app = null; // assigned after Build() below; captured by the Kestrel cert selector closure
 
     builder.Host.UseSerilog((_, _, configuration) => configuration
         .MinimumLevel.Information()
@@ -65,7 +63,7 @@ try
                 : RsaType.Rsa2;
     }
 
-    // A local copy for the values needed before the DI container is built (middleware / Kestrel).
+    // A local copy for the values needed before the DI container is built (middleware).
     var serverSetting = new ServerSetting();
     BindServerSetting(builder.Configuration, serverSetting);
 
@@ -76,8 +74,6 @@ try
 
     var cfgDomainName = serverSetting.DomainName ?? "";
     var cfgSessionExpireMinutes = serverSetting.SessionExpireMinutes;
-    var cfgDockerCertPath = serverSetting.DockerCertPath;
-    var cfgDockerKeyPath = serverSetting.DockerKeyPath;
 
     // Register ServerSetting as IOptions<ServerSetting> for DI.
     builder.Services.Configure<ServerSetting>(cfg => BindServerSetting(builder.Configuration, cfg));
@@ -103,31 +99,6 @@ try
         .AddScoped<Maroik.Website.Contracts.IExcelExportService, Maroik.Website.Services.ExcelExportService>()
         .AddScoped<Maroik.Website.Contracts.ISessionService, Maroik.Website.Services.SessionService>();
 
-    // Registered here (before Build()) so it goes through DI like the other services. ConfigureKestrel
-    // below must also run before Build() - the service collection becomes read-only once Build() runs.
-    // The selector closure captures `app`, which is only assigned after Build() (see below), but the
-    // selector itself isn't invoked until the first TLS handshake, long after that.
-    if (!string.IsNullOrEmpty(cfgDockerCertPath) && !string.IsNullOrEmpty(cfgDockerKeyPath))
-    {
-        builder.Services.AddSingleton<Maroik.Website.Contracts.ICertificateManager>(sp =>
-            new Maroik.Website.Services.CertificateManager(
-                cfgDockerCertPath,
-                cfgDockerKeyPath,
-                sp.GetRequiredService<ILogger<Maroik.Website.Services.CertificateManager>>()));
-
-        builder.WebHost.ConfigureKestrel(options =>
-        {
-            options.ConfigureHttpsDefaults(https =>
-            {
-                // ReSharper disable once AccessToModifiedClosure - `app` is assigned exactly once
-                // (right after Build(), below) before this selector can ever be invoked.
-                https.ServerCertificateSelector = (_, _) =>
-                    app!.Services.GetRequiredService<Maroik.Website.Contracts.ICertificateManager>()
-                        .SelectCertificate();
-            });
-        });
-    }
-
     #endregion
 
     #region AddClients
@@ -147,9 +118,6 @@ try
     IConnectionMultiplexer? valkey = null;
     if (!string.IsNullOrEmpty(valkeyConnectionString))
     {
-        // AbortOnConnectFail = false so a Valkey that is briefly unreachable at boot (its container
-        // still starting, a transient network blip) does not take the whole web app down with it —
-        // the multiplexer connects in the background and retries instead of throwing here.
         var valkeyOptions = ConfigurationOptions.Parse(valkeyConnectionString);
         valkeyOptions.AbortOnConnectFail = false;
         valkey = await ConnectionMultiplexer.ConnectAsync(valkeyOptions);
@@ -251,6 +219,20 @@ try
         // one host that actually needs it.
     });
 
+    // TLS ends at Cloudflare: the request reaches Kestrel as plain HTTP through the Cloudflare
+    // Tunnel (cloudflared on the private Docker network), which states the visitor's scheme in
+    // X-Forwarded-Proto. Taking it makes UseHsts and the www redirect see https. Only the scheme
+    // is taken (RemoteIpAddress stays the peer's), and only from a private-network peer: no port is
+    // published, so on the server that is cloudflared — on the Docker bridge today, possibly a
+    // VPC address on another host later. Loopback is in the defaults already.
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
+        options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("10.0.0.0/8"));
+        options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("172.16.0.0/12"));
+        options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("192.168.0.0/16"));
+    });
+
     #region Multi-Language
 
     builder.Services.AddLocalization(opt => { opt.ResourcesPath = "Resources"; });
@@ -258,12 +240,15 @@ try
     // Pages services were dead weight. The filters/options for the same builder are added by the
     // AddControllersWithViews call further below; the two calls merge into one MVC builder.
     builder.Services.AddControllersWithViews()
-        .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
+        .AddViewLocalization()
         .AddDataAnnotationsLocalization();
 
     builder.Services.Configure<RequestLocalizationOptions>(opt =>
     {
-        List<CultureInfo> supportedCultures = CulturePolicy.SupportedCultures.Select(c => new CultureInfo(c)).ToList();
+        List<CultureInfo> supportedCultures =
+        [
+            .. CulturePolicy.SupportedCultures.Select(c => new CultureInfo(c))
+        ];
         opt.DefaultRequestCulture = new RequestCulture(CulturePolicy.DefaultCulture);
         opt.SupportedCultures = supportedCultures;
         opt.SupportedUICultures = supportedCultures;
@@ -291,33 +276,10 @@ try
             new AutoValidateAntiforgeryTokenAttribute()); // Globally enables token validation for all requests except for GET, HEAD, OPTIONS, and TRACE
     });
 
-    app = builder.Build();
+    var app = builder.Build();
 
-    #region Hot Swap Cert
-
-    if (!string.IsNullOrEmpty(cfgDockerCertPath) && !string.IsNullOrEmpty(cfgDockerKeyPath))
-    {
-        var certManager = app.Services.GetRequiredService<Maroik.Website.Contracts.ICertificateManager>();
-
-        var certTimer = new System.Timers.Timer(TimeSpan.FromHours(1).TotalMilliseconds)
-        {
-            AutoReset = true
-        };
-        certTimer.Elapsed += (_, _) => certManager.TryReload();
-        certTimer.Start();
-
-        // Stop and dispose the timer on graceful shutdown so it can't fire a reload into a
-        // half-torn-down host.
-        app.Lifetime.ApplicationStopping.Register(() =>
-        {
-            certTimer.Stop();
-            certTimer.Dispose();
-        });
-
-        app.Logger.LogInformation("Certificate polling started");
-    }
-
-    #endregion
+    // First, so every later middleware (HSTS, redirects, cookies) sees the visitor's scheme.
+    app.UseForwardedHeaders();
 
     app.UseCookiePolicy(new CookiePolicyOptions
     {

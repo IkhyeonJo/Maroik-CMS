@@ -2,7 +2,7 @@ using ErrorOr;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Finance;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Service.Mappers;
 
 namespace Maroik.Core.Service.Services;
@@ -50,7 +50,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
 
         Asset? asset = await assetBalance.GetAssetForReadAsync(accountEmail, request.DepositMyAssetProductName ?? "", ct);
         if (asset == null)
-            return ServiceResult.NotFound("FixedIncome.AssetNotFound", "The selected asset could not be found.");
+            return ServiceResult.NotFound("FixedIncome.AssetNotFound", ServiceErrorKeys.SelectedAssetNotFound);
         if (asset.Deleted)
             return DeletedAssetResult;
 
@@ -78,11 +78,11 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
 
         FixedIncome? fi = await fixedIncomeRepository.FindByEmailAndIdAsync(accountEmail, request.Id, ct);
         if (fi == null)
-            return ServiceResult.NotFound("FixedIncome.NotFound", "The fixed-income record could not be found.");
+            return ServiceResult.NotFound("FixedIncome.NotFound", ServiceErrorKeys.FixedIncomeNotFound);
 
         Asset? asset = await assetBalance.GetAssetForReadAsync(accountEmail, request.DepositMyAssetProductName ?? "", ct);
         if (asset == null)
-            return ServiceResult.NotFound("FixedIncome.AssetNotFound", "The selected asset could not be found.");
+            return ServiceResult.NotFound("FixedIncome.AssetNotFound", ServiceErrorKeys.SelectedAssetNotFound);
         if (asset.Deleted)
             return DeletedAssetResult;
         string currency = asset.Balance.Currency.Value;
@@ -104,7 +104,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
         _ = timeProvider.GetUtcNow().UtcDateTime;
         FixedIncome? fi = await fixedIncomeRepository.FindByEmailAndIdAsync(accountEmail, id, ct);
         if (fi == null)
-            return ServiceResult.NotFound("FixedIncome.NotFound", "The fixed-income record could not be found.");
+            return ServiceResult.NotFound("FixedIncome.NotFound", ServiceErrorKeys.FixedIncomeNotFound);
 
         await fixedIncomeRepository.DeleteByIdAsync(fi.Id, ct);
         return ServiceResult.Ok();
@@ -125,7 +125,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
 
     /// <summary>Failure returned when the chosen deposit asset has been soft-deleted.</summary>
     private static ServiceResult DeletedAssetResult => ServiceResult.Conflict(
-        "FixedIncome.AssetDeleted", "Actions cannot be executed with assets that have already been deleted.");
+        "FixedIncome.AssetDeleted", ServiceErrorKeys.AssetAlreadyDeleted);
 
     /// <summary>
     /// Validates the income class and deposit month/day of a fixed-income request.
@@ -141,7 +141,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
             return Error.Validation("FixedIncome.DepositMonth", "Deposit month must be between 1 and 12.");
 
         if (!FixedSchedulePolicy.IsValidDepositDate(request.DepositMonth, request.DepositDay))
-            return LocalizableError.Validation("FixedIncome.DepositDay",
+            return DomainError.Validation("FixedIncome.DepositDay",
                 "Deposit day must be between 1 and {0} for month {1}.",
                 FixedSchedulePolicy.MaxDepositDay(request.DepositMonth), request.DepositMonth);
 

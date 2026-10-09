@@ -1,6 +1,6 @@
 using System.Globalization;
-using Maroik.Core.Domain.Localization;
-namespace Maroik.Core.Domain.Tests.Localization;
+using Maroik.Core.Domain.Time;
+namespace Maroik.Core.Domain.Tests.Time;
 
 /// <summary>
 /// Unit tests for <see cref="DateTimeExtensions"/>.

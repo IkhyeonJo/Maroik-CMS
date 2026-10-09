@@ -1,4 +1,4 @@
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Time;
 
 namespace Maroik.Website.Extensions;
 

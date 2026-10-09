@@ -1,7 +1,7 @@
 using System.Globalization;
 using Maroik.Core.Domain.Finance;
 using Maroik.Core.Domain.ValueObjects;
-using DomainLocalizableError = Maroik.Core.Domain.Localization.LocalizableError;
+using Maroik.Core.Domain.Errors;
 namespace Maroik.Core.Domain.Tests.Finance;
 
 /// <summary>
@@ -56,7 +56,7 @@ public class FinanceAmountScaleTests
 
         AssertTooManyDecimals(error.Code);
         Assert.Equal("Amount can have up to 4 decimal places.", error.Description);
-        Assert.Equal("Amount can have up to {0} decimal places.", error.Metadata![DomainLocalizableError.ResourceKeyMetadataKey]);
+        Assert.Equal("Amount can have up to {0} decimal places.", error.Metadata![DomainError.MessageTemplateMetadataKey]);
     }
 
     /// <summary><c>ValidateAmount</c> (every income / expenditure) includes the scale rule.</summary>

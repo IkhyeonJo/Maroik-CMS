@@ -135,7 +135,7 @@ public class ExpenditureService(
             // drift the linked asset balances.
             Expenditure? previous = await expenditureRepository.FindByEmailAndIdForUpdateAsync(accountEmail, request.Id, ct);
             if (previous == null)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Expenditure.NotFound", "The expenditure record could not be found."), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("Expenditure.NotFound", ServiceErrorKeys.ExpenditureNotFound), ct);
 
             // Lock every asset this update can touch (old + new payment/deposit) in a single
             // ordinal-ordered batch so concurrent transactions on the same asset pair cannot deadlock.
@@ -212,7 +212,7 @@ public class ExpenditureService(
             // same expenditure cannot reverse its asset impact twice or from a stale amount.
             Expenditure? expenditure = await expenditureRepository.FindByEmailAndIdForUpdateAsync(accountEmail, id, ct);
             if (expenditure == null)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Expenditure.NotFound", "The expenditure record could not be found."), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("Expenditure.NotFound", ServiceErrorKeys.ExpenditureNotFound), ct);
 
             // An expenditure referencing a since-archived (soft-deleted) asset must not be
             // deletable, matching Create/Update: a deleted asset's balance must not be touched.
@@ -243,19 +243,19 @@ public class ExpenditureService(
 
     /// <summary>Failure returned when a transfer's payment asset and deposit asset are the same asset.</summary>
     private static ServiceResult SameAssetResult => ServiceResult.Validation(
-        "Expenditure.SameAsset", "The PaymentMethod and MyDepositAsset value cannot be the same.");
+        "Expenditure.SameAsset", ServiceErrorKeys.SameAsset);
 
     /// <summary>Failure returned when a transfer's payment asset and deposit asset hold different currencies.</summary>
     private static ServiceResult CurrencyMismatchResult => ServiceResult.Validation(
-        "Expenditure.CurrencyMismatch", "PaymentMethod MonetaryUnit must be same as MyDepositAsset MonetaryUnit.");
+        "Expenditure.CurrencyMismatch", ServiceErrorKeys.CurrencyMismatch);
 
     /// <summary>Failure returned when a referenced asset does not exist on the caller's account.</summary>
     private static ServiceResult AssetNotFoundResult => ServiceResult.NotFound(
-        "Expenditure.AssetNotFound", "The selected asset could not be found.");
+        "Expenditure.AssetNotFound", ServiceErrorKeys.SelectedAssetNotFound);
 
     /// <summary>Failure returned when a referenced asset has been soft-deleted.</summary>
     private static ServiceResult DeletedAssetResult => ServiceResult.Conflict(
-        "Expenditure.AssetDeleted", "Actions cannot be executed with assets that have already been deleted.");
+        "Expenditure.AssetDeleted", ServiceErrorKeys.AssetAlreadyDeleted);
 
     /// <summary>Generic failure returned (after logging) when a write throws unexpectedly.</summary>
     private static ServiceResult UnexpectedFailure => ServiceResult.Failure(

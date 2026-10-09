@@ -2,7 +2,7 @@ using ErrorOr;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Finance;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Service.Mappers;
 
 namespace Maroik.Core.Service.Services;
@@ -108,7 +108,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
 
         FixedExpenditure? fe = await fixedExpenditureRepository.FindByEmailAndIdAsync(accountEmail, request.Id, ct);
         if (fe == null)
-            return ServiceResult.NotFound("FixedExpenditure.NotFound", "The fixed-expenditure record could not be found.");
+            return ServiceResult.NotFound("FixedExpenditure.NotFound", ServiceErrorKeys.FixedExpenditureNotFound);
 
         string currency = payAsset.Balance.Currency.Value;
         string? myDepositAsset = requiresDepositAsset ? request.MyDepositAsset : null;
@@ -130,7 +130,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
         _ = timeProvider.GetUtcNow().UtcDateTime;
         FixedExpenditure? fe = await fixedExpenditureRepository.FindByEmailAndIdAsync(accountEmail, id, ct);
         if (fe == null)
-            return ServiceResult.NotFound("FixedExpenditure.NotFound", "The fixed-expenditure record could not be found.");
+            return ServiceResult.NotFound("FixedExpenditure.NotFound", ServiceErrorKeys.FixedExpenditureNotFound);
 
         await fixedExpenditureRepository.DeleteByIdAsync(fe.Id, ct);
         return ServiceResult.Ok();
@@ -150,19 +150,19 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
 
     /// <summary>Failure returned when a transfer's payment asset and deposit asset are the same asset.</summary>
     private static ServiceResult SameAssetResult => ServiceResult.Validation(
-        "FixedExpenditure.SameAsset", "The PaymentMethod and MyDepositAsset value cannot be the same.");
+        "FixedExpenditure.SameAsset", ServiceErrorKeys.SameAsset);
 
     /// <summary>Failure returned when a transfer's payment asset and deposit asset hold different currencies.</summary>
     private static ServiceResult CurrencyMismatchResult => ServiceResult.Validation(
-        "FixedExpenditure.CurrencyMismatch", "PaymentMethod MonetaryUnit must be same as MyDepositAsset MonetaryUnit.");
+        "FixedExpenditure.CurrencyMismatch", ServiceErrorKeys.CurrencyMismatch);
 
     /// <summary>Failure returned when a referenced asset does not exist on the caller's account.</summary>
     private static ServiceResult AssetNotFoundResult => ServiceResult.NotFound(
-        "FixedExpenditure.AssetNotFound", "The selected asset could not be found.");
+        "FixedExpenditure.AssetNotFound", ServiceErrorKeys.SelectedAssetNotFound);
 
     /// <summary>Failure returned when a referenced asset has been soft-deleted.</summary>
     private static ServiceResult DeletedAssetResult => ServiceResult.Conflict(
-        "FixedExpenditure.AssetDeleted", "Actions cannot be executed with assets that have already been deleted.");
+        "FixedExpenditure.AssetDeleted", ServiceErrorKeys.AssetAlreadyDeleted);
 
     /// <summary>
     /// Validates the MainClass/SubClass combination and the deposit month/day of a fixed-expenditure
@@ -180,7 +180,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
             return Error.Validation("FixedExpenditure.DepositMonth", "Deposit month must be between 1 and 12.");
 
         if (!FixedSchedulePolicy.IsValidDepositDate(req.DepositMonth, req.DepositDay))
-            return LocalizableError.Validation("FixedExpenditure.DepositDay",
+            return DomainError.Validation("FixedExpenditure.DepositDay",
                 "Deposit day must be between 1 and {0} for month {1}.",
                 FixedSchedulePolicy.MaxDepositDay(req.DepositMonth), req.DepositMonth);
 

@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 
 namespace Maroik.Core.Domain.Finance;
 
@@ -17,7 +17,7 @@ public static class FinanceAmountPolicy
     public static ErrorOr<Success> ValidateNonNegative(decimal amount)
     {
         if (amount < 0m)
-            return LocalizableError.Validation("Finance.NegativeAmount", "Amount cannot be negative.");
+            return DomainError.Validation("Finance.NegativeAmount", "Amount cannot be negative.");
 
         return Result.Success;
     }
@@ -35,7 +35,7 @@ public static class FinanceAmountPolicy
     public static ErrorOr<Success> ValidateWithinRange(decimal amount)
     {
         if (decimal.Abs(amount) > MaxAbsoluteAmount)
-            return LocalizableError.Validation("Finance.AmountOutOfRange", "Amount must not exceed {0}.", MaxAbsoluteAmount.ToString("N4", System.Globalization.CultureInfo.InvariantCulture));
+            return DomainError.Validation("Finance.AmountOutOfRange", "Amount must not exceed {0}.", MaxAbsoluteAmount.ToString("N4", System.Globalization.CultureInfo.InvariantCulture));
 
         return Result.Success;
     }
@@ -60,7 +60,7 @@ public static class FinanceAmountPolicy
     public static ErrorOr<Success> ValidateScale(decimal amount)
     {
         if (decimal.Round(amount, MaxDecimalPlaces) != amount)
-            return LocalizableError.Validation("Finance.AmountTooManyDecimals", "Amount can have up to {0} decimal places.", MaxDecimalPlaces);
+            return DomainError.Validation("Finance.AmountTooManyDecimals", "Amount can have up to {0} decimal places.", MaxDecimalPlaces);
 
         return Result.Success;
     }

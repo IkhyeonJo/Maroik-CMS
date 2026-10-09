@@ -1,12 +1,7 @@
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Reflection;
-using Maroik.Core.Domain.Localization;
-using Maroik.Website.Contracts;
+using Maroik.Website.Constants;
 using Maroik.Website.Tests.Infrastructure;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,9 +11,9 @@ using StackExchange.Redis;
 namespace Maroik.Website.Tests.Controllers;
 
 /// <summary>
-/// The composition root (<c>Program.cs</c>) fails fast on unusable server settings and wires the hot-swappable TLS
-/// certificate manager only when both certificate paths are configured. These start derived hosts with host-level
-/// settings (<c>UseSetting</c> — the only kind <c>Program.cs</c> sees while it is still building the host).
+/// The composition root (<c>Program.cs</c>) fails fast on unusable server settings and wires the shared services. These
+/// start derived hosts with host-level settings (<c>UseSetting</c> — the only kind <c>Program.cs</c> sees while it is
+/// still building the host).
 /// </summary>
 [Collection("Website Integration")]
 public class ProgramStartupTests(MaroikWebApplicationFactory factory)
@@ -56,53 +51,6 @@ public class ProgramStartupTests(MaroikWebApplicationFactory factory)
         Assert.Contains("MaxLoginAttempt", failure.Message);
     }
 
-    /// <summary>With both certificate paths configured the manager is registered and serves the certificate from disk.</summary>
-    [Fact]
-    public void Startup_RegistersTheCertificateManager_WhenBothCertificatePathsAreConfigured()
-    {
-        string dir = Directory.CreateTempSubdirectory("maroik-cert-").FullName;
-        try
-        {
-            using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-            var request = new CertificateRequest("CN=www.localhost", key, HashAlgorithmName.SHA256);
-            using X509Certificate2 cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
-            string certPath = Path.Combine(dir, "cert.pem");
-            string keyPath = Path.Combine(dir, "privkey.pem");
-            File.WriteAllText(certPath, cert.ExportCertificatePem());
-            File.WriteAllText(keyPath, key.ExportECPrivateKeyPem());
-
-            using var factory1 = factory.WithWebHostBuilder(b => b
-                .UseSetting("ServerSetting:DockerCertPath", certPath)
-                .UseSetting("ServerSetting:DockerKeyPath", keyPath));
-            using HttpClient client = factory1.CreateClient();
-
-            var manager = factory1.Services.GetRequiredService<ICertificateManager>();
-            Assert.Equal(cert.Thumbprint, manager.SelectCertificate().Thumbprint);
-
-            // Kestrel's HTTPS defaults pick the certificate from that manager on every handshake (so a renewed one is served
-            // without a restart). ApplyHttpsDefaults is Kestrel-internal, so it is invoked by reflection.
-            var kestrel = factory1.Services.GetRequiredService<IOptions<KestrelServerOptions>>().Value;
-            var https = new HttpsConnectionAdapterOptions();
-            typeof(KestrelServerOptions).GetMethod("ApplyHttpsDefaults", BindingFlags.Instance | BindingFlags.NonPublic)!
-                .Invoke(kestrel, [https]);
-            Assert.NotNull(https.ServerCertificateSelector);
-            Assert.Equal(cert.Thumbprint, https.ServerCertificateSelector!(null, null)!.Thumbprint);
-        }
-        finally
-        {
-            Directory.Delete(dir, recursive: true);
-        }
-    }
-
-    /// <summary>Without certificate paths (the test default) no manager is registered and no certificate polling starts.</summary>
-    [Fact]
-    public void Startup_DoesNotRegisterTheCertificateManager_WithoutCertificatePaths()
-    {
-        using HttpClient client = factory.CreateClient();
-
-        Assert.Null(factory.Services.GetService<ICertificateManager>());
-    }
-
     /// <summary>Without a Valkey connection string the Data Protection keyring is persisted to a folder under the content root.</summary>
     [Fact]
     public void Startup_PersistsTheDataProtectionKeyRingToDisk_WithoutValkey()
@@ -114,7 +62,7 @@ public class ProgramStartupTests(MaroikWebApplicationFactory factory)
         Assert.True(Directory.Exists(Path.Combine(contentRoot, "dataprotection-keys")));
     }
 
-    /// <summary>The site's request cultures come from <c>CulturePolicy</c> (the Domain's single list of supported cultures).</summary>
+    /// <summary>The site's request cultures come from <c>CulturePolicy</c> (the Website's single list of supported cultures).</summary>
     [Fact]
     public void Startup_ConfiguresRequestLocalization_FromCulturePolicy()
     {

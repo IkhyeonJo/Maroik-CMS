@@ -64,7 +64,7 @@ public class HtmlColorCodeTests
     }
 
     /// <summary>
-    /// The "invalid format" error is built via <c>LocalizableError</c>: its Metadata carries the
+    /// The "invalid format" error is built via <c>DomainError</c>: its Metadata carries the
     /// composite-format resource template and the raw offending value separately, so
     /// <c>ServiceResult.FromError</c> can hand the UI something resx-localizable instead of the
     /// already-baked, value-embedding sentence in <see cref="ErrorOr.Error.Description"/>.
@@ -75,8 +75,8 @@ public class HtmlColorCodeTests
         var result = HtmlColorCode.Create("red");
 
         Assert.Equal("'red' is not a valid HTML hex color code (e.g. #FF5733).", result.FirstError.Description);
-        Assert.Equal("'{0}' is not a valid HTML hex color code (e.g. #FF5733).", result.FirstError.Metadata!["ResourceKey"]);
-        Assert.Equal(["red"], (object[])result.FirstError.Metadata["ResourceArgs"]);
+        Assert.Equal("'{0}' is not a valid HTML hex color code (e.g. #FF5733).", result.FirstError.Metadata!["MessageTemplate"]);
+        Assert.Equal(["red"], (object[])result.FirstError.Metadata["MessageArgs"]);
     }
 
     /// <summary>Equality same value are equal.</summary>

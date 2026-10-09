@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Core.Domain.Account;
@@ -111,23 +111,23 @@ public static class NicknamePolicy
     public static ErrorOr<string> Validate(string? nickname, bool allowReserved = false)
     {
         if (string.IsNullOrWhiteSpace(nickname))
-            return LocalizableError.Validation("Account.NicknameEmpty", "Nickname cannot be empty.");
+            return DomainError.Validation("Account.NicknameEmpty", "Nickname cannot be empty.");
 
         string normalized;
         try { normalized = Normalize(nickname); }
         catch (ArgumentException)
         {
-            return LocalizableError.Validation("Account.NicknameInvalidCharacters", "Nickname contains characters that are not allowed.");
+            return DomainError.Validation("Account.NicknameInvalidCharacters", "Nickname contains characters that are not allowed.");
         }
 
         if (normalized.Length > ShortTextPolicy.MaxLength)
-            return LocalizableError.Validation("Account.NicknameTooLong", "Nickname must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
+            return DomainError.Validation("Account.NicknameTooLong", "Nickname must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
 
         if (ContainsDisallowedCharacter(normalized) || MixesLookalikeScripts(normalized))
-            return LocalizableError.Validation("Account.NicknameInvalidCharacters", "Nickname contains characters that are not allowed.");
+            return DomainError.Validation("Account.NicknameInvalidCharacters", "Nickname contains characters that are not allowed.");
 
         if (!allowReserved && IsReserved(normalized))
-            return LocalizableError.Validation("Account.NicknameReserved", "'{0}' cannot be used as a Nickname.", normalized);
+            return DomainError.Validation("Account.NicknameReserved", "'{0}' cannot be used as a Nickname.", normalized);
 
         return normalized;
     }

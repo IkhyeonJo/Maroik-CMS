@@ -108,10 +108,6 @@ public class MaroikWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         {
             config.AddInMemoryCollection(new Dictionary<string, string>
             {
-                // Skip TLS cert loading (DockerCertPath / DockerKeyPath empty → cert block skipped)
-                ["ServerSetting:DockerCertPath"] = "",
-                ["ServerSetting:DockerKeyPath"] = "",
-
                 // Use a test domain; www prefix avoids AddRedirectToWww triggering
                 ["ServerSetting:DomainName"] = "https://www.localhost",
                 ["ServerSetting:SessionExpireMinutes"] = "60",

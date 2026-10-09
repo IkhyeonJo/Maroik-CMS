@@ -48,8 +48,8 @@ public class BoardCommentTests
         var tooLong = BoardComment.Create(10, 1, null, "Alice", new string('a', max + 1), Now);
         Assert.True(tooLong.IsError);
         Assert.Equal("BoardComment.ContentTooLong", tooLong.FirstError.Code);
-        Assert.Equal("Comment must be {0} characters or fewer.", tooLong.FirstError.Metadata!["ResourceKey"]);
-        Assert.Equal([max], (object[])tooLong.FirstError.Metadata["ResourceArgs"]);
+        Assert.Equal("Comment must be {0} characters or fewer.", tooLong.FirstError.Metadata!["MessageTemplate"]);
+        Assert.Equal([max], (object[])tooLong.FirstError.Metadata["MessageArgs"]);
     }
 
     /// <summary>Create returns error, when content empty.</summary>

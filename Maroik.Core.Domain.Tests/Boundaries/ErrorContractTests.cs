@@ -12,7 +12,7 @@ namespace Maroik.Core.Domain.Tests.Boundaries;
 
 /// <summary>
 /// The message template of each domain error is the key the Website uses to find its ko-KR translation
-/// (see <c>LocalizableError</c>), so it is part of the behavior: these assert the code, type and exact
+/// (see <c>DomainError</c>), so it is part of the behavior: these assert the code, type and exact
 /// template of every error that had no such assertion. Changing a template means changing the resx keys too.
 /// </summary>
 public class ErrorContractTests

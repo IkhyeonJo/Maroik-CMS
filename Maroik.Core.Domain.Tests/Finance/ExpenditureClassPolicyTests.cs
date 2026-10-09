@@ -36,7 +36,7 @@ public class ExpenditureClassPolicyTests
     }
 
     /// <summary>
-    /// A recognized main class with an unrecognized subclass is built via <c>LocalizableError</c>:
+    /// A recognized main class with an unrecognized subclass is built via <c>DomainError</c>:
     /// its Metadata carries the composite-format resource template and the raw main-class name
     /// separately, so <c>ServiceResult.FromError</c> can hand the UI something resx-localizable
     /// instead of the already-baked, value-embedding sentence in <see cref="ErrorOr.Error.Description"/>.
@@ -47,8 +47,8 @@ public class ExpenditureClassPolicyTests
         var result = ExpenditureClassPolicy.Validate("RegularSavings", "Unknown");
 
         Assert.Equal("Invalid sub-class for RegularSavings.", result.FirstError.Description);
-        Assert.Equal("Invalid sub-class for {0}.", result.FirstError.Metadata!["ResourceKey"]);
-        Assert.Equal(["RegularSavings"], (object[])result.FirstError.Metadata["ResourceArgs"]);
+        Assert.Equal("Invalid sub-class for {0}.", result.FirstError.Metadata!["MessageTemplate"]);
+        Assert.Equal(["RegularSavings"], (object[])result.FirstError.Metadata["MessageArgs"]);
     }
 
     // -- NonConsumerSpending ---------------------------------------------------

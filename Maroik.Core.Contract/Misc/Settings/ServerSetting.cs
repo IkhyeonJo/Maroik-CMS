@@ -46,12 +46,6 @@ public class ServerSetting
     /// </summary>
     public int NoticeMaturityDateDay { get; set; }
 
-    /// <summary>File system path to the TLS certificate used by the Docker/Kestrel host.</summary>
-    public string? DockerCertPath { get; set; }
-
-    /// <summary>File system path to the TLS private key used by the Docker/Kestrel host.</summary>
-    public string? DockerKeyPath { get; set; }
-
     /// <summary>Base64-encoded DER (PKCS#1) RSA private key used to decrypt mailed tokens and stored image paths.</summary>
     public string? RsaPrivateKey { get; set; }
 

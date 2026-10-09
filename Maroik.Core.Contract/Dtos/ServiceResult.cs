@@ -39,7 +39,7 @@ public class ServiceResult
     /// database, file-storage or other server-side fault. Kept apart from "Input is invalid" so the user is told
     /// to try again later rather than to correct what they entered.
     /// </summary>
-    public const string TemporaryErrorKey = "A temporary error occurred. Please try again later.";
+    public const string TemporaryErrorKey = ServiceErrorKeys.TemporaryError;
 
     /// <summary>True when the operation completed successfully.</summary>
     public bool Success { get; private init; }
@@ -103,7 +103,7 @@ public class ServiceResult
 
     /// <summary>
     /// Maps a domain <see cref="Error"/> to a <see cref="ServiceResult"/>, preserving its category.
-    /// When <paramref name="error"/> was built via <c>LocalizableError</c>, <see cref="ErrorKey"/> /
+    /// When <paramref name="error"/> was built via <c>DomainError</c>, <see cref="ErrorKey"/> /
     /// <see cref="ErrorArgs"/> carry its resource template and arguments instead of the already-formatted
     /// <see cref="Error.Description"/>.
     /// </summary>

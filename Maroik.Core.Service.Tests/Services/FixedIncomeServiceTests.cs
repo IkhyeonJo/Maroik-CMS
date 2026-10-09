@@ -113,7 +113,7 @@ public class FixedIncomeServiceTests
     /// <see cref="ServiceResult.ErrorKey"/> -- so the UI can localize it via resx.
     /// </summary>
     [Fact]
-    public async Task CreateAsync_ReturnsLocalizableErrorArgs_WhenDepositDayIsOutOfRange()
+    public async Task CreateAsync_ReturnsDomainErrorArgs_WhenDepositDayIsOutOfRange()
     {
         var sut = CreateSut();
         var request = ValidRequest();

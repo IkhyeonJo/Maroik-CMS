@@ -71,7 +71,7 @@ public class EmailTests
     }
 
     /// <summary>
-    /// The "invalid format" error is built via <c>LocalizableError</c>: its Metadata carries the
+    /// The "invalid format" error is built via <c>DomainError</c>: its Metadata carries the
     /// composite-format resource template and the raw offending value separately, so
     /// <c>ServiceResult.FromError</c> can hand the UI something resx-localizable instead of the
     /// already-baked, value-embedding sentence in <see cref="ErrorOr.Error.Description"/>.
@@ -82,8 +82,8 @@ public class EmailTests
         var result = Email.Create("notanemail");
 
         Assert.Equal("'notanemail' is not a valid email address.", result.FirstError.Description);
-        Assert.Equal("'{0}' is not a valid email address.", result.FirstError.Metadata!["ResourceKey"]);
-        Assert.Equal(["notanemail"], (object[])result.FirstError.Metadata["ResourceArgs"]);
+        Assert.Equal("'{0}' is not a valid email address.", result.FirstError.Metadata!["MessageTemplate"]);
+        Assert.Equal(["notanemail"], (object[])result.FirstError.Metadata["MessageArgs"]);
     }
 
     /// <summary>Create normalizes to lower case.</summary>

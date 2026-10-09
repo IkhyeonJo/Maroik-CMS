@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Core.Domain.Calendar;
@@ -60,25 +60,25 @@ public sealed class CalendarEventAttachedFile : AggregateRoot<long>
         string? path)
     {
         if (string.IsNullOrWhiteSpace(name))
-            return LocalizableError.Validation("CalendarEventAttachedFile.NameEmpty", "File name cannot be empty.");
+            return DomainError.Validation("CalendarEventAttachedFile.NameEmpty", "File name cannot be empty.");
 
         if (string.IsNullOrWhiteSpace(path))
-            return LocalizableError.Validation("CalendarEventAttachedFile.PathEmpty", "File storage path cannot be empty.");
+            return DomainError.Validation("CalendarEventAttachedFile.PathEmpty", "File storage path cannot be empty.");
 
         if (size < 0)
-            return LocalizableError.Validation("CalendarEventAttachedFile.InvalidSize", "File size cannot be negative.");
+            return DomainError.Validation("CalendarEventAttachedFile.InvalidSize", "File size cannot be negative.");
 
         // Name, Extension and Path are each persisted in a character varying(255) column: reject an
         // over-long value here (a clean validation error, before anything is uploaded) instead of a raw
         // "value too long" (SQLSTATE 22001) from the write.
         if (name.Length > ShortTextPolicy.MaxLength)
-            return LocalizableError.Validation("CalendarEventAttachedFile.NameTooLong", "File name must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
+            return DomainError.Validation("CalendarEventAttachedFile.NameTooLong", "File name must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
 
         if (extension?.Length > ShortTextPolicy.MaxLength)
-            return LocalizableError.Validation("CalendarEventAttachedFile.ExtensionTooLong", "File extension must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
+            return DomainError.Validation("CalendarEventAttachedFile.ExtensionTooLong", "File extension must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
 
         if (path.Length > ShortTextPolicy.MaxLength)
-            return LocalizableError.Validation("CalendarEventAttachedFile.PathTooLong", "File storage path must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
+            return DomainError.Validation("CalendarEventAttachedFile.PathTooLong", "File storage path must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
 
         return new CalendarEventAttachedFile(0, calendarEventId, size, name, extension, path);
     }
