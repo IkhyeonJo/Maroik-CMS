@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import { describeAmountLabel } from "@tests/_common/amountLabelSuite";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
-import { loadSite, hidden, antiForgery, stubPlugin } from "@tests/_common/harness";
+import { loadSite, hidden, antiForgery, stubPlugin, present } from "@tests/_common/harness";
 
 // wwwroot/user/custom/AccountBook/Income/js/site.js
 //
@@ -57,11 +57,11 @@ describe("AccountBook/Income", () => {
         h.$("#btnExportExcelIncome").trigger("click");
 
         expect(h.submittedForms).toHaveLength(1);
-        const form = h.submittedForms[0];
+        const form = present(h.submittedForms[0]);
         expect(form.method.toUpperCase()).toBe("POST");
         expect(form.action).toContain("/AccountBook/ExportExcelIncome");
-        expect(form.querySelector<HTMLInputElement>("input[name=\"fileName\"]")!.value).toBe("Income");
-        expect(form.querySelector<HTMLInputElement>("input[name=\"__RequestVerificationToken\"]")!.value).toBe("tok");
+        expect(present(form.querySelector<HTMLInputElement>("input[name=\"fileName\"]")).value).toBe("Income");
+        expect(present(form.querySelector<HTMLInputElement>("input[name=\"__RequestVerificationToken\"]")).value).toBe("tok");
     });
 
     it("does not call $.ajax when the create form is invalid", () => {
@@ -102,7 +102,7 @@ describe("AccountBook/Income", () => {
 
         call?.success?.({ result: true, label: "KRW" });
 
-        expect(h.win.document.querySelector("#labelCreateIncomeAmount")!.textContent).toBe("KRW");
+        expect(present(h.win.document.querySelector("#labelCreateIncomeAmount")).textContent).toBe("KRW");
     });
 
     it("percent-encodes the chosen deposit asset in the amount-label lookup query", () => {
@@ -144,11 +144,11 @@ describe("AccountBook/Income — date pickers", () => {
         vi.useFakeTimers(); // after load: loadSite manages its own fake timers while it evaluates the script
         try {
             for (const id of ["createIncomeDate", "editIncomeDate"]) {
-                const init = h.datepickerInits.find((i) => i.el?.id === id)!;
+                const init = present(h.datepickerInits.find((i) => i.el?.id === id));
                 expect(init, `a datepicker is attached to #${id}`).toBeDefined();
                 expect(() => {
-                    init.options.beforeShow!();
-                    init.options.onChangeMonthYear!();
+                    present(init.options.beforeShow)();
+                    present(init.options.onChangeMonthYear)();
                     vi.runAllTimers();
                 }).not.toThrow();
             }

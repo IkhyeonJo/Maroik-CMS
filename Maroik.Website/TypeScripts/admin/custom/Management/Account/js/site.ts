@@ -71,7 +71,7 @@
     // the row whose `data-email` matches the clicked record.
     $(document).off("rowclick.Account").on("rowclick.Account", (e: JQuery.TriggeredEvent) => {
         let selectedRow = conform(e.detail, check.object({ data: check.record(check.string) }), "the rowclick detail");
-        let selectedRowEmail = selectedRow.data.Email;
+        let selectedRowEmail = selectedRow.data["Email"];
 
         let $clsGridRow = $(".clsGridRow");
 
@@ -219,6 +219,7 @@
                 }
             })
         });
+        return undefined;
     }
 
     /** Edit-account modal submit: validate, POST every field + flag as JSON, then close / reload / toast. */
@@ -295,6 +296,7 @@
 
         $confirmDeleteAccountDialogModal.modal("toggle");
         $confirmDeleteAccountDialogModal.modal("show");
+        return undefined;
     }
 
     /** Confirmed delete: re-check selection, confirm the record exists, then POST `DeleteAccount`. */
@@ -351,6 +353,7 @@
                 }
             })
         });
+        return undefined;
     }
 
     /**

@@ -4,7 +4,7 @@
  * scripts additionally publish `escapeHtml` and the default upload-size fallback.
  */
 import { describe, it, expect } from "vitest";
-import { loadSite, antiForgery, hidden, hiddenByStyle, type SiteHandle } from "@tests/_common/harness";
+import { loadSite, antiForgery, hidden, hiddenByStyle, type SiteHandle, successOf, present } from "@tests/_common/harness";
 
 /** The layout DOM the scripts touch: culture links, loading overlay and two forms with submit buttons. */
 const fixture = () =>
@@ -20,7 +20,7 @@ export function describeLayoutScript(area: "admin" | "user" | "anonymous"): void
     /** Loads the area's `_Layout` script over {@link fixture}. */
     const load = () => loadSite(area, "_Layout", "", fixture());
     /** Whether the button with `id` is disabled. */
-    const disabled = (h: SiteHandle, id: string) => (h.win.document.getElementById(id) as HTMLButtonElement).disabled;
+    const disabled = (h: SiteHandle, id: string) => present(h.win.document.getElementById(id), `#${id}`).matches(":disabled");
     /** Fires jQuery's global `ajaxSend` for a request of `type` (no type when omitted). */
     const send = (h: SiteHandle, type?: string) => h.$(h.win.document).trigger("ajaxSend", [{}, type === undefined ? {} : { type }]);
     /** Fires jQuery's global `ajaxComplete` for a request of `type` (no type when omitted). */
@@ -40,7 +40,7 @@ export function describeLayoutScript(area: "admin" | "user" | "anonymous"): void
             expect(call.url).toBe("/Dashboard/CultureManagement");
             expect(call.headers).toEqual({ RequestVerificationToken: "tok" });
             expect(JSON.parse(String(call.data))).toEqual({ Culture: culture });
-            call.success!({});
+            successOf(call)({});
             expect(h.navigations.at(-1)).toBe("/back-to-here");
         });
 
@@ -105,7 +105,7 @@ export function describeLayoutScript(area: "admin" | "user" | "anonymous"): void
             h.$("#loading").show();
             send(h, "POST");
             send(h, "POST");
-            h.$(h.win as unknown as Element).trigger("pageshow");
+            h.$(h.win).trigger("pageshow");
             expect(disabled(h, "s1")).toBe(false);
             expect(hiddenByStyle(h.win.document.getElementById("loading"))).toBe(true);
 

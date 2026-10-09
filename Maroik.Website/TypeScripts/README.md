@@ -209,42 +209,47 @@ here because **no Razor view uses an inline `on*=` handler** and **no script ref
 script's globals** — verified before starting. Shared helpers therefore stay duplicated
 per file (just typed); there is deliberately no shared module.
 
-### The recurring annotations
+### Types: checked, not asserted
 
-There is no `any` anywhere in `TypeScripts/` or `TypeScripts.Tests/`: none written in code
-(`TypeScripts.Tests/_common/noExplicitAny.test.ts` fails on one, since `tsc` has no option that forbids it),
-and none handed over by a library either. The library calls whose typings answer `any` — `JSON.parse`,
-`$.ajax`'s `success` data, jQuery's `.data(key)` / `.prop("checked")` — are redeclared in `global.d.ts` (and,
-for the tests, `TypeScripts.Tests/_common/noImplicitAnyLibs.d.ts`) to answer `unknown` or the real type, so the
-strict compiler rejects any use that does not state a type. Each `$.ajax` names its reply
-(`success: function(data: ReadReply<AssetPayload>)`); the reply types mirror the controllers' `Json(...)`
-results, with `result: true | false` telling the success and failure shapes apart. The shared types (server
-payloads, plugin gaps) live in `global.d.ts`, which loads the jQuery typings first so its overloads are tried
-before the library's.
+The scripts and their tests hold **no `any`** and **no type assertion** (`x as T`, `x!`; `as const` aside):
+`TypeScripts.Tests/_common/noExplicitAny.test.ts` fails on either (`tsc` has no option that forbids them), and
+`noImplicitAny.test.ts` fails if a library value that the typings call `any` (`JSON.parse`, `$.ajax`'s `success`
+data, jQuery's `.data(key)`) could be used without stating a type — `global.d.ts` redeclares those to answer
+`unknown`. Both tsconfigs also turn on `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
+`noImplicitReturns`, `noUnused*`, `noPropertyAccessFromIndexSignature` and `noImplicitOverride` on top of `strict`.
 
-| Original pattern                                                                                         | Becomes                                                                              | Reason                                                                                         |
-|----------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
-| `function f(x) {` (DOM-interop param)                                                                    | `function f(x: string \| HTMLSelectElement \| …)` / `x?: string`                    | `noImplicitAny`                                                                                |
-| `$(sel).val()` used as a string (`location.href =`, `input.value`, ajax `headers`, `parseInt`, `.split`) | `$(sel).val() as string`                                                             | `.val()` is `string \| number \| string[] \| undefined` (`FormFieldValue` in `global.d.ts`)  |
-| `$(this).attr('x')` assigned to a `string` / before `.includes()`                                        | `$(this).attr('x')!`                                                                 | `.attr()` is `string \| undefined`; the attribute is always present                           |
-| `toastr.error(msg)` where `msg?: string`                                                                 | `toastr.error(msg!)` (inside the guard where it's set)                               | `toastr.error`'s message param is non-optional                                                 |
-| `const localizer = { … 44 × $(sel).val() }`                                                              | `const localizer = { … } as Record<string, string>`                                  | every hidden input holds a string (see the casing fix under "Deliberate post-port changes")    |
-| `.datepicker({ … beforeShow/onSelect … })` instance call                                                 | no cast; `onSelect: function (this: HTMLInputElement)`                               | `DatepickerSetupOptions` (`global.d.ts`) accepts the void `beforeShow` jQuery UI allows        |
-| `$.datepicker._clearDate(x)`                                                                             | as is                                                                                | the undocumented internal is declared on `JQueryUI.Datepicker` in `global.d.ts`                |
-| `new FullCalendar.Calendar(document.getElementById('calendar'), {…})`                                    | `… getElementById('calendar')!, {…}` + `FullCalendarEventClickArg` / `…DateSelectArg` | null-guard; FullCalendar's own types, aliased in `global.d.ts`                                 |
-| `JSON.parse(…).forEach((item) => …)` / `$.each(response.calendars, …)`                                   | `(JSON.parse(…) as CalendarEventJson[]).forEach(…)`, `(_, calendar: CalendarSummary)` | the calendar payloads, mirrored from the C# view models / DTOs in `global.d.ts`                |
-| `success: function(data) { … data.asset.amount … }`                                                      | `success: function(data: ReadReply<AssetPayload>)`                                   | `$.ajax` hands `success` an `unknown` until the call names its reply type                      |
-| a hoisted `function show…Modal() { … data.calendarEvent … }` inside `if (data.result)`                   | `(data as SucceededReply<CalendarEventPayload>).calendarEvent`                       | the `data.result` narrowing does not reach a hoisted function declaration                      |
-| `formData.append("X", value)` with a `.val()` / boolean / missing file                                   | as is                                                                                | `global.d.ts` adds the `FormData.append` overload for the values it stringifies                |
-| `let x;` (no initialiser) / `let arr = [];` reused                                                       | `let x: FormFieldValue;` / `let arr: CalendarReminderFormValue[] = [];`              | `noImplicitAny` on evolving types                                                              |
-| `htmlDoc.querySelectorAll('img[data-file]')` then `imgTag.src`                                           | `.querySelectorAll<HTMLImageElement>('img[data-file]')`                              | `Element` has no `.src`                                                                        |
+A value the code cannot prove is **checked at run time** through the toolkit each role's `_Layout` script puts
+on `window` (typed in `global.d.ts`, tested once per area by `TypeScripts.Tests/_common/toolkitSuite.ts`):
 
-Typing the scripts this way changed the compiled `site.js` in a few places, none of them in behaviour:
-`data: null` is no longer passed to `$.ajax` (jQuery only tests `data` for truthiness), a calendar event's
-`id` is passed as `String(item.Id)` (FullCalendar 5 runs `id` through `String` itself), the reminder
-validators call `isNaN(Number(value))` (global `isNaN` applies the same `ToNumber`), and the deposit-day
-lists read the month's maximum day straight from `maxDepositDayByMonth` instead of through `parseInt` (the
-values are already integers; a missing month still yields no days).
+| Reading …                                                         | goes through                                          | when it is not what the code expects                         |
+|-------------------------------------------------------------------|-------------------------------------------------------|--------------------------------------------------------------|
+| a form field / hidden input the view always renders               | `fieldValue($el)` (`selectValue` for a select)        | throws (`selectValue` answers `null` when nothing is chosen) |
+| a server constant with a built-in fallback                        | `optionalFieldValue($el)`                             | `undefined` → the fallback                                   |
+| JSON the view rendered                                            | `parseJson(text, check, "#id")`                       | throws                                                       |
+| an attribute / element / event target / dropped file             | `attribute`, `byId`, `elementOf`, `instanceOf`         | throws                                                       |
+| a value a library may leave out (`getContext("2d")`, an index)    | `required(value, what)`                               | throws                                                       |
+| an ajax reply                                                     | `success: onReply(check, function(data) { … })`        | logs why, toasts the layout's generic "temporary error"      |
+| a refusal sent instead of a file                                  | `.then(onReplyText(replies.failed, …))`                | as above                                                     |
+| data a widget hands back (rowclick detail, FullCalendar props)    | `conform(value, check, what)`                         | throws                                                       |
+
+A reply's check (`window.check` builders, `window.replies.action / read / write / failed`) is declared at the
+top of the page script that reads it and mirrors the controller's `Json(...)` result field for field — camelCase
+names, nulls kept, nullability from the database (e.g. `DeleteComment` answers `{ result: true }` with no
+message; `Category.Action` may be null); its type is inferred from the check, so there is no separate interface
+to drift. Every localized text a script reads is rendered by its view (`viewContract.test.ts`).
+
+Where the typings themselves are wrong, `global.d.ts` corrects them instead of a cast: `DatepickerSetupOptions`
+(a `beforeShow` may return nothing), `JQueryUI.Datepicker._clearDate`, `FormData.append` (stringifies non-Blob
+values), `val(null)`, `Array.isArray` / `Object.entries` (answer `unknown`, not `any`).
+
+The checks changed behaviour only where the old code went on with a value it did not have: a missing element or
+attribute now throws at the read instead of sending `undefined`, a reply of the wrong shape shows the generic
+error instead of failing half-way through the handler, an account without assets no longer asks for the amount
+label of "undefined", and an attachment without an extension no longer shows its name followed by "null". The
+other changes to the compiled `site.js` are behaviour-neutral: `data: null` is no longer passed to `$.ajax`,
+event ids go to FullCalendar as `String(item.Id)` (it converts them anyway), `isNaN(Number(value))`, the
+deposit-day lists read the integer from `maxDepositDayByMonth` directly, and explicit `return undefined;` where a
+handler returned `false` on another path.
 
 ### Deliberate post-port changes
 

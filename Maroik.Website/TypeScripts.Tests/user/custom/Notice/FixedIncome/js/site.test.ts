@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import { describeAmountLabel } from "@tests/_common/amountLabelSuite";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
-import { loadSite, hidden, antiForgery } from "@tests/_common/harness";
+import { loadSite, hidden, antiForgery, lastOf } from "@tests/_common/harness";
 
 // wwwroot/user/custom/Notice/FixedIncome/js/site.js
 /** Main class → sub-classes, as the page publishes it. */
@@ -50,7 +50,7 @@ describe("Notice/FixedIncome", () => {
     it("Excel export targets /Notice/ExportExcelFixedIncome", () => {
         const h = loadSite("user", "Notice", "FixedIncome", fixture());
         h.$("#btnExportExcelFixedIncome").trigger("click");
-        expect(h.submittedForms.at(-1)!.action).toContain("/Notice/ExportExcelFixedIncome");
+        expect(lastOf(h.submittedForms).action).toContain("/Notice/ExportExcelFixedIncome");
     });
 
     // Regression: the EDIT button's cached jQuery selector used to target a nonexistent id

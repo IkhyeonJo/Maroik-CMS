@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { loadSite, antiForgery, hidden, hiddenByStyle, stubPlugin } from "@tests/_common/harness";
+import { loadSite, antiForgery, hidden, hiddenByStyle, stubPlugin, present, successOf } from "@tests/_common/harness";
 
 // wwwroot/anonymous/custom/Account/js/site.js
 function fixture(): string {
@@ -40,14 +40,14 @@ describe("anonymous/Account", () => {
         const call = h.lastAjax();
         expect(call.headers).toEqual({ RequestVerificationToken: "tok" });
         expect(JSON.parse(String(call.data))).toEqual({ Culture: "ko-KR" });
-        call.success!({});
+        successOf(call)({});
         expect(h.navigations.at(-1)).toBe("/back");
     });
 
     it("refuses to navigate when the page lacks the field it returns to (the view and the script disagree)", () => {
         const h = loadSite("anonymous", "Account", "", fixture().replace(hidden("returnUri", "/back"), ""));
         h.$("#aChangeCultureEnUS").trigger("click");
-        expect(() => h.lastAjax().success!({})).toThrow("A required field is missing from the page");
+        expect(() => successOf(h.lastAjax())({})).toThrow("A required field is missing from the page");
         expect(h.navigations).toEqual([]);
     });
 
@@ -62,7 +62,7 @@ describe("anonymous/Account", () => {
         const h = loadSite("anonymous", "Account", "", fixture());
         const validated: string[] = [];
         stubPlugin(h, "valid", function(this: JQuery) {
-            validated.push(this.attr("id")!);
+            validated.push(present(this.attr("id")));
             return validated.length > 1; // first call: invalid, second call: valid
         });
 

@@ -38,21 +38,23 @@ export interface AjaxCall {
     complete?: (...a: unknown[]) => void;
     async?: boolean;
     xhrFields?: Record<string, unknown>;
+    /** the settings object itself, as jQuery takes it (respondOverHttp replays it through the real `$.ajax`) */
+    settings: JQuery.AjaxSettings;
 }
 
 /**
  * The jsdom window a page runs in: the globals the harness installs (`$`, `toastr`, `MvcGrid`, …) are
  * `unknown` to a test, except `escapeHtml`, which a test may call.
  */
-export type PageWindow = Window & typeof globalThis & Record<string, unknown> & { escapeHtml(value: string): string };
+export type PageWindow = Window & typeof globalThis;
 
 /** A callback a page handed to a widget; a test calls it with whatever the widget would pass. */
 type WidgetCallback = (this: unknown, ...args: unknown[]) => unknown;
 
 /** The FullCalendar options callbacks a test drives directly (see {@link SiteHandle.calendarOptions}). */
 export interface CapturedCalendarOptions {
-    select(arg: { start: Date; end: Date }): void;
-    eventClick(arg: object): unknown;
+    select?: (arg: { start: Date; end: Date }) => void;
+    eventClick?: (arg: object) => unknown;
 }
 
 /** An event object a page passed to `calendar.addEvent(...)`. */
@@ -90,7 +92,71 @@ export interface CapturedChartConfig {
 
 /** The summernote options a test drives: the image-upload callback. */
 export interface CapturedSummernoteOptions {
-    callbacks: { onImageUpload(files: File[]): void };
+    callbacks?: { onImageUpload?: (files: File[]) => void };
+}
+
+/** The fields of a plain object; null for anything else. */
+function fieldsOf(value: unknown): Map<string, unknown> | null {
+    return typeof value === "object" && value !== null ? new Map(Object.entries(value)) : null;
+}
+
+/** Whether `value` is absent or a function (a widget callback a test may call). */
+function isOptionalCallback(value: unknown): value is WidgetCallback | undefined {
+    return value === undefined || typeof value === "function";
+}
+
+/** Whether `value` carries the datepicker callbacks a test calls, each absent or a function. */
+function isDatepickerOptions(value: unknown): value is CapturedDatepickerOptions {
+    const fields = fieldsOf(value);
+    return fields !== null && ["beforeShow", "onChangeMonthYear", "onSelect"].every((name) => isOptionalCallback(fields.get(name)));
+}
+
+/** Whether `value` is summernote options whose `callbacks.onImageUpload`, if any, is a function. */
+function isSummernoteOptions(value: unknown): value is CapturedSummernoteOptions {
+    const fields = fieldsOf(value);
+    if (fields === null) return false;
+    const callbacks = fields.get("callbacks");
+    if (callbacks === undefined) return true;
+    const callbackFields = fieldsOf(callbacks);
+    return callbackFields !== null && isOptionalCallback(callbackFields.get("onImageUpload"));
+}
+
+/** Whether `value` is FullCalendar options whose `select` / `eventClick`, if any, are functions. */
+function isCalendarOptions(value: unknown): value is CapturedCalendarOptions {
+    const fields = fieldsOf(value);
+    return fields !== null && isOptionalCallback(fields.get("select")) && isOptionalCallback(fields.get("eventClick"));
+}
+
+/** Whether `value` is a doughnut config with the data, colours and tooltip callback the Dashboard tests read. */
+function isChartConfig(value: unknown): value is CapturedChartConfig {
+    const fields = fieldsOf(value);
+    const data = fieldsOf(fields?.get("data"));
+    const datasets = data?.get("datasets");
+    const tooltips = fieldsOf(fieldsOf(fields?.get("options"))?.get("tooltips"));
+    const label = fieldsOf(tooltips?.get("callbacks"))?.get("label");
+    return typeof fields?.get("type") === "string" && Array.isArray(data?.get("labels")) && Array.isArray(datasets)
+        && datasets.every((dataset) => Array.isArray(fieldsOf(dataset)?.get("data"))) && typeof label === "function";
+}
+
+/** `value`, which must pass `guard` (the options a script handed to a stubbed widget). */
+function captured<T>(value: unknown, guard: (value: unknown) => value is T, what: string): T {
+    if (guard(value)) return value;
+    throw new Error(`${what} are not of the expected shape`);
+}
+
+/** The FullCalendar instance the page constructed. */
+export function firstCalendar(h: SiteHandle): FakeCalendar {
+    return present(h.calendarInstances[0], "the FullCalendar instance");
+}
+
+/** Calls the `select` callback a page gave FullCalendar (a drag-selected date range). */
+export function calendarSelect(h: SiteHandle, arg: { start: Date; end: Date }): void {
+    present(present(h.calendarOptions[0], "the FullCalendar options").select, "the select callback")(arg);
+}
+
+/** Calls the `eventClick` callback a page gave FullCalendar, returning what it returns. */
+export function calendarEventClick(h: SiteHandle, arg: object): unknown {
+    return present(present(h.calendarOptions[0], "the FullCalendar options").eventClick, "the eventClick callback")(arg);
 }
 
 /** What {@link loadSite} returns: the page's window and every stub/capture a test asserts on. */
@@ -140,36 +206,9 @@ export interface SiteHandle {
     summernoteCalls: { el: Element | undefined; args: unknown[] }[];
 }
 
-/** jQuery bound to `win` (the CommonJS build exports a factory when no global window exists). */
-function bindJquery(win: Window): JQueryStatic {
-    // @types/jquery types the import as jQuery itself; the factory form has no `fn`.
-    const mod = jqueryImport as unknown as Partial<Pick<JQueryStatic, "fn">> & ((win: Window) => JQueryStatic);
-    const $ = typeof mod === "function" && !mod.fn ? mod(win) : mod;
-    return $ as JQueryStatic;
-}
-
-/** The members of an `XMLHttpRequest` that jQuery's xhr transport touches. */
-interface FakeXhr {
-    responseType: XMLHttpRequestResponseType;
-    readyState: number;
-    status: number;
-    statusText: string;
-    response: unknown;
-    onload: (() => void) | null;
-    onerror: (() => void) | null;
-    onabort: (() => void) | null;
-    ontimeout: (() => void) | null;
-    open(): void;
-    setRequestHeader(): void;
-    overrideMimeType(): void;
-    abort(): void;
-    getAllResponseHeaders(): string;
-    readonly responseText: string;
-    send(): void;
-}
-
 /** jQuery's real `$.ajax`, kept before {@link loadSite} replaces it with a capturing stub. */
-const realAjax: JQueryStatic["ajax"] = bindJquery(window).ajax;
+// (Vitest's jsdom environment has a global window, so the CommonJS build exports jQuery bound to it.)
+const realAjax: JQueryStatic["ajax"] = jqueryImport.ajax;
 
 /**
  * Builds a minimal `XMLHttpRequest` stand-in for jQuery's xhr transport that answers HTTP 200 with
@@ -178,38 +217,44 @@ const realAjax: JQueryStatic["ajax"] = bindJquery(window).ajax;
  */
 function fakeXhrFactory(win: Window & typeof globalThis, body: string, contentType: string): () => XMLHttpRequest {
     return () => {
-        const xhr: FakeXhr = {
-            responseType: "",
-            readyState: 0,
-            status: 0,
-            statusText: "",
-            response: null,
-            onload: null,
-            onerror: null,
-            onabort: null,
-            ontimeout: null,
-            open() { /* nothing to connect */ },
-            setRequestHeader() { /* headers are not inspected here */ },
-            overrideMimeType() { /* not used by the scripts */ },
-            abort() { /* never aborted */ },
-            getAllResponseHeaders: () => `content-type: ${contentType}\r\n`,
-            get responseText() {
-                if (xhr.responseType !== "" && xhr.responseType !== "text") {
-                    throw new win.DOMException("responseText is only available for a text response", "InvalidStateError");
-                }
-                return body;
+        // A real XMLHttpRequest whose network side is replaced: own properties shadow the prototype's.
+        const xhr = new win.XMLHttpRequest();
+        let readyState = 0;
+        let status = 0;
+        let statusText = "";
+        let response: unknown = null;
+        const nothing = () => undefined;
+        Object.defineProperties(xhr, {
+            readyState: { get: () => readyState },
+            status: { get: () => status },
+            statusText: { get: () => statusText },
+            response: { get: () => response },
+            responseText: {
+                get() {
+                    if (xhr.responseType !== "" && xhr.responseType !== "text") {
+                        throw new win.DOMException("responseText is only available for a text response", "InvalidStateError");
+                    }
+                    return body;
+                },
             },
-            send() {
-                void Promise.resolve().then(() => {
-                    xhr.readyState = 4;
-                    xhr.status = 200;
-                    xhr.statusText = "OK";
-                    xhr.response = xhr.responseType === "blob" ? new win.Blob([body], { type: contentType }) : body;
-                    xhr.onload?.();
-                });
+            open: { value: nothing }, // nothing to connect
+            setRequestHeader: { value: nothing }, // headers are not inspected here
+            overrideMimeType: { value: nothing },
+            abort: { value: nothing },
+            getAllResponseHeaders: { value: () => `content-type: ${contentType}\r\n` },
+            send: {
+                value() {
+                    void Promise.resolve().then(() => {
+                        readyState = 4;
+                        status = 200;
+                        statusText = "OK";
+                        response = xhr.responseType === "blob" ? new win.Blob([body], { type: contentType }) : body;
+                        xhr.dispatchEvent(new win.ProgressEvent("load"));
+                    });
+                },
             },
-        };
-        return xhr as unknown as XMLHttpRequest;
+        });
+        return xhr;
     };
 }
 
@@ -221,13 +266,13 @@ export function loadSite(
     fixtureHtml: string,
     opts: { autoAjaxResult?: boolean; /** what `$(el).summernote("code")` returns */ summernoteCode?: string } = {},
 ): SiteHandle {
-    const win = window as PageWindow;
+    const win: PageWindow = window;
 
     // Views/Shared/_Layout.cshtml's hidden inputs ride along with every page it lays out (not the account pages).
     win.document.body.innerHTML = (feature === "Account" ? "" : LAYOUT_CHROME) + fixtureHtml;
 
-    const $ = bindJquery(win);
-    win.$ = win.jQuery = $;
+    const $ = jqueryImport;
+    Object.assign(win, { $, jQuery: $ });
 
     // --- vendored jQuery plugins the scripts call: chainable no-ops -------------
     // Always (re)assigned so a mutation from one test (e.g. `$.fn.valid = () => false`)
@@ -240,7 +285,7 @@ export function loadSite(
     const datepickerInits: SiteHandle["datepickerInits"] = [];
     Object.assign($.fn, {
         datepicker: function(this: JQuery, arg?: unknown) {
-            if (arg && typeof arg === "object") datepickerInits.push({ el: this[0], options: arg as CapturedDatepickerOptions });
+            if (arg && typeof arg === "object") datepickerInits.push({ el: this[0], options: captured(arg, isDatepickerOptions, "the datepicker options") });
             return arg === "getDate" ? null : this;
         },
         valid: () => true,
@@ -251,7 +296,7 @@ export function loadSite(
     Object.assign($.fn, {
         summernote: function(this: JQuery, ...args: unknown[]) {
             if (args.length === 0 || typeof args[0] === "object") {
-                summernoteInits.push({ el: this[0], options: args[0] as CapturedSummernoteOptions });
+                summernoteInits.push({ el: this[0], options: captured(args[0] ?? {}, isSummernoteOptions, "the summernote options") });
                 return this;
             }
             if (args[0] === "code" && args.length === 1) return opts.summernoteCode ?? "";
@@ -272,8 +317,9 @@ export function loadSite(
         always(): FakeJqXhr;
     }
     Object.assign($, {
-        ajax: vi.fn((options: AjaxCall) => {
-            ajaxCalls.push(options);
+        // What the page passes: the fields a test reads, and jQuery's settings type for the replay.
+        ajax: vi.fn((options: Omit<AjaxCall, "settings"> & JQuery.AjaxSettings) => {
+            ajaxCalls.push({ ...options, settings: options });
             if (opts.autoAjaxResult && typeof options.success === "function") {
                 options.success({ result: true, message: "ok", calendars: [], tempOtherCalendars: [] });
             }
@@ -284,18 +330,18 @@ export function loadSite(
 
     // --- globals -----------------------------------------------------------
     const toastr = { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() };
-    win.toastr = toastr;
+    Object.assign(win, { toastr });
 
     // Stub MvcGrid: records each instance, with a fixed URL and a spy `reload`.
     const MvcGridInstances: FakeMvcGrid[] = [];
-    win.MvcGrid = class {
+    Object.assign(win, { MvcGrid: class {
         url = new URL("http://localhost/grid");
         reload = vi.fn();
 
         constructor(_container: Element | null) {
             MvcGridInstances.push(this);
         }
-    };
+    } });
 
     // Every options object passed to `new FullCalendar.Calendar(el, opts)`, so a test can invoke a
     // page's `select` / `eventClick` callback directly (`h.calendarOptions[0].select(arg)`) to drive
@@ -303,10 +349,10 @@ export function loadSite(
     // simulated, only the options object FullCalendar would have called back into.
     const calendarOptions: CapturedCalendarOptions[] = [];
     const calendarInstances: FakeCalendar[] = [];
-    win.FullCalendar = {
+    Object.assign(win, { FullCalendar: {
         Calendar: class {
             constructor(_el: unknown, opts: unknown) {
-                calendarOptions.push(opts as CapturedCalendarOptions);
+                calendarOptions.push(captured(opts, isCalendarOptions, "the FullCalendar options"));
                 calendarInstances.push(this);
             }
 
@@ -315,7 +361,7 @@ export function loadSite(
             removeAllEvents = vi.fn();
             unselect = vi.fn();
         },
-    };
+    } });
 
     // Minimal moment stub: every date formats as "2024-01-01".
     interface FakeMoment {
@@ -335,11 +381,11 @@ export function loadSite(
 
     // Chart.js 2.x — Dashboard builds ~10 of these in its $(function).
     const charts: SiteHandle["charts"] = [];
-    win.Chart = class {
+    Object.assign(win, { Chart: class {
         constructor(ctx: unknown, cfg: unknown) {
-            charts.push({ ctx, cfg: cfg as CapturedChartConfig });
+            charts.push({ ctx, cfg: captured(cfg, isChartConfig, "the Chart config") });
         }
-    };
+    } });
 
     // --- browser bits jsdom lacks / complains about --------------------------
     // jsdom has no canvas: getContext answers null where a browser hands Chart.js a 2D context.
@@ -395,7 +441,9 @@ export function loadSite(
     const code = readFileSync(file, "utf8");
     // The view renders every localized text the script reads (pinned by viewContract.test.ts); a fixture lists
     // only those its test looks at, so the rest are filled in here as "L_<Key>".
-    for (const [, id, key] of code.matchAll(/\$\("#(localizer(\w+))"\)/g)) {
+    for (const match of code.matchAll(/\$\("#(localizer(\w+))"\)/g)) {
+        const id = present(match[1]);
+        const key = present(match[2]);
         if (win.document.getElementById(id) === null) {
             win.document.body.insertAdjacentHTML("beforeend", `<input type="hidden" id="${id}" value="L_${key}" />`);
         }
@@ -426,9 +474,10 @@ export function loadSite(
         },
         respondOverHttp(indexFromEnd, body, contentType) {
             const call = ajaxCalls[ajaxCalls.length - 1 - indexFromEnd];
-            void realAjax({ ...(call as JQuery.AjaxSettings), xhr: fakeXhrFactory(win, body, contentType) });
+            const settings: JQuery.AjaxSettings = { ...present(call, "the ajax call to replay").settings, xhr: fakeXhrFactory(win, body, contentType) };
+            void realAjax(settings);
         },
-        lastAjax: () => ajaxCalls[ajaxCalls.length - 1],
+        lastAjax: () => lastOf(ajaxCalls),
         toastr,
         submittedForms,
         navigations,
@@ -457,6 +506,48 @@ export function eventProps(over: Record<string, unknown> = {}): Record<string, u
     };
 }
 
+// --- Checked reads for tests -------------------------------------------------------------------------
+// A test reads what the script left behind (a captured ajax call, a fixture element, a mock's arguments)
+// through these instead of type assertions: a value that is not there, or not of the expected type, throws
+// and so fails the test with a message naming it.
+
+/** `value`, which the test expects to be there. */
+export function present<T>(value: T | null | undefined, what = "an expected value"): T {
+    if (value === null || value === undefined) throw new Error(`${what} is missing`);
+    return value;
+}
+
+/** The last of `items`, which must not be empty. */
+export function lastOf<T>(items: readonly T[]): T {
+    return present(items[items.length - 1], "the last item");
+}
+
+/** `value`, which must be a `type` (an element of the fixture, the FormData a script posted, …). */
+export function instanceOfType<T>(value: unknown, type: abstract new (...args: never[]) => T): T {
+    if (value instanceof type) return value;
+    throw new Error(`expected a ${type.name}, got ${value === null ? "null" : typeof value}`);
+}
+
+/** The `success` callback a script passed to `$.ajax`. */
+export function successOf(call: AjaxCall | undefined): (data: unknown) => void {
+    return present(present(call, "the ajax call").success, "the call's success callback");
+}
+
+/** The `complete` callback a script passed to `$.ajax`. */
+export function completeOf(call: AjaxCall | undefined): (...a: unknown[]) => void {
+    return present(present(call, "the ajax call").complete, "the call's complete callback");
+}
+
+/** The `error` callback a script passed to `$.ajax`. */
+export function errorOf(call: AjaxCall | undefined): (...a: unknown[]) => void {
+    return present(present(call, "the ajax call").error, "the call's error callback");
+}
+
+/** The FormData a captured `$.ajax` call posted. */
+export function formDataOf(call: AjaxCall | undefined): FormData {
+    return instanceOfType(present(call, "the ajax call").data, FormData);
+}
+
 /** Minimal hidden-input fixture: `hidden("id", "value")` → `<input id hidden>`. */
 export function hidden(id: string, value = ""): string {
     return `<input type="hidden" id="${id}" value="${value}" />`;
@@ -467,7 +558,7 @@ export function hidden(id: string, value = ""): string {
  * toggle visibility with `.show()` / `.hide()`, which set `style.display`. Read that.
  */
 export function hiddenByStyle(el: Element | null | undefined): boolean {
-    return (el as HTMLElement | null | undefined)?.style.display === "none";
+    return el instanceof HTMLElement && el.style.display === "none";
 }
 
 /** Native `CustomEvent` dispatch — how MvcGrid fires `rowclick`/`reload*` at runtime. */

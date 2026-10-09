@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { loadSite, antiForgery } from "@tests/_common/harness";
+import { loadSite, antiForgery, instanceOfType } from "@tests/_common/harness";
 
 // wwwroot/anonymous/custom/Forum/FreeForum/js/site.js — read-only board view.
 function fixture(): string {
@@ -52,13 +52,14 @@ describe("Forum/FreeForum (anonymous) — pages without the optional parts", () 
     });
 
     it("a detail body that is already visible is left alone", () => {
-        const boxes = vi.spyOn(window.HTMLElement.prototype, "getClientRects").mockReturnValue([{}] as unknown as DOMRectList); // jsdom has no layout: give every element a box
+        // jsdom has no layout: give every element a box (jQuery's :visible only counts them)
+        Object.defineProperty(window.HTMLElement.prototype, "getClientRects", { configurable: true, value: () => [{}] });
         try {
             const html = fixture().replace("<div id=\"detailBoardContent\"></div>", `<div id="detailBoardContent" style="display:block"><p>shown</p><img data-file="QUJD" data-contenttype="image/png" alt=""></div>`);
             const h = loadSite("anonymous", "Forum", "FreeForum", html);
             expect(h.$("#detailBoardContent").html()).toContain("data-file=\"QUJD\""); // not rehydrated: the body was not hidden
         } finally {
-            boxes.mockRestore();
+            Reflect.deleteProperty(window.HTMLElement.prototype, "getClientRects"); // back to Element.prototype's
         }
     });
 });
@@ -99,7 +100,7 @@ describe("Forum/FreeForum (anonymous) — navigation, images and attachments", (
         const h = load(fixture().replace(
             "<div id=\"detailBoardContent\"></div>",
             `<div id="detailBoardContent" style="display:none"><p>x</p><img data-file="${btoa("abc")}" data-contenttype="image/png" alt=""><img data-file="${btoa("no-type")}" alt=""></div>`));
-        const el = h.$("#detailBoardContent")[0] as HTMLElement;
+        const el = instanceOfType(h.$("#detailBoardContent")[0], HTMLElement);
         expect(el.innerHTML).toContain("blob:");
         expect(el.innerHTML).toContain("<p>x</p>");
         expect(el.innerHTML).toContain("data-file"); // the image without a content type is left alone
@@ -111,9 +112,9 @@ describe("Forum/FreeForum (anonymous) — navigation, images and attachments", (
             "<div id=\"detailBoardContent\"></div>",
             `<div id="detailBoardContent" style="display:none"><img data-file="${btoa("abc")}" data-contenttype="image/png" alt=""></div>`));
         const revoke = (h.win.URL.revokeObjectURL = vi.fn());
-        const img = h.$("#detailBoardContent img")[0] as HTMLImageElement;
+        const img = instanceOfType(h.$("#detailBoardContent img")[0], HTMLImageElement);
 
-        (img[event] as () => void)();
+        img.dispatchEvent(new Event(event.slice(2))); // fires the onload / onerror handler
 
         expect(revoke).toHaveBeenCalledWith(img.src);
     });
@@ -149,7 +150,7 @@ describe("Forum/FreeForum (anonymous) — navigation, images and attachments", (
             try {
                 h.respond(0, new h.win.Blob(["zip-bytes"], { type: "application/x-zip-compressed" }));
                 expect(click).toHaveBeenCalledTimes(1);
-                expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("report.zip");
+                expect((instanceOfType(click.mock.contexts[0], HTMLAnchorElement)).download).toBe("report.zip");
                 expect(revoke).not.toHaveBeenCalled();
                 vi.advanceTimersByTime(100);
                 expect(revoke).toHaveBeenCalledWith("blob:attachment");

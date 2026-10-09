@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import { describeAmountLabel } from "@tests/_common/amountLabelSuite";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
-import { loadSite, hidden, antiForgery, hiddenByStyle, fireNative, stubPlugin } from "@tests/_common/harness";
+import { loadSite, hidden, antiForgery, hiddenByStyle, fireNative, stubPlugin, present, lastOf, successOf } from "@tests/_common/harness";
 
 // wwwroot/user/custom/AccountBook/Expenditure/js/site.js
 /** Main class → sub-classes, as the page publishes it. */
@@ -56,7 +56,7 @@ describe("AccountBook/Expenditure", () => {
     it("Excel export targets /AccountBook/ExportExcelExpenditure", () => {
         const h = loadSite("user", "AccountBook", "Expenditure", fixture());
         h.$("#btnExportExcelExpenditure").trigger("click");
-        expect(h.submittedForms.at(-1)!.action).toContain("/AccountBook/ExportExcelExpenditure");
+        expect(lastOf(h.submittedForms).action).toContain("/AccountBook/ExportExcelExpenditure");
     });
 
     it("shows a toastr error when the create-form amount-label lookup fails", () => {
@@ -114,10 +114,10 @@ describe("AccountBook/Expenditure — date pickers and filling the edit form", (
         vi.useFakeTimers(); // after load: loadSite manages its own fake timers while it evaluates the script
         try {
             for (const id of ["createExpenditureDate", "editExpenditureDate"]) {
-                const init = h.datepickerInits.find((i) => i.el?.id === id)!;
+                const init = present(h.datepickerInits.find((i) => i.el?.id === id));
                 expect(() => {
-                    init.options.beforeShow!();
-                    init.options.onChangeMonthYear!();
+                    present(init.options.beforeShow)();
+                    present(init.options.onChangeMonthYear)();
                     vi.runAllTimers();
                 }).not.toThrow();
             }
@@ -137,7 +137,7 @@ describe("AccountBook/Expenditure — date pickers and filling the edit form", (
         });
         fireNative(h.win.document, "rowclick", { data: { Id: "1" } });
         h.$("#btnEditExpenditureGridRow").trigger("click");
-        h.ajaxCalls.find((a) => String(a.url).includes("IsExpenditureExists"))!.success!({
+        successOf(present(h.ajaxCalls.find((a) => String(a.url).includes("IsExpenditureExists"))))({
             result: true, expenditure: {
                 id: 1, mainClass: "Transfer", subClass: "ToSavings", content: "c", amount: 5, created: "2024-05-04T09:08:07", note: "n",
                 paymentMethod: "Card", myDepositAsset: null, ...record

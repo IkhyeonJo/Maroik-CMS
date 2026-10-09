@@ -70,7 +70,7 @@
     // one, but the grid keys rows by `data-productName`, not by index).
     $(document).off("rowclick.Asset").on("rowclick.Asset", (e: JQuery.TriggeredEvent) => {
         let selectedRow = conform(e.detail, check.object({ data: check.record(check.string) }), "the rowclick detail");
-        let selectedRowProductName = selectedRow.data.ProductName;
+        let selectedRowProductName = selectedRow.data["ProductName"];
         let $clsGridRow = $(".clsGridRow");
 
         $clsGridRow.each(function() {
@@ -225,6 +225,7 @@
                 }
             })
         });
+        return undefined;
     }
 
     /**
@@ -304,6 +305,7 @@
 
         $confirmDeleteAssetDialogModal.modal("toggle");
         $confirmDeleteAssetDialogModal.modal("show");
+        return undefined;
     }
 
     /**
@@ -364,6 +366,7 @@
                 }
             })
         });
+        return undefined;
     }
 
     /**

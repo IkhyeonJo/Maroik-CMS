@@ -135,36 +135,40 @@
      * `writeUploadedFile` for `WriteBoard` to send.
      */
     function WriteUploadFile(obj: HTMLInputElement, errorMessage: string) {
-        if (!obj.files || obj.files.length === 0) {
+        const chosenFile = obj.files?.[0];
+        if (chosenFile === undefined) {
             // The picker was cancelled: the input is empty, so nothing may be sent.
             writeUploadedFile = undefined;
-            return;
+            return undefined;
         }
-        if (obj.files[0].size > maxFileSize) {
+        if (chosenFile.size > maxFileSize) {
             alert(errorMessage);
             byId("writeUploadedFile", HTMLInputElement).value = "";
             writeUploadedFile = undefined;
             return false;
         } else {
-            writeUploadedFile = obj.files[0];
+            writeUploadedFile = chosenFile;
         }
+        return undefined;
     }
 
     /** Same as `WriteUploadFile` for the edit form. */
     function EditUploadFile(obj: HTMLInputElement, errorMessage: string) {
-        if (!obj.files || obj.files.length === 0) {
+        const chosenFile = obj.files?.[0];
+        if (chosenFile === undefined) {
             // The picker was cancelled: the input is empty, so nothing may be sent.
             editUploadedFile = undefined;
-            return;
+            return undefined;
         }
-        if (obj.files[0].size > maxFileSize) {
+        if (chosenFile.size > maxFileSize) {
             alert(errorMessage);
             byId("editUploadedFile", HTMLInputElement).value = "";
             editUploadedFile = undefined;
             return false;
         } else {
-            editUploadedFile = obj.files[0];
+            editUploadedFile = chosenFile;
         }
+        return undefined;
     }
 
     /** Reloads the list filtered by the chosen search type + text. */

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import { describeAmountLabel } from "@tests/_common/amountLabelSuite";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
-import { loadSite, hidden, antiForgery, hiddenByStyle, fireNative, stubPlugin } from "@tests/_common/harness";
+import { loadSite, hidden, antiForgery, hiddenByStyle, fireNative, stubPlugin, present, lastOf, successOf } from "@tests/_common/harness";
 
 // wwwroot/user/custom/Notice/FixedExpenditure/js/site.js
 /** Main class → sub-classes, as the page publishes it. */
@@ -53,7 +53,7 @@ describe("Notice/FixedExpenditure", () => {
     it("Excel export targets /Notice/ExportExcelFixedExpenditure", () => {
         const h = loadSite("user", "Notice", "FixedExpenditure", fixture());
         h.$("#btnExportExcelFixedExpenditure").trigger("click");
-        expect(h.submittedForms.at(-1)!.action).toContain("/Notice/ExportExcelFixedExpenditure");
+        expect(lastOf(h.submittedForms).action).toContain("/Notice/ExportExcelFixedExpenditure");
     });
 
     it("shows a toastr error when the create-form amount-label lookup fails", () => {
@@ -145,7 +145,7 @@ describe("Notice/FixedExpenditure — class and deposit-month changes, and filli
         });
         fireNative(h.win.document, "rowclick", { data: { Id: "1" } });
         h.$("#btnEditFixedExpenditureGridRow").trigger("click");
-        h.ajaxCalls.find((a) => String(a.url).includes("IsFixedExpenditureExists"))!.success!({
+        successOf(present(h.ajaxCalls.find((a) => String(a.url).includes("IsFixedExpenditureExists"))))({
             result: true, fixedExpenditure: {
                 id: 1, mainClass: "Transfer", subClass: "ToSavings", content: "c", amount: 5, depositMonth: 2, depositDay: 28, maturityDate: "2030-01-01",
                 note: "n", paymentMethod: "Card", myDepositAsset: null, unpunctuality: false, ...record

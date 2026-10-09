@@ -407,36 +407,40 @@
      * `createCalendarEventUploadedFile` for the submit to send.
      */
     function CreateCalendarEventUploadedFile(obj: HTMLInputElement, errorMessage: string) {
-        if (!obj.files || obj.files.length === 0) {
+        const chosenFile = obj.files?.[0];
+        if (chosenFile === undefined) {
             // The picker was cancelled: the input is empty, so nothing may be sent.
             createCalendarEventUploadedFile = undefined;
-            return;
+            return undefined;
         }
-        if (obj.files[0].size > maxFileSize) {
+        if (chosenFile.size > maxFileSize) {
             alert(errorMessage);
             byId("createCalendarEventAttachment", HTMLInputElement).value = "";
             createCalendarEventUploadedFile = undefined;
             return false;
         } else {
-            createCalendarEventUploadedFile = obj.files[0];
+            createCalendarEventUploadedFile = chosenFile;
         }
+        return undefined;
     }
 
     /** Same as `CreateCalendarEventUploadedFile` for the edit-event form. */
     function EditCalendarEventUploadedFile(obj: HTMLInputElement, errorMessage: string) {
-        if (!obj.files || obj.files.length === 0) {
+        const chosenFile = obj.files?.[0];
+        if (chosenFile === undefined) {
             // The picker was cancelled: the input is empty, so nothing may be sent.
             editCalendarEventUploadedFile = undefined;
-            return;
+            return undefined;
         }
-        if (obj.files[0].size > maxFileSize) {
+        if (chosenFile.size > maxFileSize) {
             alert(errorMessage);
             byId("editCalendarEventAttachment", HTMLInputElement).value = "";
             editCalendarEventUploadedFile = undefined;
             return false;
         } else {
-            editCalendarEventUploadedFile = obj.files[0];
+            editCalendarEventUploadedFile = chosenFile;
         }
+        return undefined;
     }
 
     $createCalendarEventAttachment.off("change").on("change", function(event) {
@@ -768,7 +772,7 @@
 
                     if (popup.is(":visible") && currentEventId === arg.event.id) {
                         popup.hide();
-                        return;
+                        return undefined;
                     }
 
                     $calendarEventPopupTitle.text(arg.event.title);
@@ -833,12 +837,12 @@
 
                                         $editCalendarEventAllDay.prop("checked", false);
 
-                                        $editCalendarEventAllDayUncheckedStartDate.val(data.calendarEvent.displayStartDate.split(" ")[0]);
-                                        $editCalendarEventAllDayUncheckedStartTime.val(data.calendarEvent.displayStartDate.split(" ")[1].substring(0, 5));
+                                        $editCalendarEventAllDayUncheckedStartDate.val(required(data.calendarEvent.displayStartDate.split(" ")[0], "part 0 of calendarEvent.displayStartDate"));
+                                        $editCalendarEventAllDayUncheckedStartTime.val(required(data.calendarEvent.displayStartDate.split(" ")[1], "part 1 of calendarEvent.displayStartDate").substring(0, 5));
                                         $editCalendarEventAllDayUncheckedStartTimeZone.val(data.calendarEvent.startDateTimeZoneIanaId);
 
-                                        $editCalendarEventAllDayUncheckedEndDate.val(data.calendarEvent.displayEndDate.split(" ")[0]);
-                                        $editCalendarEventAllDayUncheckedEndTime.val(data.calendarEvent.displayEndDate.split(" ")[1].substring(0, 5));
+                                        $editCalendarEventAllDayUncheckedEndDate.val(required(data.calendarEvent.displayEndDate.split(" ")[0], "part 0 of calendarEvent.displayEndDate"));
+                                        $editCalendarEventAllDayUncheckedEndTime.val(required(data.calendarEvent.displayEndDate.split(" ")[1], "part 1 of calendarEvent.displayEndDate").substring(0, 5));
                                         $editCalendarEventAllDayUncheckedEndTimeZone.val(data.calendarEvent.endDateTimeZoneIanaId);
                                     }
 
@@ -873,9 +877,9 @@
 
                                         $aEditCalendarEventAttachedFile.attr("href", "#");
                                         $aEditCalendarEventAttachedFile.attr("data-calendareventid", data.calendarEvent.id);
-                                        $aEditCalendarEventAttachedFile.attr("data-name", `${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension}`);
+                                        $aEditCalendarEventAttachedFile.attr("data-name", `${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension ?? ""}`);
 
-                                        $aEditCalendarEventAttachedFile.text(`${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension}`);
+                                        $aEditCalendarEventAttachedFile.text(`${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension ?? ""}`);
 
                                         $spanEditCalendarEventAttachedFile.text(`${Math.round(data.calendarEvent.calendarEventAttachedFile.size / 1024).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}KB`);
                                     }
@@ -1071,7 +1075,7 @@
 
                     if (popup.is(":visible") && currentEventId === arg.event.id) {
                         popup.hide();
-                        return;
+                        return undefined;
                     }
 
                     $otherCalendarEventPopupTitle.text(arg.event.title);
@@ -1135,12 +1139,12 @@
 
                                         $viewCalendarEventAllDay.prop("checked", false);
 
-                                        $viewCalendarEventAllDayUncheckedStartDate.val(data.calendarEvent.displayStartDate.split(" ")[0]);
-                                        $viewCalendarEventAllDayUncheckedStartTime.val(data.calendarEvent.displayStartDate.split(" ")[1].substring(0, 5));
+                                        $viewCalendarEventAllDayUncheckedStartDate.val(required(data.calendarEvent.displayStartDate.split(" ")[0], "part 0 of calendarEvent.displayStartDate"));
+                                        $viewCalendarEventAllDayUncheckedStartTime.val(required(data.calendarEvent.displayStartDate.split(" ")[1], "part 1 of calendarEvent.displayStartDate").substring(0, 5));
                                         $viewCalendarEventAllDayUncheckedStartTimeZone.val(data.calendarEvent.startDateTimeZoneIanaId);
 
-                                        $viewCalendarEventAllDayUncheckedEndDate.val(data.calendarEvent.displayEndDate.split(" ")[0]);
-                                        $viewCalendarEventAllDayUncheckedEndTime.val(data.calendarEvent.displayEndDate.split(" ")[1].substring(0, 5));
+                                        $viewCalendarEventAllDayUncheckedEndDate.val(required(data.calendarEvent.displayEndDate.split(" ")[0], "part 0 of calendarEvent.displayEndDate"));
+                                        $viewCalendarEventAllDayUncheckedEndTime.val(required(data.calendarEvent.displayEndDate.split(" ")[1], "part 1 of calendarEvent.displayEndDate").substring(0, 5));
                                         $viewCalendarEventAllDayUncheckedEndTimeZone.val(data.calendarEvent.endDateTimeZoneIanaId);
                                     }
 
@@ -1176,9 +1180,9 @@
 
                                         $aViewCalendarEventAttachedFile.attr("href", "#");
                                         $aViewCalendarEventAttachedFile.attr("data-calendareventid", data.calendarEvent.id);
-                                        $aViewCalendarEventAttachedFile.attr("data-name", `${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension}`);
+                                        $aViewCalendarEventAttachedFile.attr("data-name", `${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension ?? ""}`);
 
-                                        $aViewCalendarEventAttachedFile.text(`${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension}`);
+                                        $aViewCalendarEventAttachedFile.text(`${data.calendarEvent.calendarEventAttachedFile.name}${data.calendarEvent.calendarEventAttachedFile.extension ?? ""}`);
 
                                         $spanViewCalendarEventAttachedFile.text(`${Math.round(data.calendarEvent.calendarEventAttachedFile.size / 1024).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}KB`);
                                     }
@@ -1336,6 +1340,7 @@
 
                     return false;
                 }
+                return undefined;
             }
         });
 
@@ -1409,9 +1414,7 @@
                     { Id: Number(attribute($(this).closest("label"), "id").replace("lblCalendar", "")) }
                 ];
 
-                for (let i = 0; i < calendarsArray.length; i++) {
-                    paramValue.Calendars.push(calendarsArray[i]);
-                }
+                paramValue.Calendars.push(...calendarsArray);
             });
 
             $otherCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
@@ -1419,9 +1422,7 @@
                     { Id: Number(attribute($(this).closest("label"), "id").replace("lblOtherCalendar", "")) }
                 ];
 
-                for (let i = 0; i < calendarsArray.length; i++) {
-                    paramValue.Calendars.push(calendarsArray[i]);
-                }
+                paramValue.Calendars.push(...calendarsArray);
             });
 
             $.ajax({
@@ -1881,9 +1882,7 @@
                                 { Id: Number(attribute($(this).closest("label"), "id").replace("lblCalendar", "")) }
                             ];
 
-                            for (let i = 0; i < calendarsArray.length; i++) {
-                                paramValue.Calendars.push(calendarsArray[i]);
-                            }
+                            paramValue.Calendars.push(...calendarsArray);
                         });
 
                         $otherCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
@@ -1891,9 +1890,7 @@
                                 { Id: Number(attribute($(this).closest("label"), "id").replace("lblOtherCalendar", "")) }
                             ];
 
-                            for (let i = 0; i < calendarsArray.length; i++) {
-                                paramValue.Calendars.push(calendarsArray[i]);
-                            }
+                            paramValue.Calendars.push(...calendarsArray);
                         });
 
                         $.ajax({
@@ -2121,9 +2118,7 @@
                                 { Id: Number(attribute($(this).closest("label"), "id").replace("lblCalendar", "")) }
                             ];
 
-                            for (let i = 0; i < calendarsArray.length; i++) {
-                                paramValue.Calendars.push(calendarsArray[i]);
-                            }
+                            paramValue.Calendars.push(...calendarsArray);
                         });
 
                         $otherCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
@@ -2131,9 +2126,7 @@
                                 { Id: Number(attribute($(this).closest("label"), "id").replace("lblOtherCalendar", "")) }
                             ];
 
-                            for (let i = 0; i < calendarsArray.length; i++) {
-                                paramValue.Calendars.push(calendarsArray[i]);
-                            }
+                            paramValue.Calendars.push(...calendarsArray);
                         });
 
                         $.ajax({
@@ -2209,9 +2202,7 @@
                 Calendars: []
             };
 
-            for (let i = 0; i < calendarsArray.length; i++) {
-                paramValue.Calendars.push(calendarsArray[i]);
-            }
+            paramValue.Calendars.push(...calendarsArray);
 
             $.ajax({
                 url: "/Calendar/UpdateCalendar",
@@ -2297,9 +2288,7 @@
                             Calendars: []
                         };
 
-                        for (let i = 0; i < calendarsArray.length; i++) {
-                            paramValue.Calendars.push(calendarsArray[i]);
-                        }
+                        paramValue.Calendars.push(...calendarsArray);
 
                         $.ajax({
                             url: "/Calendar/DeleteCalendar",
@@ -2452,9 +2441,7 @@
             Calendars: []
         };
 
-        for (let i = 0; i < calendarsArray.length; i++) {
-            paramValue.Calendars.push(calendarsArray[i]);
-        }
+        paramValue.Calendars.push(...calendarsArray);
 
         $.ajax({
             url: "/Calendar/CreateCalendar",
@@ -2863,9 +2850,7 @@
                                         { Id: Number(attribute($(this).closest("label"), "id").replace("lblCalendar", "")) }
                                     ];
 
-                                    for (let i = 0; i < calendarsArray.length; i++) {
-                                        paramValue.Calendars.push(calendarsArray[i]);
-                                    }
+                                    paramValue.Calendars.push(...calendarsArray);
                                 });
 
                                 $otherCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
@@ -2873,9 +2858,7 @@
                                         { Id: Number(attribute($(this).closest("label"), "id").replace("lblOtherCalendar", "")) }
                                     ];
 
-                                    for (let i = 0; i < calendarsArray.length; i++) {
-                                        paramValue.Calendars.push(calendarsArray[i]);
-                                    }
+                                    paramValue.Calendars.push(...calendarsArray);
                                 });
 
                                 $.ajax({

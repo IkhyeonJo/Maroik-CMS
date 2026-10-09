@@ -99,8 +99,8 @@
     // comparison is stable for Category rows.
     $(document).off("rowclick.Menu").on("rowclick.Menu", (e: JQuery.TriggeredEvent) => {
         let selectedRow = conform(e.detail, check.object({ data: check.record(check.string) }), "the rowclick detail");
-        let selectedRowId = selectedRow.data.Id;
-        let selectedRowCategoryId = selectedRow.data.CategoryId;
+        let selectedRowId = selectedRow.data["Id"];
+        let selectedRowCategoryId = selectedRow.data["CategoryId"];
 
         if (selectedRowCategoryId === "") {
             selectedRowCategoryId = "-1";
@@ -337,6 +337,7 @@
                 })
             });
         }
+        return undefined;
     }
 
     /** Edit-category modal submit: validate, POST every field as JSON, then close / reload / toast. */
@@ -460,6 +461,7 @@
 
         $confirmDeleteMenuDialogModal.modal("toggle");
         $confirmDeleteMenuDialogModal.modal("show");
+        return undefined;
     }
 
     /**
@@ -579,6 +581,7 @@
                 })
             });
         }
+        return undefined;
     }
 
     /**

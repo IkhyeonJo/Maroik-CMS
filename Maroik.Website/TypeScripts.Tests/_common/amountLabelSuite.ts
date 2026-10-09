@@ -4,6 +4,7 @@
  * on both the creation and the edit form.
  */
 import { describe, it, expect } from "vitest";
+import { successOf } from "@tests/_common/harness";
 import type { SiteHandle } from "@tests/_common/harness";
 
 /** What one page supplies to {@link describeAmountLabel}. */
@@ -30,9 +31,9 @@ export function describeAmountLabel(c: AmountLabelConfig): void {
             h.$(side.trigger).trigger("change");
             const call = h.lastAjax();
             expect(call.url).toContain(c.url);
-            call.success!({ result: true, label: "KRW" });
+            successOf(call)({ result: true, label: "KRW" });
             expect(h.$(side.span).text()).toBe("KRW");
-            call.success!({ result: false, label: "—" });
+            successOf(call)({ result: false, label: "—" });
             expect(h.$(side.span).text()).toBe("—");
         });
 

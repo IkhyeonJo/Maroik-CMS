@@ -76,8 +76,7 @@
     // Far-future stand-in for "no maturity date", published by the server (FixedSchedulePolicy)
     // as a yyyy-MM-dd string so the client and server never drift on the value.
     const noMaturityIso = fieldValue($("#noMaturityDate"));
-    const [nmYear, nmMonth, nmDay] = noMaturityIso.split("-").map(Number);
-    const NO_MATURITY_DATE = new Date(nmYear, nmMonth - 1, nmDay);
+    const NO_MATURITY_DATE = new Date(`${noMaturityIso}T00:00:00`); // local midnight of that day
 
     // Enables/shows only the options in allowedValues (disabling+hiding the rest) and selects
     // valueToSelect when it is allowed, otherwise the first allowed option.
@@ -96,7 +95,7 @@
 
     // The valid deposit-day option values ("1".."maxDay") for the given deposit month.
     function DepositDayValues(monthValue: string) {
-        const maxDay = maxDepositDayByMonth[String(monthValue)];
+        const maxDay = maxDepositDayByMonth[String(monthValue)] ?? 0; // a month the policy does not list has no days
         const values = [];
         for (let day = 1; day <= maxDay; day++) {
             values.push(String(day));
@@ -305,7 +304,7 @@
     // MvcGrid `rowclick`: move the highlight to the row whose `data-id` matches.
     $(document).off("rowclick.FixedIncome").on("rowclick.FixedIncome", (e: JQuery.TriggeredEvent) => {
         let selectedRow = conform(e.detail, check.object({ data: check.record(check.string) }), "the rowclick detail");
-        let selectedRowId = selectedRow.data.Id;
+        let selectedRowId = selectedRow.data["Id"];
         let $clsGridRow = $(".clsGridRow");
 
         $clsGridRow.each(function() {
@@ -482,6 +481,7 @@
                 }
             })
         });
+        return undefined;
     }
 
     /** Edit-fixed-income modal submit: same shape as `CreateFixedIncome` plus `ID` and `Unpunctuality`. */
@@ -564,6 +564,7 @@
 
         $confirmDeleteFixedIncomeDialogModal.modal("toggle");
         $confirmDeleteFixedIncomeDialogModal.modal("show");
+        return undefined;
     }
 
     /** Confirmed delete: re-check selection, confirm the record exists, then POST `DeleteFixedIncome`. */
@@ -620,6 +621,7 @@
                 }
             })
         });
+        return undefined;
     }
 
     /**

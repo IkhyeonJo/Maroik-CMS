@@ -7,7 +7,7 @@
  * test is the compiled one at the matching wwwroot path.
  */
 import { describe, it, expect, vi } from "vitest";
-import { loadSite, hidden, antiForgery, type SiteHandle, stubPlugin } from "@tests/_common/harness";
+import { loadSite, hidden, antiForgery, type SiteHandle, stubPlugin, present, instanceOfType } from "@tests/_common/harness";
 
 /** What one board page supplies to `describeBoardScript`. */
 export interface BoardScriptConfig {
@@ -118,7 +118,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
 
         it("the confirm-delete button opens the modal (static, no Esc) and shows it", () => {
             const h = load();
-            const modal = vi.fn(function(this: JQuery) {
+            const modal = vi.fn(function(this: JQuery, _command?: unknown) {
                 return this;
             });
             stubPlugin(h, "modal", modal);
@@ -131,7 +131,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
 
         it("the write/edit submit buttons show the loading overlay only when the form is valid", () => {
             const h = load();
-            const overlay = () => (h.$("#loading")[0] as HTMLElement).style.display;
+            const overlay = () => (instanceOfType(h.$("#loading")[0], HTMLElement)).style.display;
             for (const button of [`#btn${i}ShowWriteBoardLoading`, `#btn${i}SubmitModify`]) {
                 stubPlugin(h, "valid", () => false);
                 h.$("#loading").show();
@@ -151,7 +151,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
 
         it.each(["write", "edit"])("the %s attachment over the size limit is rejected with the localized message and cleared", (which) => {
             const h = load();
-            const input = h.$(`#${which}UploadedFile`)[0] as HTMLInputElement;
+            const input = instanceOfType(h.$(`#${which}UploadedFile`)[0], HTMLInputElement);
             selectFile(h, `#${which}UploadedFile`, 5000);
             h.$(input).trigger("change");
             expect(h.win.alert).toHaveBeenCalledWith("too big");
@@ -162,8 +162,8 @@ function describeBoardScript(c: BoardScriptConfig): void {
             const file = selectFile(h, "#writeUploadedFile", 10, "ok.zip");
             h.$("#writeUploadedFile").trigger("change");
             h.$("#formWriteBoard").trigger("submit");
-            expect((h.lastAjax().data as FormData).get("UploadedFile")).toBeInstanceOf(h.win.File);
-            expect(((h.lastAjax().data as FormData).get("UploadedFile") as File).name).toBe(file.name);
+            expect((instanceOfType(h.lastAjax().data, FormData)).get("UploadedFile")).toBeInstanceOf(h.win.File);
+            expect((instanceOfType((instanceOfType(h.lastAjax().data, FormData)).get("UploadedFile"), File)).name).toBe(file.name);
         });
 
         it("an attachment within the limit is sent with the edit form", () => {
@@ -171,13 +171,13 @@ function describeBoardScript(c: BoardScriptConfig): void {
             selectFile(h, "#editUploadedFile", 10, "edit.zip");
             h.$("#editUploadedFile").trigger("change");
             h.$("#formEditBoard").trigger("submit");
-            expect(((h.lastAjax().data as FormData).get("UploadedFile") as File).name).toBe("edit.zip");
+            expect((instanceOfType((instanceOfType(h.lastAjax().data, FormData)).get("UploadedFile"), File)).name).toBe("edit.zip");
         });
 
         /** Submits the `which` form and returns the "UploadedFile" it sent. */
         const submittedFile = (h: SiteHandle, which: string) => {
             h.$(which === "write" ? "#formWriteBoard" : "#formEditBoard").trigger("submit");
-            return (h.lastAjax().data as FormData).get("UploadedFile");
+            return (instanceOfType(h.lastAjax().data, FormData)).get("UploadedFile");
         };
 
         it.each(["write", "edit"])("%s: a file rejected for its size replaces the one chosen before — nothing is sent", (which) => {
@@ -215,7 +215,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
             const submit = h.$.Event("submit");
             h.$("#formWriteBoard").trigger(submit);
             const call = h.lastAjax();
-            const data = call.data as FormData;
+            const data = instanceOfType(call.data, FormData);
             expect(call.url).toBe(`${c.actionPrefix}/${c.writeAction}`);
             expect(data.get("Title")).toBe("hello");
             expect(data.get("Locked")).toBe("true");
@@ -228,7 +228,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
                 const h = load();
                 h.$("#writeBoardNoticed").prop("checked", true);
                 h.$("#formWriteBoard").trigger("submit");
-                expect((h.lastAjax().data as FormData).get("Noticed")).toBe("true");
+                expect((instanceOfType(h.lastAjax().data, FormData)).get("Noticed")).toBe("true");
             });
         }
 
@@ -254,7 +254,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
             h.$("#formWriteBoard").trigger("submit");
             h.respond(0, { result: false, error: "nope" });
             expect(h.toastr.error).toHaveBeenCalledWith("nope");
-            expect((h.$("#loading")[0] as HTMLElement).style.display).toBe("none");
+            expect((instanceOfType(h.$("#loading")[0], HTMLElement)).style.display).toBe("none");
             expect(h.navigations).toHaveLength(0);
         });
 
@@ -272,7 +272,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
             h.$("#editBoardLocked").prop("checked", true);
             h.$("#formEditBoard").trigger("submit");
             const call = h.lastAjax();
-            const data = call.data as FormData;
+            const data = instanceOfType(call.data, FormData);
             expect(call.url).toBe(`${c.actionPrefix}/${c.editAction}`);
             expect(data.get("Id")).toBe("7");
             expect(data.get("Title")).toBe("edited");
@@ -310,7 +310,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
 
         it("delete: a successful delete closes the modal, alerts and returns to the list", () => {
             const h = load();
-            const modal = vi.fn(function(this: JQuery) {
+            const modal = vi.fn(function(this: JQuery, _command?: unknown) {
                 return this;
             });
             stubPlugin(h, "modal", modal);
@@ -390,21 +390,21 @@ function describeBoardScript(c: BoardScriptConfig): void {
             ["edit", 1],
         ])(`the %s editor uploads each dropped image and inserts it as a <img alt=""> whose alt is the stored path`, (which, editorIndex) => {
             const h = load();
-            const options = h.summernoteInits[editorIndex].options;
+            const options = present(h.summernoteInits[editorIndex]).options;
             const png = new h.win.File([new Uint8Array(4)], "p.png", { type: "image/png" });
             const jpg = new h.win.File([new Uint8Array(4)], "q.jpg", { type: "image/jpeg" });
 
-            options.callbacks.onImageUpload([png, jpg]);
+            present(present(options.callbacks).onImageUpload)([png, jpg]);
 
             expect(h.ajaxCalls).toHaveLength(2);
-            expect(h.ajaxCalls[0].url).toBe(`${c.actionPrefix}/UploadImageFile`);
-            expect((h.ajaxCalls[0].data as FormData).get("summernoteImageFile")).toBeInstanceOf(h.win.File);
+            expect(present(h.ajaxCalls[0]).url).toBe(`${c.actionPrefix}/UploadImageFile`);
+            expect((instanceOfType(present(h.ajaxCalls[0]).data, FormData)).get("summernoteImageFile")).toBeInstanceOf(h.win.File);
 
             h.respond(1, { result: true, file: { fileContents: btoa("abc"), contentType: "image/png" }, filePath: "enc-path" });
 
             const insert = h.summernoteCalls.find((x) => x.args[0] === "insertNode");
             expect(insert?.el?.id).toBe(`${which}BoardContent`);
-            const img = insert!.args[1] as HTMLImageElement;
+            const img = instanceOfType(present(insert).args[1], HTMLImageElement);
             expect(img.getAttribute("alt")).toBe("enc-path");
             expect(img.src).toContain("blob:");
             expect(img.style.maxWidth).toBe("170px");
@@ -418,18 +418,18 @@ function describeBoardScript(c: BoardScriptConfig): void {
                 const h = load();
                 h.win.URL.createObjectURL = () => "blob:uploaded";
                 const revoke = (h.win.URL.revokeObjectURL = vi.fn());
-                h.summernoteInits[editorIndex].options.callbacks.onImageUpload([new h.win.File([new Uint8Array(4)], "p.png", { type: "image/png" })]);
+                present(present(present(h.summernoteInits[editorIndex]).options.callbacks).onImageUpload)([new h.win.File([new Uint8Array(4)], "p.png", { type: "image/png" })]);
                 h.respond(0, { result: true, file: { fileContents: btoa("abc"), contentType: "image/png" }, filePath: "enc-path" });
-                const img = h.summernoteCalls.find((x) => x.args[0] === "insertNode")!.args[1] as HTMLImageElement;
+                const img = instanceOfType(present(h.summernoteCalls.find((x) => x.args[0] === "insertNode")).args[1], HTMLImageElement);
                 expect(revoke).not.toHaveBeenCalled();
-                (img[event] as () => void)();
+                img.dispatchEvent(new Event(event.slice(2))); // fires the onload / onerror handler
                 expect(revoke).toHaveBeenCalledWith("blob:uploaded");
             }
         });
 
         it.each([["write", 0], ["edit", 1]])("the %s editor alerts the server's message when an image is refused", (_which, editorIndex) => {
             const h = load();
-            h.summernoteInits[editorIndex].options.callbacks.onImageUpload([new h.win.File([new Uint8Array(1)], "p.png")]);
+            present(present(present(h.summernoteInits[editorIndex]).options.callbacks).onImageUpload)([new h.win.File([new Uint8Array(1)], "p.png")]);
             h.respond(0, { result: false, errorMessage: "png only" });
             expect(h.win.alert).toHaveBeenCalledWith("png only");
             expect(h.summernoteCalls.find((x) => x.args[0] === "insertNode")).toBeUndefined();
@@ -442,12 +442,12 @@ function describeBoardScript(c: BoardScriptConfig): void {
                 boardFixture(c).replace(
                     "<div id=\"detailBoardContent\" style=\"display:none\"></div>",
                     `<div id="detailBoardContent" style="display:none"><p>text</p><img data-file="${btoa("abc")}" data-contenttype="image/png" alt=""><img data-file="${btoa("x")}" alt=""></div>`));
-            const html = (h.$("#detailBoardContent")[0] as HTMLElement).innerHTML;
+            const html = (instanceOfType(h.$("#detailBoardContent")[0], HTMLElement)).innerHTML;
             expect(html).toContain("blob:");
             expect(html).toContain("<p>text</p>");
             // the image without a content type is left as-is (nothing to build a Blob from)
             expect(html).toContain("data-file");
-            expect((h.$("#detailBoardContent")[0] as HTMLElement).style.display).not.toBe("none");
+            expect((instanceOfType(h.$("#detailBoardContent")[0], HTMLElement)).style.display).not.toBe("none");
         });
 
         it.each(["onload", "onerror"] as const)("detail view: a rebuilt image's %s releases the object URL it was given", (event) => {
@@ -456,10 +456,10 @@ function describeBoardScript(c: BoardScriptConfig): void {
                     "<div id=\"detailBoardContent\" style=\"display:none\"></div>",
                     `<div id="detailBoardContent" style="display:none"><img data-file="${btoa("abc")}" data-contenttype="image/png" alt=""></div>`));
             const revoke = (h.win.URL.revokeObjectURL = vi.fn());
-            const img = h.$("#detailBoardContent img")[0] as HTMLImageElement; // the image as it is in the live page
+            const img = instanceOfType(h.$("#detailBoardContent img")[0], HTMLImageElement); // the image as it is in the live page
 
             expect(revoke).not.toHaveBeenCalled();
-            (img[event] as () => void)();
+            img.dispatchEvent(new Event(event.slice(2))); // fires the onload / onerror handler
 
             expect(revoke).toHaveBeenCalledTimes(1);
             expect(revoke).toHaveBeenCalledWith(img.src);
@@ -474,7 +474,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
             const set = h.summernoteCalls.find((x) => x.args[0] === "code");
             expect(String(set?.args[1])).toContain("blob:");
             expect(String(set?.args[1])).not.toContain("data-file");
-            expect((h.$("#divEditBoardContent")[0] as HTMLElement).style.display).not.toBe("none");
+            expect((instanceOfType(h.$("#divEditBoardContent")[0], HTMLElement)).style.display).not.toBe("none");
         });
 
         it.each(["onload", "onerror"] as const)("edit view: a rebuilt image's %s releases the object URL it was given", (event) => {
@@ -484,9 +484,9 @@ function describeBoardScript(c: BoardScriptConfig): void {
                     .replace("<div id=\"divEditBoardContent\"></div>", "<div id=\"divEditBoardContent\" style=\"display:none\"></div>"),
                 { summernoteCode: `<img data-file="${btoa("abc")}" data-contenttype="image/png" alt="">` });
             const revoke = (h.win.URL.revokeObjectURL = vi.fn());
-            const img = h.$(".note-editor img")[0] as HTMLImageElement; // the editor's own copy of the rebuilt image
+            const img = instanceOfType(h.$(".note-editor img")[0], HTMLImageElement); // the editor's own copy of the rebuilt image
 
-            (img[event] as () => void)();
+            img.dispatchEvent(new Event(event.slice(2))); // fires the onload / onerror handler
 
             expect(revoke).toHaveBeenCalledWith("blob:live");
         });
@@ -539,8 +539,8 @@ function describeBoardScript(c: BoardScriptConfig): void {
                 try {
                     h.respond(0, new h.win.Blob(["zip-bytes"], { type: "application/x-zip-compressed" }));
                     expect(click).toHaveBeenCalledTimes(1);
-                    expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("report.zip");
-                    expect((click.mock.contexts[0] as HTMLAnchorElement).href).toBe("blob:attachment");
+                    expect((instanceOfType(click.mock.contexts[0], HTMLAnchorElement)).download).toBe("report.zip");
+                    expect((instanceOfType(click.mock.contexts[0], HTMLAnchorElement)).href).toBe("blob:attachment");
                     expect(revoke).not.toHaveBeenCalled();
                     vi.advanceTimersByTime(100);
                     expect(revoke).toHaveBeenCalledWith("blob:attachment");

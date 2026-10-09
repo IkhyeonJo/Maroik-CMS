@@ -16,7 +16,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, parseJson, conform, instanceOf, fieldValue, selectValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, parseJson, conform, required, instanceOf, fieldValue, selectValue, optionalFieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const amountLabelReply = check.object({ result: check.boolean, label: check.string });
@@ -223,7 +223,7 @@
     // MvcGrid `rowclick`: move the highlight to the row whose `data-id` matches.
     $(document).off("rowclick.Expenditure").on("rowclick.Expenditure", (e: JQuery.TriggeredEvent) => {
         let selectedRow = conform(e.detail, check.object({ data: check.record(check.string) }), "the rowclick detail");
-        let selectedRowId = selectedRow.data.Id;
+        let selectedRowId = selectedRow.data["Id"];
 
         let $clsGridRow = $(".clsGridRow");
 
@@ -388,10 +388,10 @@
                     $editExpenditureAmount.val(data.expenditure.amount);
                     // Split the `created` ISO string into the date field and the
                     // hour / minute / second selects.
-                    $editExpenditureDate.val(data.expenditure.created.split("T")[0]);
-                    $editExpenditureHour.val(parseInt(data.expenditure.created.split("T")[1].substring(0, 2))).trigger("change");
-                    $editExpenditureMinute.val(parseInt(data.expenditure.created.split("T")[1].substring(3, 5))).trigger("change");
-                    $editExpenditureSecond.val(parseInt(data.expenditure.created.split("T")[1].substring(6, 8))).trigger("change");
+                    $editExpenditureDate.val(required(data.expenditure.created.split("T")[0], "part 0 of expenditure.created"));
+                    $editExpenditureHour.val(parseInt(required(data.expenditure.created.split("T")[1], "part 1 of expenditure.created").substring(0, 2))).trigger("change");
+                    $editExpenditureMinute.val(parseInt(required(data.expenditure.created.split("T")[1], "part 1 of expenditure.created").substring(3, 5))).trigger("change");
+                    $editExpenditureSecond.val(parseInt(required(data.expenditure.created.split("T")[1], "part 1 of expenditure.created").substring(6, 8))).trigger("change");
                     $editExpenditurePaymentMethod.val(data.expenditure.paymentMethod).trigger("change");
                     $editExpenditureNote.val(data.expenditure.note);
 
@@ -413,6 +413,7 @@
                 }
             })
         });
+        return undefined;
     }
 
     /** Edit form main-class change: re-filter the subclass options and re-evaluate the deposit-asset block. */
@@ -510,6 +511,7 @@
 
         $confirmDeleteExpenditureDialogModal.modal("toggle");
         $confirmDeleteExpenditureDialogModal.modal("show");
+        return undefined;
     }
 
     /** Confirmed delete: re-check selection, confirm the record exists, then POST `DeleteExpenditure`. */
@@ -566,6 +568,7 @@
                 }
             })
         });
+        return undefined;
     }
 
     /**
