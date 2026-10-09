@@ -119,6 +119,24 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(input.style.textDecoration).toBe("none");
         });
 
+        it.each([
+            ["create", true, "Days", "L_ErrorRangeDay"], ["create", false, "Minutes", "L_ErrorRangeMinute"],
+            ["edit", true, "Weeks", "L_ErrorRangeWeek"], ["edit", false, "Hours", "L_ErrorRangeHour"],
+        ] as const)("%s (all-day=%s) %s reminder below the server-published minimum is flagged as: %s", (kind, checked, type, message) => {
+            const h = build({ body: (html) => html.replace(hidden("minLeadTimeBeforeEvent", "0"), hidden("minLeadTimeBeforeEvent", "2")) + row(kind, checked, type, "1") });
+            const suffix = checked ? "AllDayChecked" : "AllDayUnchecked";
+            const r = h.$(`.div${kind === "create" ? "Create" : "Edit"}EventNotification${suffix}Row`).last();
+            r.find(`.${kind}CalendarEventSelNotificationNumber${suffix}`).trigger("input");
+            expect(r.find(".error-message").text()).toBe(message); // 1 < the published minimum 2
+        });
+
+        it.each([
+            ["create", true, "Days", "L_ErrorRangeDay"], ["edit", false, "Minutes", "L_ErrorRangeMinute"],
+        ] as const)("%s (all-day=%s) %s reminder -1 is below the fixture's minimum 0 and is flagged as: %s", (kind, checked, type, message) => {
+            const { message: el } = run(kind, checked, type, "-1");
+            expect(el.text()).toBe(message);
+        });
+
         it("changing the unit re-validates the same number against the new unit's limit", () => {
             const h = build({ body: (html) => html + row("create", true, "Days", "10") });
             const r = h.$(".divCreateEventNotificationAllDayCheckedRow").last();
@@ -326,6 +344,22 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(h.toastr.success).toHaveBeenCalledWith("made");
         });
 
+        // The server orders the list with the request culture (CalendarService: OrderBy(Name) under the
+        // request's CurrentCulture) and publishes that culture as #calendarNameCulture; the client re-sorts with it.
+        it.each([
+            ["en-US", "Éclair", ["lblCalendar2", "lblCalendar7", "lblCalendar3", "lblCalendar1"]], // Alpha, Éclair, Mid, Zeta
+            ["en-US", "Öl", ["lblCalendar2", "lblCalendar3", "lblCalendar7", "lblCalendar1"]], // Alpha, Mid, Öl, Zeta
+            ["sv-SE", "Öl", ["lblCalendar2", "lblCalendar3", "lblCalendar1", "lblCalendar7"]], // Alpha, Mid, Zeta, Öl (Ö sorts after Z in Swedish)
+        ] as const)("a created calendar is placed by the published culture's collation (%s, %s)", (culture, name, expected) => {
+            const h = build({ body: (html) => html.replace(hidden("calendarNameCulture", "en-US"), hidden("calendarNameCulture", culture)) });
+            spyModal(h);
+            const created = { id: 7, name };
+            h.$("#createCalendarName").val(created.name);
+            h.$("#formCreateCalendar").trigger("submit");
+            successOf(h.lastAjax())({ result: true, message: "made", calendar: { ...created, htmlColorCode: "#abcdef" } });
+            expect(labels(h)).toEqual(expected);
+        });
+
         it("a hostile calendar name is HTML-escaped, never interpreted", () => {
             const h = build();
             spyModal(h);
@@ -408,6 +442,24 @@ export function describeCalendarCommon(c: CalendarCommon): void {
                 expect(setProp).toHaveBeenCalledWith("borderColor", "#222222");
                 expect(h.$("#myCalendars > label").map((_, l) => l.id).get()).toEqual(["lblCalendar1", "lblCalendar2", "lblCalendar3"]); // Aaa, Alpha, Mid
                 expect(h.toastr.success).toHaveBeenCalledWith("saved");
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
+        it("a renamed calendar is re-placed by the published culture's collation", () => {
+            const h = build();
+            vi.useFakeTimers(); // after build: loadSite manages its own fake timers while it evaluates the script
+            try {
+                spyModal(h);
+                firstCalendar(h).getEvents = () => [];
+                h.$("#editCalendarId").val("1");
+                h.$("#editCalendarName").val("Éclair");
+                h.$("#formEditCalendar").trigger("submit");
+                successOf(h.lastAjax())({ result: true, message: "saved", calendar: { id: 1, name: "Éclair", htmlColorCode: "#222222" } });
+                vi.runAllTimers();
+
+                expect(labels(h)).toEqual(["lblCalendar2", "lblCalendar1", "lblCalendar3"]); // Alpha, Éclair, Mid (en-US)
             } finally {
                 vi.useRealTimers();
             }

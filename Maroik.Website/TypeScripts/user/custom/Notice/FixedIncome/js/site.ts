@@ -103,10 +103,9 @@
         return values;
     }
 
-    // Localized month / day names for the datepicker plus the two extra button captions and the
-    // maturity-date error message (asserted `Record<string, string>`: each holds a string, which
-    // `.val()` types as a wider union); `PrevText` / `NextText` are read PascalCase to match the
-    // keys.
+    // Localized month / day names for the datepicker plus the two extra button captions (asserted
+    // `Record<string, string>`: each holds a string, which `.val()` types as a wider union);
+    // `PrevText` / `NextText` are read PascalCase to match the keys.
     const localizer = {
         PrevText: fieldValue($("#localizerPrevText")),
         NextText: fieldValue($("#localizerNextText")),
@@ -157,7 +156,6 @@
         YearSuffix: fieldValue($("#localizerYearSuffix")),
         NoMaturityDate: fieldValue($("#localizerNoMaturityDate")),
         Today: fieldValue($("#localizerToday")),
-        MaturityDateError: fieldValue($("#localizerMaturityDateError")),
     };
 
     // Apply the localized names to every datepicker on the page.

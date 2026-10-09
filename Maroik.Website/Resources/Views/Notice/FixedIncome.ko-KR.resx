@@ -375,7 +375,4 @@
   <data name="Today" xml:space="preserve">
     <value>오늘</value>
   </data>
-  <data name="The maturity date cannot be earlier than the current date." xml:space="preserve">
-    <value>만기일이 현재 날짜보다 앞설 수 없습니다.</value>
-  </data>
 </root>

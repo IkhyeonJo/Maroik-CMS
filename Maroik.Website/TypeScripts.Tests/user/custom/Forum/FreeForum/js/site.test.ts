@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
+import { describeRequiredServerConstants } from "@tests/_common/missingConfigSuite";
 import describeBoardScript from "@tests/_common/boardSuite";
 import { loadSite, hidden, antiForgery, lastOf, instanceOfType } from "@tests/_common/harness";
 
@@ -68,4 +68,4 @@ describeBoardScript({
     downloadAction: "/Forum/DownloadFreeBoardAttachedFile",
 });
 
-describeMissingServerConstants("user", "Forum", "FreeForum", () => fixture);
+describeRequiredServerConstants("user", "Forum", "FreeForum", () => fixture, ["maxAttachedFileSizeBytes"]);

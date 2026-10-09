@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
+import { describeMissingServerConstants, describeRequiredServerConstants } from "@tests/_common/missingConfigSuite";
 import { loadSite, antiForgery, hidden, eventProps, present, lastOf, successOf, completeOf, errorOf, instanceOfType, calendarSelect, calendarEventClick, firstCalendar } from "@tests/_common/harness";
 import {
     describeCalendarCommon,
@@ -28,12 +28,14 @@ function fixture(): string {
     return (
         antiForgery +
         hidden("maxAttachedFileSizeBytes", "1048576") +
+        hidden("minLeadTimeBeforeEvent", "0") +
         hidden("maxMinutesBeforeEvent", "40320") +
         hidden("maxHoursBeforeEvent", "672") +
         hidden("maxDaysBeforeEvent", "28") +
         hidden("maxWeeksBeforeEvent", "4") +
         hidden("reminderTimeIntervals", "[&quot;09:00&quot;,&quot;18:30&quot;]") +
         hidden("defaultReminderTimeOfDay", "09:00") +
+        hidden("calendarNameCulture", "en-US") +
         hidden("loggedInAccountTimeZoneIanaId", "Asia/Seoul") +
         hidden("calendarEventOutputViewModels", "[]") +
         hidden("otherCalendarEventOutputViewModels", "[]") +
@@ -853,3 +855,4 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
 });
 
 describeMissingServerConstants("user", "Calendar", "UserIndex", () => fixture());
+describeRequiredServerConstants("user", "Calendar", "UserIndex", () => fixture(), ["maxAttachedFileSizeBytes", "defaultReminderTimeOfDay"]);

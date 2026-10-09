@@ -10,6 +10,9 @@ namespace Maroik.Core.Domain.Calendar;
 /// </summary>
 public static class CalendarReminderPolicy
 {
+    /// <summary>Minimum lead time before the event, in any unit (a reminder at the event's start).</summary>
+    public const long MinLeadTimeBeforeEvent = 0;
+
     /// <summary>Maximum minutes before the event (28 days).</summary>
     public const long MaxMinutesBeforeEvent = 40_320;
 
@@ -33,17 +36,17 @@ public static class CalendarReminderPolicy
 
     /// <summary>
     /// Returns <see langword="true"/> when the single non-null lead-time value falls within
-    /// <c>0</c>..its per-unit maximum (inclusive). Returns <see langword="true"/> when no
+    /// <see cref="MinLeadTimeBeforeEvent"/>..its per-unit maximum (inclusive). Returns <see langword="true"/> when no
     /// lead-time field is set — the "exactly one must be set" rule is enforced separately by
     /// <see cref="CalendarEventReminder.Create"/>.
     /// </summary>
     public static bool IsLeadTimeWithinRange(
         long? minutesBefore, long? hoursBefore, long? daysBefore, long? weeksBefore)
     {
-        if (minutesBefore is { } minutes) return minutes is >= 0 and <= MaxMinutesBeforeEvent;
-        if (hoursBefore is { } hours) return hours is >= 0 and <= MaxHoursBeforeEvent;
-        if (daysBefore is { } days) return days is >= 0 and <= MaxDaysBeforeEvent;
-        if (weeksBefore is { } weeks) return weeks is >= 0 and <= MaxWeeksBeforeEvent;
+        if (minutesBefore is { } minutes) return minutes is >= MinLeadTimeBeforeEvent and <= MaxMinutesBeforeEvent;
+        if (hoursBefore is { } hours) return hours is >= MinLeadTimeBeforeEvent and <= MaxHoursBeforeEvent;
+        if (daysBefore is { } days) return days is >= MinLeadTimeBeforeEvent and <= MaxDaysBeforeEvent;
+        if (weeksBefore is { } weeks) return weeks is >= MinLeadTimeBeforeEvent and <= MaxWeeksBeforeEvent;
         return true;
     }
 }
