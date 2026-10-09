@@ -68,7 +68,7 @@ describe("Dashboard/UserIndex — donut charts", () => {
     it("each of the ten charts is a doughnut fed from its hidden inputs (one value per label)", () => {
         const h = loadSite("user", "Dashboard", "UserIndex", fullFixture());
         expect(h.charts).toHaveLength(10);
-        for (const { cfg } of h.charts as { cfg: any }[]) {
+        for (const { cfg } of h.charts) {
             expect(cfg.type).toBe("doughnut");
             const [dataset] = cfg.data.datasets;
             expect(dataset.data.length).toBe(cfg.data.labels.length);
@@ -80,7 +80,7 @@ describe("Dashboard/UserIndex — donut charts", () => {
     it("every tooltip reads 'Label: 1,500 (12.50%)' for each slice, using the server-supplied percentage", () => {
         const h = loadSite("user", "Dashboard", "UserIndex", fullFixture());
         let checked = 0;
-        for (const { cfg } of h.charts as { cfg: any }[]) {
+        for (const { cfg } of h.charts) {
             const label = cfg.options.tooltips.callbacks.label;
             cfg.data.labels.forEach((name: string, index: number) => {
                 expect(label({ index }, cfg.data)).toBe(`${name}: ${(1500).toLocaleString()} (12.50%)`);

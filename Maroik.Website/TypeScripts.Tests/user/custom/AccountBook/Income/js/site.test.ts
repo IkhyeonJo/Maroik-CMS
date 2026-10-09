@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import { describeAmountLabel } from "@tests/_common/amountLabelSuite";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
-import { loadSite, hidden, antiForgery } from "@tests/_common/harness";
+import { loadSite, hidden, antiForgery, stubPlugin } from "@tests/_common/harness";
 
 // wwwroot/user/custom/AccountBook/Income/js/site.js
 //
@@ -65,7 +65,7 @@ describe("AccountBook/Income", () => {
 
     it("does not call $.ajax when the create form is invalid", () => {
         const h = loadSite("user", "AccountBook", "Income", fixture());
-        (h.$.fn as any).valid = () => false;
+        stubPlugin(h, "valid", () => false);
 
         h.$("#formCreateIncome").trigger("submit");
 
@@ -145,8 +145,8 @@ describe("AccountBook/Income — date pickers", () => {
                 const init = h.datepickerInits.find((i) => i.el?.id === id)!;
                 expect(init, `a datepicker is attached to #${id}`).toBeDefined();
                 expect(() => {
-                    init.options.beforeShow();
-                    init.options.onChangeMonthYear();
+                    init.options.beforeShow!();
+                    init.options.onChangeMonthYear!();
                     vi.runAllTimers();
                 }).not.toThrow();
             }

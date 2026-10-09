@@ -59,8 +59,8 @@
 
     // MvcGrid `rowclick` (native CustomEvent): move the selection highlight to
     // the row whose `data-email` matches the clicked record.
-    $(document).off("rowclick.Account").on("rowclick.Account", (e: any) => {
-        let selectedRow = e.detail;
+    $(document).off("rowclick.Account").on("rowclick.Account", (e: JQuery.TriggeredEvent) => {
+        let selectedRow = e.detail as unknown as MvcGridRowClickDetail;
         let selectedRowEmail = selectedRow.data.Email;
 
         let $clsGridRow = $(".clsGridRow");
@@ -180,7 +180,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {
@@ -309,7 +308,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {

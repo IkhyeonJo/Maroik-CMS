@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { loadSite, antiForgery, fireNative } from "@tests/_common/harness";
+import { loadSite, antiForgery, fireNative, stubPlugin } from "@tests/_common/harness";
 
 // wwwroot/admin/custom/Management/Menu/js/site.js
 function fixture(): string {
@@ -66,10 +66,10 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
     const load = () => loadSite("admin", "Management", "Menu", menuFixture());
     /** Replaces `$.fn.modal` with a chainable spy and returns it. */
     const spyModal = (h: ReturnType<typeof load>) => {
-        const modal = vi.fn(function(this: any) {
+        const modal = vi.fn(function(this: JQuery) {
             return this;
         });
-        (h.$.fn as any).modal = modal;
+        stubPlugin(h, "modal", modal);
         return modal;
     };
     /** Whether the category row and the sub-category row are highlighted, in that order. */
@@ -120,7 +120,7 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
 
     it("an invalid form sends nothing", () => {
         const h = load();
-        (h.$.fn as any).valid = () => false;
+        stubPlugin(h, "valid", () => false);
         for (const f of ["formCreateCategory", "formCreateSubCategory", "formEditCategory", "formEditSubCategory"])
             h.$(`#${f}`).trigger("submit");
         expect(h.ajaxCalls).toHaveLength(0);

@@ -35,7 +35,7 @@ describe("Forum/FreeForum (anonymous)", () => {
 
     it("blocks Enter inside the comment form", () => {
         const h = loadSite("anonymous", "Forum", "FreeForum", fixture());
-        const ev: any = h.$.Event("keydown", { key: "Enter" });
+        const ev: JQuery.Event & { result?: unknown } = h.$.Event("keydown", { key: "Enter" });
         h.$("#formWriteFreeComment").trigger(ev);
         // jQuery stashes the last handler's return value on event.result
         expect(ev.result).toBe(false);
@@ -110,7 +110,7 @@ describe("Forum/FreeForum (anonymous) — navigation, images and attachments", (
         const h = load(fixture().replace(
             "<div id=\"detailBoardContent\"></div>",
             `<div id="detailBoardContent" style="display:none"><img data-file="${btoa("abc")}" data-contenttype="image/png" alt=""></div>`));
-        const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+        const revoke = (h.win.URL.revokeObjectURL = vi.fn());
         const img = h.$("#detailBoardContent img")[0] as HTMLImageElement;
 
         (img[event] as () => void)();
@@ -129,7 +129,7 @@ describe("Forum/FreeForum (anonymous) — navigation, images and attachments", (
         h.$("#aDetailBoardAttachedFile").trigger(ev);
 
         expect(ev.isDefaultPrevented()).toBe(true);
-        const call = h.lastAjax() as any;
+        const call = h.lastAjax();
         expect(call.url).toBe("/Forum/DownloadFreeBoardAttachedFile");
         expect(call.type).toBe("POST");
         expect(call.data).toEqual({ boardId: "42" });
@@ -142,8 +142,8 @@ describe("Forum/FreeForum (anonymous) — navigation, images and attachments", (
         });
         try {
             const h = withAttachment();
-            (h.win as any).URL.createObjectURL = () => "blob:attachment";
-            const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+            h.win.URL.createObjectURL = () => "blob:attachment";
+            const revoke = (h.win.URL.revokeObjectURL = vi.fn());
             h.$("#aDetailBoardAttachedFile").trigger("click");
             vi.useFakeTimers();
             try {

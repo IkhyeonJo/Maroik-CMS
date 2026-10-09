@@ -7,7 +7,7 @@
  * script under test is the compiled one at the matching wwwroot path.
  */
 import { describe, it, expect, vi } from "vitest";
-import { loadSite, fireNative, type SiteHandle } from "@tests/_common/harness";
+import { loadSite, fireNative, type SiteHandle, stubPlugin } from "@tests/_common/harness";
 
 /** What one grid page supplies to {@link describeGridCrudScript}. */
 export interface GridCrudConfig {
@@ -63,10 +63,10 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
     const lastGrid = (h: SiteHandle) => h.MvcGridInstances.at(-1)!;
     /** Replaces `$.fn.modal` with a chainable spy and returns it. */
     const spyModal = (h: SiteHandle) => {
-        const modal = vi.fn(function(this: any) {
+        const modal = vi.fn(function(this: JQuery) {
             return this;
         });
-        (h.$.fn as any).modal = modal;
+        stubPlugin(h, "modal", modal);
         return modal;
     };
     /** The row key as a camelCase query-string name, e.g. "productName". */
@@ -174,7 +174,7 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
 
         it.each(["Create", "Update"])("%s: an invalid form sends nothing", (verb) => {
             const h = load();
-            (h.$.fn as any).valid = () => false;
+            stubPlugin(h, "valid", () => false);
             h.$(`#form${verb === "Create" ? "Create" : "Edit"}${N}`).trigger("submit");
             expect(h.ajaxCalls.filter((a) => String(a.url).includes(`/${verb}${N}`))).toHaveLength(0);
         });
@@ -275,18 +275,18 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
                 const widget = h.win.document.createElement("div");
                 widget.appendChild(pane);
                 const sets: { id: string; date: Date }[] = [];
-                (h.$.fn as any).datepicker = function(this: any, cmd?: string, arg?: unknown) {
+                stubPlugin(h, "datepicker", function(this: JQuery, cmd?: string, arg?: unknown) {
                     if (cmd === "widget") return h.$(widget);
                     if (cmd === "setDate") sets.push({ id: this[0]?.id, date: arg as Date });
                     return this;
-                };
+                });
                 return { pane, sets };
             };
             const [nmYear, nmMonth, nmDay] = (c.noMaturityDate ?? "9999-12-31").split("-").map(Number);
 
             it("localizes the pickers (yy-mm-dd, month after year)", () => {
                 const h = load();
-                const defaults = (h.$ as any).datepicker.setDefaults.mock.calls[0][0];
+                const defaults = h.datepickerStatics.setDefaults.mock.calls[0][0];
                 expect(defaults).toMatchObject({ dateFormat: "yy-mm-dd", showMonthAfterYear: true });
                 expect(defaults.monthNames).toHaveLength(12);
                 expect(defaults.dayNamesMin).toHaveLength(7);
@@ -299,7 +299,7 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
                 try {
                     const init = h.datepickerInits.find((i) => i.el?.id === id);
                     expect(init, `a datepicker is attached to #${id}`).toBeDefined();
-                    init!.options.beforeShow(init!.el);
+                    init!.options.beforeShow!(init!.el);
                     vi.runAllTimers();
                 } finally {
                     vi.useRealTimers();
@@ -314,7 +314,7 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
                 const before = Date.now();
                 buttons[1].click(); // "Today"
                 expect(Math.abs(sets.at(-1)!.date.getTime() - before)).toBeLessThan(5000);
-                expect((h.$ as any).datepicker._clearDate).toHaveBeenCalledTimes(2);
+                expect(h.datepickerStatics._clearDate).toHaveBeenCalledTimes(2);
             });
 
             it.each(c.maturityPickers!)("%s: changing the month/year re-adds the same two buttons, and they work", (id) => {
@@ -323,7 +323,7 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
                 vi.useFakeTimers();
                 try {
                     const init = h.datepickerInits.find((i) => i.el?.id === id)!;
-                    init.options.onChangeMonthYear(2030, 5, { input: init.el });
+                    init.options.onChangeMonthYear!(2030, 5, { input: init.el });
                     vi.runAllTimers();
                 } finally {
                     vi.useRealTimers();

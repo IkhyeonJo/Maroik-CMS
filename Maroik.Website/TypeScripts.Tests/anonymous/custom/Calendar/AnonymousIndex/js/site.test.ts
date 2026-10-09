@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
-import { loadSite, antiForgery, hidden } from "@tests/_common/harness";
+import { loadSite, antiForgery, hidden, stubPlugin } from "@tests/_common/harness";
 
 // wwwroot/anonymous/custom/Calendar/AnonymousIndex/js/site.js  (read-only calendar view)
 function fixture(): string {
@@ -168,7 +168,7 @@ describe("Calendar/AnonymousIndex — seeded and refreshed events", () => {
         const cal = h.calendarInstances[0];
         expect(cal.addEvent).toHaveBeenCalledTimes(2);
         expect(cal.addEvent.mock.calls[0][0]).toMatchObject({
-            id: 1, title: "Event 1", allDay: false, backgroundColor: "#ff0000", borderColor: "#ff0000",
+            id: "1", title: "Event 1", allDay: false, backgroundColor: "#ff0000", borderColor: "#ff0000",
             extendedProps: { calendarId: 5, calendarType: "Other", displayStartDate: "2024-05-01 10:00:00" },
         });
         expect(cal.render).toHaveBeenCalled();
@@ -200,7 +200,7 @@ describe("Calendar/AnonymousIndex — seeded and refreshed events", () => {
         h.$(".chkOtherCalendar").first().trigger("change");
         h.respond(0, { result: true, calendarEvents: JSON.stringify([seededEvent(3), seededEvent(4)]) });
         expect(cal.addEvent).toHaveBeenCalledTimes(2);
-        expect(cal.addEvent.mock.calls.at(-1)[0].extendedProps.calendarType).toBe("Other");
+        expect(cal.addEvent.mock.calls.at(-1)![0].extendedProps.calendarType).toBe("Other");
 
         cal.addEvent.mockClear();
         h.$(".chkOtherCalendar").first().trigger("change");
@@ -218,8 +218,8 @@ describe("Calendar/AnonymousIndex — seeded and refreshed events", () => {
         second.success!({ result: true, calendarEvents: JSON.stringify([seededEvent(20)]) });
         first.success!({ result: true, calendarEvents: JSON.stringify([seededEvent(10)]) });
 
-        const ids = cal.addEvent.mock.calls.map((c: any[]) => c[0].id);
-        expect(ids).toEqual([20]);
+        const ids = cal.addEvent.mock.calls.map((c) => c[0].id);
+        expect(ids).toEqual(["20"]);
     });
 });
 
@@ -264,7 +264,7 @@ describe("Calendar/AnonymousIndex — the 'other event' popup", () => {
     it("clicking the same event again closes the popup; the close button and a click elsewhere close it too", () => {
         const h = load();
         const popup = h.$("#otherCalendarEventPopup")[0] as HTMLElement;
-        (popup as any).getClientRects = () => [1]; // jsdom has no layout: make it count as visible
+        Object.assign(popup, { getClientRects: () => [1] }); // jsdom has no layout: make it count as visible
         const anchor = h.win.document.createElement("div");
         h.win.document.body.appendChild(anchor);
 
@@ -387,7 +387,7 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         const h = load(); // (the fixture's editor container already holds an image, as summernote's own DOM would after `code` is set)
         open(h);
         h.lastAjax().success!(reply({ description: `<img data-file="${btoa("abc")}" data-contenttype="image/png" alt="">` }));
-        const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+        const revoke = (h.win.URL.revokeObjectURL = vi.fn());
         const img = h.$(".note-editor img")[0] as HTMLImageElement;
 
         (img[event] as () => void)();
@@ -420,7 +420,7 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         h.$("#aViewCalendarEventAttachedFile").trigger(ev);
 
         expect(ev.isDefaultPrevented()).toBe(true);
-        const call = h.lastAjax() as any;
+        const call = h.lastAjax();
         expect(call.url).toBe("/Calendar/DownloadCalendarEventAttachedFile");
         expect(call.type).toBe("POST");
         expect(call.data).toEqual({ calendarEventId: "77" });
@@ -433,8 +433,8 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         });
         try {
             const h = withAttachment();
-            (h.win as any).URL.createObjectURL = () => "blob:attachment";
-            const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+            h.win.URL.createObjectURL = () => "blob:attachment";
+            const revoke = (h.win.URL.revokeObjectURL = vi.fn());
             h.$("#aViewCalendarEventAttachedFile").trigger("click");
             vi.useFakeTimers();
             try {
@@ -483,11 +483,11 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
 
     it("the modal is opened static (no Esc) once the calendar list settles", () => {
         const h = load();
-        const modal = vi.fn(function(this: any) {
+        const modal = vi.fn(function(this: JQuery) {
             return this;
         });
         open(h);
-        (h.$.fn as any).modal = modal;
+        stubPlugin(h, "modal", modal);
         h.lastAjax().success!(reply());
         finish(h);
         expect(modal).toHaveBeenCalledWith({ keyboard: false, backdrop: "static" });

@@ -26,7 +26,7 @@
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
     // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
     // missing or unparseable.
-    const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || (window as any).MaroikDefaultMaxAttachedFileSizeBytes;
+    const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || window.MaroikDefaultMaxAttachedFileSizeBytes;
     // Accepted avatar image MIME types, published by Profile.cshtml (ImageUploadPolicy). The
     // server re-validates by extension; this is the client mirror.
     const allowedImageContentTypes = (JSON.parse(($("#allowedImageContentTypes").val() as string) || "[]")).map(function(t: string) {
@@ -48,9 +48,9 @@
      * @param fileTypeErrorMessage          shown when the MIME type is not in `allowedImageContentTypes`.
      */
     function UpdateProfileAvatar(noFileAttachedErrorMessage?: string, fileSizeLimitationErrorMessage?: string, fileTypeErrorMessage?: string) {
-        // `.files` is possibly null and `[0]` possibly undefined; typed `any` here
-        // because it is compared against `undefined` right below.
-        let files: any = (document.getElementById("ProfileAvatarFiles") as HTMLInputElement).files![0];
+        // A file input always has `.files`; `[0]` is undefined when nothing was chosen,
+        // which the check right below handles.
+        let files: File | undefined = (document.getElementById("ProfileAvatarFiles") as HTMLInputElement).files![0];
         if (files === undefined || files === null) {
             alert(noFileAttachedErrorMessage);
             window.location.href = "/Management/Profile";

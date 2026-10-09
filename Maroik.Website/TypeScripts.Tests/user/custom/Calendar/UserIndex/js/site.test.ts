@@ -252,7 +252,7 @@ describe("user/Calendar/UserIndex", () => {
             h.$(link).trigger(ev);
 
             expect(ev.isDefaultPrevented()).toBe(true);
-            const call = h.lastAjax() as any;
+            const call = h.lastAjax();
             expect(call.url).toBe("/Calendar/DownloadCalendarEventAttachedFile");
             expect(call.type).toBe("POST");
             expect(call.data).toEqual({ calendarEventId: "77" });
@@ -265,8 +265,8 @@ describe("user/Calendar/UserIndex", () => {
             });
             try {
                 const h = withAttachment();
-                (h.win as any).URL.createObjectURL = () => "blob:attachment";
-                const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+                h.win.URL.createObjectURL = () => "blob:attachment";
+                const revoke = (h.win.URL.revokeObjectURL = vi.fn());
                 h.$(link).trigger("click");
                 vi.useFakeTimers();
                 try {
@@ -428,7 +428,7 @@ describe("user/Calendar/UserIndex — events on the grid", () => {
     it("seeds the grid with my events (typed 'My') and other calendars' events (typed 'Other')", () => {
         const h = build({ my: [evt(1, 1)], other: [evt(2, 9)] });
         const cal = h.calendarInstances[0];
-        expect(cal.addEvent.mock.calls.map((c: any[]) => [c[0].id, c[0].extendedProps.calendarType])).toEqual([[1, "My"], [2, "Other"]]);
+        expect(cal.addEvent.mock.calls.map((c) => [c[0].id, c[0].extendedProps.calendarType])).toEqual([["1", "My"], ["2", "Other"]]);
         expect(cal.render).toHaveBeenCalled();
     });
 
@@ -450,7 +450,7 @@ describe("user/Calendar/UserIndex — events on the grid", () => {
         const [first, second] = eventCalls(h);
         second.success!({ result: true, calendarEvents: JSON.stringify([evt(20, 1, "Other")]) });
         first.success!({ result: true, calendarEvents: JSON.stringify([evt(10, 1)]) });
-        expect(cal.addEvent.mock.calls.map((c: any[]) => [c[0].id, c[0].extendedProps.calendarType])).toEqual([[20, "Other"]]);
+        expect(cal.addEvent.mock.calls.map((c) => [c[0].id, c[0].extendedProps.calendarType])).toEqual([["20", "Other"]]);
     });
 });
 
@@ -507,7 +507,7 @@ describe("user/Calendar/UserIndex — calendars of interest", () => {
 
         h.lastAjax().success!({ result: true, calendarEvents: JSON.stringify([evt(60, 11, "Other")]) });
         h.lastAjax().complete!();
-        expect(h.calendarInstances[0].addEvent.mock.calls.at(-1)[0].id).toBe(60);
+        expect(h.calendarInstances[0].addEvent.mock.calls.at(-1)![0].id).toBe("60");
         expect(modal).toHaveBeenCalledWith("hide");
         expect(h.toastr.success).toHaveBeenCalledWith("saved");
     });
@@ -620,8 +620,8 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
     /** Loads the page with {@link detailDom}, stubbed object URLs and a modal spy. */
     const setup = () => {
         const h = build({ body: (html) => html + detailDom });
-        (h.win as any).URL.createObjectURL = vi.fn(() => "blob:fake");
-        (h.win as any).URL.revokeObjectURL = vi.fn();
+        h.win.URL.createObjectURL = vi.fn(() => "blob:fake");
+        h.win.URL.revokeObjectURL = vi.fn();
         spyModal(h);
         return h;
     };
@@ -727,10 +727,10 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
 
         it.each(["onload", "onerror"] as const)("the view's rebuilt image %s releases the object URL it was given", (event) => {
             const h = build({ body: (html) => html.replace("<div id=\"viewCalendarEventDescription\"></div>", `<div id="viewCalendarEventDescription"></div><div class="note-editor"><img src="blob:live" alt=""></div>`) + detailDom });
-            (h.win as any).URL.createObjectURL = vi.fn(() => "blob:fake");
+            h.win.URL.createObjectURL = vi.fn(() => "blob:fake");
             spyModal(h);
             openView(h, { description: `<img data-file="${png}" data-contenttype="image/png" alt="">` });
-            const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+            const revoke = (h.win.URL.revokeObjectURL = vi.fn());
             const img = h.$(".note-editor img")[0] as HTMLImageElement;
 
             (img[event] as () => void)();
@@ -830,7 +830,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
             h.$(h.win.document.body).trigger("click");
             expect(display(h, "#otherCalendarEventPopup")).toBe("none");
 
-            (h.$("#otherCalendarEventPopup")[0] as any).getClientRects = () => [1]; // jsdom has no layout
+            Object.assign(h.$("#otherCalendarEventPopup")[0], { getClientRects: () => [1] }); // jsdom has no layout
             const el = h.win.document.createElement("div");
             h.win.document.body.appendChild(el);
             const event = { id: "o1", title: "T", allDay: false, extendedProps: { calendarType: "Other" } };

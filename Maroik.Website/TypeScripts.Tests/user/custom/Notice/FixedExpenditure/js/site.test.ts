@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import { describeAmountLabel } from "@tests/_common/amountLabelSuite";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
-import { loadSite, hidden, antiForgery, hiddenByStyle, fireNative } from "@tests/_common/harness";
+import { loadSite, hidden, antiForgery, hiddenByStyle, fireNative, stubPlugin } from "@tests/_common/harness";
 
 // wwwroot/user/custom/Notice/FixedExpenditure/js/site.js
 /** Main class → sub-classes, as the page publishes it. */
@@ -139,9 +139,9 @@ describe("Notice/FixedExpenditure — class and deposit-month changes, and filli
             + `<div class="mvc-grid"></div><table><tbody><tr class="clsGridRow" data-id="1"></tr></tbody></table>
          <div id="editFixedExpenditureDialogModal"></div><div id="confirmDeleteFixedExpenditureDialogModal"></div>
          <select id="editFixedExpenditureMyDepositAsset"><option value="acct">acct</option><option value="Card">Card</option></select>`);
-        (h.$.fn as any).modal = function(this: any) {
+        stubPlugin(h, "modal", function(this: JQuery) {
             return this;
-        };
+        });
         fireNative(h.win.document, "rowclick", { data: { Id: "1" } });
         h.$("#btnEditFixedExpenditureGridRow").trigger("click");
         h.ajaxCalls.find((a) => String(a.url).includes("IsFixedExpenditureExists"))!.success!({

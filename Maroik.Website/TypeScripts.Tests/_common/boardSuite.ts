@@ -7,7 +7,7 @@
  * test is the compiled one at the matching wwwroot path.
  */
 import { describe, it, expect, vi } from "vitest";
-import { loadSite, hidden, antiForgery, type SiteHandle } from "@tests/_common/harness";
+import { loadSite, hidden, antiForgery, type SiteHandle, stubPlugin } from "@tests/_common/harness";
 
 /** What one board page supplies to `describeBoardScript`. */
 export interface BoardScriptConfig {
@@ -118,10 +118,10 @@ function describeBoardScript(c: BoardScriptConfig): void {
 
         it("the confirm-delete button opens the modal (static, no Esc) and shows it", () => {
             const h = load();
-            const modal = vi.fn(function(this: any) {
+            const modal = vi.fn(function(this: JQuery) {
                 return this;
             });
-            (h.$.fn as any).modal = modal;
+            stubPlugin(h, "modal", modal);
             h.$(`#btn${i}ConfirmDeleteBoard`).trigger("click");
             expect(modal).toHaveBeenCalledWith({ keyboard: false, backdrop: "static" });
             expect(modal).toHaveBeenCalledWith("show");
@@ -133,14 +133,14 @@ function describeBoardScript(c: BoardScriptConfig): void {
             const h = load();
             const overlay = () => (h.$("#loading")[0] as HTMLElement).style.display;
             for (const button of [`#btn${i}ShowWriteBoardLoading`, `#btn${i}SubmitModify`]) {
-                (h.$.fn as any).valid = () => false;
+                stubPlugin(h, "valid", () => false);
                 h.$("#loading").show();
                 const invalid = h.$.Event("click");
                 h.$(button).trigger(invalid);
                 expect(overlay()).toBe("none");
                 expect(invalid.isDefaultPrevented()).toBe(true);
 
-                (h.$.fn as any).valid = () => true;
+                stubPlugin(h, "valid", () => true);
                 h.$("#loading").hide();
                 h.$(button).trigger("click");
                 expect(overlay()).not.toBe("none");
@@ -204,7 +204,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
 
         it("write: an invalid form sends nothing", () => {
             const h = load();
-            (h.$.fn as any).valid = () => false;
+            stubPlugin(h, "valid", () => false);
             h.$("#formWriteBoard").trigger("submit");
             expect(h.ajaxCalls).toHaveLength(0);
         });
@@ -262,7 +262,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
 
         it("edit: an invalid form sends nothing", () => {
             const h = load();
-            (h.$.fn as any).valid = () => false;
+            stubPlugin(h, "valid", () => false);
             h.$("#formEditBoard").trigger("submit");
             expect(h.ajaxCalls).toHaveLength(0);
         });
@@ -310,10 +310,10 @@ function describeBoardScript(c: BoardScriptConfig): void {
 
         it("delete: a successful delete closes the modal, alerts and returns to the list", () => {
             const h = load();
-            const modal = vi.fn(function(this: any) {
+            const modal = vi.fn(function(this: JQuery) {
                 return this;
             });
-            (h.$.fn as any).modal = modal;
+            stubPlugin(h, "modal", modal);
             h.$(`#btn${i}DeleteBoard`).trigger("click");
             h.respond(0, { result: true, [c.existsKey]: { id: 3 } });
             h.respond(0, { result: true, message: "deleted" });
@@ -416,8 +416,8 @@ function describeBoardScript(c: BoardScriptConfig): void {
         ])("the %s editor releases an uploaded image's object URL once the image has loaded (or failed to)", (_which, editorIndex) => {
             for (const event of ["onload", "onerror"] as const) {
                 const h = load();
-                (h.win as any).URL.createObjectURL = () => "blob:uploaded";
-                const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+                h.win.URL.createObjectURL = () => "blob:uploaded";
+                const revoke = (h.win.URL.revokeObjectURL = vi.fn());
                 h.summernoteInits[editorIndex].options.callbacks.onImageUpload([new h.win.File([new Uint8Array(4)], "p.png", { type: "image/png" })]);
                 h.respond(0, { result: true, file: { fileContents: btoa("abc"), contentType: "image/png" }, filePath: "enc-path" });
                 const img = h.summernoteCalls.find((x) => x.args[0] === "insertNode")!.args[1] as HTMLImageElement;
@@ -455,7 +455,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
                 boardFixture(c).replace(
                     "<div id=\"detailBoardContent\" style=\"display:none\"></div>",
                     `<div id="detailBoardContent" style="display:none"><img data-file="${btoa("abc")}" data-contenttype="image/png" alt=""></div>`));
-            const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+            const revoke = (h.win.URL.revokeObjectURL = vi.fn());
             const img = h.$("#detailBoardContent img")[0] as HTMLImageElement; // the image as it is in the live page
 
             expect(revoke).not.toHaveBeenCalled();
@@ -483,7 +483,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
                     .replace("<div id=\"editBoardContent\"></div>", "<div id=\"editBoardContent\"></div><div class=\"note-editor\"><img src=\"blob:live\" alt=\"\"></div>")
                     .replace("<div id=\"divEditBoardContent\"></div>", "<div id=\"divEditBoardContent\" style=\"display:none\"></div>"),
                 { summernoteCode: `<img data-file="${btoa("abc")}" data-contenttype="image/png" alt="">` });
-            const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+            const revoke = (h.win.URL.revokeObjectURL = vi.fn());
             const img = h.$(".note-editor img")[0] as HTMLImageElement; // the editor's own copy of the rebuilt image
 
             (img[event] as () => void)();
@@ -518,7 +518,7 @@ function describeBoardScript(c: BoardScriptConfig): void {
             h.$(`#${id}`).trigger(ev);
 
             expect(ev.isDefaultPrevented()).toBe(true);
-            const call = h.lastAjax() as any;
+            const call = h.lastAjax();
             expect(call.url).toBe(c.downloadAction);
             expect(call.type).toBe("POST");
             expect(call.data).toEqual({ boardId: "42" });
@@ -531,8 +531,8 @@ function describeBoardScript(c: BoardScriptConfig): void {
             });
             try {
                 const h = loadSite(c.area, c.feature, c.page, boardFixture(c, attachmentLink(id)));
-                (h.win as any).URL.createObjectURL = () => "blob:attachment";
-                const revoke = ((h.win as any).URL.revokeObjectURL = vi.fn());
+                h.win.URL.createObjectURL = () => "blob:attachment";
+                const revoke = (h.win.URL.revokeObjectURL = vi.fn());
                 h.$(`#${id}`).trigger("click");
 
                 vi.useFakeTimers();

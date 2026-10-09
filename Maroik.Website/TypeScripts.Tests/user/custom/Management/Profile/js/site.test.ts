@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import { describeProfileScript } from "@tests/_common/profileSuite";
-import { loadSite, hidden, antiForgery } from "@tests/_common/harness";
+import { loadSite, hidden, antiForgery, stubPlugin } from "@tests/_common/harness";
 
 // wwwroot/user/custom/Management/Profile/js/site.js
 // (identical behavior to admin/Management/Profile; the two site.js differ only in
@@ -28,7 +28,7 @@ describe("user/Management/Profile", () => {
 
     it("makes no request when the password form is invalid", () => {
         const h = loadSite("user", "Management", "Profile", fixture);
-        (h.$.fn as any).valid = () => false;
+        stubPlugin(h, "valid", () => false);
         h.$("#formUpdateProfilePassword").trigger("submit");
         expect(h.ajaxCalls).toHaveLength(0);
     });

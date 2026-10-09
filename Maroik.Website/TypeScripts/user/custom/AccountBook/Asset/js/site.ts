@@ -61,8 +61,8 @@
     // is the clicked row and `e.detail.data` its bound record. Move the
     // selection highlight to every row whose ProductName matches (there is only
     // one, but the grid keys rows by `data-productName`, not by index).
-    $(document).off("rowclick.Asset").on("rowclick.Asset", (e: any) => {
-        let selectedRow = e.detail;
+    $(document).off("rowclick.Asset").on("rowclick.Asset", (e: JQuery.TriggeredEvent) => {
+        let selectedRow = e.detail as unknown as MvcGridRowClickDetail;
         let selectedRowProductName = selectedRow.data.ProductName;
         let $clsGridRow = $(".clsGridRow");
 
@@ -191,7 +191,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {
@@ -325,7 +324,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {

@@ -17,7 +17,7 @@
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { vi } from "vitest";
+import { vi, type Mock } from "vitest";
 import jqueryImport from "jquery";
 
 /** The website's wwwroot, where the compiled scripts live. */
@@ -34,6 +34,60 @@ export interface AjaxCall {
     error?: (...a: unknown[]) => void;
     complete?: (...a: unknown[]) => void;
     async?: boolean;
+    xhrFields?: Record<string, unknown>;
+}
+
+/**
+ * The jsdom window a page runs in: the globals the harness installs (`$`, `toastr`, `MvcGrid`, …) are
+ * `unknown` to a test, except `escapeHtml`, which a test may call.
+ */
+export type PageWindow = Window & typeof globalThis & Record<string, unknown> & { escapeHtml(value: string): string };
+
+/** A callback a page handed to a widget; a test calls it with whatever the widget would pass. */
+type WidgetCallback = (this: unknown, ...args: unknown[]) => unknown;
+
+/** The FullCalendar options callbacks a test drives directly (see {@link SiteHandle.calendarOptions}). */
+export interface CapturedCalendarOptions {
+    select(arg: { start: Date; end: Date }): void;
+    eventClick(arg: object): unknown;
+}
+
+/** An event object a page passed to `calendar.addEvent(...)`. */
+export type AddedCalendarEvent = Record<string, unknown> & { extendedProps: Record<string, unknown> };
+
+/** The FullCalendar stand-in a page constructs: every method the pages call is a spy. */
+export interface FakeCalendar {
+    render: Mock;
+    addEvent: Mock<(event: AddedCalendarEvent) => void>;
+    removeAllEvents: Mock;
+    unselect: Mock;
+    /** Not stubbed by default: a test installs it when the flow under test reads the calendar's events. */
+    getEvents?: () => object[];
+}
+
+/** The MvcGrid stand-in a page constructs. */
+export interface FakeMvcGrid {
+    url: URL;
+    reload: Mock;
+}
+
+/** The datepicker callbacks a test calls directly (a picker sets only some of them). */
+export interface CapturedDatepickerOptions {
+    beforeShow?: WidgetCallback;
+    onChangeMonthYear?: WidgetCallback;
+    onSelect?: WidgetCallback;
+}
+
+/** The Chart.js 2 config the Dashboard passes to `new Chart(ctx, cfg)` — the parts a test reads. */
+export interface CapturedChartConfig {
+    type: string;
+    data: { labels: string[]; datasets: { data: number[]; backgroundColor: string[] }[] };
+    options: { tooltips: { callbacks: { label(item: { index: number }, data: CapturedChartConfig["data"]): string } } };
+}
+
+/** The summernote options a test drives: the image-upload callback. */
+export interface CapturedSummernoteOptions {
+    callbacks: { onImageUpload(files: File[]): void };
 }
 
 /** What {@link loadSite} returns: the page's window and every stub/capture a test asserts on. */
@@ -41,11 +95,11 @@ export interface SiteHandle {
     /** the jQuery bound to the page window */
     $: JQueryStatic;
     /** the jsdom window the script ran in */
-    win: Window & typeof globalThis & Record<string, any>;
+    win: PageWindow;
     /** every `{ ctx, cfg }` passed to `new Chart(...)` (Dashboard) */
-    charts: unknown[];
+    charts: { ctx: unknown; cfg: CapturedChartConfig }[];
     /** every options object passed to `new FullCalendar.Calendar(el, opts)` — lets a test call a page's `select` / `eventClick` callback (see the comment on `calendarOptions` in loadSite). */
-    calendarOptions: any[];
+    calendarOptions: CapturedCalendarOptions[];
     /** every `$.ajax` call, in order */
     ajaxCalls: AjaxCall[];
 
@@ -64,28 +118,51 @@ export interface SiteHandle {
     lastAjax(): AjaxCall;
 
     /** the `toastr` spies */
-    toastr: { success: any; error: any; info: any; warning: any };
+    toastr: { success: Mock; error: Mock; info: Mock; warning: Mock };
     /** `<form>`s that site.js created + submitted via ExportExcel* */
     submittedForms: HTMLFormElement[];
     /** values passed to `window.location.href = …` */
     navigations: string[];
     /** every `new MvcGrid(...)` stub the script constructed */
-    MvcGridInstances: any[];
+    MvcGridInstances: FakeMvcGrid[];
+    /** the `$.datepicker` statics (`setDefaults` / `_clearDate`) as spies */
+    datepickerStatics: { setDefaults: Mock<(options: Record<string, unknown>) => void>; _clearDate: Mock };
     /** every `{ el, options }` passed to `$(el).datepicker({...})` — lets a test call `options.onSelect` / `beforeShow` */
-    datepickerInits: { el: Element | undefined; options: any }[];
+    datepickerInits: { el: Element | undefined; options: CapturedDatepickerOptions }[];
     /** every `FullCalendar.Calendar` the script constructed (`addEvent` / `removeAllEvents` / `render` are spies) */
-    calendarInstances: any[];
+    calendarInstances: FakeCalendar[];
     /** every `{ el, options }` passed to `$(el).summernote({...})` — lets a test call `options.callbacks.onImageUpload(...)` */
-    summernoteInits: { el: Element | undefined; options: any }[];
+    summernoteInits: { el: Element | undefined; options: CapturedSummernoteOptions }[];
     /** every other `$(el).summernote("cmd", ...args)` call (insertNode, code setter, …) */
     summernoteCalls: { el: Element | undefined; args: unknown[] }[];
 }
 
 /** jQuery bound to `win` (the CommonJS build exports a factory when no global window exists). */
-function bindJquery(win: any): JQueryStatic {
-    const mod: any = jqueryImport as any;
+function bindJquery(win: Window): JQueryStatic {
+    // @types/jquery types the import as jQuery itself; the factory form has no `fn`.
+    const mod = jqueryImport as unknown as Partial<Pick<JQueryStatic, "fn">> & ((win: Window) => JQueryStatic);
     const $ = typeof mod === "function" && !mod.fn ? mod(win) : mod;
     return $ as JQueryStatic;
+}
+
+/** The members of an `XMLHttpRequest` that jQuery's xhr transport touches. */
+interface FakeXhr {
+    responseType: XMLHttpRequestResponseType;
+    readyState: number;
+    status: number;
+    statusText: string;
+    response: unknown;
+    onload: (() => void) | null;
+    onerror: (() => void) | null;
+    onabort: (() => void) | null;
+    ontimeout: (() => void) | null;
+    open(): void;
+    setRequestHeader(): void;
+    overrideMimeType(): void;
+    abort(): void;
+    getAllResponseHeaders(): string;
+    readonly responseText: string;
+    send(): void;
 }
 
 /** jQuery's real `$.ajax`, kept before {@link loadSite} replaces it with a capturing stub. */
@@ -96,9 +173,9 @@ const realAjax: JQueryStatic["ajax"] = bindJquery(window).ajax;
  * `body` as `contentType`. Like a browser, it hands back a Blob in `response` when the caller set
  * `responseType = "blob"`, and refuses to read `responseText` for a non-text response type.
  */
-function fakeXhrFactory(win: any, body: string, contentType: string): () => XMLHttpRequest {
+function fakeXhrFactory(win: Window & typeof globalThis, body: string, contentType: string): () => XMLHttpRequest {
     return () => {
-        const xhr: any = {
+        const xhr: FakeXhr = {
             responseType: "",
             readyState: 0,
             status: 0,
@@ -129,7 +206,7 @@ function fakeXhrFactory(win: any, body: string, contentType: string): () => XMLH
                 });
             },
         };
-        return xhr as XMLHttpRequest;
+        return xhr as unknown as XMLHttpRequest;
     };
 }
 
@@ -141,7 +218,7 @@ export function loadSite(
     fixtureHtml: string,
     opts: { autoAjaxResult?: boolean; /** what `$(el).summernote("code")` returns */ summernoteCode?: string } = {},
 ): SiteHandle {
-    const win = window as any;
+    const win = window as PageWindow;
 
     win.document.body.innerHTML = fixtureHtml;
 
@@ -151,44 +228,54 @@ export function loadSite(
     // --- vendored jQuery plugins the scripts call: chainable no-ops -------------
     // Always (re)assigned so a mutation from one test (e.g. `$.fn.valid = () => false`)
     // does not leak into the next loadSite() in the same file.
-    const chainable = function(this: any) {
+    const chainable = function(this: JQuery) {
         return this;
     };
-    for (const name of ["tabs", "modal", "tooltip"]) {
-        ($.fn as any)[name] = chainable;
-    }
+    Object.assign($.fn, { tabs: chainable, modal: chainable, tooltip: chainable });
     // Captured for SiteHandle.datepickerInits; `$(el).datepicker("getDate")` answers null.
     const datepickerInits: SiteHandle["datepickerInits"] = [];
-    ($.fn as any).datepicker = function(this: any, arg?: unknown) {
-        if (arg && typeof arg === "object") datepickerInits.push({ el: this[0], options: arg });
-        return arg === "getDate" ? null : this;
-    };
-    ($.fn as any).valid = () => true;
+    Object.assign($.fn, {
+        datepicker: function(this: JQuery, arg?: unknown) {
+            if (arg && typeof arg === "object") datepickerInits.push({ el: this[0], options: arg as CapturedDatepickerOptions });
+            return arg === "getDate" ? null : this;
+        },
+        valid: () => true,
+    });
     // Captured for SiteHandle.summernoteInits / summernoteCalls; `summernote("code")` returns opts.summernoteCode.
     const summernoteInits: SiteHandle["summernoteInits"] = [];
     const summernoteCalls: SiteHandle["summernoteCalls"] = [];
-    ($.fn as any).summernote = function(this: any, ...args: unknown[]) {
-        if (args.length === 0 || typeof args[0] === "object") {
-            summernoteInits.push({ el: this[0], options: args[0] });
+    Object.assign($.fn, {
+        summernote: function(this: JQuery, ...args: unknown[]) {
+            if (args.length === 0 || typeof args[0] === "object") {
+                summernoteInits.push({ el: this[0], options: args[0] as CapturedSummernoteOptions });
+                return this;
+            }
+            if (args[0] === "code" && args.length === 1) return opts.summernoteCode ?? "";
+            summernoteCalls.push({ el: this[0], args });
             return this;
-        }
-        if (args[0] === "code" && args.length === 1) return opts.summernoteCode ?? "";
-        summernoteCalls.push({ el: this[0], args });
-        return this;
-    };
+        },
+    });
 
     // --- static jQuery helpers -------------------------------------------------
-    ($ as any).datepicker = { setDefaults: vi.fn(), _clearDate: vi.fn() };
+    const datepickerStatics: SiteHandle["datepickerStatics"] = { setDefaults: vi.fn(), _clearDate: vi.fn() };
+    Object.assign($, { datepicker: datepickerStatics });
 
     // --- $.ajax capture ------------------------------------------------------
     const ajaxCalls: AjaxCall[] = [];
-    ($ as any).ajax = vi.fn((options: AjaxCall) => {
-        ajaxCalls.push(options);
-        if (opts.autoAjaxResult && typeof options.success === "function") {
-            options.success({ result: true, message: "ok", calendars: [], tempOtherCalendars: [] });
-        }
-        const d: any = { done: () => d, fail: () => d, always: () => d };
-        return d;
+    interface FakeJqXhr {
+        done(): FakeJqXhr;
+        fail(): FakeJqXhr;
+        always(): FakeJqXhr;
+    }
+    Object.assign($, {
+        ajax: vi.fn((options: AjaxCall) => {
+            ajaxCalls.push(options);
+            if (opts.autoAjaxResult && typeof options.success === "function") {
+                options.success({ result: true, message: "ok", calendars: [], tempOtherCalendars: [] });
+            }
+            const d: FakeJqXhr = { done: () => d, fail: () => d, always: () => d };
+            return d;
+        }),
     });
 
     // --- globals -----------------------------------------------------------
@@ -216,7 +303,7 @@ export function loadSite(
     };
 
     // Stub MvcGrid: records each instance, with a fixed URL and a spy `reload`.
-    const MvcGridInstances: any[] = [];
+    const MvcGridInstances: FakeMvcGrid[] = [];
     win.MvcGrid = class {
         url = new URL("http://localhost/grid");
         reload = vi.fn();
@@ -230,36 +317,43 @@ export function loadSite(
     // page's `select` / `eventClick` callback directly (`h.calendarOptions[0].select(arg)`) to drive
     // flows that only run from inside those callbacks — the render/interaction loop itself is not
     // simulated, only the options object FullCalendar would have called back into.
-    const calendarOptions: any[] = [];
-    const calendarInstances: any[] = [];
+    const calendarOptions: CapturedCalendarOptions[] = [];
+    const calendarInstances: FakeCalendar[] = [];
     win.FullCalendar = {
         Calendar: class {
             constructor(_el: unknown, opts: unknown) {
-                calendarOptions.push(opts);
+                calendarOptions.push(opts as CapturedCalendarOptions);
                 calendarInstances.push(this);
             }
 
             render = vi.fn();
-            addEvent = vi.fn();
+            addEvent = vi.fn<(event: AddedCalendarEvent) => void>();
             removeAllEvents = vi.fn();
             unselect = vi.fn();
         },
     };
 
     // Minimal moment stub: every date formats as "2024-01-01".
-    const moment: any = (_d?: unknown) => ({
-        format: () => "2024-01-01",
-        add: () => moment(),
-        subtract: () => moment(),
-    });
+    interface FakeMoment {
+        format(): string;
+        add(): FakeMoment;
+        subtract(): FakeMoment;
+    }
+    function moment(_d?: unknown): FakeMoment {
+        return {
+            format: () => "2024-01-01",
+            add: () => moment(),
+            subtract: () => moment(),
+        };
+    }
     moment.utc = (_d?: unknown) => moment();
-    win.moment = moment;
+    Object.assign(win, { moment });
 
     // Chart.js 2.x — Dashboard builds ~10 of these in its $(function).
-    const charts: unknown[] = [];
+    const charts: SiteHandle["charts"] = [];
     win.Chart = class {
         constructor(ctx: unknown, cfg: unknown) {
-            charts.push({ ctx, cfg });
+            charts.push({ ctx, cfg: cfg as CapturedChartConfig });
         }
     };
 
@@ -328,7 +422,7 @@ export function loadSite(
         },
         respondOverHttp(indexFromEnd, body, contentType) {
             const call = ajaxCalls[ajaxCalls.length - 1 - indexFromEnd];
-            void realAjax({ ...(call as any), xhr: fakeXhrFactory(win, body, contentType) });
+            void realAjax({ ...(call as JQuery.AjaxSettings), xhr: fakeXhrFactory(win, body, contentType) });
         },
         lastAjax: () => ajaxCalls[ajaxCalls.length - 1],
         toastr,
@@ -338,8 +432,14 @@ export function loadSite(
         summernoteInits,
         summernoteCalls,
         calendarInstances,
+        datepickerStatics,
         datepickerInits,
     };
+}
+
+/** Replaces (or adds) a jQuery plugin method on the page's `$.fn` — e.g. `stubPlugin(h, "valid", () => false)`. */
+export function stubPlugin(h: SiteHandle, name: string, impl: (this: JQuery, ...args: never[]) => unknown): void {
+    Object.assign(h.$.fn, { [name]: impl });
 }
 
 /** Minimal hidden-input fixture: `hidden("id", "value")` → `<input id hidden>`. */
@@ -357,7 +457,7 @@ export function hiddenByStyle(el: Element | null | undefined): boolean {
 
 /** Native `CustomEvent` dispatch — how MvcGrid fires `rowclick`/`reload*` at runtime. */
 export function fireNative(target: EventTarget, type: string, detail?: unknown): void {
-    target.dispatchEvent(new (globalThis as any).CustomEvent(type, { detail, bubbles: true }));
+    target.dispatchEvent(new CustomEvent(type, { detail, bubbles: true }));
 }
 
 /** The antiforgery input every page has. */

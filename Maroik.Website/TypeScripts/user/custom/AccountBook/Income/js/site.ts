@@ -80,11 +80,11 @@
         }
     }
 
-    // Localized month / day names for the datepicker, each read from a hidden
-    // input the view rendered from the resource files. Typed `any` so the ~40
-    // `.val()` unions don't each need a cast. `PrevText` / `NextText` are read
-    // PascalCase to match the object keys (a casing fix committed separately).
-    const localizer: any = {
+    // Localized month / day names for the datepicker, each read from a hidden input the view
+    // rendered from the resource files (asserted `Record<string, string>`: each holds a string,
+    // which `.val()` types as a wider union). `PrevText` / `NextText` are read PascalCase to match
+    // the object keys (a casing fix committed separately).
+    const localizer = {
         PrevText: $("#localizerPrevText").val(),
         NextText: $("#localizerNextText").val(),
         January: $("#localizerJanuary").val(),
@@ -132,7 +132,7 @@
         Fr: $("#localizerFr").val(),
         Sa: $("#localizerSa").val(),
         YearSuffix: $("#localizerYearSuffix").val()
-    };
+    } as Record<string, string>;
 
     // Apply the localized names to every datepicker on the page.
     $.datepicker.setDefaults({
@@ -153,8 +153,7 @@
         $editIncomeTabs.tabs();
         // The empty `setTimeout(fn, 1)` in `beforeShow` / `onChangeMonthYear` is
         // a jQuery-UI datepicker nudge — it defers a repaint so the button panel
-        // lays out correctly. Cast `as any` because `@types/jqueryui` insists
-        // those callbacks return `DatepickerOptions`.
+        // lays out correctly.
         $createIncomeDate.datepicker({
             showButtonPanel: true,
             beforeShow: function() {
@@ -167,7 +166,7 @@
 
                 }, 1);
             }
-        } as any);
+        });
 
         $editIncomeDate.datepicker({
             showButtonPanel: true,
@@ -181,7 +180,7 @@
 
                 }, 1);
             }
-        } as any);
+        });
 
         // Hide the datepicker's built-in "Close" / "Today" buttons via injected CSS.
         $("<style> .ui-datepicker-close { display: none; } </style>").appendTo("head");
@@ -193,8 +192,8 @@
 
     // MvcGrid `rowclick` (native CustomEvent): move the highlight to the row
     // whose `data-id` matches the clicked record.
-    $(document).off("rowclick.Income").on("rowclick.Income", (e: any) => {
-        let selectedRow = e.detail;
+    $(document).off("rowclick.Income").on("rowclick.Income", (e: JQuery.TriggeredEvent) => {
+        let selectedRow = e.detail as unknown as MvcGridRowClickDetail;
         let selectedRowId = selectedRow.data.Id;
 
         let $clsGridRow = $(".clsGridRow");
@@ -344,7 +343,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {
@@ -485,7 +483,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 if (data.result) {
@@ -559,7 +556,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 $labelCreateIncomeAmount.text(data.label);
@@ -577,7 +573,6 @@
             type: "POST",
             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
             dataType: "json",
-            data: null as any,
             contentType: "application/json; charset=utf-8",
             success: function(data) {
                 $labelEditIncomeAmount.text(data.label);

@@ -107,10 +107,10 @@
         });
     }
 
-    // Localized FullCalendar UI strings + reminder labels + validation messages,
-    // each from a hidden input the view rendered from the resource files. Typed
-    // `any` so the ~70 `.val()` unions don't each need a cast.
-    const localizer: any = {
+    // Localized FullCalendar UI strings + reminder labels + validation messages, each from a
+    // hidden input the view rendered from the resource files (asserted `Record<string, string>`:
+    // each holds a string, which `.val()` types as a wider union).
+    const localizer = {
         Email: $("#localizerEmail").val(),
         Notification: $("#localizerNotification").val(),
         Minutes: $("#localizerMinutes").val(),
@@ -192,12 +192,11 @@
         ErrorRangeDay: $("#localizerErrorRangeDay").val(),
         ErrorRangeWeek: $("#localizerErrorRangeWeek").val(),
         FailedToLoadCalendars: $("#localizerFailedToLoadCalendars").val()
-    };
+    } as Record<string, string>;
 
     // Module-scope FullCalendar instance, assigned inside `$(function)` below and
-    // used by `RefreshCalendarEvents`. Typed `any` (the global `<script>` build's
-    // `FullCalendar.Calendar` is loosely typed here).
-    let calendar: any;
+    // used by `RefreshCalendarEvents`.
+    let calendar: FullCalendarCalendar;
 
     $(function() {
         $viewCalendarEventTaskTabs.tabs();
@@ -221,7 +220,7 @@
             selectMirror: true,
             // Clicking an "Other" event: show a small summary popup anchored to
             // the event element. Clicking again on the same event closes it.
-            eventClick: function(arg: any) {
+            eventClick: function(arg: FullCalendarEventClickArg) {
                 if (arg.event.extendedProps.calendarType === "Other") {
                     let eventEl = $(arg.el);
                     let offset = eventEl.offset()!;
@@ -278,7 +277,6 @@
                             type: "POST",
                             headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                             dataType: "json",
-                            data: null as any,
                             contentType: "application/json; charset=utf-8",
                             success: function(data) {
                                 if (data.result) {
@@ -380,7 +378,7 @@
                                             if (data.calendarEvent.serializedCalendarReminders !== "[]") {
                                                 const timeIntervals = reminderTimeIntervals;
 
-                                                JSON.parse(data.calendarEvent.serializedCalendarReminders).forEach((reminder: any) => {
+                                                JSON.parse(data.calendarEvent.serializedCalendarReminders).forEach((reminder: CalendarReminderJson) => {
                                                     if (reminder.Method !== "Email") {
                                                         // (a visitor only ever sees Notification reminders, so that is the method shown)
                                                         const selectedMethodOption = `
@@ -411,7 +409,7 @@
 
                                                             <label style="padding-left:5px;padding-right:5px;">${localizer.BeforeAt}</label>
                                                             <select class='form-control-sm viewCalendarEventSelNotificationTimeAllDayChecked' style='width:11%;text-overflow:ellipsis;' disabled>
-                                                                ${timeIntervals.map((time: any) => time === `${reminder.TimesBeforeEvent.substring(0, 5)}` ? `<option value="${time}" selected>${time}</option>` : `<option value="${time}">${time}</option>`).join("")}
+                                                                ${timeIntervals.map((time: string) => time === `${reminder.TimesBeforeEvent!.substring(0, 5)}` ? `<option value="${time}" selected>${time}</option>` : `<option value="${time}">${time}</option>`).join("")}
                                                             </select>
 
                                                             <br />
@@ -429,7 +427,7 @@
 
                                             if (data.calendarEvent.serializedCalendarReminders !== "[]") {
 
-                                                JSON.parse(data.calendarEvent.serializedCalendarReminders).forEach((reminder: any) => {
+                                                JSON.parse(data.calendarEvent.serializedCalendarReminders).forEach((reminder: CalendarReminderJson) => {
                                                     if (reminder.Method !== "Email") {
                                                         // (a visitor only ever sees Notification reminders, so that is the method shown)
                                                         const selectedMethodOption = `
@@ -490,13 +488,12 @@
                                         method: "POST",
                                         headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
                                         dataType: "json",
-                                        data: null as any,
                                         contentType: "application/json; charset=utf-8",
                                         success: function(response) {
                                             if (response.result) {
                                                 $viewCalendarEventMyCalendar.empty();
 
-                                                $.each(response.tempOtherCalendars, function(_, tempOtherCalendar: any) {
+                                                $.each(response.tempOtherCalendars, function(_, tempOtherCalendar: CalendarSummary) {
                                                     $viewCalendarEventMyCalendar.append($("<option>", {
                                                         value: tempOtherCalendar.id,
                                                         text: tempOtherCalendar.name
@@ -528,9 +525,9 @@
         });
 
         // --- Seed the calendar with the server-rendered events ---------------
-        JSON.parse($otherCalendarEventOutputViewModels.val() as string).forEach((item: any) => {
+        JSON.parse($otherCalendarEventOutputViewModels.val() as string).forEach((item: CalendarEventJson) => {
             calendar.addEvent({
-                id: item.Id,
+                id: String(item.Id),
                 title: item.Title,
                 allDay: item.AllDay,
                 start: item.StartDate,
@@ -565,7 +562,7 @@
 
             const requestSeq = ++calendarEventsRequestSeq;
 
-            let paramValue: any = {
+            let paramValue: CalendarEventsRequest = {
                 Calendars: []
             };
 
@@ -595,9 +592,9 @@
                         return;
                     }
                     if (response.result) {
-                        JSON.parse(response.calendarEvents).forEach((item: any) => {
+                        JSON.parse(response.calendarEvents).forEach((item: CalendarEventJson) => {
                             calendar.addEvent({
-                                id: item.Id,
+                                id: String(item.Id),
                                 title: item.Title,
                                 allDay: item.AllDay,
                                 start: item.StartDate,
