@@ -24,7 +24,30 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, parseJson, fieldValue, optionalFieldValue } = window;
+    const { check, replies, onReply, parseJson, fieldValue, optionalFieldValue, attribute } = window;
+
+    // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
+    const calendarSummary = check.object({ id: check.number, name: check.string, htmlColorCode: check.string });
+    const calendarEventJson = check.object({
+        Id: check.number, CalendarId: check.number, Title: check.string, AllDay: check.boolean, StartDate: check.string, EndDate: check.string,
+        HtmlColorCode: check.string, DisplayStartDate: check.string, DisplayEndDate: check.string, DisplayStartDateTimeZone: check.string,
+        DisplayEndDateTimeZone: check.string, CalendarType: check.nullable(check.string),
+    });
+    const calendarReminderJson = check.object({
+        Method: check.string, MinutesBeforeEvent: check.nullable(check.number), HoursBeforeEvent: check.nullable(check.number),
+        DaysBeforeEvent: check.nullable(check.number), WeeksBeforeEvent: check.nullable(check.number), TimesBeforeEvent: check.nullable(check.string),
+    });
+    const calendarEventReply = replies.read({
+        calendarEvent: check.object({
+            id: check.number, calendarId: check.number, title: check.string, allDay: check.boolean,
+            displayStartDate: check.string, displayEndDate: check.string, startDateTimeZoneIanaId: check.string, endDateTimeZoneIanaId: check.string,
+            location: check.nullable(check.string), description: check.string, status: check.string,
+            serializedCalendarReminders: check.jsonText(check.array(calendarReminderJson)),
+            calendarEventAttachedFile: check.nullable(check.object({ name: check.string, extension: check.nullable(check.string), size: check.number })),
+        }),
+    });
+    const calendarEventsReply = replies.read({ calendarEvents: check.jsonText(check.array(calendarEventJson)) });
+    const otherCalendarsReply = replies.read({ tempOtherCalendars: check.array(calendarSummary) });
     // Cached element references — the "other event" popup and every field of the
     // read-only "view event" modal, plus the anti-forgery input and the two
     // hidden inputs the view uses to hand data to this script.
@@ -280,7 +303,7 @@
                             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                             dataType: "json",
                             contentType: "application/json; charset=utf-8",
-                            success: function(data: ReadReply<CalendarEventPayload>) {
+                            success: onReply(calendarEventReply, function(data) {
                                 if (data.result) {
                                     // --- Fill the read-only modal from `data.calendarEvent` ---
                                     $viewCalendarEventId.val(data.calendarEvent.id);
@@ -491,7 +514,7 @@
                                         headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                                         dataType: "json",
                                         contentType: "application/json; charset=utf-8",
-                                        success: function(response: ReadReply<OtherCalendarsPayload>) {
+                                        success: onReply(otherCalendarsReply, function(response) {
                                             if (response.result) {
                                                 $viewCalendarEventMyCalendar.empty();
 
@@ -504,7 +527,7 @@
 
                                                 $viewCalendarEventMyCalendar.val(data.calendarEvent.calendarId);
                                             }
-                                        },
+                                        }),
                                         error: function() {
                                             toastr.error(localizer.FailedToLoadCalendars);
                                         },
@@ -515,7 +538,7 @@
                                 } else {
                                     toastr.error(data.error);
                                 }
-                            }
+                            })
                         });
 
                         popup.hide();
@@ -571,7 +594,7 @@
             $otherCalendars.find("input[type=\"checkbox\"]").filter(":checked").each(function() {
                 // Each checkbox's `<label id="lblOtherCalendar123">` encodes the id.
                 let calendarsArray = [
-                    { Id: Number($(this).closest("label").attr("id")!.replace("lblOtherCalendar", "")) }
+                    { Id: Number(attribute($(this).closest("label"), "id").replace("lblOtherCalendar", "")) }
                 ];
 
                 for (let i = 0; i < calendarsArray.length; i++) {
@@ -586,7 +609,7 @@
                 dataType: "json",
                 data: JSON.stringify(paramValue),
                 contentType: "application/json; charset=utf-8",
-                success: function(response: ReadReply<CalendarEventsPayload>) {
+                success: onReply(calendarEventsReply, function(response) {
                     // A newer RefreshCalendarEvents call already ran (and removed/re-added events)
                     // since this request went out — applying this stale response now would put
                     // back events the newer call's own removeAllEvents() just cleared.
@@ -614,7 +637,7 @@
                             });
                         });
                     }
-                }
+                })
             });
         }
 
@@ -631,11 +654,12 @@
      */
     function DownloadCalendarEventAttachedFile(this: HTMLElement, event: JQuery.TriggeredEvent) {
         event.preventDefault();
+        // A link with nothing attached yet names no id: nothing to download.
         let calendarEventId = $(this).attr("data-calendareventid");
-        let name = $(this).attr("data-name");
         if (!calendarEventId) {
             return;
         }
+        let name = attribute($(this), "data-name");
 
         $.ajax({
             url: "/Calendar/DownloadCalendarEventAttachedFile",
@@ -646,7 +670,7 @@
             // Without a declared dataType jQuery infers "json" from a refusal's Content-Type and fails to
             // parse the Blob (parsererror -> the layout's ajaxError redirect); "binary" hands back the Blob as is.
             dataType: "binary",
-            success: function(data: Blob) {
+            success: onReply(check.instance(Blob), function(data) {
                 if (data.type.indexOf("application/json") === 0) {
                     data.text().then(function(text) {
                         toastr.error((JSON.parse(text) as FailedReply).error);
@@ -658,14 +682,14 @@
                 let a = document.createElement("a");
                 try {
                     a.href = url;
-                    a.download = name!;
+                    a.download = name;
                     a.click();
                 } finally {
                     // Revoke after a tick so the download has started; drop the <a>.
                     setTimeout(() => URL.revokeObjectURL(url), 100);
                     a.remove();
                 }
-            }
+            })
         });
     }
 

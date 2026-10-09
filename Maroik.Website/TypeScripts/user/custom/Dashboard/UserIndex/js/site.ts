@@ -24,7 +24,10 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { fieldValue } = window;
+    const { check, onReply, fieldValue } = window;
+
+    // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
+    const resultReply = check.object({ result: check.boolean });
     // Localized category names, read from hidden inputs the view rendered from
     // the resource files. Used as the chart slice labels below.
     const localizer = {
@@ -78,13 +81,13 @@
                 DefaultMonetaryUnit: $("#monetaryUnit").find(":selected").val()
             }),
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(resultReply, function(data) {
                 if (data.result) {
                     window.location.href = "/Dashboard/UserIndex?year=" + $("#year").find(":selected").val() + "&month=" + $("#month").find(":selected").val();
                 } else {
                     window.location.href = "/Dashboard/UserIndex?year=" + $("#year").find(":selected").val() + "&month=" + $("#month").find(":selected").val();
                 }
-            }
+            })
         });
     });
 

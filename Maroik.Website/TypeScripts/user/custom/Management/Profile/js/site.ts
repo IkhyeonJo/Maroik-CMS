@@ -17,7 +17,10 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, parseJson, fieldValue, optionalFieldValue } = window;
+    const { check, replies, onReply, parseJson, fieldValue, optionalFieldValue, attribute } = window;
+
+    // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
+    const avatarReply = check.oneOf(check.object({ result: check.literal(true) }), check.object({ result: check.literal(false), errorMessage: check.string }));
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
     // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
     // missing or unparseable.
@@ -49,7 +52,7 @@
      * @param fileSizeLimitationErrorMessage shown when the file is empty or over `maxFileSize`.
      * @param fileTypeErrorMessage          shown when the MIME type is not in `allowedImageContentTypes`.
      */
-    function UpdateProfileAvatar(noFileAttachedErrorMessage?: string, fileSizeLimitationErrorMessage?: string, fileTypeErrorMessage?: string) {
+    function UpdateProfileAvatar(noFileAttachedErrorMessage: string, fileSizeLimitationErrorMessage: string, fileTypeErrorMessage: string) {
         // A file input always has `.files`; `[0]` is undefined when nothing was chosen,
         // which the check right below handles.
         let files: File | undefined = (document.getElementById("ProfileAvatarFiles") as HTMLInputElement).files![0];
@@ -77,14 +80,14 @@
                         contentType: false,
                         dataType: "json",
                         cache: false,
-                        success: function(data: AvatarReply) {
+                        success: onReply(avatarReply, function(data) {
                             if (data.result) {
                                 window.location.href = "/Management/Profile";
                             } else {
                                 alert(data.errorMessage);
                                 window.location.href = "/Management/Profile";
                             }
-                        }
+                        })
                     });
 
                 } else {
@@ -126,7 +129,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     // Changing the password signs every session of the account out — this one
                     // included (the server already dropped it). `alert` blocks until the user
@@ -138,7 +141,7 @@
                     // new password rejected by PasswordPolicy).
                     toastr.error(data.error);
                 }
-            }
+            })
         });
         return false;
     }
@@ -152,6 +155,6 @@
     // Avatar upload is triggered by picking a file, not by a submit button. The
     // localized error strings are read from the input's `data-*` attributes.
     $profileAvatarFiles.off("change").on("change", function() {
-        return UpdateProfileAvatar($(this).attr("data-noFileAttachedErrorMessage"), $(this).attr("data-fileSizeLimitationErrorMessage"), $(this).attr("data-fileTypeErrorMessage"));
+        return UpdateProfileAvatar(attribute($(this), "data-noFileAttachedErrorMessage"), attribute($(this), "data-fileSizeLimitationErrorMessage"), attribute($(this), "data-fileTypeErrorMessage"));
     });
 })();

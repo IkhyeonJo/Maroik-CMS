@@ -33,8 +33,8 @@ function fixture(): string {
      <div id="divCreateFixedExpenditureMyDepositAsset" style="display:none"></div>
      <div id="divEditFixedExpenditureMyDepositAsset" style="display:none"></div>
      <form id="formCreateFixedExpenditure"></form><form id="formEditFixedExpenditure"></form>
-     <button id="btnExportExcelFixedExpenditure"></button><button id="btnEditFixedExpenditureGridRow"></button>
-     <button id="btnConfirmDeleteFixedExpenditure"></button><button id="btnDeleteFixedExpenditure"></button>
+     <button id="btnExportExcelFixedExpenditure"></button><button id="btnEditFixedExpenditureGridRow" data-errorMessageSelectGridRow="L_SelectRow"></button>
+     <button id="btnConfirmDeleteFixedExpenditure" data-errorMessageSelectGridRow="L_SelectRow"></button><button id="btnDeleteFixedExpenditure" data-errorMessageSelectGridRow="L_SelectRow"></button>
      <select id="createFixedExpenditurePaymentMethod"><option value="Card" selected>Card</option></select>
      <select id="editFixedExpenditurePaymentMethod"><option value="Card">Card</option><option value="Cash">Cash</option></select>
      <span id="labelCreateFixedExpenditureAmount"></span><span id="labelEditFixedExpenditureAmount"></span>`
@@ -148,7 +148,7 @@ describe("Notice/FixedExpenditure — class and deposit-month changes, and filli
         h.ajaxCalls.find((a) => String(a.url).includes("IsFixedExpenditureExists"))!.success!({
             result: true, fixedExpenditure: {
                 id: 1, mainClass: "Transfer", subClass: "ToSavings", content: "c", amount: 5, depositMonth: 2, depositDay: 28, maturityDate: "2030-01-01",
-                note: "n", paymentMethod: "Card", myDepositAsset: null, ...record
+                note: "n", paymentMethod: "Card", myDepositAsset: null, unpunctuality: false, ...record
             }
         });
         return h;

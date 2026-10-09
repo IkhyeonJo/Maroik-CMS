@@ -31,7 +31,42 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, parseJson, fieldValue, optionalFieldValue } = window;
+    const { check, replies, onReply, parseJson, instanceOf, fieldValue, optionalFieldValue, attribute } = window;
+
+    // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
+    const uploadImageReply = check.oneOf(
+        check.object({ result: check.literal(true), file: check.object({ fileContents: check.string, contentType: check.string }), filePath: check.string }),
+        check.object({ result: check.literal(false), errorMessage: check.string }));
+    const calendarSummary = check.object({ id: check.number, name: check.string, htmlColorCode: check.string });
+    const calendarSavedReply = replies.write({ calendar: calendarSummary });
+    const calendarDeletedReply = replies.write({ calendar: check.object({ id: check.number }) });
+    const calendarDetailReply = replies.read({
+        calendar: check.object({
+            id: check.number, name: check.string, htmlColorCode: check.string, description: check.nullable(check.string), timeZoneIanaId: check.string,
+        }),
+    });
+    const calendarEventJson = check.object({
+        Id: check.number, CalendarId: check.number, Title: check.string, AllDay: check.boolean, StartDate: check.string, EndDate: check.string,
+        HtmlColorCode: check.string, DisplayStartDate: check.string, DisplayEndDate: check.string, DisplayStartDateTimeZone: check.string,
+        DisplayEndDateTimeZone: check.string, CalendarType: check.nullable(check.string),
+    });
+    const calendarReminderJson = check.object({
+        Method: check.string, MinutesBeforeEvent: check.nullable(check.number), HoursBeforeEvent: check.nullable(check.number),
+        DaysBeforeEvent: check.nullable(check.number), WeeksBeforeEvent: check.nullable(check.number), TimesBeforeEvent: check.nullable(check.string),
+    });
+    const calendarEventReply = replies.read({
+        calendarEvent: check.object({
+            id: check.number, calendarId: check.number, title: check.string, allDay: check.boolean,
+            displayStartDate: check.string, displayEndDate: check.string, startDateTimeZoneIanaId: check.string, endDateTimeZoneIanaId: check.string,
+            location: check.nullable(check.string), description: check.string, status: check.string,
+            serializedCalendarReminders: check.jsonText(check.array(calendarReminderJson)),
+            calendarEventAttachedFile: check.nullable(check.object({ name: check.string, extension: check.nullable(check.string), size: check.number })),
+        }),
+    });
+    const calendarEventsReply = replies.read({ calendarEvents: check.jsonText(check.array(calendarEventJson)) });
+    const calendarsReply = replies.read({ calendars: check.array(calendarSummary) });
+    const otherCalendarsReply = replies.read({ tempOtherCalendars: check.array(calendarSummary) });
+    const browseCalendarsReply = replies.read({ browseCalendarsOfInterests: check.array(check.object({ id: check.number, name: check.string, checked: check.boolean })) });
     // Escapes text before it's interpolated into a raw HTML template literal (as opposed to
     // jQuery .text()/.attr(), which already escape on their own). Calendar names are free text a
     // calendar owner controls; the CSP (script-src with no 'unsafe-inline') already blocks any
@@ -366,7 +401,7 @@
      * input if the file exceeds `maxFileSize`, otherwise stash the `File` in
      * `createCalendarEventUploadedFile` for the submit to send.
      */
-    function CreateCalendarEventUploadedFile(obj: HTMLInputElement, errorMessage?: string) {
+    function CreateCalendarEventUploadedFile(obj: HTMLInputElement, errorMessage: string) {
         if (!obj.files || obj.files.length === 0) {
             // The picker was cancelled: the input is empty, so nothing may be sent.
             createCalendarEventUploadedFile = undefined;
@@ -383,7 +418,7 @@
     }
 
     /** Same as `CreateCalendarEventUploadedFile` for the edit-event form. */
-    function EditCalendarEventUploadedFile(obj: HTMLInputElement, errorMessage?: string) {
+    function EditCalendarEventUploadedFile(obj: HTMLInputElement, errorMessage: string) {
         if (!obj.files || obj.files.length === 0) {
             // The picker was cancelled: the input is empty, so nothing may be sent.
             editCalendarEventUploadedFile = undefined;
@@ -400,11 +435,11 @@
     }
 
     $createCalendarEventAttachment.off("change").on("change", function(event) {
-        return CreateCalendarEventUploadedFile(event.currentTarget as HTMLInputElement, $(event.currentTarget).attr("data-errorMessage"));
+        return CreateCalendarEventUploadedFile(instanceOf(event.currentTarget, HTMLInputElement, "the file input"), attribute($(event.currentTarget), "data-errorMessage"));
     });
 
     $editCalendarEventAttachment.off("change").on("change", function(event) {
-        return EditCalendarEventUploadedFile(event.currentTarget as HTMLInputElement, $(event.currentTarget).attr("data-errorMessage"));
+        return EditCalendarEventUploadedFile(instanceOf(event.currentTarget, HTMLInputElement, "the file input"), attribute($(event.currentTarget), "data-errorMessage"));
     });
 
     /**
@@ -680,7 +715,7 @@
                     headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                     dataType: "json",
                     contentType: "application/json; charset=utf-8",
-                    success: function(response: ReadReply<CalendarsPayload>) {
+                    success: onReply(calendarsReply, function(response) {
                         if (response.result) {
                             $createCalendarEventMyCalendar.empty();
 
@@ -691,7 +726,7 @@
                                 }));
                             });
                         }
-                    },
+                    }),
                     error: function() {
                         toastr.error(localizer.FailedToLoadCalendars);
                     },
@@ -773,7 +808,7 @@
                             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                             dataType: "json",
                             contentType: "application/json; charset=utf-8",
-                            success: function(data: ReadReply<CalendarEventPayload>) {
+                            success: onReply(calendarEventReply, function(data) {
                                 if (data.result) {
 
                                     $editCalendarEventId.val(data.calendarEvent.id);
@@ -965,7 +1000,7 @@
                                         headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                                         dataType: "json",
                                         contentType: "application/json; charset=utf-8",
-                                        success: function(response: ReadReply<CalendarsPayload>) {
+                                        success: onReply(calendarsReply, function(response) {
                                             if (response.result) {
                                                 $editCalendarEventMyCalendar.empty();
 
@@ -978,7 +1013,7 @@
 
                                                 $editCalendarEventMyCalendar.val(data.calendarEvent.calendarId);
                                             }
-                                        },
+                                        }),
                                         error: function() {
                                             toastr.error(localizer.FailedToLoadCalendars);
                                         },
@@ -989,7 +1024,7 @@
                                 } else {
                                     toastr.error(data.error);
                                 }
-                            }
+                            })
                         });
 
                         popup.hide();
@@ -1003,14 +1038,14 @@
                                 headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                                 dataType: "json",
                                 contentType: "application/json; charset=utf-8",
-                                success: function(data: ActionReply) {
+                                success: onReply(replies.action, function(data) {
                                     if (data.result) {
                                         arg.event.remove();
                                         toastr.success(data.message);
                                     } else {
                                         toastr.error(data.error);
                                     }
-                                }
+                                })
                             });
                         }
                         popup.hide();
@@ -1070,7 +1105,7 @@
                             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                             dataType: "json",
                             contentType: "application/json; charset=utf-8",
-                            success: function(data: ReadReply<CalendarEventPayload>) {
+                            success: onReply(calendarEventReply, function(data) {
                                 if (data.result) {
                                     $viewCalendarEventId.val(data.calendarEvent.id);
                                     $viewCalendarEventName.val(data.calendarEvent.title);
@@ -1254,7 +1289,7 @@
                                         headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                                         dataType: "json",
                                         contentType: "application/json; charset=utf-8",
-                                        success: function(response: ReadReply<OtherCalendarsPayload>) {
+                                        success: onReply(otherCalendarsReply, function(response) {
                                             if (response.result) {
                                                 $viewCalendarEventMyCalendar.empty();
 
@@ -1267,7 +1302,7 @@
 
                                                 $viewCalendarEventMyCalendar.val(data.calendarEvent.calendarId);
                                             }
-                                        },
+                                        }),
                                         error: function() {
                                             toastr.error(localizer.FailedToLoadCalendars);
                                         },
@@ -1278,7 +1313,7 @@
                                 } else {
                                     toastr.error(data.error);
                                 }
-                            }
+                            })
                         });
 
                         popup.hide();
@@ -1356,7 +1391,7 @@
 
             $myCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
                 let calendarsArray = [
-                    { Id: Number($(this).closest("label").attr("id")!.replace("lblCalendar", "")) }
+                    { Id: Number(attribute($(this).closest("label"), "id").replace("lblCalendar", "")) }
                 ];
 
                 for (let i = 0; i < calendarsArray.length; i++) {
@@ -1366,7 +1401,7 @@
 
             $otherCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
                 let calendarsArray = [
-                    { Id: Number($(this).closest("label").attr("id")!.replace("lblOtherCalendar", "")) }
+                    { Id: Number(attribute($(this).closest("label"), "id").replace("lblOtherCalendar", "")) }
                 ];
 
                 for (let i = 0; i < calendarsArray.length; i++) {
@@ -1381,7 +1416,7 @@
                 dataType: "json",
                 data: JSON.stringify(paramValue),
                 contentType: "application/json; charset=utf-8",
-                success: function(response: ReadReply<CalendarEventsPayload>) {
+                success: onReply(calendarEventsReply, function(response) {
                     // A newer RefreshCalendarEvents call already ran (and removed/re-added events)
                     // since this request went out — applying this stale response now would put
                     // back events the newer call's own removeAllEvents() just cleared.
@@ -1409,7 +1444,7 @@
                             });
                         });
                     }
-                }
+                })
             });
         }
 
@@ -1814,7 +1849,7 @@
                 data: formData,
                 contentType: false,
                 processData: false,
-                success: function(data: ActionReply) {
+                success: onReply(replies.action, function(data) {
                     if (data.result) {
                         // Accepted: the file has been stored and must not go out with the next submit. A refused
                         // submit keeps it, since the form still shows it and editing without a file clears the attachment.
@@ -1828,7 +1863,7 @@
 
                         $myCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
                             let calendarsArray = [
-                                { Id: Number($(this).closest("label").attr("id")!.replace("lblCalendar", "")) }
+                                { Id: Number(attribute($(this).closest("label"), "id").replace("lblCalendar", "")) }
                             ];
 
                             for (let i = 0; i < calendarsArray.length; i++) {
@@ -1838,7 +1873,7 @@
 
                         $otherCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
                             let calendarsArray = [
-                                { Id: Number($(this).closest("label").attr("id")!.replace("lblOtherCalendar", "")) }
+                                { Id: Number(attribute($(this).closest("label"), "id").replace("lblOtherCalendar", "")) }
                             ];
 
                             for (let i = 0; i < calendarsArray.length; i++) {
@@ -1853,7 +1888,7 @@
                             dataType: "json",
                             data: JSON.stringify(paramValue),
                             contentType: "application/json; charset=utf-8",
-                            success: function(response: ReadReply<CalendarEventsPayload>) {
+                            success: onReply(calendarEventsReply, function(response) {
                                 if (response.result) {
                                     (JSON.parse(response.calendarEvents) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
                                         calendar.addEvent({
@@ -1877,7 +1912,7 @@
                                 } else {
                                     toastr.error(response.error);
                                 }
-                            }
+                            })
                         });
 
                         toastr.success(data.message);
@@ -1886,7 +1921,7 @@
                     } else {
                         toastr.error(data.error);
                     }
-                }
+                })
             });
 
             return false;
@@ -2054,7 +2089,7 @@
                 data: formData,
                 contentType: false,
                 processData: false,
-                success: function(data: ActionReply) {
+                success: onReply(replies.action, function(data) {
                     if (data.result) {
                         // Accepted: the file has been stored and must not go out with the next submit. A refused
                         // submit keeps it, since the form still shows it and editing without a file clears the attachment.
@@ -2068,7 +2103,7 @@
 
                         $myCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
                             let calendarsArray = [
-                                { Id: Number($(this).closest("label").attr("id")!.replace("lblCalendar", "")) }
+                                { Id: Number(attribute($(this).closest("label"), "id").replace("lblCalendar", "")) }
                             ];
 
                             for (let i = 0; i < calendarsArray.length; i++) {
@@ -2078,7 +2113,7 @@
 
                         $otherCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
                             let calendarsArray = [
-                                { Id: Number($(this).closest("label").attr("id")!.replace("lblOtherCalendar", "")) }
+                                { Id: Number(attribute($(this).closest("label"), "id").replace("lblOtherCalendar", "")) }
                             ];
 
                             for (let i = 0; i < calendarsArray.length; i++) {
@@ -2093,7 +2128,7 @@
                             dataType: "json",
                             data: JSON.stringify(paramValue),
                             contentType: "application/json; charset=utf-8",
-                            success: function(response: ReadReply<CalendarEventsPayload>) {
+                            success: onReply(calendarEventsReply, function(response) {
                                 if (response.result) {
                                     (JSON.parse(response.calendarEvents) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
                                         calendar.addEvent({
@@ -2117,7 +2152,7 @@
                                 } else {
                                     toastr.error(response.error);
                                 }
-                            }
+                            })
                         });
 
                         toastr.success(data.message);
@@ -2126,7 +2161,7 @@
                     } else {
                         toastr.error(data.error);
                     }
-                }
+                })
             });
 
             return false;
@@ -2170,7 +2205,7 @@
                 dataType: "json",
                 data: JSON.stringify(paramValue),
                 contentType: "application/json; charset=utf-8",
-                success: function(data: WriteReply<CalendarPayload>) {
+                success: onReply(calendarSavedReply, function(data) {
                     if (data.result) {
                         $editCalendarDialogModal.modal("hide");
                         let $lblCalendarId = $("#lblCalendar" + data.calendar.id);
@@ -2213,7 +2248,7 @@
                     } else {
                         toastr.error(data.error);
                     }
-                }
+                })
             });
             return false;
         }
@@ -2237,7 +2272,7 @@
                 headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(data: ReadReply<CalendarPayload>) {
+                success: onReply(calendarDetailReply, function(data) {
                     if (data.result) {
                         let calendarsArray = [
                             { Id: data.calendar.id }
@@ -2258,7 +2293,7 @@
                             dataType: "json",
                             data: JSON.stringify(paramValue),
                             contentType: "application/json; charset=utf-8",
-                            success: function(data: WriteReply<CalendarPayload>) {
+                            success: onReply(calendarDeletedReply, function(data) {
                                 if (data.result) {
                                     $confirmDeleteCalendarDialogModal.modal("hide");
 
@@ -2274,12 +2309,12 @@
                                 } else {
                                     toastr.error(data.error);
                                 }
-                            }
+                            })
                         });
                     } else {
                         toastr.error(data.error);
                     }
-                }
+                })
             });
         }
 
@@ -2313,7 +2348,7 @@
             contentType: false,
             dataType: "json",
             cache: false,
-            success: function(data: UploadImageReply) {
+            success: onReply(uploadImageReply, function(data) {
                 if (data.result) {
                     const imgURL = URL.createObjectURL(base64ToBlob(data.file.fileContents, data.file.contentType));
                     const imgNode = document.createElement("img");
@@ -2333,7 +2368,7 @@
                 } else {
                     alert(data.errorMessage);
                 }
-            }
+            })
         });
     }
 
@@ -2353,7 +2388,7 @@
             contentType: false,
             dataType: "json",
             cache: false,
-            success: function(data: UploadImageReply) {
+            success: onReply(uploadImageReply, function(data) {
                 if (data.result) {
                     const imgURL = URL.createObjectURL(base64ToBlob(data.file.fileContents, data.file.contentType));
                     const imgNode = document.createElement("img");
@@ -2373,7 +2408,7 @@
                 } else {
                     alert(data.errorMessage);
                 }
-            }
+            })
         });
     }
 
@@ -2413,7 +2448,7 @@
             dataType: "json",
             data: JSON.stringify(paramValue),
             contentType: "application/json; charset=utf-8",
-            success: function(data: WriteReply<CalendarPayload>) {
+            success: onReply(calendarSavedReply, function(data) {
                 if (data.result) {
                     $createCalendarDialogModal.modal("hide");
 
@@ -2438,7 +2473,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
         return false;
     }
@@ -2459,7 +2494,7 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(response: ReadReply<CalendarsPayload>) {
+            success: onReply(calendarsReply, function(response) {
                 if (response.result) {
                     $createCalendarEventMyCalendar.empty();
 
@@ -2470,7 +2505,7 @@
                         }));
                     });
                 }
-            },
+            }),
             error: function() {
                 toastr.error(localizer.FailedToLoadCalendars);
             },
@@ -2702,7 +2737,7 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(response: ReadReply<BrowseCalendarsPayload>) {
+            success: onReply(browseCalendarsReply, function(response) {
                 if (response.result) {
                     let htmlString = "";
                     $.each(response.browseCalendarsOfInterests, function(_, browseCalendarsOfInterest: CalendarBrowseSummary) {
@@ -2728,7 +2763,7 @@
                         $allCheckBrowseCalendarsOfInterest.prop("checked", $(".checkBoxBrowseCalendarsOfInterest").length === $(".checkBoxBrowseCalendarsOfInterest:checked").length);
                     });
                 }
-            },
+            }),
             error: function() {
                 toastr.error(localizer.FailedToLoadCalendars);
             },
@@ -2753,7 +2788,7 @@
             let checkBox = $(element).find(".checkBoxBrowseCalendarsOfInterest");
             if (checkBox.is(":checked")) {
                 calendarBeOtherCalendar.push({
-                    CalendarId: checkBox.parent().attr("id")!.replace("divBrowseCalendarsOfInterest", "")
+                    CalendarId: attribute(checkBox.parent(), "id").replace("divBrowseCalendarsOfInterest", "")
                 });
             }
         });
@@ -2765,7 +2800,7 @@
             dataType: "json",
             data: JSON.stringify(calendarBeOtherCalendar),
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
 
                     // Runs on every exit path below (both ajax calls' success-but-failed-result,
@@ -2784,7 +2819,7 @@
                         headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                         dataType: "json",
                         contentType: "application/json; charset=utf-8",
-                        success: function(response: ReadReply<OtherCalendarsPayload>) {
+                        success: onReply(otherCalendarsReply, function(response) {
                             if (response.result) {
                                 let htmlString = "";
 
@@ -2807,7 +2842,7 @@
 
                                 $myCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
                                     let calendarsArray = [
-                                        { Id: Number($(this).closest("label").attr("id")!.replace("lblCalendar", "")) }
+                                        { Id: Number(attribute($(this).closest("label"), "id").replace("lblCalendar", "")) }
                                     ];
 
                                     for (let i = 0; i < calendarsArray.length; i++) {
@@ -2817,7 +2852,7 @@
 
                                 $otherCalendars.find("input[type=\"checkbox\"]:checked").each(function() {
                                     let calendarsArray = [
-                                        { Id: Number($(this).closest("label").attr("id")!.replace("lblOtherCalendar", "")) }
+                                        { Id: Number(attribute($(this).closest("label"), "id").replace("lblOtherCalendar", "")) }
                                     ];
 
                                     for (let i = 0; i < calendarsArray.length; i++) {
@@ -2832,7 +2867,7 @@
                                     dataType: "json",
                                     data: JSON.stringify(paramValue),
                                     contentType: "application/json; charset=utf-8",
-                                    success: function(response: ReadReply<CalendarEventsPayload>) {
+                                    success: onReply(calendarEventsReply, function(response) {
                                         if (response.result) {
                                             (JSON.parse(response.calendarEvents) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
                                                 calendar.addEvent({
@@ -2854,7 +2889,7 @@
                                                 });
                                             });
                                         }
-                                    },
+                                    }),
                                     error: function() {
                                         toastr.error(localizer.FailedToLoadCalendars);
                                     },
@@ -2869,7 +2904,7 @@
                             } else {
                                 finishBrowseCalendarsUpdate();
                             }
-                        },
+                        }),
                         error: function() {
                             toastr.error(localizer.FailedToLoadCalendars);
                             finishBrowseCalendarsUpdate();
@@ -2878,7 +2913,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
 
         return false;
@@ -2893,7 +2928,7 @@
         e.preventDefault();
         e.stopPropagation();
 
-        let selectedCalendarId = $(this).parent().attr("id")!.replace("lblCalendar", "");
+        let selectedCalendarId = attribute($(this).parent(), "id").replace("lblCalendar", "");
 
         $.ajax({
             url: "/Calendar/IsCalendarExists" + "?id=" + selectedCalendarId,
@@ -2901,7 +2936,7 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: ReadReply<CalendarPayload>) {
+            success: onReply(calendarDetailReply, function(data) {
                 if (data.result) {
                     $editCalendarId.val(data.calendar.id);
                     $editCalendarName.val(data.calendar.name);
@@ -2919,7 +2954,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
     });
 
@@ -2935,7 +2970,7 @@
         e.preventDefault();
         e.stopPropagation();
 
-        let calendarId = $(this).parent().attr("id")!.replace("lblCalendar", "");
+        let calendarId = attribute($(this).parent(), "id").replace("lblCalendar", "");
         $confirmDeleteCalendarDialogModal.data("calendar-id", calendarId);
 
         $confirmDeleteCalendarDialogModal.modal({
@@ -2962,11 +2997,12 @@
      */
     function DownloadCalendarEventAttachedFile(this: HTMLElement, event: JQuery.TriggeredEvent) {
         event.preventDefault();
+        // A link with nothing attached yet names no id: nothing to download.
         let calendarEventId = $(this).attr("data-calendareventid");
-        let name = $(this).attr("data-name");
         if (!calendarEventId) {
             return;
         }
+        let name = attribute($(this), "data-name");
 
         $.ajax({
             url: "/Calendar/DownloadCalendarEventAttachedFile",
@@ -2977,7 +3013,7 @@
             // Without a declared dataType jQuery infers "json" from a refusal's Content-Type and fails to
             // parse the Blob (parsererror -> the layout's ajaxError redirect); "binary" hands back the Blob as is.
             dataType: "binary",
-            success: function(data: Blob) {
+            success: onReply(check.instance(Blob), function(data) {
                 if (data.type.indexOf("application/json") === 0) {
                     data.text().then(function(text) {
                         toastr.error((JSON.parse(text) as FailedReply).error);
@@ -2989,14 +3025,14 @@
                 let a = document.createElement("a");
                 try {
                     a.href = url;
-                    a.download = name!;
+                    a.download = name;
                     a.click();
                 } finally {
                     // Revoke after a tick so the download has started; drop the <a>.
                     setTimeout(() => URL.revokeObjectURL(url), 100);
                     a.remove();
                 }
-            }
+            })
         });
     }
 

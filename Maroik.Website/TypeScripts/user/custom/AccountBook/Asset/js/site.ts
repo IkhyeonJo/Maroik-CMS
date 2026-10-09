@@ -21,7 +21,12 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { fieldValue, attribute } = window;
+    const { check, replies, onReply, fieldValue, attribute } = window;
+
+    // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
+    const assetReply = replies.read({
+        asset: check.object({ productName: check.string, item: check.string, amount: check.number, monetaryUnit: check.string, note: check.string, deleted: check.boolean }),
+    });
     // Cached references: jQuery-UI tab containers, the grid search box, and every
     // field of the creation/edit modals plus the anti-forgery token input.
     const $createAssetTabs = $("#createAssetTabs");
@@ -74,7 +79,7 @@
 
         $clsGridRow.each(function() {
             // Stringify both sides defensively before comparing the identity key.
-            if ((String(selectedRowProductName).valueOf() === String($(this).attr("data-productName")).valueOf())) {
+            if ((String(selectedRowProductName).valueOf() === String(attribute($(this), "data-productName")).valueOf())) {
                 $(this).addClass(selectedRowColor);
             }
         });
@@ -99,8 +104,8 @@
     // `document` because grid rows are replaced on every reload.
     $(document).off("dblclick.Asset", ".clsGridRow").on("dblclick.Asset", ".clsGridRow", function() {
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                EditAssetGridRow();
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                EditAssetGridRow(attribute($btnEditAssetGridRow, "data-errorMessageSelectGridRow"));
             }
         });
     });
@@ -146,7 +151,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     $createAssetDialogModal.modal("hide");
 
@@ -157,7 +162,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
 
         return false;
@@ -173,18 +178,18 @@
      * @param errorMessageSelectGridRow localized "pick a row first" text, from
      *   the button's `data-*` attribute (optional only because `.attr()` is).
      */
-    function EditAssetGridRow(errorMessageSelectGridRow?: string) {
+    function EditAssetGridRow(errorMessageSelectGridRow: string) {
 
         let selectedRowProductName = "";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowProductName = $(this).attr("data-productName")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowProductName = attribute($(this), "data-productName");
             }
         });
 
         if (selectedRowProductName === "") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -194,7 +199,7 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: ReadReply<AssetPayload>) {
+            success: onReply(assetReply, function(data) {
                 if (data.result) {
 
                     $editAssetOriginalProductName.val(data.asset.productName);
@@ -218,7 +223,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
     }
 
@@ -257,7 +262,7 @@
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
-            success: function(data: ActionReply) {
+            success: onReply(replies.action, function(data) {
                 if (data.result) {
                     $editAssetDialogModal.modal("hide");
 
@@ -268,7 +273,7 @@
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
         return false;
     }
@@ -277,18 +282,18 @@
      * "Delete" button: verify a row is selected, then just open the confirmation
      * modal. The actual delete happens in `DeleteAsset` when it is confirmed.
      */
-    function ConfirmDeleteAsset(errorMessageSelectGridRow?: string) {
+    function ConfirmDeleteAsset(errorMessageSelectGridRow: string) {
 
         let selectedRowProductName = "";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowProductName = $(this).attr("data-productName")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowProductName = attribute($(this), "data-productName");
             }
         });
 
         if (selectedRowProductName === "") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -306,18 +311,18 @@
      * (`IsAssetExists`), then POST `DeleteAsset`. Nested so the delete always
      * uses the server's current record, not stale row markup.
      */
-    function DeleteAsset(errorMessageSelectGridRow?: string) {
+    function DeleteAsset(errorMessageSelectGridRow: string) {
 
         let selectedRowProductName = "";
 
         $(".clsGridRow").each(function() {
-            if ($(this).attr("class")!.includes(selectedRowColor)) {
-                selectedRowProductName = $(this).attr("data-productName")!;
+            if (attribute($(this), "class").includes(selectedRowColor)) {
+                selectedRowProductName = attribute($(this), "data-productName");
             }
         });
 
         if (selectedRowProductName === "") {
-            toastr.error(errorMessageSelectGridRow!);
+            toastr.error(errorMessageSelectGridRow);
             return false;
         }
 
@@ -327,7 +332,7 @@
             headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: function(data: ReadReply<AssetPayload>) {
+            success: onReply(assetReply, function(data) {
                 if (data.result) {
 
                     let paramValue = JSON.stringify({
@@ -341,7 +346,7 @@
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
-                        success: function(data: ActionReply) {
+                        success: onReply(replies.action, function(data) {
                             if (data.result) {
                                 $confirmDeleteAssetDialogModal.modal("hide");
 
@@ -352,12 +357,12 @@
                             } else {
                                 toastr.error(data.error);
                             }
-                        }
+                        })
                     });
                 } else {
                     toastr.error(data.error);
                 }
-            }
+            })
         });
     }
 
@@ -392,11 +397,11 @@
     // The edit/confirm/delete buttons pass their localized "select a row first"
     // message down from a `data-*` attribute.
     $btnEditAssetGridRow.off("click").on("click", function() {
-        EditAssetGridRow($(this).attr("data-errorMessageSelectGridRow"));
+        EditAssetGridRow(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $btnConfirmDeleteAsset.off("click").on("click", function() {
-        ConfirmDeleteAsset($(this).attr("data-errorMessageSelectGridRow"));
+        ConfirmDeleteAsset(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $btnExportExcelAsset.off("click").on("click", function() {
@@ -404,7 +409,7 @@
     });
 
     $btnDeleteAsset.off("click").on("click", function() {
-        DeleteAsset($(this).attr("data-errorMessageSelectGridRow"));
+        DeleteAsset(attribute($(this), "data-errorMessageSelectGridRow"));
     });
 
     $formCreateAsset.off("submit").on("submit", function() {

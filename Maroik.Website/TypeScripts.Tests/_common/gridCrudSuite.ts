@@ -238,10 +238,12 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
 
             const exists = h.ajaxCalls.find((a) => String(a.url).includes(`Is${N}Exists`))!;
             expect(exists.url).toBe(existsUrl(KEYS[1]));
-            exists.success!({ result: true, [c.existsKey]: { ...c.record, [recordKey]: 424242 } });
+            // A key unlike the selected row's, typed like the real one (a numeric Id, or a name / e-mail).
+            const returnedKey = c.rowKey === "Id" ? 424242 : "returned-key";
+            exists.success!({ result: true, [c.existsKey]: { ...c.record, [recordKey]: returnedKey } });
 
             const del = h.ajaxCalls.find((a) => a.url === `/${c.controller}/Delete${N}`)!;
-            expect(JSON.parse(String(del.data))).toEqual(deleteBody(424242));
+            expect(JSON.parse(String(del.data))).toEqual(deleteBody(returnedKey));
             del.success!({ result: true, message: "removed" });
 
             expect(modal).toHaveBeenCalledWith("hide");

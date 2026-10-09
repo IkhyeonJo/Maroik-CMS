@@ -30,8 +30,8 @@ function fixture(extra = ""): string {
      <select id="editIncomeMainClass"></select><select id="editIncomeSubClass"></select>
      <form id="formCreateIncome"></form><form id="formEditIncome"></form>
      <button id="btnExportExcelIncome"></button>
-     <button id="btnEditIncomeGridRow"></button><button id="btnConfirmDeleteIncome"></button>
-     <button id="btnDeleteIncome"></button>
+     <button id="btnEditIncomeGridRow" data-errorMessageSelectGridRow="L_SelectRow"></button><button id="btnConfirmDeleteIncome" data-errorMessageSelectGridRow="L_SelectRow"></button>
+     <button id="btnDeleteIncome" data-errorMessageSelectGridRow="L_SelectRow"></button>
      <select id="createIncomeDepositMyAssetProductName"><option value="A" selected>A</option></select>
      <select id="editIncomeDepositMyAssetProductName"><option value="A">A</option><option value="B">B</option><option value="A&amp;B Bank">A&amp;B Bank</option></select>
      <span id="labelCreateIncomeAmount"></span><span id="labelEditIncomeAmount"></span>` +

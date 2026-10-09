@@ -115,7 +115,7 @@ describe("admin/Calendar/AdminIndex", () => {
         expect(call.url).toBe("/Calendar/GetCalendars");
         expect(call.async).not.toBe(false);
 
-        call.success?.({ result: true, calendars: [{ id: 1, name: "Cal 1" }] });
+        call.success?.({ result: true, calendars: [{ id: 1, name: "Cal 1", htmlColorCode: "#123456" }] });
         call.complete?.();
 
         expect(h.$("#createCalendarEventMyCalendar option").length).toBe(1);
@@ -172,6 +172,7 @@ describe("admin/Calendar/AdminIndex", () => {
         expect(call.url).toBe("/Calendar/CreateCalendar");
         call.success?.({
             result: true,
+            message: "created",
             calendar: { id: 1, name: "<img src=x alt=\"\">", htmlColorCode: "#3788d8" }
         });
 
@@ -191,6 +192,8 @@ describe("admin/Calendar/AdminIndex", () => {
                 allDay: true,
                 displayStartDate: "2024-01-01",
                 displayEndDate: "2024-01-02",
+                startDateTimeZoneIanaId: "UTC",
+                endDateTimeZoneIanaId: "UTC",
                 location: "",
                 description: "<p>hello</p>",
                 calendarEventAttachedFile: null,
@@ -213,7 +216,7 @@ describe("admin/Calendar/AdminIndex", () => {
         expect(call.url).toBe("/Calendar/GetCalendars");
         expect(call.async).not.toBe(false);
 
-        call.success?.({ result: true, calendars: [{ id: 1, name: "Cal 1" }] });
+        call.success?.({ result: true, calendars: [{ id: 1, name: "Cal 1", htmlColorCode: "#123456" }] });
         call.complete?.();
 
         expect(h.$("#createCalendarEventMyCalendar option").length).toBe(1);
@@ -249,7 +252,7 @@ describe("admin/Calendar/AdminIndex", () => {
         expect(innerCall.url).toBe("/Calendar/GetCalendars");
         expect(innerCall.async).not.toBe(false);
 
-        innerCall.success?.({ result: true, calendars: [{ id: 5, name: "Cal 5" }] });
+        innerCall.success?.({ result: true, calendars: [{ id: 5, name: "Cal 5", htmlColorCode: "#123456" }] });
         innerCall.complete?.();
 
         // Only set inside showEditCalendarEventModal, which now runs from `complete`.

@@ -17,7 +17,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { fieldValue } = window;
+    const { check, onReply, fieldValue, attribute } = window;
     // Cached element references. `#free_forum_detail_updated` and the table only
     // exist on the relevant sub-view, so their `.length` is checked before use.
     const $freeForumDetailUpdated = $("#free_forum_detail_updated");
@@ -112,7 +112,7 @@
         // "Back to list" keeps the caller's paging/search state, carried in the
         // button's `data-link` attribute (always present here, hence the `!`).
         $btnFreeForumList.off("click").on("click", function() {
-            location.href = $(this).attr("data-link")!;
+            location.href = attribute($(this), "data-link");
         });
 
         // Enter in the search box triggers the search instead of submitting.
@@ -162,11 +162,12 @@
         // the file; a refusal comes back as JSON `{ result, error }` instead of a file.
         function DownloadAttachedFile(this: HTMLElement, event: JQuery.TriggeredEvent) {
             event.preventDefault();
+            // A link with nothing attached yet names no id: nothing to download.
             let boardId = $(this).attr("data-boardid");
-            let name = $(this).attr("data-name");
             if (!boardId) {
                 return;
             }
+            let name = attribute($(this), "data-name");
 
             $.ajax({
                 url: "/Forum/DownloadFreeBoardAttachedFile",
@@ -177,7 +178,7 @@
                 // Without a declared dataType jQuery infers "json" from a refusal's Content-Type and fails to
                 // parse the Blob (parsererror -> the layout's ajaxError redirect); "binary" hands back the Blob as is.
                 dataType: "binary",
-                success: function(data: Blob) {
+                success: onReply(check.instance(Blob), function(data) {
                     if (data.type.indexOf("application/json") === 0) {
                         data.text().then(function(text) {
                             toastr.error((JSON.parse(text) as FailedReply).error);
@@ -189,14 +190,14 @@
                     let a = document.createElement("a");
                     try {
                         a.href = url;
-                        a.download = name!;
+                        a.download = name;
                         a.click();
                     } finally {
                         // Revoke after a tick so the download has started; drop the <a>.
                         setTimeout(() => URL.revokeObjectURL(url), 100);
                         a.remove();
                     }
-                }
+                })
             });
         }
 
