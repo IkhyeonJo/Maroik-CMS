@@ -57,6 +57,88 @@ This repository is a portfolio snapshot of Maroik. The original Maroik repositor
 - **Use-case DTOs.** Self-registration, admin account creation and admin account update each have their own request type, so a registration form can never carry a role, lock or confirmation flag.
 - **Test-first development.** Every change starts with a failing test, including the log entries it must write; real PostgreSQL and RabbitMQ run in Testcontainers instead of mocks wherever the behaviour depends on them.
 
+## Architecture
+
+### Layers — DDD + Clean Architecture
+
+```mermaid
+flowchart TB
+    subgraph hosts["Application hosts"]
+        Website["Maroik.Website<br/>MVC controllers · views · TypeScript"]
+        Worker["Maroik.Worker<br/>e-mail consumer"]
+        FileStorage["Maroik.FileStorage<br/>internal file API"]
+    end
+    Service["Maroik.Core.Service<br/>use cases · transactions · logging"]
+    Contract["Maroik.Core.Contract<br/>interfaces · DTOs"]
+    Domain["Maroik.Core.Domain<br/>aggregates · value objects · policies"]
+    Repository["Maroik.Core.Repository<br/>EF Core repositories"]
+    PostgreSQL["Maroik.Core.PostgreSQL<br/>DbContext · mapped models"]
+    Client["Maroik.Core.Client<br/>SMTP · file storage · ClamAV · RabbitMQ"]
+
+    Website --> Service
+    Worker --> Service
+    Service --> Contract --> Domain
+    Repository --> Contract
+    Repository --> PostgreSQL
+    Client --> Contract
+    FileStorage --> Client
+    Website -. "composition root only" .-> Repository
+    Website -. "composition root only" .-> Client
+    Worker -. "composition root only" .-> Repository
+    Worker -. "composition root only" .-> Client
+```
+
+- **Domain** holds the business rules — aggregates, value objects (`Email`, `Money`, `CurrencyCode`, …) and policies
+  (finance class taxonomies, reminder limits, fixed schedules, passwords, image uploads). It references no other
+  project, logs nothing, never reads the clock (the current time is passed in) and reports every error through
+  `DomainError`, so the outer layers can translate it.
+- **Service** orchestrates a use case: it loads aggregates through repository interfaces, calls domain methods, owns
+  the transaction (each write spells out `BeginAsync` / `CommitAsync` / `RollbackAsync`), maps to DTOs and logs. It
+  depends on **Contract** only.
+- **Repository** (EF Core) and **Client** (SMTP, file storage, ClamAV, RabbitMQ) implement the Contract interfaces.
+  The hosts reference them only to register them in the composition root; controllers and views cannot see them.
+- **Website** controllers bind the request, call a service and return the view model or a `{ result, error }`
+  JSON reply; views only render. The navigation menu doubles as the access-control list (`AuthorizationFilter`).
+- **No business logic on the client.** The client scripts do DOM wiring and AJAX only; a rule the UI mirrors comes
+  from a domain policy serialized into the page, and the server re-validates every write.
+
+All of this is enforced by architecture tests that fail the build, among them:
+`Domain_ShouldNot_DependOnAnyOtherLayer`, `Domain_ShouldNot_Log`, `Domain_ShouldNot_ReadTheClock`,
+`Domain_ErrorMessages_MustGoThrough_DomainError`, `BoundedContext_ShouldNot_DependOnAnotherBoundedContext`,
+`ServiceLayer_MustNotProjectReference_AnyInfrastructureOrPersistenceProject`,
+`InfrastructureLayers_MustBuildOnContractOnly_NotOnEachOtherOrService`, `ProjectReferenceGraph_MustBeAcyclic`,
+`Controllers_ShouldNot_DependOnRepositoryOrClientOrServiceNamespace`,
+`PostActions_MustCarry_AntiforgeryAndRoleAttributes` and `ServiceResults_TakeTheirMessageKey_FromServiceErrorKeys`.
+
+### Runtime
+
+```mermaid
+flowchart LR
+    Browser --> Website["Maroik.Website"]
+    Website --> PostgreSQL[("PostgreSQL 17")]
+    Website --> Valkey[("Valkey<br/>session · Data Protection keys")]
+    Website --> FileStorage["Maroik.FileStorage"]
+    Website --> ClamAV["ClamAV"]
+    FileStorage --> ClamAV
+    Website -- "mail jobs" --> RabbitMQ[("RabbitMQ")]
+    RabbitMQ --> Worker["Maroik.Worker"]
+    Worker --> SMTP["SMTP relay"]
+```
+
+Every service runs as a container under Docker Compose. Uploads are scanned by ClamAV before they are stored, the
+file storage is reachable only on the internal network, and outgoing mail is queued in RabbitMQ and sent by the
+worker. In production the site is reached through a Cloudflare Tunnel, so the host publishes no port.
+
+### Client scripts
+
+The page scripts are written in **TypeScript** (`Maroik.Website/TypeScripts/**/site.ts`) and compiled 1:1 by `tsc`
+into plain global scripts — no bundler, no runtime framework. They are type-checked with `strict` plus
+`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` and the other strict options, and contain **no `any` and no
+type assertion**. Anything the compiler cannot prove is checked at run time instead: each role's layout script
+provides a small toolkit (`fieldValue`, `parseJson`, `byId`, `required`, `onReply`, …), every AJAX reply is
+validated against a check that mirrors the controller's JSON field for field, and a reply of the wrong shape shows a
+generic error instead of failing half-way through a handler.
+
 ## Technologies Used
 
 ### Backend
@@ -129,8 +211,31 @@ Maroik/
 - Code projects (assemblies, namespaces, types) follow the .NET Framework Design Guidelines for acronym casing: acronyms of three or more letters use PascalCase (e.g. `Ssl`, `Http`), while two-letter acronyms stay uppercase (e.g. `DB`, `IO`).
 - Folders that are not code projects — `Maroik.SSL`, `Maroik.DB`, `Maroik.Log` — intentionally keep their existing casing, because docker-compose volume mounts reference them by name.
 
-## Testing
-Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all. Coverage target: line >= 80 %, branch >= 65 %. At the time of writing the suites hold about 4,200 tests (3,323 .NET + 848 Vitest), all passing.
+## Testing Strategy
+
+The goal is that a test fails whenever the behaviour it describes breaks — not that lines are merely executed.
+
+- **Test-first.** Every change starts with a failing test, a bug fix with a regression test that fails on the old
+  code, and the log entries a use case must write are asserted like any other result.
+- **Real dependencies where the behaviour depends on them.** Repositories run against a real PostgreSQL 17 loaded
+  with the production schema and seed data (Testcontainers, one throwaway database per test class); messaging against
+  a real RabbitMQ 4; mail against an in-process SMTP server; controllers through `WebApplicationFactory` against a real
+  database; and the whole site in a real browser with Playwright.
+- **Mocks only at layer boundaries.** Service tests mock the repositories but assert the transaction calls
+  (`BeginAsync` / `CommitAsync` / `RollbackAsync`), the exact error code / key / type, and every `catch`'s log entry.
+- **Contracts between the layers are tested.** The EF model is compared with the SQL schema
+  (`ModelMatchesSchemaTests`); every message key a controller can receive must exist in its `en-US` and `ko-KR`
+  resources (`ServiceErrorKeyResxTests`); every localized text a page script reads must be rendered by its view.
+- **Architecture as tests.** The layering rules above, the project-reference graph and the controller conventions
+  fail the build when broken.
+- **Client scripts run as shipped.** Vitest + jsdom run the *compiled* `site.js` together with the real layout
+  script, against fixtures that carry what the real views and replies carry. Guard tests keep `any` and type
+  assertions out of the TypeScript, and a compile probe proves that untyped library values are rejected.
+- **Quality gates.** Line coverage >= 80 %, branch coverage >= 65 %, zero build warnings, and on-demand mutation
+  testing with Stryker.NET (Domain 92 %, Service 96 % — the survivors left are equivalent mutants).
+
+### Test projects
+Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all. Coverage target: line >= 80 %, branch >= 65 %. At the time of writing the suites hold about 4,300 tests (about 3,300 .NET + 980 Vitest), all passing.
 
 | Tests | What they cover | Needs Docker |
 |---|---|---|
