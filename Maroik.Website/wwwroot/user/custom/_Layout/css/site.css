@@ -1,14 +1,19 @@
+/*
+ * User layout: every Bootstrap modal is centred vertically — an inline-block dialog beside a full-height
+ * inline-block pseudo-element. Loaded after AdminLTE / Bootstrap, which these rules override, so they stay
+ * outside a cascade layer (a layered rule loses to every unlayered one).
+ */
 .modal {
     text-align: center;
     padding: 0 !important;
-}
 
-.modal:before {
-    content: '';
-    display: inline-block;
-    height: 100%;
-    vertical-align: middle;
-    margin-right: -4px;
+    &::before {
+        content: '';
+        display: inline-block;
+        height: 100%;
+        vertical-align: middle;
+        margin-right: -4px; /* swallows the inline-block gap */
+    }
 }
 
 .modal-dialog {
