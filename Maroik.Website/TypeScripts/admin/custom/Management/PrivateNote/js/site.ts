@@ -16,7 +16,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, instanceOf, fieldValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, onReplyText, byId, instanceOf, fieldValue, optionalFieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const doneReply = check.oneOf(check.object({ result: check.literal(true) }), replies.failed);
@@ -92,8 +92,8 @@
     // Only the summernote UI language is needed (asserted `Record<string, string>`: each holds a
     // string, which `.val()` types as a wider union).
     const localizer = {
-        IETFLanguageTag: $("#localizerIETFLanguageTag").val()
-    } as Record<string, string>;
+        IETFLanguageTag: fieldValue($("#localizerIETFLanguageTag"))
+    };
 
     // Rich-text editors for the write / edit bodies; each pasted image is
     // uploaded and re-inserted by the helpers below.
@@ -104,7 +104,7 @@
             onImageUpload: function(files: Blob[]) {
                 for (let i = 0; i < files.length; i++) {
                     // summernote hands over the dropped / pasted File objects (@types/summernote says Blob[]).
-                    WriteUploadImageFile(files[i] as File);
+                    WriteUploadImageFile(instanceOf(files[i], File, "the dropped image"));
                 }
             }
         }
@@ -117,7 +117,7 @@
             onImageUpload: function(files: Blob[]) {
                 for (let i = 0; i < files.length; i++) {
                     // summernote hands over the dropped / pasted File objects (@types/summernote says Blob[]).
-                    EditUploadImageFile(files[i] as File);
+                    EditUploadImageFile(instanceOf(files[i], File, "the dropped image"));
                 }
             }
         }
@@ -136,7 +136,7 @@
         }
         if (obj.files[0].size > maxFileSize) {
             alert(errorMessage);
-            (document.getElementById("writeUploadedFile") as HTMLInputElement).value = "";
+            byId("writeUploadedFile", HTMLInputElement).value = "";
             writeUploadedFile = undefined;
             return false;
         } else {
@@ -153,7 +153,7 @@
         }
         if (obj.files[0].size > maxFileSize) {
             alert(errorMessage);
-            (document.getElementById("editUploadedFile") as HTMLInputElement).value = "";
+            byId("editUploadedFile", HTMLInputElement).value = "";
             editUploadedFile = undefined;
             return false;
         } else {
@@ -615,9 +615,9 @@
                 dataType: "binary",
                 success: onReply(check.instance(Blob), function(data) {
                     if (data.type.indexOf("application/json") === 0) {
-                        data.text().then(function(text) {
-                            toastr.error((JSON.parse(text) as FailedReply).error);
-                        });
+                        data.text().then(onReplyText(replies.failed, function(refusal) {
+                            toastr.error(refusal.error);
+                        }));
                         return;
                     }
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
-import { loadSite, antiForgery, hidden, stubPlugin } from "@tests/_common/harness";
+import { loadSite, antiForgery, hidden, stubPlugin, eventProps } from "@tests/_common/harness";
 
 // wwwroot/anonymous/custom/Calendar/AnonymousIndex/js/site.js  (read-only calendar view)
 function fixture(): string {
@@ -89,7 +89,7 @@ describe("Calendar/AnonymousIndex", () => {
                 id: "other-1",
                 title: "Team sync",
                 allDay: true,
-                extendedProps: { calendarType: "Other", displayStartDate: "2024-01-01", displayEndDate: "2024-01-02" },
+                extendedProps: eventProps({ calendarType: "Other", displayStartDate: "2024-01-01", displayEndDate: "2024-01-02" }),
             },
         });
         h.$("#viewOtherCalendarEventPopup").trigger("click");
@@ -154,13 +154,13 @@ const load = (events: unknown[] = [], extra = "") => loadSite("anonymous", "Cale
 /** A FullCalendar event object of type "Other", as `eventClick` receives it, with `o` merged in. */
 const otherEvent = (o: Record<string, unknown> = {}) => ({
     id: "e1", title: "Sync", allDay: false,
-    extendedProps: {
+    extendedProps: eventProps({
         calendarType: "Other",
         displayStartDate: "2024-05-01 10:00:00",
         displayEndDate: "2024-05-01 11:00:00",
         displayStartDateTimeZone: "UTC",
         displayEndDateTimeZone: "KST"
-    },
+    }),
     ...o,
 });
 
@@ -237,7 +237,7 @@ describe("Calendar/AnonymousIndex — the 'other event' popup", () => {
 
     it("only 'Other' events open the popup", () => {
         const h = load();
-        expect(click(h, otherEvent({ extendedProps: { calendarType: "My" } }))).toBeUndefined();
+        expect(click(h, otherEvent({ extendedProps: eventProps({ calendarType: "My" }) }))).toBeUndefined();
         expect(h.$("#otherCalendarEventPopupTitle").text()).toBe("");
     });
 
@@ -256,7 +256,7 @@ describe("Calendar/AnonymousIndex — the 'other event' popup", () => {
 
     it("an all-day event fills the all-day layout instead", () => {
         const h = load();
-        click(h, otherEvent({ allDay: true, extendedProps: { calendarType: "Other", displayStartDate: "2024-05-01", displayEndDate: "2024-05-02" } }));
+        click(h, otherEvent({ allDay: true, extendedProps: eventProps({ calendarType: "Other", displayStartDate: "2024-05-01", displayEndDate: "2024-05-02" }) }));
         expect(h.$("#otherCalendarEventPopupStartAllDayChecked").text()).toBe("2024-05-01");
         expect(h.$("#otherCalendarEventPopupEndAllDayChecked").text()).toBe("2024-05-02");
         expect(display(h, "#divOtherCalendarEventPopupAllDayChecked")).not.toBe("none");

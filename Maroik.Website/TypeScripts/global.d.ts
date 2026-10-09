@@ -27,14 +27,6 @@ declare class MvcGrid {
     [key: string]: unknown;
 }
 
-// The `detail` of MvcGrid's `rowclick` CustomEvent: the clicked row's column values by column name.
-// jQuery 3 copies the native `detail` onto the jQuery event, but @types/jquery types `detail` as
-// UIEvent's number, so a `rowclick` handler narrows `e.detail` to this.
-interface MvcGridRowClickDetail {
-    /** Column name -> the row's value for that column. */
-    data: Record<string, string>;
-}
-
 // Shared helpers each role's _Layout script puts on `window` (see "Client scripts" in CLAUDE.md).
 interface Window {
     /** Fallback upload limit for a page whose `#maxAttachedFileSizeBytes` hidden field is missing. */
@@ -90,9 +82,9 @@ interface JQuery<TElement = HTMLElement> {
     datepicker(options: DatepickerSetupOptions): this;
 }
 
-// The datepicker `minDate` setter the calendar scripts call. @types/jqueryui resolves this call to its
-// catch-all `option` overload, which answers `any`, and an augmenting overload is never tried before it;
-// the call sites view the picker through this interface instead.
+// The datepicker `minDate` setter (window.setMinDate takes the picker as this). @types/jqueryui resolves the
+// call to its catch-all `option` overload, which answers `any`, and an augmenting overload is never tried
+// before it, so the setter is typed through this interface instead.
 interface DatepickerMinDateSetter {
     datepicker(methodName: "option", optionName: "minDate", minDate: Date | null): unknown;
 }
@@ -123,61 +115,6 @@ type FullCalendarCalendar = import("@fullcalendar/core").Calendar;
 type FullCalendarEventApi = import("@fullcalendar/core").EventApi;
 type FullCalendarEventClickArg = import("@fullcalendar/core").EventClickArg;
 type FullCalendarDateSelectArg = import("@fullcalendar/core").DateSelectArg;
-
-// ── Calendar payloads from CalendarController ───────────────────────────────────────────────────────
-// Two JSON spellings reach the scripts: `JsonSerialization.ToClientJson` strings (events, reminders —
-// PascalCase, parsed with JSON.parse) and MVC `Json(...)` replies (camelCase).
-
-/** One reminder in `serializedCalendarReminders` (CalendarReminderDto). Exactly one `*BeforeEvent` is set. */
-interface CalendarReminderJson {
-    Method: string;
-    MinutesBeforeEvent: number | null;
-    HoursBeforeEvent: number | null;
-    DaysBeforeEvent: number | null;
-    WeeksBeforeEvent: number | null;
-    /** Time of day ("HH:mm:ss") of an all-day event's reminder; null for a timed event. */
-    TimesBeforeEvent: string | null;
-}
-
-/** One event of `calendarEvents` or a page's `*CalendarEventOutputViewModels` (CalendarEventOutputViewModel). */
-interface CalendarEventJson {
-    /** FullCalendar takes event ids as strings (it converts any other value), so the scripts pass `String(Id)`. */
-    Id: number;
-    CalendarId: number;
-    Title: string;
-    AllDay: boolean;
-    StartDate: string;
-    EndDate: string;
-    HtmlColorCode: string;
-    DisplayStartDate: string;
-    DisplayEndDate: string;
-    DisplayStartDateTimeZone: string;
-    DisplayEndDateTimeZone: string;
-    /** "My" or "Other". */
-    CalendarType: string;
-}
-
-/** A calendar in the `calendars` / `tempOtherCalendars` replies (CalendarResponse). */
-interface CalendarSummary {
-    id: number;
-    name: string;
-    htmlColorCode: string;
-}
-
-/** A row of the `setCalendarShareds` reply (CalendarSharedSummaryResponse). */
-interface CalendarSharedSummary {
-    id: number;
-    name: string;
-    user: boolean;
-    guest: boolean;
-}
-
-/** A row of the `browseCalendarsOfInterests` reply (CalendarBrowseSummaryResponse). */
-interface CalendarBrowseSummary {
-    id: number;
-    name: string;
-    checked: boolean;
-}
 
 // ── Calendar request bodies the calendar scripts build ─────────────────────────────────────────────
 
@@ -253,216 +190,6 @@ interface JQuery<TElement = HTMLElement> {
     /** Sets the value; jQuery writes `null` as "" and any other value as its string. */
     val(value: string | number | boolean | string[] | null): this;
 
-}
-
-// ── Controller replies (MVC `Json(...)`, camelCase) ──────────────────────────────────────────────────
-// `result` tells the two shapes apart, so `if (data.result)` narrows to the success shape.
-
-/** The refusal every action answers with. */
-interface FailedReply {
-    result: false;
-    error: string;
-}
-
-/** A write action's reply: a localized confirmation or the refusal. */
-type ActionReply = { result: true; message: string } | FailedReply;
-
-/** A read action's reply: `TPayload` on success, or the refusal. */
-type ReadReply<TPayload> = ({ result: true } & TPayload) | FailedReply;
-
-/** A write action's reply that also returns what it wrote. */
-type WriteReply<TPayload> = ({ result: true; message: string } & TPayload) | FailedReply;
-
-/**
- * The success shape of a reply, for code the `if (data.result)` narrowing cannot reach — a function
- * declaration inside that branch is hoisted, so TypeScript does not carry the narrowing into it.
- */
-type SucceededReply<TPayload> = { result: true } & TPayload;
-
-/** `Get*AmountLabel`: the currency label of the chosen asset. */
-interface AmountLabelReply {
-    result: boolean;
-    label: string;
-}
-
-/** `UploadImageFile` (Forum / Management / Calendar): the stored inline image, or why it was refused. */
-type UploadImageReply =
-    | { result: true; file: { fileContents: string; contentType: string }; filePath: string }
-    | { result: false; errorMessage: string };
-
-/** `UpdateProfileAvatar`. */
-type AvatarReply = { result: true } | { result: false; errorMessage: string };
-
-/** `Write*Comment`: where to go back to. */
-type CommentWrittenReply = { result: true; boardId: number; page: number } | FailedReply;
-
-/** `IsAssetExists` (AssetResponse). */
-interface AssetPayload {
-    asset: { productName: string; item: string; amount: number; monetaryUnit: string; note: string | null; deleted: boolean };
-}
-
-/** `IsIncomeExists` (IncomeResponse). */
-interface IncomePayload {
-    income: {
-        id: number;
-        mainClass: string;
-        subClass: string;
-        content: string;
-        amount: number;
-        depositMyAssetProductName: string;
-        created: string;
-        note: string | null;
-    };
-}
-
-/** `IsExpenditureExists` (ExpenditureResponse). */
-interface ExpenditurePayload {
-    expenditure: {
-        id: number;
-        mainClass: string;
-        subClass: string;
-        content: string;
-        amount: number;
-        paymentMethod: string;
-        myDepositAsset: string | null;
-        created: string;
-        note: string | null;
-    };
-}
-
-/** The fields `IsFixedIncomeExists` / `IsFixedExpenditureExists` share (Fixed*OutputViewModel). */
-interface FixedSchedule {
-    id: number;
-    mainClass: string;
-    subClass: string;
-    content: string;
-    amount: number;
-    depositMonth: number;
-    depositDay: number;
-    /** "yyyy-MM-dd". */
-    maturityDate: string;
-    note: string | null;
-    unpunctuality: boolean;
-}
-
-/** `IsFixedIncomeExists`. */
-interface FixedIncomePayload {
-    fixedIncome: FixedSchedule & { depositMyAssetProductName: string };
-}
-
-/** `IsFixedExpenditureExists`. */
-interface FixedExpenditurePayload {
-    fixedExpenditure: FixedSchedule & { paymentMethod: string; myDepositAsset: string | null };
-}
-
-/** `IsAccountExists` (AccountResponse). */
-interface AccountPayload {
-    account: {
-        email: string;
-        nickname: string;
-        role: string;
-        timeZoneIanaId: string;
-        locked: boolean;
-        emailConfirmed: boolean;
-        agreedServiceTerms: boolean;
-        message: string | null;
-        deleted: boolean;
-    };
-}
-
-/** A menu row (MenuOutputViewModel); `categoryId` is set on a sub-category only. */
-interface MenuItem {
-    id: number;
-    categoryId: number | null;
-    name: string;
-    displayName: string;
-    iconPath: string;
-    controller: string | null;
-    action: string;
-    role: string;
-    order: number;
-}
-
-/** `IsCategoryExists`. */
-interface CategoryPayload {
-    category: MenuItem;
-}
-
-/** `IsSubCategoryExists`. */
-interface SubCategoryPayload {
-    subCategory: MenuItem;
-}
-
-/** `IsBoardExists` (Forum): the post's id. */
-interface FreeBoardPayload {
-    freeBoard: { id: number };
-}
-
-/** `IsBoardExists` (Management): the private note's id. */
-interface PrivateNoteBoardPayload {
-    privateNoteBoard: { id: number };
-}
-
-/** A calendar as `CreateCalendar` / `UpdateCalendar` / `DeleteCalendar` / `IsCalendarExists` return it. */
-interface CalendarPayload {
-    calendar: { id: number; name: string; htmlColorCode: string; description: string | null; timeZoneIanaId: string };
-}
-
-/** `IsCalendarEventExists` / `IsOtherCalendarEventExists` (CalendarEventOutputViewModel). */
-interface CalendarEventPayload {
-    calendarEvent: {
-        id: number;
-        calendarId: number;
-        title: string;
-        allDay: boolean;
-        /** "yyyy-MM-dd" for an all-day event, "yyyy-MM-dd HH:mm:ss" otherwise. */
-        displayStartDate: string;
-        displayEndDate: string;
-        startDateTimeZoneIanaId: string;
-        endDateTimeZoneIanaId: string;
-        location: string;
-        description: string;
-        calendarEventAttachedFile: { name: string; extension: string; size: number } | null;
-        status: string;
-        /** A JSON array of {@link CalendarReminderJson}. */
-        serializedCalendarReminders: string;
-    };
-}
-
-/** `GetCalendarEvents`: a JSON array of {@link CalendarEventJson}. */
-interface CalendarEventsPayload {
-    calendarEvents: string;
-}
-
-/** `GetCalendars`. */
-interface CalendarsPayload {
-    calendars: CalendarSummary[];
-}
-
-/** `GetOtherCalendars`. */
-interface OtherCalendarsPayload {
-    tempOtherCalendars: CalendarSummary[];
-}
-
-/** `GetCalendarShareds`. */
-interface CalendarSharedsPayload {
-    setCalendarShareds: CalendarSharedSummary[];
-}
-
-/** `GetBrowseCalendarsOfInterest`. */
-interface BrowseCalendarsPayload {
-    browseCalendarsOfInterests: CalendarBrowseSummary[];
-}
-
-/** What the calendar scripts put in a FullCalendar event's `extendedProps`. */
-interface CalendarEventExtendedProps {
-    calendarId: number;
-    displayStartDate: string;
-    displayEndDate: string;
-    displayStartDateTimeZone: string;
-    displayEndDateTimeZone: string;
-    /** "My" or "Other". */
-    calendarType: string;
 }
 
 // ── Runtime checks — each role's _Layout script defines these on `window` ──────────────────────────

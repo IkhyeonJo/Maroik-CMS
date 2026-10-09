@@ -17,7 +17,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, parseJson, fieldValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, parseJson, required, byId, elementOf, fieldValue, optionalFieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const avatarReply = check.oneOf(check.object({ result: check.literal(true) }), check.object({ result: check.literal(false), errorMessage: check.string }));
@@ -55,7 +55,7 @@
     function UpdateProfileAvatar(noFileAttachedErrorMessage: string, fileSizeLimitationErrorMessage: string, fileTypeErrorMessage: string) {
         // A file input always has `.files`; `[0]` is undefined when nothing was chosen,
         // which the check right below handles.
-        let files: File | undefined = (document.getElementById("ProfileAvatarFiles") as HTMLInputElement).files![0];
+        let files: File | undefined = required(byId("ProfileAvatarFiles", HTMLInputElement).files, "the chosen files")[0];
         if (files === undefined || files === null) {
             alert(noFileAttachedErrorMessage);
             window.location.href = "/Management/Profile";
@@ -69,7 +69,7 @@
                     // Send the entire form (file + anti-forgery token) as multipart.
                     // processData/contentType `false` let jQuery pass the FormData
                     // through untouched with the correct multipart boundary.
-                    let form = $formUpdateProfileAvatar[0] as HTMLFormElement;
+                    let form = elementOf($formUpdateProfileAvatar, HTMLFormElement);
                     let formData = new FormData(form);
                     $.ajax({
                         url: "/Management/UpdateProfileAvatar",

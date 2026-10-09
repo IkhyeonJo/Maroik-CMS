@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
-import { loadSite, antiForgery, hidden } from "@tests/_common/harness";
+import { loadSite, antiForgery, hidden, eventProps } from "@tests/_common/harness";
 import {
     describeCalendarCommon,
     describeEditFormDetail,
@@ -232,7 +232,7 @@ describe("admin/Calendar/AdminIndex", () => {
                 id: 1,
                 title: "Team sync",
                 allDay: true,
-                extendedProps: { displayStartDate: "2024-01-01", displayEndDate: "2024-01-02" },
+                extendedProps: eventProps({ displayStartDate: "2024-01-01", displayEndDate: "2024-01-02" }),
             },
         });
         h.$("#editCalendarEventPopup").trigger("click");

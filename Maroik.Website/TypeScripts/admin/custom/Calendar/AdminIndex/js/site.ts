@@ -29,7 +29,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, parseJson, instanceOf, fieldValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, onReplyText, parseJson, conform, required, byId, instanceOf, fieldValue, optionalFieldValue, attribute, setMinDate } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const uploadImageReply = check.oneOf(
@@ -42,6 +42,11 @@
         calendar: check.object({
             id: check.number, name: check.string, htmlColorCode: check.string, description: check.nullable(check.string), timeZoneIanaId: check.string,
         }),
+    });
+    // What the scripts put in a FullCalendar event's extendedProps (see the calendar.addEvent calls).
+    const calendarEventProps = check.object({
+        calendarId: check.number, displayStartDate: check.string, displayEndDate: check.string,
+        displayStartDateTimeZone: check.string, displayEndDateTimeZone: check.string, calendarType: check.nullable(check.string),
     });
     const calendarEventJson = check.object({
         Id: check.number, CalendarId: check.number, Title: check.string, AllDay: check.boolean, StartDate: check.string, EndDate: check.string,
@@ -217,88 +222,88 @@
     // — each from a hidden input the view rendered from the resource files (asserted
     // `Record<string, string>`: each holds a string, which `.val()` types as a wider union).
     const localizer = {
-        Email: $("#localizerEmail").val(),
-        Notification: $("#localizerNotification").val(),
-        Minutes: $("#localizerMinutes").val(),
-        Hours: $("#localizerHours").val(),
-        Days: $("#localizerDays").val(),
-        Weeks: $("#localizerWeeks").val(),
-        BeforeAt: $("#localizerBeforeAt").val(),
-        PrevText: $("#localizerPrevText").val(),
-        NextText: $("#localizerNextText").val(),
-        January: $("#localizerJanuary").val(),
-        February: $("#localizerFebruary").val(),
-        March: $("#localizerMarch").val(),
-        April: $("#localizerApril").val(),
-        May: $("#localizerMay").val(),
-        June: $("#localizerJune").val(),
-        July: $("#localizerJuly").val(),
-        August: $("#localizerAugust").val(),
-        September: $("#localizerSeptember").val(),
-        October: $("#localizerOctober").val(),
-        November: $("#localizerNovember").val(),
-        December: $("#localizerDecember").val(),
-        Jan: $("#localizerJan").val(),
-        Feb: $("#localizerFeb").val(),
-        Mar: $("#localizerMar").val(),
-        Apr: $("#localizerApr").val(),
-        Jun: $("#localizerJun").val(),
-        Jul: $("#localizerJul").val(),
-        Aug: $("#localizerAug").val(),
-        Sep: $("#localizerSep").val(),
-        Oct: $("#localizerOct").val(),
-        Nov: $("#localizerNov").val(),
-        Dec: $("#localizerDec").val(),
-        Sunday: $("#localizerSunday").val(),
-        Monday: $("#localizerMonday").val(),
-        Tuesday: $("#localizerTuesday").val(),
-        Wednesday: $("#localizerWednesday").val(),
-        Thursday: $("#localizerThursday").val(),
-        Friday: $("#localizerFriday").val(),
-        Saturday: $("#localizerSaturday").val(),
-        Sun: $("#localizerSun").val(),
-        Mon: $("#localizerMon").val(),
-        Tue: $("#localizerTue").val(),
-        Wed: $("#localizerWed").val(),
-        Thu: $("#localizerThu").val(),
-        Fri: $("#localizerFri").val(),
-        Sat: $("#localizerSat").val(),
-        Su: $("#localizerSu").val(),
-        Mo: $("#localizerMo").val(),
-        Tu: $("#localizerTu").val(),
-        We: $("#localizerWe").val(),
-        Th: $("#localizerTh").val(),
-        Fr: $("#localizerFr").val(),
-        Sa: $("#localizerSa").val(),
-        YearSuffix: $("#localizerYearSuffix").val(),
-        IETFLanguageTag: $("#localizerIETFLanguageTag").val(),
-        Prev: $("#localizerPrev").val(),
-        Next: $("#localizerNext").val(),
-        PrevYear: $("#localizerPrevYear").val(),
-        NextYear: $("#localizerNextYear").val(),
-        Today: $("#localizerToday").val(),
-        Month: $("#localizerMonth").val(),
-        Week: $("#localizerWeek").val(),
-        Day: $("#localizerDay").val(),
-        List: $("#localizerList").val(),
-        DayGridMonth: $("#localizerDayGridMonth").val(),
-        DayGridWeek: $("#localizerDayGridWeek").val(),
-        DayGridDay: $("#localizerDayGridDay").val(),
-        TimeGridWeek: $("#localizerTimeGridWeek").val(),
-        TimeGridDay: $("#localizerTimeGridDay").val(),
-        ListYear: $("#localizerListYear").val(),
-        ListMonth: $("#localizerListMonth").val(),
-        ListWeek: $("#localizerListWeek").val(),
-        ListDay: $("#localizerListDay").val(),
-        ConfirmDelete: $("#localizerConfirmDelete").val(),
-        ThisFieldRequired: $("#localizerThisFieldRequired").val(),
-        ErrorInvalidNumber: $("#localizerErrorInvalidNumber").val(),
-        ErrorRangeMinute: $("#localizerErrorRangeMinute").val(),
-        ErrorRangeHour: $("#localizerErrorRangeHour").val(),
-        ErrorRangeDay: $("#localizerErrorRangeDay").val(),
-        ErrorRangeWeek: $("#localizerErrorRangeWeek").val(),
-        FailedToLoadCalendars: $("#localizerFailedToLoadCalendars").val()
-    } as Record<string, string>;
+        Email: fieldValue($("#localizerEmail")),
+        Notification: fieldValue($("#localizerNotification")),
+        Minutes: fieldValue($("#localizerMinutes")),
+        Hours: fieldValue($("#localizerHours")),
+        Days: fieldValue($("#localizerDays")),
+        Weeks: fieldValue($("#localizerWeeks")),
+        BeforeAt: fieldValue($("#localizerBeforeAt")),
+        PrevText: fieldValue($("#localizerPrevText")),
+        NextText: fieldValue($("#localizerNextText")),
+        January: fieldValue($("#localizerJanuary")),
+        February: fieldValue($("#localizerFebruary")),
+        March: fieldValue($("#localizerMarch")),
+        April: fieldValue($("#localizerApril")),
+        May: fieldValue($("#localizerMay")),
+        June: fieldValue($("#localizerJune")),
+        July: fieldValue($("#localizerJuly")),
+        August: fieldValue($("#localizerAugust")),
+        September: fieldValue($("#localizerSeptember")),
+        October: fieldValue($("#localizerOctober")),
+        November: fieldValue($("#localizerNovember")),
+        December: fieldValue($("#localizerDecember")),
+        Jan: fieldValue($("#localizerJan")),
+        Feb: fieldValue($("#localizerFeb")),
+        Mar: fieldValue($("#localizerMar")),
+        Apr: fieldValue($("#localizerApr")),
+        Jun: fieldValue($("#localizerJun")),
+        Jul: fieldValue($("#localizerJul")),
+        Aug: fieldValue($("#localizerAug")),
+        Sep: fieldValue($("#localizerSep")),
+        Oct: fieldValue($("#localizerOct")),
+        Nov: fieldValue($("#localizerNov")),
+        Dec: fieldValue($("#localizerDec")),
+        Sunday: fieldValue($("#localizerSunday")),
+        Monday: fieldValue($("#localizerMonday")),
+        Tuesday: fieldValue($("#localizerTuesday")),
+        Wednesday: fieldValue($("#localizerWednesday")),
+        Thursday: fieldValue($("#localizerThursday")),
+        Friday: fieldValue($("#localizerFriday")),
+        Saturday: fieldValue($("#localizerSaturday")),
+        Sun: fieldValue($("#localizerSun")),
+        Mon: fieldValue($("#localizerMon")),
+        Tue: fieldValue($("#localizerTue")),
+        Wed: fieldValue($("#localizerWed")),
+        Thu: fieldValue($("#localizerThu")),
+        Fri: fieldValue($("#localizerFri")),
+        Sat: fieldValue($("#localizerSat")),
+        Su: fieldValue($("#localizerSu")),
+        Mo: fieldValue($("#localizerMo")),
+        Tu: fieldValue($("#localizerTu")),
+        We: fieldValue($("#localizerWe")),
+        Th: fieldValue($("#localizerTh")),
+        Fr: fieldValue($("#localizerFr")),
+        Sa: fieldValue($("#localizerSa")),
+        YearSuffix: fieldValue($("#localizerYearSuffix")),
+        IETFLanguageTag: fieldValue($("#localizerIETFLanguageTag")),
+        Prev: fieldValue($("#localizerPrev")),
+        Next: fieldValue($("#localizerNext")),
+        PrevYear: fieldValue($("#localizerPrevYear")),
+        NextYear: fieldValue($("#localizerNextYear")),
+        Today: fieldValue($("#localizerToday")),
+        Month: fieldValue($("#localizerMonth")),
+        Week: fieldValue($("#localizerWeek")),
+        Day: fieldValue($("#localizerDay")),
+        List: fieldValue($("#localizerList")),
+        DayGridMonth: fieldValue($("#localizerDayGridMonth")),
+        DayGridWeek: fieldValue($("#localizerDayGridWeek")),
+        DayGridDay: fieldValue($("#localizerDayGridDay")),
+        TimeGridWeek: fieldValue($("#localizerTimeGridWeek")),
+        TimeGridDay: fieldValue($("#localizerTimeGridDay")),
+        ListYear: fieldValue($("#localizerListYear")),
+        ListMonth: fieldValue($("#localizerListMonth")),
+        ListWeek: fieldValue($("#localizerListWeek")),
+        ListDay: fieldValue($("#localizerListDay")),
+        ConfirmDelete: fieldValue($("#localizerConfirmDelete")),
+        ThisFieldRequired: fieldValue($("#localizerThisFieldRequired")),
+        ErrorInvalidNumber: fieldValue($("#localizerErrorInvalidNumber")),
+        ErrorRangeMinute: fieldValue($("#localizerErrorRangeMinute")),
+        ErrorRangeHour: fieldValue($("#localizerErrorRangeHour")),
+        ErrorRangeDay: fieldValue($("#localizerErrorRangeDay")),
+        ErrorRangeWeek: fieldValue($("#localizerErrorRangeWeek")),
+        FailedToLoadCalendars: fieldValue($("#localizerFailedToLoadCalendars"))
+    };
 
     // Apply the localized names to every jQuery-UI datepicker on the page.
     $.datepicker.setDefaults({
@@ -325,7 +330,7 @@
             onImageUpload: function(files: Blob[]) {
                 for (let i = 0; i < files.length; i++) {
                     // summernote hands over the dropped / pasted File objects (@types/summernote says Blob[]).
-                    CreateUploadImageFile(files[i] as File);
+                    CreateUploadImageFile(instanceOf(files[i], File, "the dropped image"));
                 }
                 $createCalendarEventTaskDialogModal.css("overflow", "scroll");
             }
@@ -338,7 +343,7 @@
             onImageUpload: function(files: Blob[]) {
                 for (let i = 0; i < files.length; i++) {
                     // summernote hands over the dropped / pasted File objects (@types/summernote says Blob[]).
-                    EditUploadImageFile(files[i] as File);
+                    EditUploadImageFile(instanceOf(files[i], File, "the dropped image"));
                 }
                 $editCalendarEventTaskDialogModal.css("overflow", "scroll");
             }
@@ -443,7 +448,7 @@
                 if (endDate && endDate < startDate) {
                     $createCalendarEventAllDayUncheckedEndDate.datepicker("setDate", startDate);
                 }
-                ($createCalendarEventAllDayUncheckedEndDate as DatepickerMinDateSetter).datepicker("option", "minDate", startDate);
+                setMinDate($createCalendarEventAllDayUncheckedEndDate, startDate);
             }
         });
 
@@ -482,7 +487,7 @@
                 if (endDate && endDate < startDate) {
                     $createCalendarEventAllDayCheckedEndDate.datepicker("setDate", startDate);
                 }
-                ($createCalendarEventAllDayCheckedEndDate as DatepickerMinDateSetter).datepicker("option", "minDate", startDate);
+                setMinDate($createCalendarEventAllDayCheckedEndDate, startDate);
             }
         });
 
@@ -521,7 +526,7 @@
                 if (endDate && endDate < startDate) {
                     $editCalendarEventAllDayUncheckedEndDate.datepicker("setDate", startDate);
                 }
-                ($editCalendarEventAllDayUncheckedEndDate as DatepickerMinDateSetter).datepicker("option", "minDate", startDate);
+                setMinDate($editCalendarEventAllDayUncheckedEndDate, startDate);
             }
         });
 
@@ -560,7 +565,7 @@
                 if (endDate && endDate < startDate) {
                     $editCalendarEventAllDayCheckedEndDate.datepicker("setDate", startDate);
                 }
-                ($editCalendarEventAllDayCheckedEndDate as DatepickerMinDateSetter).datepicker("option", "minDate", startDate);
+                setMinDate($editCalendarEventAllDayCheckedEndDate, startDate);
             }
         });
 
@@ -631,7 +636,7 @@
         // Read-only grid (`editable: false`) but `selectable` so a drag opens the
         // create-event modal. `calendar` is block-scoped here and closed over by
         // the form handlers below and `RefreshCalendarEvents`.
-        let calendar = new FullCalendar.Calendar(document.getElementById("calendar")!, {
+        let calendar = new FullCalendar.Calendar(byId("calendar", HTMLElement), {
             locale: localizer.IETFLanguageTag,
             headerToolbar: {
                 left: "prevYear,prev,next,nextYear today",
@@ -672,7 +677,7 @@
                         if (response.result) {
                             $createCalendarEventMyCalendar.empty();
 
-                            $.each(response.calendars, function(_, calendar: CalendarSummary) {
+                            $.each(response.calendars, function(_, calendar) {
                                 $createCalendarEventMyCalendar.append($("<option>", {
                                     value: calendar.id,
                                     text: calendar.name
@@ -708,7 +713,7 @@
             //     the event from the grid.
             eventClick: function(arg: FullCalendarEventClickArg) {
                 let eventEl = $(arg.el);
-                let offset = eventEl.offset()!;
+                let offset = required(eventEl.offset(), "the event element\'s position");
                 let popup = $calendarEventPopup;
                 let currentEventId = popup.data("event-id");
 
@@ -722,20 +727,20 @@
                 $divCalendarEventPopupAllDayUnchecked.hide();
 
                 if (arg.event.allDay === true) {
-                    $calendarEventPopupStartAllDayChecked.text((arg.event.extendedProps as CalendarEventExtendedProps).displayStartDate);
-                    $calendarEventPopupEndAllDayChecked.text((arg.event.extendedProps as CalendarEventExtendedProps).displayEndDate);
+                    $calendarEventPopupStartAllDayChecked.text(conform(arg.event.extendedProps, calendarEventProps, "the event\'s extendedProps").displayStartDate);
+                    $calendarEventPopupEndAllDayChecked.text(conform(arg.event.extendedProps, calendarEventProps, "the event\'s extendedProps").displayEndDate);
                     $divCalendarEventPopupAllDayChecked.show();
                 } else {
-                    $calendarEventPopupStartAllDayUnchecked.text((arg.event.extendedProps as CalendarEventExtendedProps).displayStartDate);
-                    $calendarEventPopupStartTimeZoneAllDayUnchecked.text(`(${(arg.event.extendedProps as CalendarEventExtendedProps).displayStartDateTimeZone})`);
-                    $calendarEventPopupEndAllDayUnchecked.text((arg.event.extendedProps as CalendarEventExtendedProps).displayEndDate);
-                    $calendarEventPopupEndTimeZoneAllDayUnchecked.text(`(${(arg.event.extendedProps as CalendarEventExtendedProps).displayEndDateTimeZone})`);
+                    $calendarEventPopupStartAllDayUnchecked.text(conform(arg.event.extendedProps, calendarEventProps, "the event\'s extendedProps").displayStartDate);
+                    $calendarEventPopupStartTimeZoneAllDayUnchecked.text(`(${conform(arg.event.extendedProps, calendarEventProps, "the event\'s extendedProps").displayStartDateTimeZone})`);
+                    $calendarEventPopupEndAllDayUnchecked.text(conform(arg.event.extendedProps, calendarEventProps, "the event\'s extendedProps").displayEndDate);
+                    $calendarEventPopupEndTimeZoneAllDayUnchecked.text(`(${conform(arg.event.extendedProps, calendarEventProps, "the event\'s extendedProps").displayEndDateTimeZone})`);
                     $divCalendarEventPopupAllDayUnchecked.show();
                 }
 
                 popup.css({
-                    top: offset.top + eventEl.outerHeight()!,
-                    left: offset.left + eventEl.outerWidth()!,
+                    top: offset.top + required(eventEl.outerHeight(), "the event element\'s height"),
+                    left: offset.left + required(eventEl.outerWidth(), "the event element\'s width"),
                     display: "block"
                 }).data("event-id", arg.event.id);
 
@@ -826,20 +831,25 @@
                                     $spanEditCalendarEventAttachedFile.text(`${Math.round(data.calendarEvent.calendarEventAttachedFile.size / 1024).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}KB`);
                                 }
 
+                                // Captured from the narrowed reply: the hoisted function below does not see `data.result`.
+
+                                const calendarEvent = data.calendarEvent;
+
+
                                 function showEditCalendarEventModal() {
-                                    $editCalendarEventStatus.val((data as SucceededReply<CalendarEventPayload>).calendarEvent.status);
+                                    $editCalendarEventStatus.val(calendarEvent.status);
 
                                     $divEditEventNotificationAllDayChecked.hide();
                                     $divEditEventNotificationAllDayUnchecked.hide();
 
-                                    if ((data as SucceededReply<CalendarEventPayload>).calendarEvent.allDay === true) {
+                                    if (calendarEvent.allDay === true) {
                                         $divEditEventNotificationAllDayChecked.find(".divEditEventNotificationAllDayCheckedRow").remove();
                                         $divEditEventNotificationAllDayChecked.show();
 
-                                        if ((data as SucceededReply<CalendarEventPayload>).calendarEvent.serializedCalendarReminders !== "[]") {
+                                        if (calendarEvent.serializedCalendarReminders !== "[]") {
                                             const timeIntervals = reminderTimeIntervals;
 
-                                            (JSON.parse((data as SucceededReply<CalendarEventPayload>).calendarEvent.serializedCalendarReminders) as CalendarReminderJson[]).forEach((reminder: CalendarReminderJson) => {
+                                            parseJson(calendarEvent.serializedCalendarReminders, check.array(calendarReminderJson), "the event\'s reminders").forEach((reminder) => {
 
                                                 const selectedMethodOption = `
                                                 <option value='Email' ${reminder.Method === "Email" ? "selected" : ""}>${localizer.Email}</option>
@@ -868,7 +878,7 @@
 
                                                 <label style='padding-left:5px;padding-right:5px;'>${localizer.BeforeAt}</label>
                                                 <select class='form-control-sm editCalendarEventSelNotificationTimeAllDayChecked' style='width:11%;text-overflow:ellipsis;'>
-                                                    ${timeIntervals.map((time: string) => time === `${reminder.TimesBeforeEvent!.substring(0, 5)}` ? `<option value='${time}' selected>${time}</option>` : `<option value='${time}'>${time}</option>`).join("")}
+                                                    ${timeIntervals.map((time: string) => time === `${required(reminder.TimesBeforeEvent, "an all-day reminder's time").substring(0, 5)}` ? `<option value='${time}' selected>${time}</option>` : `<option value='${time}'>${time}</option>`).join("")}
                                                 </select>
                                                 <a class='hover aEditCalendarDeleteNotificationAllDayChecked' href='#' style='width:10%;'>
                                                     <i class='fa fa-trash' aria-hidden='true' style='margin-left: 7px;'></i>
@@ -885,9 +895,9 @@
                                         $divEditEventNotificationAllDayUnchecked.find(".divEditEventNotificationAllDayUncheckedRow").remove();
                                         $divEditEventNotificationAllDayUnchecked.show();
 
-                                        if ((data as SucceededReply<CalendarEventPayload>).calendarEvent.serializedCalendarReminders !== "[]") {
+                                        if (calendarEvent.serializedCalendarReminders !== "[]") {
 
-                                            (JSON.parse((data as SucceededReply<CalendarEventPayload>).calendarEvent.serializedCalendarReminders) as CalendarReminderJson[]).forEach((reminder: CalendarReminderJson) => {
+                                            parseJson(calendarEvent.serializedCalendarReminders, check.array(calendarReminderJson), "the event\'s reminders").forEach((reminder) => {
 
                                                 const selectedMethodOption = `
                                                 <option value='Email' ${reminder.Method === "Email" ? "selected" : ""}>${localizer.Email}</option>
@@ -954,7 +964,7 @@
                                         if (response.result) {
                                             $editCalendarEventMyCalendar.empty();
 
-                                            $.each(response.calendars, function(_, calendar: CalendarSummary) {
+                                            $.each(response.calendars, function(_, calendar) {
                                                 $editCalendarEventMyCalendar.append($("<option>", {
                                                     value: calendar.id,
                                                     text: calendar.name
@@ -1008,7 +1018,7 @@
         // Seed the calendar with the events the server rendered into the hidden
         // input, then render. `extendedProps` carries the pre-formatted display
         // strings the popup shows.
-        (JSON.parse(fieldValue($calendarEventOutputViewModels)) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
+        parseJson(fieldValue($calendarEventOutputViewModels), check.array(calendarEventJson), "the calendar events").forEach((item) => {
             calendar.addEvent({
                 id: String(item.Id),
                 title: item.Title,
@@ -1073,7 +1083,7 @@
                         return;
                     }
                     if (response.result) {
-                        (JSON.parse(response.calendarEvents) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
+                        parseJson(response.calendarEvents, check.array(calendarEventJson), "the calendar events").forEach((item) => {
                             calendar.addEvent({
                                 id: String(item.Id),
                                 title: item.Title,
@@ -1527,7 +1537,7 @@
                             contentType: "application/json; charset=utf-8",
                             success: onReply(calendarEventsReply, function(response) {
                                 if (response.result) {
-                                    (JSON.parse(response.calendarEvents) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
+                                    parseJson(response.calendarEvents, check.array(calendarEventJson), "the calendar events").forEach((item) => {
                                         calendar.addEvent({
                                             id: String(item.Id),
                                             title: item.Title,
@@ -1756,7 +1766,7 @@
                             contentType: "application/json; charset=utf-8",
                             success: onReply(calendarEventsReply, function(response) {
                                 if (response.result) {
-                                    (JSON.parse(response.calendarEvents) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
+                                    parseJson(response.calendarEvents, check.array(calendarEventJson), "the calendar events").forEach((item) => {
                                         calendar.addEvent({
                                             id: String(item.Id),
                                             title: item.Title,
@@ -1846,7 +1856,7 @@
                         }
 
                         calendar.getEvents().forEach(function(event) {
-                            if ((event.extendedProps as CalendarEventExtendedProps).calendarId === data.calendar.id) {
+                            if (conform(event.extendedProps, calendarEventProps, "the event\'s extendedProps").calendarId === data.calendar.id) {
                                 event.setProp("backgroundColor", data.calendar.htmlColorCode);
                                 event.setProp("borderColor", data.calendar.htmlColorCode);
                             }
@@ -1926,7 +1936,7 @@
                                     $("#lblCalendar" + data.calendar.id).remove();
 
                                     calendar.getEvents().forEach(function(event) {
-                                        if ((event.extendedProps as CalendarEventExtendedProps).calendarId === data.calendar.id) {
+                                        if (conform(event.extendedProps, calendarEventProps, "the event\'s extendedProps").calendarId === data.calendar.id) {
                                             event.remove();
                                         }
                                     });
@@ -2125,7 +2135,7 @@
                 if (response.result) {
                     $createCalendarEventMyCalendar.empty();
 
-                    $.each(response.calendars, function(_, calendar: CalendarSummary) {
+                    $.each(response.calendars, function(_, calendar) {
                         $createCalendarEventMyCalendar.append($("<option>", {
                             value: calendar.id,
                             text: calendar.name
@@ -2368,7 +2378,7 @@
             success: onReply(calendarSharedsReply, function(response) {
                 if (response.result) {
                     let htmlString = "";
-                    $.each(response.setCalendarShareds, function(_, setCalendarShared: CalendarSharedSummary) {
+                    $.each(response.setCalendarShareds, function(_, setCalendarShared) {
                         htmlString += String.raw`
                             <div class='form-row setCalendarShared' style='margin-top: 20px;'>
                                 <div id='divSetCalendarShared${setCalendarShared.id}' class='form-group col-md-4 mb-4 text-center'>
@@ -2530,9 +2540,9 @@
             dataType: "binary",
             success: onReply(check.instance(Blob), function(data) {
                 if (data.type.indexOf("application/json") === 0) {
-                    data.text().then(function(text) {
-                        toastr.error((JSON.parse(text) as FailedReply).error);
-                    });
+                    data.text().then(onReplyText(replies.failed, function(refusal) {
+                        toastr.error(refusal.error);
+                    }));
                     return;
                 }
 

@@ -342,6 +342,13 @@ export function loadSite(
     };
 
     // --- browser bits jsdom lacks / complains about --------------------------
+    // jsdom has no canvas: getContext answers null where a browser hands Chart.js a 2D context.
+    Object.defineProperty(win.HTMLCanvasElement.prototype, "getContext", {
+        configurable: true,
+        value: function(this: HTMLCanvasElement) {
+            return { canvas: this };
+        },
+    });
     win.alert = vi.fn();
     win.confirm = vi.fn(() => true);
     if (!win.URL.createObjectURL) win.URL.createObjectURL = () => "blob:stub";
@@ -386,6 +393,13 @@ export function loadSite(
     // before the test asserts.
     const file = resolve(WWWROOT, area, "custom", feature, page, "js", "site.js");
     const code = readFileSync(file, "utf8");
+    // The view renders every localized text the script reads (pinned by viewContract.test.ts); a fixture lists
+    // only those its test looks at, so the rest are filled in here as "L_<Key>".
+    for (const [, id, key] of code.matchAll(/\$\("#(localizer(\w+))"\)/g)) {
+        if (win.document.getElementById(id) === null) {
+            win.document.body.insertAdjacentHTML("beforeend", `<input type="hidden" id="${id}" value="L_${key}" />`);
+        }
+    }
     vi.useFakeTimers();
     try {
         // A real page load runs the role's _Layout script first (Views/Shared/_Layout.cshtml): it defines the
@@ -430,6 +444,17 @@ export function loadSite(
 /** Replaces (or adds) a jQuery plugin method on the page's `$.fn` — e.g. `stubPlugin(h, "valid", () => false)`. */
 export function stubPlugin(h: SiteHandle, name: string, impl: (this: JQuery, ...args: never[]) => unknown): void {
     Object.assign(h.$.fn, { [name]: impl });
+}
+
+/**
+ * A FullCalendar event's extendedProps as the calendar scripts set them (every field present), with `over`
+ * merged in: a test names only the fields it looks at.
+ */
+export function eventProps(over: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+        calendarId: 1, displayStartDate: "2024-01-01", displayEndDate: "2024-01-02",
+        displayStartDateTimeZone: "UTC", displayEndDateTimeZone: "UTC", calendarType: "My", ...over,
+    };
 }
 
 /** Minimal hidden-input fixture: `hidden("id", "value")` → `<input id hidden>`. */
