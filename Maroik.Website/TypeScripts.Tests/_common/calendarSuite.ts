@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import realMoment from "moment";
-import { hidden, type SiteHandle, stubPlugin } from "@tests/_common/harness";
+import { hidden, type SiteHandle, stubPlugin, eventProps } from "@tests/_common/harness";
 
 /** Short alias used by the calendar suites. */
 export type Handle = SiteHandle;
@@ -389,8 +389,8 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             try {
                 spyModal(h);
                 const setProp = vi.fn();
-                h.calendarInstances[0].getEvents = () => [{ extendedProps: { calendarId: 1 }, setProp }, {
-                    extendedProps: { calendarId: 2 },
+                h.calendarInstances[0].getEvents = () => [{ extendedProps: eventProps({ calendarId: 1 }), setProp }, {
+                    extendedProps: eventProps({ calendarId: 2 }),
                     setProp: vi.fn()
                 }];
                 h.$("#editCalendarId").val("1");
@@ -429,8 +429,8 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             const modal = spyModal(h);
             const remove1 = vi.fn();
             const remove2 = vi.fn();
-            h.calendarInstances[0].getEvents = () => [{ extendedProps: { calendarId: 1 }, remove: remove1 }, {
-                extendedProps: { calendarId: 2 },
+            h.calendarInstances[0].getEvents = () => [{ extendedProps: eventProps({ calendarId: 1 }), remove: remove1 }, {
+                extendedProps: eventProps({ calendarId: 2 }),
                 remove: remove2
             }];
             h.$(".delete-calendar").trigger("click");
@@ -471,13 +471,13 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             h.win.document.body.appendChild(el);
             const event = {
                 id: "55", title: "Mine", allDay: false, remove: vi.fn(),
-                extendedProps: {
+                extendedProps: eventProps({
                     calendarType: "My",
                     displayStartDate: "2024-05-01 09:05:00",
                     displayEndDate: "2024-05-01 10:10:00",
                     displayStartDateTimeZone: "UTC",
                     displayEndDateTimeZone: "KST"
-                }, ...over
+                }), ...over
             };
             const result = h.calendarOptions[0].eventClick({ el, event });
             return { event, result, el };
@@ -500,7 +500,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
 
         it("an all-day event uses the all-day layout; the close button and a click elsewhere hide the popup", () => {
             const h = build();
-            clickEvent(h, { allDay: true, extendedProps: { calendarType: "My", displayStartDate: "2024-05-01", displayEndDate: "2024-05-02" } });
+            clickEvent(h, { allDay: true, extendedProps: eventProps({ calendarType: "My", displayStartDate: "2024-05-01", displayEndDate: "2024-05-02" }) });
             expect(h.$("#calendarEventPopupStartAllDayChecked").text()).toBe("2024-05-01");
             expect(display(h, "#divCalendarEventPopupAllDayChecked")).not.toBe("none");
             h.$("#closeCalendarEventPopup").trigger("click");
@@ -516,7 +516,7 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             Object.assign(h.$("#calendarEventPopup")[0], { getClientRects: () => [1] }); // jsdom has no layout
             const el = h.win.document.createElement("div");
             h.win.document.body.appendChild(el);
-            const event = { id: "55", title: "Mine", allDay: false, extendedProps: { calendarType: "My" } };
+            const event = { id: "55", title: "Mine", allDay: false, extendedProps: eventProps({ calendarType: "My" }) };
             h.calendarOptions[0].eventClick({ el, event });
             expect(h.calendarOptions[0].eventClick({ el, event })).toBeUndefined();
             expect(display(h, "#calendarEventPopup")).toBe("none");
@@ -1059,7 +1059,7 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
                     id: "55",
                     title: "T",
                     allDay: false,
-                    extendedProps: { calendarType: "My", displayStartDate: "", displayEndDate: "", displayStartDateTimeZone: "", displayEndDateTimeZone: "" }
+                    extendedProps: eventProps({ calendarType: "My", displayStartDate: "", displayEndDate: "", displayStartDateTimeZone: "", displayEndDateTimeZone: "" })
                 }
             });
             expect(display(h, "#calendarEventPopup")).toBe("block");
@@ -1171,7 +1171,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
     const click = (h: Handle) => {
         const el = h.win.document.createElement("div");
         h.win.document.body.appendChild(el);
-        return h.calendarOptions[0].eventClick({ el, event: { id: "55", title: "T", allDay: false, extendedProps: { calendarType: "My" } } });
+        return h.calendarOptions[0].eventClick({ el, event: { id: "55", title: "T", allDay: false, extendedProps: eventProps({ calendarType: "My" }) } });
     };
     /** A stored attachment as the event reply describes it. */
     const attachment = { name: "spec", extension: ".pdf", size: 2_500_000 };

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
-import { loadSite, antiForgery, hidden } from "@tests/_common/harness";
+import { loadSite, antiForgery, hidden, eventProps } from "@tests/_common/harness";
 import {
     describeCalendarCommon,
     describeEditFormDetail,
@@ -197,7 +197,7 @@ describe("user/Calendar/UserIndex", () => {
                 id: 1,
                 title: "Team sync",
                 allDay: true,
-                extendedProps: { calendarType: "My", displayStartDate: "2024-01-01", displayEndDate: "2024-01-02" },
+                extendedProps: eventProps({ calendarType: "My", displayStartDate: "2024-01-01", displayEndDate: "2024-01-02" }),
             },
         });
         h.$("#editCalendarEventPopup").trigger("click");
@@ -316,7 +316,7 @@ describe("user/Calendar/UserIndex", () => {
                 id: "other-1",
                 title: "Team sync",
                 allDay: true,
-                extendedProps: { calendarType: "Other", displayStartDate: "2024-01-01", displayEndDate: "2024-01-02" },
+                extendedProps: eventProps({ calendarType: "Other", displayStartDate: "2024-01-01", displayEndDate: "2024-01-02" }),
             },
         });
         h.$("#viewOtherCalendarEventPopup").trigger("click");
@@ -632,7 +632,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
     const click = (h: Handle, over: Record<string, unknown>) => {
         const el = h.win.document.createElement("div");
         h.win.document.body.appendChild(el);
-        const event = { id: "55", title: "T", allDay: false, extendedProps: { calendarType: "My" }, ...over };
+        const event = { id: "55", title: "T", allDay: false, extendedProps: eventProps({ calendarType: "My" }), ...over };
         return h.calendarOptions[0].eventClick({ el, event });
     };
     /** A stored attachment as the event reply describes it. */
@@ -653,7 +653,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
 
     /** Runs "other event → view": IsOtherCalendarEventExists reply, then GetOtherCalendars settles. */
     const openView = (h: Handle, calendarEvent: Record<string, unknown>) => {
-        click(h, { extendedProps: { calendarType: "Other" } });
+        click(h, { extendedProps: eventProps({ calendarType: "Other" }) });
         h.$("#viewOtherCalendarEventPopup").trigger("click");
         h.lastAjax().success!(payload(calendarEvent));
         const inner = h.lastAjax();
@@ -743,7 +743,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
 
         it("a view of a shared event whose calendar list is refused still opens with the rest filled in", () => {
             const h = setup();
-            click(h, { extendedProps: { calendarType: "Other" } });
+            click(h, { extendedProps: eventProps({ calendarType: "Other" }) });
             h.$("#viewOtherCalendarEventPopup").trigger("click");
             h.lastAjax().success!(payload());
             const inner = h.lastAjax();
@@ -775,7 +775,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
 
         it("a refused lookup toasts the server's message and opens nothing", () => {
             const h = setup();
-            click(h, { extendedProps: { calendarType: "Other" } });
+            click(h, { extendedProps: eventProps({ calendarType: "Other" }) });
             h.$("#viewOtherCalendarEventPopup").trigger("click");
             h.lastAjax().success!({ result: false, error: "no longer shared" });
             expect(h.toastr.error).toHaveBeenCalledWith("no longer shared");
@@ -786,13 +786,13 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
         it("a timed event shows its local start/end with both zones", () => {
             const h = setup();
             click(h, {
-                extendedProps: {
+                extendedProps: eventProps({
                     calendarType: "Other",
                     displayStartDate: "2024-05-01 09:05:00",
                     displayEndDate: "2024-05-01 10:10:00",
                     displayStartDateTimeZone: "UTC",
                     displayEndDateTimeZone: "KST"
-                }
+                })
             });
             expect(h.$("#otherCalendarEventPopupStartAllDayUnchecked").text()).toBe("2024-05-01 09:05:00");
             expect(h.$("#otherCalendarEventPopupStartTimeZoneAllDayUnchecked").text()).toBe("(UTC)");
@@ -804,7 +804,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
 
         it("a click on the open popup itself, or on a calendar event, does not close it", () => {
             const h = setup();
-            click(h, { extendedProps: { calendarType: "Other" } });
+            click(h, { extendedProps: eventProps({ calendarType: "Other" }) });
             h.$("#otherCalendarEventPopup").trigger("click");
             const other = h.win.document.createElement("div");
             other.className = "fc-event";
@@ -816,7 +816,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
         it("an event of neither calendar type opens no popup", () => {
             const h = setup();
             const before = h.ajaxCalls.length;
-            const result = click(h, { extendedProps: { calendarType: "Something" } });
+            const result = click(h, { extendedProps: eventProps({ calendarType: "Something" }) });
             expect(result).toBeUndefined();
             expect(display(h, "#otherCalendarEventPopup")).not.toBe("block");
             expect(display(h, "#calendarEventPopup")).not.toBe("block");
@@ -825,18 +825,18 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
 
         it("the close button, a click elsewhere and a second click on the same event all hide it", () => {
             const h = setup();
-            click(h, { extendedProps: { calendarType: "Other" } });
+            click(h, { extendedProps: eventProps({ calendarType: "Other" }) });
             h.$("#closeOtherCalendarEventPopup").trigger("click");
             expect(display(h, "#otherCalendarEventPopup")).toBe("none");
 
-            click(h, { extendedProps: { calendarType: "Other" } });
+            click(h, { extendedProps: eventProps({ calendarType: "Other" }) });
             h.$(h.win.document.body).trigger("click");
             expect(display(h, "#otherCalendarEventPopup")).toBe("none");
 
             Object.assign(h.$("#otherCalendarEventPopup")[0], { getClientRects: () => [1] }); // jsdom has no layout
             const el = h.win.document.createElement("div");
             h.win.document.body.appendChild(el);
-            const event = { id: "o1", title: "T", allDay: false, extendedProps: { calendarType: "Other" } };
+            const event = { id: "o1", title: "T", allDay: false, extendedProps: eventProps({ calendarType: "Other" }) };
             h.calendarOptions[0].eventClick({ el, event });
             expect(h.calendarOptions[0].eventClick({ el, event })).toBeUndefined();
             expect(display(h, "#otherCalendarEventPopup")).toBe("none");

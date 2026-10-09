@@ -17,7 +17,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, onReply, fieldValue, attribute } = window;
+    const { check, replies, onReply, onReplyText, fieldValue, attribute } = window;
     // Cached element references. `#free_forum_detail_updated` and the table only
     // exist on the relevant sub-view, so their `.length` is checked before use.
     const $freeForumDetailUpdated = $("#free_forum_detail_updated");
@@ -180,9 +180,9 @@
                 dataType: "binary",
                 success: onReply(check.instance(Blob), function(data) {
                     if (data.type.indexOf("application/json") === 0) {
-                        data.text().then(function(text) {
-                            toastr.error((JSON.parse(text) as FailedReply).error);
-                        });
+                        data.text().then(onReplyText(replies.failed, function(refusal) {
+                            toastr.error(refusal.error);
+                        }));
                         return;
                     }
 

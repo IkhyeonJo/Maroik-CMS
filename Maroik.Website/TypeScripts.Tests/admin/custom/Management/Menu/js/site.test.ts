@@ -23,7 +23,7 @@ function fixture(): string {
 describe("Management/Menu (admin)", () => {
     it("highlights the sub-category row matching id + categoryId", () => {
         const h = loadSite("admin", "Management", "Menu", fixture());
-        fireNative(h.win.document, "rowclick", { data: { Id: 2, CategoryId: 1 } });
+        fireNative(h.win.document, "rowclick", { data: { Id: "2", CategoryId: "1" } });
         const rows = [...h.win.document.querySelectorAll(".clsGridRow")];
         expect(rows.map((r) => r.classList.contains("table-primary"))).toEqual([false, true]);
     });
@@ -78,9 +78,9 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
 
     it("a category row (null CategoryId → \"\") and a same-id sub-category row are told apart by their parent id", () => {
         const h = load();
-        fireNative(h.win.document, "rowclick", { data: { Id: 10, CategoryId: "" } });
+        fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: "" } });
         expect(selected(h)).toEqual([true, false]);
-        fireNative(h.win.document, "rowclick", { data: { Id: 10, CategoryId: 4 } });
+        fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: "4" } });
         expect(selected(h)).toEqual([false, true]);
     });
 
@@ -130,13 +130,13 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
         const h = load();
         const modal = spyModal(h);
 
-        fireNative(h.win.document, "rowclick", { data: { Id: 10, CategoryId: "" } });
+        fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: "" } });
         h.$("#btnEditMenuGridRow").trigger("click");
         expect(h.lastAjax().url).toBe("/Management/IsCategoryExists?id=10");
         h.lastAjax().success!({ result: true, category });
         expect(modal).toHaveBeenCalledWith("show");
 
-        fireNative(h.win.document, "rowclick", { data: { Id: 10, CategoryId: 4 } });
+        fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: "4" } });
         h.$("#btnEditMenuGridRow").trigger("click");
         expect(h.lastAjax().url).toBe("/Management/IsSubCategoryExists?id=10");
         h.lastAjax().success!({ result: true, subCategory });
@@ -145,10 +145,10 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
 
     it("Edit: a record that no longer exists is toasted", () => {
         const h = load();
-        fireNative(h.win.document, "rowclick", { data: { Id: 10, CategoryId: "" } });
+        fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: "" } });
         h.$("#btnEditMenuGridRow").trigger("click");
         h.lastAjax().success!({ result: false, error: "gone" });
-        fireNative(h.win.document, "rowclick", { data: { Id: 10, CategoryId: 4 } });
+        fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: "4" } });
         h.$("#btnEditMenuGridRow").trigger("click");
         h.lastAjax().success!({ result: false, error: "gone too" });
         expect(h.toastr.error).toHaveBeenCalledWith("gone");
@@ -159,7 +159,7 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
         const h = load();
         h.$(categoryRow).trigger("dblclick");
         expect(h.ajaxCalls).toHaveLength(0);
-        fireNative(h.win.document, "rowclick", { data: { Id: 10, CategoryId: "" } });
+        fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: "" } });
         h.$(categoryRow).trigger("dblclick");
         expect(h.lastAjax().url).toBe("/Management/IsCategoryExists?id=10");
     });
@@ -169,7 +169,7 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
         const modal = spyModal(h);
         h.$("#btnConfirmDeleteMenu").trigger("click");
         expect(h.toastr.error).toHaveBeenCalledWith("select a row");
-        fireNative(h.win.document, "rowclick", { data: { Id: 10, CategoryId: 4 } });
+        fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: "4" } });
         h.$("#btnConfirmDeleteMenu").trigger("click");
         expect(modal).toHaveBeenCalledWith({ keyboard: false, backdrop: "static" });
         expect(modal).toHaveBeenCalledWith("show");
@@ -181,7 +181,7 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
     ])("delete of a %s re-checks it exists, then deletes; success closes, reloads and toasts", (_kind, categoryId, existsAction, deleteAction, reply) => {
         const h = load();
         const modal = spyModal(h);
-        fireNative(h.win.document, "rowclick", { data: { Id: 10, CategoryId: categoryId } });
+        fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: String(categoryId) } });
         h.$("#btnDeleteMenu").trigger("click");
         expect(h.lastAjax().url).toBe(`/Management/${existsAction}?id=10`);
 
@@ -200,7 +200,7 @@ describe("Management/Menu (admin) — categories and sub-categories share one gr
         ["sub-category", 4],
     ])("delete of a %s: a vanished record or a refused delete is toasted, nothing reloads", (_kind, categoryId) => {
         const h = load();
-        fireNative(h.win.document, "rowclick", { data: { Id: 10, CategoryId: categoryId } });
+        fireNative(h.win.document, "rowclick", { data: { Id: "10", CategoryId: String(categoryId) } });
         h.$("#btnDeleteMenu").trigger("click");
         h.lastAjax().success!({ result: false, error: "vanished" });
         expect(h.toastr.error).toHaveBeenCalledWith("vanished");

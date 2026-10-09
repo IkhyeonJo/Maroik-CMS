@@ -21,7 +21,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, fieldValue, attribute } = window;
+    const { check, replies, onReply, conform, instanceOf, fieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const assetReply = replies.read({
@@ -69,7 +69,7 @@
     // selection highlight to every row whose ProductName matches (there is only
     // one, but the grid keys rows by `data-productName`, not by index).
     $(document).off("rowclick.Asset").on("rowclick.Asset", (e: JQuery.TriggeredEvent) => {
-        let selectedRow = e.detail as unknown as MvcGridRowClickDetail;
+        let selectedRow = conform(e.detail, check.object({ data: check.record(check.string) }), "the rowclick detail");
         let selectedRowProductName = selectedRow.data.ProductName;
         let $clsGridRow = $(".clsGridRow");
 
@@ -115,7 +115,7 @@
     // because the grid element is swapped on reload.
     $gridSearch.off("input").on("input", function() {
         const grid = new MvcGrid(document.querySelector(".mvc-grid"));
-        grid.url.searchParams.set("wholeSearch", (this as HTMLInputElement).value);
+        grid.url.searchParams.set("wholeSearch", instanceOf(this, HTMLInputElement, "the event target").value);
         grid.reload();
     });
 

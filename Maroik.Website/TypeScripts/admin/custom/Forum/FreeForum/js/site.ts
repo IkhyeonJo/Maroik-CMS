@@ -20,7 +20,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, instanceOf, fieldValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, onReplyText, instanceOf, fieldValue, optionalFieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const doneReply = check.oneOf(check.object({ result: check.literal(true) }), replies.failed);
@@ -98,8 +98,8 @@
     // Only one localized value is needed here — the summernote UI language (asserted
     // `Record<string, string>`: each holds a string, which `.val()` types as a wider union).
     const localizer = {
-        IETFLanguageTag: $("#localizerIETFLanguageTag").val()
-    } as Record<string, string>;
+        IETFLanguageTag: fieldValue($("#localizerIETFLanguageTag"))
+    };
 
     // Rich-text editor for the "write" body. `onImageUpload` fires for every
     // image the user drops/pastes; each is uploaded and re-inserted below.
@@ -110,7 +110,7 @@
             onImageUpload: function(files: Blob[]) {
                 for (let i = 0; i < files.length; i++) {
                     // summernote hands over the dropped / pasted File objects (@types/summernote says Blob[]).
-                    WriteUploadImageFile(files[i] as File);
+                    WriteUploadImageFile(instanceOf(files[i], File, "the dropped image"));
                 }
             }
         }
@@ -124,7 +124,7 @@
             onImageUpload: function(files: Blob[]) {
                 for (let i = 0; i < files.length; i++) {
                     // summernote hands over the dropped / pasted File objects (@types/summernote says Blob[]).
-                    EditUploadImageFile(files[i] as File);
+                    EditUploadImageFile(instanceOf(files[i], File, "the dropped image"));
                 }
             }
         }
@@ -635,9 +635,9 @@
                 dataType: "binary",
                 success: onReply(check.instance(Blob), function(data) {
                     if (data.type.indexOf("application/json") === 0) {
-                        data.text().then(function(text) {
-                            toastr.error((JSON.parse(text) as FailedReply).error);
-                        });
+                        data.text().then(onReplyText(replies.failed, function(refusal) {
+                            toastr.error(refusal.error);
+                        }));
                         return;
                     }
 

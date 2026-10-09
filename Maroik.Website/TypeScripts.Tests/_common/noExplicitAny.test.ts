@@ -2,7 +2,8 @@
 // `unknown` and narrowed), so `strict` type-checking actually covers the code. tsc has no option that
 // forbids an explicit `any`, hence this scan. It strips comments and string / template literals first,
 // so prose such as "any AJAX error" in a comment does not count — only `any` written as code does.
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -91,6 +92,14 @@ function explicitAnyLines(file: string): string[] {
         .flatMap((line, index) => (anyWord.test(line) ? [`${relative(websiteRoot, file)}:${index + 1}`] : []));
 }
 
+/** Lines that assert a type (`x as T`, `as const` aside) or non-null (`x!`) instead of checking it. */
+function assertionLines(file: string): string[] {
+    const assertion = new RegExp("\\bas\\s+(?!const\\b)[\\w$({\\[]|(?<=[\\w$)\\]])!(?!=)");
+    return codeOnly(readFileSync(file, "utf8"))
+        .split("\n")
+        .flatMap((line, index) => (assertion.test(line) ? [`${relative(websiteRoot, file)}:${index + 1}`] : []));
+}
+
 describe("no explicit any", () => {
     it("codeOnly blanks comments and literals but keeps code", () => {
         const sample = 'let a: any = 1; // any\nconst s = "any"; /* any */ const t = `any`;';
@@ -107,5 +116,23 @@ describe("no explicit any", () => {
     it.each(["TypeScripts", "TypeScripts.Tests"])("%s/**/*.ts declares nothing as any", (folder) => {
         const offenders = tsFilesUnder(join(websiteRoot, folder)).flatMap(explicitAnyLines);
         expect(offenders).toEqual([]);
+    });
+});
+
+describe("no type assertions in the scripts", () => {
+    it("assertionLines finds `as T` and `x!` but not `as const`, `!x` or `!==`", () => {
+        const dir = mkdtempSync(join(tmpdir(), "maroik-assertions-"));
+        try {
+            const file = join(dir, "probe.ts");
+            writeFileSync(file, ["const a = b as string;", "const c = d!.e;", "const f = [1] as const;", "if (!g && h !== i) {}"].join("\n"));
+            expect(assertionLines(file).map((line) => line.split(":").at(-1))).toEqual(["1", "2"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    // Every value the scripts read is checked (window.check / fieldValue / required / byId, …) instead.
+    it("TypeScripts/**/*.ts neither asserts a type nor asserts non-null", () => {
+        expect(tsFilesUnder(join(websiteRoot, "TypeScripts")).flatMap(assertionLines)).toEqual([]);
     });
 });

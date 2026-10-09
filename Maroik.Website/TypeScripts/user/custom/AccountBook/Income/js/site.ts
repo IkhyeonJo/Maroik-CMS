@@ -15,7 +15,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, parseJson, fieldValue, selectValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, parseJson, conform, instanceOf, fieldValue, selectValue, optionalFieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const amountLabelReply = check.object({ result: check.boolean, label: check.string });
@@ -96,54 +96,54 @@
     // which `.val()` types as a wider union). `PrevText` / `NextText` are read PascalCase to match
     // the object keys (a casing fix committed separately).
     const localizer = {
-        PrevText: $("#localizerPrevText").val(),
-        NextText: $("#localizerNextText").val(),
-        January: $("#localizerJanuary").val(),
-        February: $("#localizerFebruary").val(),
-        March: $("#localizerMarch").val(),
-        April: $("#localizerApril").val(),
-        May: $("#localizerMay").val(),
-        June: $("#localizerJune").val(),
-        July: $("#localizerJuly").val(),
-        August: $("#localizerAugust").val(),
-        September: $("#localizerSeptember").val(),
-        October: $("#localizerOctober").val(),
-        November: $("#localizerNovember").val(),
-        December: $("#localizerDecember").val(),
-        Jan: $("#localizerJan").val(),
-        Feb: $("#localizerFeb").val(),
-        Mar: $("#localizerMar").val(),
-        Apr: $("#localizerApr").val(),
-        Jun: $("#localizerJun").val(),
-        Jul: $("#localizerJul").val(),
-        Aug: $("#localizerAug").val(),
-        Sep: $("#localizerSep").val(),
-        Oct: $("#localizerOct").val(),
-        Nov: $("#localizerNov").val(),
-        Dec: $("#localizerDec").val(),
-        Sunday: $("#localizerSunday").val(),
-        Monday: $("#localizerMonday").val(),
-        Tuesday: $("#localizerTuesday").val(),
-        Wednesday: $("#localizerWednesday").val(),
-        Thursday: $("#localizerThursday").val(),
-        Friday: $("#localizerFriday").val(),
-        Saturday: $("#localizerSaturday").val(),
-        Sun: $("#localizerSun").val(),
-        Mon: $("#localizerMon").val(),
-        Tue: $("#localizerTue").val(),
-        Wed: $("#localizerWed").val(),
-        Thu: $("#localizerThu").val(),
-        Fri: $("#localizerFri").val(),
-        Sat: $("#localizerSat").val(),
-        Su: $("#localizerSu").val(),
-        Mo: $("#localizerMo").val(),
-        Tu: $("#localizerTu").val(),
-        We: $("#localizerWe").val(),
-        Th: $("#localizerTh").val(),
-        Fr: $("#localizerFr").val(),
-        Sa: $("#localizerSa").val(),
-        YearSuffix: $("#localizerYearSuffix").val()
-    } as Record<string, string>;
+        PrevText: fieldValue($("#localizerPrevText")),
+        NextText: fieldValue($("#localizerNextText")),
+        January: fieldValue($("#localizerJanuary")),
+        February: fieldValue($("#localizerFebruary")),
+        March: fieldValue($("#localizerMarch")),
+        April: fieldValue($("#localizerApril")),
+        May: fieldValue($("#localizerMay")),
+        June: fieldValue($("#localizerJune")),
+        July: fieldValue($("#localizerJuly")),
+        August: fieldValue($("#localizerAugust")),
+        September: fieldValue($("#localizerSeptember")),
+        October: fieldValue($("#localizerOctober")),
+        November: fieldValue($("#localizerNovember")),
+        December: fieldValue($("#localizerDecember")),
+        Jan: fieldValue($("#localizerJan")),
+        Feb: fieldValue($("#localizerFeb")),
+        Mar: fieldValue($("#localizerMar")),
+        Apr: fieldValue($("#localizerApr")),
+        Jun: fieldValue($("#localizerJun")),
+        Jul: fieldValue($("#localizerJul")),
+        Aug: fieldValue($("#localizerAug")),
+        Sep: fieldValue($("#localizerSep")),
+        Oct: fieldValue($("#localizerOct")),
+        Nov: fieldValue($("#localizerNov")),
+        Dec: fieldValue($("#localizerDec")),
+        Sunday: fieldValue($("#localizerSunday")),
+        Monday: fieldValue($("#localizerMonday")),
+        Tuesday: fieldValue($("#localizerTuesday")),
+        Wednesday: fieldValue($("#localizerWednesday")),
+        Thursday: fieldValue($("#localizerThursday")),
+        Friday: fieldValue($("#localizerFriday")),
+        Saturday: fieldValue($("#localizerSaturday")),
+        Sun: fieldValue($("#localizerSun")),
+        Mon: fieldValue($("#localizerMon")),
+        Tue: fieldValue($("#localizerTue")),
+        Wed: fieldValue($("#localizerWed")),
+        Thu: fieldValue($("#localizerThu")),
+        Fri: fieldValue($("#localizerFri")),
+        Sat: fieldValue($("#localizerSat")),
+        Su: fieldValue($("#localizerSu")),
+        Mo: fieldValue($("#localizerMo")),
+        Tu: fieldValue($("#localizerTu")),
+        We: fieldValue($("#localizerWe")),
+        Th: fieldValue($("#localizerTh")),
+        Fr: fieldValue($("#localizerFr")),
+        Sa: fieldValue($("#localizerSa")),
+        YearSuffix: fieldValue($("#localizerYearSuffix"))
+    };
 
     // Apply the localized names to every datepicker on the page.
     $.datepicker.setDefaults({
@@ -204,7 +204,7 @@
     // MvcGrid `rowclick` (native CustomEvent): move the highlight to the row
     // whose `data-id` matches the clicked record.
     $(document).off("rowclick.Income").on("rowclick.Income", (e: JQuery.TriggeredEvent) => {
-        let selectedRow = e.detail as unknown as MvcGridRowClickDetail;
+        let selectedRow = conform(e.detail, check.object({ data: check.record(check.string) }), "the rowclick detail");
         let selectedRowId = selectedRow.data.Id;
 
         let $clsGridRow = $(".clsGridRow");
@@ -245,7 +245,7 @@
     // Free-text search: push the term into the grid query string and reload.
     $gridSearch.off("input").on("input", function(event) {
         const grid = new MvcGrid(document.querySelector(".mvc-grid"));
-        grid.url.searchParams.set("wholeSearch", (event.currentTarget as HTMLInputElement).value);
+        grid.url.searchParams.set("wholeSearch", instanceOf(event.currentTarget, HTMLInputElement, "the event target").value);
         grid.reload();
     });
 
@@ -621,25 +621,25 @@
 
     $createIncomeMainClass.off("change").on("change", function(event) {
         CreateFormShowIncomeSubClassBySelectedIncomeMainClass(
-            event.currentTarget as HTMLSelectElement
+            instanceOf(event.currentTarget, HTMLSelectElement, "the event target")
         );
     });
 
     $editIncomeMainClass.off("change").on("change", function(event) {
         EditFormShowIncomeSubClassBySelectedIncomeMainClass(
-            event.currentTarget as HTMLSelectElement
+            instanceOf(event.currentTarget, HTMLSelectElement, "the event target")
         );
     });
 
     $createIncomeDepositMyAssetProductName.off("change").on("change", function(event) {
         ChangeCreateIncomeAmountLabel(
-            (event.currentTarget as HTMLSelectElement).value
+            instanceOf(event.currentTarget, HTMLSelectElement, "the event target").value
         );
     });
 
     $editIncomeDepositMyAssetProductName.off("change").on("change", function(event) {
         ChangeEditIncomeAmountLabel(
-            (event.currentTarget as HTMLSelectElement).value
+            instanceOf(event.currentTarget, HTMLSelectElement, "the event target").value
         );
     });
 

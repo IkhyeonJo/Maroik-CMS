@@ -19,7 +19,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, fieldValue, attribute } = window;
+    const { check, replies, onReply, conform, instanceOf, fieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const accountReply = replies.read({
@@ -70,7 +70,7 @@
     // MvcGrid `rowclick` (native CustomEvent): move the selection highlight to
     // the row whose `data-email` matches the clicked record.
     $(document).off("rowclick.Account").on("rowclick.Account", (e: JQuery.TriggeredEvent) => {
-        let selectedRow = e.detail as unknown as MvcGridRowClickDetail;
+        let selectedRow = conform(e.detail, check.object({ data: check.record(check.string) }), "the rowclick detail");
         let selectedRowEmail = selectedRow.data.Email;
 
         let $clsGridRow = $(".clsGridRow");
@@ -112,7 +112,7 @@
     // Free-text search: push the term into the grid query string and reload.
     $gridSearch.off("input").on("input", function(event) {
         const grid = new MvcGrid(document.querySelector(".mvc-grid"));
-        grid.url.searchParams.set("wholeSearch", (event.currentTarget as HTMLInputElement).value);
+        grid.url.searchParams.set("wholeSearch", instanceOf(event.currentTarget, HTMLInputElement, "the event target").value);
         grid.reload();
     });
 

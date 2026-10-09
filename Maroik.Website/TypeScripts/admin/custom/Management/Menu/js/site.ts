@@ -19,7 +19,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, fieldValue, attribute } = window;
+    const { check, replies, onReply, conform, instanceOf, fieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const categoryReply = replies.read({
@@ -98,7 +98,7 @@
     // (ID + CategoryId). An empty CategoryId is normalized to "-1" so the
     // comparison is stable for Category rows.
     $(document).off("rowclick.Menu").on("rowclick.Menu", (e: JQuery.TriggeredEvent) => {
-        let selectedRow = e.detail as unknown as MvcGridRowClickDetail;
+        let selectedRow = conform(e.detail, check.object({ data: check.record(check.string) }), "the rowclick detail");
         let selectedRowId = selectedRow.data.Id;
         let selectedRowCategoryId = selectedRow.data.CategoryId;
 
@@ -144,7 +144,7 @@
     // Free-text search: push the term into the grid query string and reload.
     $gridSearch.off("input").on("input", function(event) {
         const grid = new MvcGrid(document.querySelector(".mvc-grid"));
-        grid.url.searchParams.set("wholeSearch", (event.currentTarget as HTMLInputElement).value);
+        grid.url.searchParams.set("wholeSearch", instanceOf(event.currentTarget, HTMLInputElement, "the event target").value);
         grid.reload();
     });
 
