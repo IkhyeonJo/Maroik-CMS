@@ -43,9 +43,11 @@ Deployment and schema
 
 Operations and hosting
 - Maroik only ever runs under docker-compose on Linux (Ubuntu). Behaviour that differs only on a Windows dev box
-  (path separators, a test that fails only there such as `CertificateManagerTests`) is an environment
-  difference, not a defect.
+  (path separators, a test that fails only there) is an environment difference, not a defect.
 - The containers run as root (no `USER` in the Dockerfiles).
+- In production TLS ends at Cloudflare: the site is reached only through a Cloudflare Tunnel, which hands requests
+  to the website container over plain HTTP, so there is no origin certificate. `Program.cs` takes
+  `X-Forwarded-Proto` from private-network peers only (pinned by `ForwardedProtoTests`).
 - `AllowedHosts` is `*`. The `amqp://guest:guest@localhost` fallbacks (`Program.cs`, `WorkerHost`) are never
   used in a deployment (the env files always set the connection string).
 - Data Protection keys are stored unencrypted (Valkey, or the file fallback); they only live on the server.
@@ -364,14 +366,15 @@ for shipped code, `tests` for `*.Tests`): `dotnet sln Maroik.sln add <csproj> --
 `SolutionLayeringArchitectureTests` (`EveryProject_MustBeRegisteredInTheSolution`,
 `EveryProject_MustBeNestedUnderTheMatchingSolutionFolder`).
 
-## Domain error messages must go through LocalizableError
+## Domain error messages must go through DomainError
 
-Every `Maroik.Core.Domain` error is built via `Maroik.Core.Domain.Localization.LocalizableError`
-(`.Validation`/`.Conflict`/`.Failure`) — **never** call the raw `ErrorOr.Error.Validation` /
-`.Conflict` / `.Failure` / `.NotFound` / `.Forbidden` / `.Unexpected` factories directly outside
-`LocalizableError.cs` itself. This applies even to a message with no runtime value to interpolate
-(pass zero `args`) — a message that starts static and later gains an interpolated value must not be
-able to silently regress to bypassing localization.
+The domain speaks English only and does no translation. Every `Maroik.Core.Domain` error is built via
+`Maroik.Core.Domain.Errors.DomainError` (`.Validation`/`.Conflict`/`.Failure`) — **never** call the raw
+`ErrorOr.Error.Validation` / `.Conflict` / `.Failure` / `.NotFound` / `.Forbidden` / `.Unexpected` factories
+directly outside `DomainError.cs` itself. `DomainError` keeps the English message template and its values
+separately in `Error.Metadata` (`MessageTemplate` / `MessageArgs`), so the outer layers can translate it.
+This applies even to a message with no runtime value to interpolate (pass zero `args`) — a message that
+starts static and later gains an interpolated value must not be able to silently lose its template.
 
 Why: a raw `Error.X(code, "some message")` bakes the description straight into `Error.Description`
 with no composite-format template in `Error.Metadata`, so the Website's `IHtmlLocalizer` resx lookup
@@ -380,10 +383,27 @@ falls back to the baked (often English, sometimes value-specific) string instead
 `Money.Add`/`Subtract`'s currency-mismatch errors it was a live bug: a genuinely runtime currency
 code was interpolated straight into the message, so no resx key could ever match it.
 
-Enforced by `DomainArchitectureTests.Domain_ErrorMessages_MustGoThrough_LocalizableError`
+Enforced by `DomainArchitectureTests.Domain_ErrorMessages_MustGoThrough_DomainError`
 (`Maroik.Core.Domain.Tests/Architecture/DomainArchitectureTests.cs`) — a NetArchTest custom rule that
 inspects each type's IL for a direct call to a raw `ErrorOr.Error` factory method (a type-dependency
 check doesn't work here since every Domain type legitimately depends on the unrelated `ErrorOr<T>`
-return type). Keep it green; when a new error is added, add it via `LocalizableError`, and add the
+return type). Keep it green; when a new error is added, add it via `DomainError`, and add the
 matching resx entry — with a `{0}`/`{1}` composite-format key, not a baked value — to every controller
 resx pair (`en-US` + `ko-KR`) that can surface it.
+
+Cultures are a Website concern: the supported UI cultures and the culture → default time-zone pre-select
+live in `Maroik.Website/Constants/CulturePolicy.cs`, not in the domain. `Maroik.Core.Domain.Time.DateTimeExtensions`
+is time-zone conversion, not language handling.
+
+## Service error keys must come from ServiceErrorKeys
+
+The message key of a failed service result (`ServiceResult`, `LoginResult`, `RegisterResult`, `SummernoteUploadResult`)
+is also the resx key the controller looks it up under, so it is written as a `Maroik.Core.Contract.Dtos.ServiceErrorKeys`
+constant, never a literal (the machine error *code*, e.g. `"Board.NotFound"`, stays a literal). Keys a controller compares
+against and answers itself (`"invalid-image"`, `"reset-password-invalid"`, ...) live in `ServiceErrorKeys.Signals` and are
+used by both sides. Rewording a value means renaming its resx key in every controller pair in the same change.
+
+Enforced by `ServiceErrorKeyArchitectureTests` (`Maroik.Core.Service.Tests`, no literal keys in the service sources) and
+`ServiceErrorKeyResxTests` (`Maroik.Website.Tests`), which follows the calls from each controller into the services with
+Mono.Cecil and fails when a key the controller can receive is missing from its `en-US` / `ko-KR` resx, or when a key is
+reached from no controller at all.

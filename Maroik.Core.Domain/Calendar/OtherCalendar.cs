@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 using Maroik.Core.Domain.ValueObjects;
 
@@ -42,7 +42,7 @@ public sealed class OtherCalendar : AggregateRoot<(string AccountEmail, long Cal
         if (emailResult.IsError) return emailResult.Errors;
 
         if (calendarId <= 0)
-            return LocalizableError.Validation("OtherCalendar.InvalidCalendarId", "Calendar ID must be a positive integer.");
+            return DomainError.Validation("OtherCalendar.InvalidCalendarId", "Calendar ID must be a positive integer.");
 
         return new OtherCalendar(emailResult.Value, calendarId);
     }

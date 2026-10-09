@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 
 namespace Maroik.Core.Domain.Finance;
 
@@ -36,10 +36,10 @@ public static class IncomeClassPolicy
     public static ErrorOr<Success> Validate(string? mainClass, string? subClass)
     {
         if (mainClass is null || !SubClassesByMainClass.TryGetValue(mainClass, out var subClasses))
-            return LocalizableError.Validation("IncomeClass.Invalid", "Unknown income main class.");
+            return DomainError.Validation("IncomeClass.Invalid", "Unknown income main class.");
 
         return subClass is not null && subClasses.Contains(subClass)
             ? Result.Success
-            : LocalizableError.Validation("IncomeClass.Invalid", "Invalid sub-class for {0}.", mainClass);
+            : DomainError.Validation("IncomeClass.Invalid", "Invalid sub-class for {0}.", mainClass);
     }
 }

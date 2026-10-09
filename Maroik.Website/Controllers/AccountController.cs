@@ -1,7 +1,7 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Localization;
 using Maroik.Website.Attributes;
+using Maroik.Website.Constants;
 using Maroik.Website.Contracts;
 using Maroik.Website.Extensions;
 using Maroik.Website.Models.ViewModels.Account;
@@ -300,7 +300,7 @@ public class AccountController(
 
         if (!result.Success)
         {
-            if (result.ErrorKey == "reset-password-invalid")
+            if (result.ErrorKey == ServiceErrorKeys.Signals.ResetPasswordInvalid)
             {
                 ViewBag.FailToResetPassword = true;
                 return View();

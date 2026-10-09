@@ -1,5 +1,6 @@
-using Maroik.Core.Domain.Localization;
-namespace Maroik.Core.Domain.Tests.Localization;
+using Maroik.Website.Constants;
+
+namespace Maroik.Website.Tests;
 
 /// <summary>Unit tests for <see cref="CulturePolicy"/>.</summary>
 public class CulturePolicyTests

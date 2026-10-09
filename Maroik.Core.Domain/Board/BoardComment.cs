@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Core.Domain.Board;
@@ -84,15 +84,15 @@ public sealed class BoardComment : AggregateRoot<long>
         DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(writer))
-            return LocalizableError.Validation("BoardComment.WriterEmpty", "Comment author (writer) cannot be empty.");
+            return DomainError.Validation("BoardComment.WriterEmpty", "Comment author (writer) cannot be empty.");
 
         if (string.IsNullOrWhiteSpace(content))
-            return LocalizableError.Validation("BoardComment.ContentEmpty", "Comment content cannot be empty.");
+            return DomainError.Validation("BoardComment.ContentEmpty", "Comment content cannot be empty.");
 
         // Persisted in a text column, so the database would accept any size; bound it here to the same
         // limit a post's body has, so one comment cannot be used to store or render an unbounded blob.
         if (content.Length > TitledContentPolicy.MaxBodyLength)
-            return LocalizableError.Validation("BoardComment.ContentTooLong", "Comment must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
+            return DomainError.Validation("BoardComment.ContentTooLong", "Comment must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
 
         return new BoardComment(0, boardId, order, avatarImagePath, writer, content, utcNow);
     }
@@ -101,7 +101,7 @@ public sealed class BoardComment : AggregateRoot<long>
     public ErrorOr<Success> SoftDelete()
     {
         if (Deleted)
-            return LocalizableError.Conflict("BoardComment.AlreadyDeleted", "Comment is already deleted.");
+            return DomainError.Conflict("BoardComment.AlreadyDeleted", "Comment is already deleted.");
 
         Deleted = true;
         return Result.Success;

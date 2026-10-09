@@ -1,4 +1,4 @@
-namespace Maroik.Core.Domain.Localization;
+namespace Maroik.Website.Constants;
 
 /// <summary>
 /// Locale-derived defaults. Keeps the "which culture implies which default" decisions in one

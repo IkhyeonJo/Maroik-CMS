@@ -91,8 +91,11 @@ script (no `import`/`export`); keep it that way.
 * The DDD/Clean-Architecture move of business logic out of the client scripts and
   views is substantially complete (commit `88941c57 feat: DDD + Clean architecture`).
   Policies exist for Finance class taxonomies, calendar reminders, fixed schedules,
-  passwords, image upload, and culture. Treat new findings as regressions to fix,
+  passwords and image upload. Treat new findings as regressions to fix,
   not a fresh migration.
+* `CulturePolicy` (supported UI cultures, the culture → default time-zone pre-select) is a
+  presentation setting, not a business rule: it lives in `Maroik.Website/Constants`, not in
+  `Maroik.Core.Domain` (moved 2026-10-09; only the Website ever used it).
 * The 22 client scripts were migrated JS → TypeScript (`TypeScripts/`), byte-faithful,
   with jsdom tests in `TypeScripts.Tests/`. `wwwroot/**/site.js` is now generated
   (and, since 2026-09-27, git-ignored rather than committed).

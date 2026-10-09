@@ -45,7 +45,7 @@ public class TimeZoneIdTests
     }
 
     /// <summary>
-    /// The "unrecognized" error is built via <c>LocalizableError</c>: its Metadata carries the
+    /// The "unrecognized" error is built via <c>DomainError</c>: its Metadata carries the
     /// composite-format resource template and the raw offending value separately, so
     /// <c>ServiceResult.FromError</c> can hand the UI something resx-localizable instead of the
     /// already-baked, value-embedding sentence in <see cref="ErrorOr.Error.Description"/>.
@@ -55,8 +55,8 @@ public class TimeZoneIdTests
     {
         var result = TimeZoneId.Create("Not/AReal/TimeZone");
 
-        Assert.Equal("'{0}' is not a recognised time-zone ID.", result.FirstError.Metadata!["ResourceKey"]);
-        Assert.Equal(["Not/AReal/TimeZone"], (object[])result.FirstError.Metadata["ResourceArgs"]);
+        Assert.Equal("'{0}' is not a recognised time-zone ID.", result.FirstError.Metadata!["MessageTemplate"]);
+        Assert.Equal(["Not/AReal/TimeZone"], (object[])result.FirstError.Metadata["MessageArgs"]);
     }
 
     /// <summary>Equality same value are equal.</summary>

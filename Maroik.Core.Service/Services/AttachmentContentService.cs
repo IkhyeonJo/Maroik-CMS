@@ -27,7 +27,7 @@ public class AttachmentContentService(
     {
         if (attachedFile == null) return null;
         if (!AttachmentUploadPolicy.IsAllowedExtension(Path.GetExtension(attachedFile.FileName)))
-            return ServiceResult.Validation("Attachment.ExtensionNotAllowed", "Only zip extension allowed.");
+            return ServiceResult.Validation("Attachment.ExtensionNotAllowed", ServiceErrorKeys.OnlyZipAllowed);
         long maxBytes = settings.Value.MaxAttachedFileSizeBytes;
         return !AttachmentUploadPolicy.IsValidSize(attachedFile.Size, maxBytes) ?
             // Stable, value-independent key (same one ManagementController/ForumController/
@@ -36,7 +36,7 @@ public class AttachmentContentService(
             // 10MB. The MB figure travels with the result via ErrorArgs, so every caller can just
             // do `_localizer[result.ErrorKey, result.ErrorArgs]` instead of separately recomputing
             // maxBytes/(1024*1024) at the call site.
-            ServiceResult.Validation("Attachment.TooLarge", "File Size must be smaller than {0}MB.", maxBytes / (1024 * 1024)) : null;
+            ServiceResult.Validation("Attachment.TooLarge", ServiceErrorKeys.FileTooLarge, maxBytes / (1024 * 1024)) : null;
     }
 
     /// <inheritdoc />
@@ -53,19 +53,19 @@ public class AttachmentContentService(
         {
             logger.LogWarning("Editor image upload refused: extension or content type not allowed ({Extension}, {ContentType}) in {Area}/{SubArea} for {Email}",
                 ext, file.ContentType, area, subArea, actorEmail);
-            return SummernoteUploadResult.Fail("Invalid image file.");
+            return SummernoteUploadResult.Fail(ServiceErrorKeys.InvalidImageFile);
         }
 
         if (imageValidator.IsSvg(file.Bytes))
         {
             logger.LogWarning("Editor image upload refused: SVG is not allowed in {Area}/{SubArea} for {Email}", area, subArea, actorEmail);
-            return SummernoteUploadResult.Fail("Invalid image file.");
+            return SummernoteUploadResult.Fail(ServiceErrorKeys.InvalidImageFile);
         }
 
         if (!imageValidator.IsValidImage(file.Bytes))
         {
             logger.LogWarning("Editor image upload refused: not a valid image in {Area}/{SubArea} for {Email}", area, subArea, actorEmail);
-            return SummernoteUploadResult.Fail("Invalid image file.");
+            return SummernoteUploadResult.Fail(ServiceErrorKeys.InvalidImageFile);
         }
 
         // Re-encode without metadata: a phone photo's EXIF (GPS position, camera, capture time) must

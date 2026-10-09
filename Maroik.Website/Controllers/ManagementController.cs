@@ -5,7 +5,7 @@ using Maroik.Core.Contract.Misc.Helpers;
 using Maroik.Core.Contract.Misc.Settings;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.Domain.Board;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Time;
 using Maroik.Core.Domain.Media;
 using Maroik.Website.Attributes;
 using Maroik.Website.Contracts;
@@ -124,10 +124,10 @@ public class ManagementController(
         {
             return avatarResult.ErrorKey switch
             {
-                "virus-detected" => Ok(new { result = false, errorMessage = localizer["File may be infected with a virus."].Value }),
-                "scan-unavailable" => Ok(new { result = false, errorMessage = localizer["The file could not be scanned for viruses. Please try again later."].Value }),
-                "svg-not-allowed" => Ok(new { result = false, errorMessage = localizer["SVG format is not allowed"].Value }),
-                "invalid-image" => Ok(new { result = false, errorMessage = localizer["Invalid image file"].Value }),
+                ServiceErrorKeys.Signals.VirusDetected => Ok(new { result = false, errorMessage = localizer["File may be infected with a virus."].Value }),
+                ServiceErrorKeys.Signals.ScanUnavailable => Ok(new { result = false, errorMessage = localizer["The file could not be scanned for viruses. Please try again later."].Value }),
+                ServiceErrorKeys.Signals.SvgNotAllowed => Ok(new { result = false, errorMessage = localizer["SVG format is not allowed"].Value }),
+                ServiceErrorKeys.Signals.InvalidImage => Ok(new { result = false, errorMessage = localizer["Invalid image file"].Value }),
                 ServiceResult.TemporaryErrorKey => Ok(new { result = false, errorMessage = localizer[ServiceResult.TemporaryErrorKey].Value }),
                 _ => Ok(new { result = false, errorMessage = localizer["Input is invalid"].Value })
             };

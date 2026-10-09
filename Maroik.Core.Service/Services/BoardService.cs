@@ -151,7 +151,7 @@ public class BoardService(
                 if (!uploaded)
                 {
                     await unitOfWork.RollbackAsync(ct);
-                    return ServiceResult.Failure("Board.AttachmentUploadFailed", "Failed to upload the attached file.");
+                    return ServiceResult.Failure("Board.AttachmentUploadFailed", ServiceErrorKeys.AttachmentUploadFailed);
                 }
 
                 await boardAttachedFileRepository.CreateAsync(fileResult.Value, ct);
@@ -193,7 +193,7 @@ public class BoardService(
             if (board == null || board.Deleted || (request.Type != null && board.Type != request.Type))
             {
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.NotFound("Board.NotFound", "Input is invalid");
+                return ServiceResult.NotFound("Board.NotFound", ServiceErrorKeys.InputInvalid);
             }
 
             // Only the original writer may edit content. An admin who is not the writer may still
@@ -209,7 +209,7 @@ public class BoardService(
                 case false when !adminClearingSomeoneElsesLock:
                     await unitOfWork.RollbackAsync(ct);
                     logger.LogWarning("Board edit refused: {Requester} may not edit post {BoardId}", writerNickname, board.Id);
-                    return ServiceResult.Fail("Input is invalid");
+                    return ServiceResult.Fail(ServiceErrorKeys.InputInvalid);
                 case true:
                 {
                     var updateResult = board.Update(request.Title, content, utcNow);
@@ -274,7 +274,7 @@ public class BoardService(
             if (board == null || board.Deleted || board.Type != boardType)
             {
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.NotFound("Board.NotFound", "Input is invalid");
+                return ServiceResult.NotFound("Board.NotFound", ServiceErrorKeys.InputInvalid);
             }
 
             // Admins may delete any post; non-admins may only delete their own.
@@ -282,7 +282,7 @@ public class BoardService(
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Board delete refused: {Requester} may not delete post {BoardId}", requesterNickname, boardId);
-                return ServiceResult.Fail("You do not have permission to delete.");
+                return ServiceResult.Fail(ServiceErrorKeys.NoPermissionToDelete);
             }
 
             // Cannot fail: the post was loaded as active and not deleted just above (SoftDelete only refuses an already-deleted post).
@@ -319,14 +319,14 @@ public class BoardService(
             if (board == null || (requiredType != null && board.Type != requiredType))
             {
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.NotFound("Board.NotFound", "Input is invalid");
+                return ServiceResult.NotFound("Board.NotFound", ServiceErrorKeys.InputInvalid);
             }
 
             // When requiredOwnerNickname is set, restrict commenting to the post owner only.
             if (requiredOwnerNickname != null && !board.IsOwnedBy(requiredOwnerNickname))
             {
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.Fail("You do not have permission to write a comment.");
+                return ServiceResult.Fail(ServiceErrorKeys.NoPermissionToWriteComment);
             }
 
             IEnumerable<BoardComment> existing = await boardCommentRepository.GetByBoardIdOrderedAsync(request.BoardId, ct);
@@ -392,7 +392,7 @@ public class BoardService(
             if (comment == null)
             {
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.NotFound("BoardComment.NotFound", "Input is invalid");
+                return ServiceResult.NotFound("BoardComment.NotFound", ServiceErrorKeys.InputInvalid);
             }
 
             bool isPrivateNoteComment = false;
@@ -405,7 +405,7 @@ public class BoardService(
                 if (parent == null || parent.Type != requiredType)
                 {
                     await unitOfWork.RollbackAsync(ct);
-                    return ServiceResult.NotFound("BoardComment.NotFound", "Input is invalid");
+                    return ServiceResult.NotFound("BoardComment.NotFound", ServiceErrorKeys.InputInvalid);
                 }
                 isPrivateNoteComment = parent.IsPrivateNote;
             }
@@ -417,7 +417,7 @@ public class BoardService(
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Comment delete refused: {Requester} may not delete comment {CommentId}", requesterNickname, commentId);
-                return ServiceResult.Fail("You do not have permission to delete.");
+                return ServiceResult.Fail(ServiceErrorKeys.NoPermissionToDelete);
             }
 
             var deleteResult = comment.SoftDelete();
@@ -463,7 +463,7 @@ public class BoardService(
 
             // Validated first, uploaded second: a rejected record must not leave an orphaned file.
             bool uploaded = await fileClient.UploadAsync(newFile.Bytes, newFile.ContentType, filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
-            if (!uploaded) return ServiceResult.Failure("Board.AttachmentUploadFailed", "Failed to upload the attached file.");
+            if (!uploaded) return ServiceResult.Failure("Board.AttachmentUploadFailed", ServiceErrorKeys.AttachmentUploadFailed);
 
             await boardAttachedFileRepository.UpdateEntityAsync(
                 BoardAttachedFile.Reconstitute(previous.Id, fileResult.Value.BoardId, fileResult.Value.Size,
@@ -489,7 +489,7 @@ public class BoardService(
 
             // Validated first, uploaded second: a rejected record must not leave an orphaned file.
             bool uploaded = await fileClient.UploadAsync(newFile.Bytes, newFile.ContentType, filePath, settings.Value.FileStorageBaseUrl ?? "", ct);
-            if (!uploaded) return ServiceResult.Failure("Board.AttachmentUploadFailed", "Failed to upload the attached file.");
+            if (!uploaded) return ServiceResult.Failure("Board.AttachmentUploadFailed", ServiceErrorKeys.AttachmentUploadFailed);
 
             await boardAttachedFileRepository.CreateAsync(fileResult.Value, ct);
         }
@@ -513,12 +513,12 @@ public class BoardService(
         {
             logger.LogWarning("Attachment download refused: post {BoardId} ({BoardType}) is missing or not visible to {Viewer}",
                 boardId, boardType, viewer?.Nickname ?? Role.Anonymous);
-            return (ServiceResult.NotFound("Board.NotFound", "The post could not be found."), null);
+            return (ServiceResult.NotFound("Board.NotFound", ServiceErrorKeys.PostNotFound), null);
         }
 
         BoardAttachedFile? attachedFile = await boardAttachedFileRepository.FindByBoardIdAsync(boardId, ct);
         if (attachedFile == null || string.IsNullOrEmpty(attachedFile.Path))
-            return (ServiceResult.NotFound("Board.AttachedFileNotFound", "The attached file could not be found."), null);
+            return (ServiceResult.NotFound("Board.AttachedFileNotFound", ServiceErrorKeys.AttachedFileNotFound), null);
 
         // OpenFileAsync logs its own failure (with the storage path) where it happens.
         Stream? content = await attachmentContent.OpenFileAsync(attachedFile.Path, ct);

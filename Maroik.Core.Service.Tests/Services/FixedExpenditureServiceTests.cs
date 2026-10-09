@@ -134,7 +134,7 @@ public class FixedExpenditureServiceTests
     /// <see cref="ServiceResult.ErrorKey"/> -- so the UI can localize it via resx.
     /// </summary>
     [Fact]
-    public async Task CreateAsync_ReturnsLocalizableErrorArgs_WhenDepositDayIsInvalid()
+    public async Task CreateAsync_ReturnsDomainErrorArgs_WhenDepositDayIsInvalid()
     {
         var sut = CreateSut();
         var request = ConsumerRequest();

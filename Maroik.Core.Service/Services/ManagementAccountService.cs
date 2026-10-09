@@ -45,7 +45,7 @@ public class ManagementAccountService(
         try
         {
             if (await FindByEmailAsync(request.Email ?? "", ct) != null)
-                return ServiceResult.Conflict("Account.AlreadyExists", "This account has already been created.");
+                return ServiceResult.Conflict("Account.AlreadyExists", ServiceErrorKeys.AccountAlreadyCreated);
 
             // Nickname: validated + normalized like self-registration, except that an administrator
             // may deliberately use a reserved name. Uniqueness is checked ignoring case (the DB
@@ -56,7 +56,7 @@ public class ManagementAccountService(
             string nickname = nicknameResult.Value;
 
             if (await accountRepository.NicknameExistsIgnoreCaseAsync(nickname, ct))
-                return ServiceResult.Conflict("Account.NicknameAlreadyExists", "'{0}' is a Nickname that already exists. Please enter another Nickname.", nickname);
+                return ServiceResult.Conflict("Account.NicknameAlreadyExists", ServiceErrorKeys.NicknameExists, nickname);
 
             // request.PlainPassword carries the raw password. The complexity rule is checked here,
             // before hashing, so the controller no longer has to — Account.Create only ever sees the hash.
@@ -102,8 +102,8 @@ public class ManagementAccountService(
                 // whichever one actually collided, same classification RegisterAsync uses.
                 bool isNicknameConflict = e.IsAccountNicknameUniqueViolation();
                 return isNicknameConflict
-                    ? ServiceResult.Conflict("Account.NicknameAlreadyExists", "'{0}' is a Nickname that already exists. Please enter another Nickname.", nickname)
-                    : ServiceResult.Conflict("Account.AlreadyExists", "This account has already been created.");
+                    ? ServiceResult.Conflict("Account.NicknameAlreadyExists", ServiceErrorKeys.NicknameExists, nickname)
+                    : ServiceResult.Conflict("Account.AlreadyExists", ServiceErrorKeys.AccountAlreadyCreated);
             }
 
  #pragma warning disable CA1873
@@ -148,7 +148,7 @@ public class ManagementAccountService(
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Admin update failed: account not found for {Email} by admin {Admin}", request.Email, actorEmail);
-                return ServiceResult.NotFound("Account.NotFound", "Email address is wrong");
+                return ServiceResult.NotFound("Account.NotFound", ServiceErrorKeys.EmailAddressWrong);
             }
 
             AccountRole oldRole = account.Role;
@@ -271,7 +271,7 @@ public class ManagementAccountService(
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Admin delete failed: account not found for {Email} by admin {Admin}", email, actorEmail);
-                return ServiceResult.NotFound("Account.NotFound", "Fail to find the account by given email address");
+                return ServiceResult.NotFound("Account.NotFound", ServiceErrorKeys.AccountNotFoundByEmail);
             }
 
             account.SoftDelete(utcNow);

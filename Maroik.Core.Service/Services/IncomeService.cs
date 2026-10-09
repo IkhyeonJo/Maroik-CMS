@@ -48,7 +48,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
 
             Asset? depositAsset = await assetBalance.GetAssetAsync(accountEmail, request.DepositMyAssetProductName ?? "", ct);
             if (depositAsset == null)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Income.AssetNotFound", "The selected asset could not be found."), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("Income.AssetNotFound", ServiceErrorKeys.SelectedAssetNotFound), ct);
             if (depositAsset.Deleted)
                 return await unitOfWork.FailAsync(DeletedAssetResult, ct);
 
@@ -93,7 +93,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
             // drift the linked asset balance.
             Income? previous = await incomeRepository.FindByEmailAndIdForUpdateAsync(accountEmail, request.Id, ct);
             if (previous == null)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Income.NotFound", "The income record could not be found."), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("Income.NotFound", ServiceErrorKeys.IncomeNotFound), ct);
 
             // Lock the previous and new deposit assets in a single ordinal-ordered batch so
             // concurrent transactions on the same asset pair (here or in ExpenditureService)
@@ -107,7 +107,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
 
             Asset? newAsset = !string.IsNullOrEmpty(request.DepositMyAssetProductName) && touchedAssets.TryGetValue(request.DepositMyAssetProductName, out var na) ? na : null;
             if (!string.IsNullOrEmpty(request.DepositMyAssetProductName) && newAsset == null)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Income.AssetNotFound", "The selected asset could not be found."), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("Income.AssetNotFound", ServiceErrorKeys.SelectedAssetNotFound), ct);
             // A record must not be retargeted onto a since-archived asset, matching Create: a
             // deleted asset's balance must never be touched.
             if (newAsset?.Deleted == true)
@@ -149,7 +149,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
             // same income cannot reverse its asset impact twice or from a stale amount.
             Income? income = await incomeRepository.FindByEmailAndIdForUpdateAsync(accountEmail, id, ct);
             if (income == null)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Income.NotFound", "The income record could not be found."), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("Income.NotFound", ServiceErrorKeys.IncomeNotFound), ct);
 
             // An income referencing a since-archived (soft-deleted) asset must not be deletable,
             // matching Create/Update: a deleted asset's balance must not be touched.
@@ -179,7 +179,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
 
     /// <summary>Failure returned when the income's deposit asset has been soft-deleted.</summary>
     private static ServiceResult DeletedAssetResult => ServiceResult.Conflict(
-        "Income.AssetDeleted", "Actions cannot be executed with assets that have already been deleted.");
+        "Income.AssetDeleted", ServiceErrorKeys.AssetAlreadyDeleted);
 
     /// <summary>Generic failure returned (after logging) when a write throws unexpectedly.</summary>
     private static ServiceResult UnexpectedFailure => ServiceResult.Failure(

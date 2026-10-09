@@ -69,7 +69,7 @@ public class CalendarEventAttachedFileTests
 
         var name = CalendarEventAttachedFile.Create(1, 10, new string("n"[0], 256), ".zip", "/f/a.zip");
         Assert.Equal("CalendarEventAttachedFile.NameTooLong", name.FirstError.Code);
-        Assert.Equal("File name must be {0} characters or fewer.", name.FirstError.Metadata!["ResourceKey"]);
+        Assert.Equal("File name must be {0} characters or fewer.", name.FirstError.Metadata!["MessageTemplate"]);
 
         var extension = CalendarEventAttachedFile.Create(1, 10, "doc", new string(".zip"[0], 256), "/f/a.zip");
         Assert.Equal("CalendarEventAttachedFile.ExtensionTooLong", extension.FirstError.Code);

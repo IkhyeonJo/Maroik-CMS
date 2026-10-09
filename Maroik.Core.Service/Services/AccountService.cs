@@ -60,8 +60,6 @@ public class AccountService(
             // LoginAttempt/Locked state rather than a stale pre-lock read.
             Account? account = await accountRepository.FindByEmailForUpdateAsync(email, ct);
 
-            const string genericLoginError = "Email or Password is wrong";
-
             if (account == null)
             {
                 // Spend the same CPU as a real verification so "no such account" and "wrong
@@ -73,7 +71,7 @@ public class AccountService(
                 _ = await accountRepository.UpdateMessageAsync(email, null, utcNow, ct);
                 await unitOfWork.CommitAsync(ct);
                 logger.LogWarning("Login failed: no account for {Email}", email);
-                return LoginResult.Fail(genericLoginError);
+                return LoginResult.Fail(ServiceErrorKeys.EmailOrPasswordWrong);
             }
 
             // A locked account is refused BEFORE the password is looked at, whatever was typed. If the
@@ -89,7 +87,7 @@ public class AccountService(
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Login refused: account is locked for {Email}", email);
-                return LoginResult.Fail("Your Account is Locked, Please reset your password by clicking Forgot password Button");
+                return LoginResult.Fail(ServiceErrorKeys.AccountLocked);
             }
 
             // For every other state the password is verified FIRST. The remaining account-state
@@ -104,28 +102,28 @@ public class AccountService(
                 logger.LogWarning("Login failed: wrong password for {Email} (failed attempts: {LoginAttempts})", email, account.LoginAttempt);
                 if (account.Locked)
                     logger.LogWarning("Account {Email} locked after {LoginAttempts} failed login attempts", email, account.LoginAttempt);
-                return LoginResult.Fail(genericLoginError);
+                return LoginResult.Fail(ServiceErrorKeys.EmailOrPasswordWrong);
             }
 
             if (account.Deleted)
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Login refused: deleted account {Email}", email);
-                return LoginResult.Fail("Your Account is Deleted. Please contact the administrator.");
+                return LoginResult.Fail(ServiceErrorKeys.AccountDeleted);
             }
 
             if (!account.EmailConfirmed)
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Login refused: email not confirmed for {Email}", email);
-                return LoginResult.Fail("Email verification was not completed. Please try sign up again.");
+                return LoginResult.Fail(ServiceErrorKeys.EmailNotConfirmed);
             }
 
             if (!account.AgreedServiceTerms)
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Login refused: service terms not accepted for {Email}", email);
-                return LoginResult.Fail("Agreed Service Terms was not checked. Please try sign up again and login again.");
+                return LoginResult.Fail(ServiceErrorKeys.ServiceTermsNotAgreed);
             }
 
             // Successful login: clear any prior failed attempt counter.
@@ -164,7 +162,7 @@ public class AccountService(
             string nickname = nicknameResult.Value;
 
             if (await accountRepository.NicknameExistsIgnoreCaseAsync(nickname, ct))
-                return RegisterResult.Fail("'{0}' is a Nickname that already exists. Please enter another Nickname.", errorArgs: [nickname]);
+                return RegisterResult.Fail(ServiceErrorKeys.NicknameExists, errorArgs: [nickname]);
 
             // Enforce the password-complexity rule at the service boundary (not just the ViewModel),
             // before hashing — Account.Create only ever sees the already-hashed value.
@@ -208,11 +206,11 @@ public class AccountService(
                     // instead of always blaming the nickname.
                     bool isNicknameConflict = e.IsAccountNicknameUniqueViolation();
                     return isNicknameConflict
-                        ? RegisterResult.Fail("'{0}' is a Nickname that already exists. Please enter another Nickname.", errorArgs: [nickname])
-                        : RegisterResult.Fail("'{0}' is an Email that already exists.", errorArgs: [newAccount.Email ?? ""]);
+                        ? RegisterResult.Fail(ServiceErrorKeys.NicknameExists, errorArgs: [nickname])
+                        : RegisterResult.Fail(ServiceErrorKeys.EmailExists, errorArgs: [newAccount.Email ?? ""]);
                 }
                 logger.LogError(e, "Failed to create account for {Email}", newAccount.Email);
-                return RegisterResult.Fail("Error occurred while processing about account registration");
+                return RegisterResult.Fail(ServiceErrorKeys.RegistrationFailed);
             }
 
  #pragma warning disable CA1873
@@ -256,7 +254,7 @@ public class AccountService(
                 if (found == null)
                 {
                     await unitOfWork.RollbackAsync(ct);
-                    return RegisterResult.Fail("Error occurred while processing about account registration");
+                    return RegisterResult.Fail(ServiceErrorKeys.RegistrationFailed);
                 }
 
                 if (found.EmailConfirmed)
@@ -272,7 +270,7 @@ public class AccountService(
                     && await accountRepository.NicknameExistsIgnoreCaseAsync(nickname, ct))
                 {
                     await unitOfWork.RollbackAsync(ct);
-                    return RegisterResult.Fail("'{0}' is a Nickname that already exists. Please enter another Nickname.", errorArgs: [nickname]);
+                    return RegisterResult.Fail(ServiceErrorKeys.NicknameExists, errorArgs: [nickname]);
                 }
 
                 // A fresh token always: every link mailed for the replaced registration dies with it.
@@ -292,7 +290,7 @@ public class AccountService(
             {
                 // Another registration took the nickname between the check above and the commit.
                 await unitOfWork.RollbackAsync(ct);
-                return RegisterResult.Fail("'{0}' is a Nickname that already exists. Please enter another Nickname.", errorArgs: [nickname]);
+                return RegisterResult.Fail(ServiceErrorKeys.NicknameExists, errorArgs: [nickname]);
             }
             catch
             {
@@ -358,7 +356,7 @@ public class AccountService(
             catch (Exception e)
             {
                 logger.LogError(e, "Failed to update account status for {Email}", existing.Email.Value);
-                return RegisterResult.Fail("Error occurred while processing about account status");
+                return RegisterResult.Fail(ServiceErrorKeys.AccountStatusFailed);
             }
         }
 
@@ -372,7 +370,7 @@ public class AccountService(
         email = Email.NormalizeForLookup(email);
         Account? account = await FindByEmailAsync(email, ct);
         if (account == null)
-            return RegisterResult.Fail("Failed to resend email", showResendEmail: true);
+            return RegisterResult.Fail(ServiceErrorKeys.ResendEmailFailed, showResendEmail: true);
 
         if (account.EmailConfirmed)
         {
@@ -398,7 +396,7 @@ public class AccountService(
             if (found == null)
             {
                 await unitOfWork.RollbackAsync(ct);
-                return RegisterResult.Fail("Failed to resend email", showResendEmail: true);
+                return RegisterResult.Fail(ServiceErrorKeys.ResendEmailFailed, showResendEmail: true);
             }
 
             if (found.EmailConfirmed)
@@ -682,14 +680,14 @@ public class AccountService(
         catch (Exception e)
         {
             logger.LogWarning(e, "Failed to decrypt reset password token");
-            return (ServiceResult.Fail("reset-password-invalid"), null);
+            return (ServiceResult.Fail(ServiceErrorKeys.Signals.ResetPasswordInvalid), null);
         }
 
         Account? found = await FindByResetPasswordTokenAsync(rawToken, ct);
         if (found == null || found.Deleted || !GuidToken.IsTokenAlive(rawToken, utcNow) || !found.EmailConfirmed)
         {
             logger.LogWarning("Password reset rejected: invalid or expired token");
-            return (ServiceResult.Fail("reset-password-invalid"), null);
+            return (ServiceResult.Fail(ServiceErrorKeys.Signals.ResetPasswordInvalid), null);
         }
 
         // Enforce the complexity rule server-side, before hashing — Account.ResetPassword only sees the hash.
@@ -710,7 +708,7 @@ public class AccountService(
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Password reset rejected: account {Email} no longer exists or is deleted", found.Email.Value);
-                return (ServiceResult.Fail("reset-password-invalid"), null);
+                return (ServiceResult.Fail(ServiceErrorKeys.Signals.ResetPasswordInvalid), null);
             }
 
             // ResetPassword re-checks the stored token, so a concurrent reset that already consumed
@@ -720,7 +718,7 @@ public class AccountService(
             {
                 await unitOfWork.RollbackAsync(ct);
                 logger.LogWarning("Password reset rejected: invalid or expired token for {Email}", account.Email.Value);
-                return (ServiceResult.Fail("reset-password-invalid"), null);
+                return (ServiceResult.Fail(ServiceErrorKeys.Signals.ResetPasswordInvalid), null);
             }
 
             // Unlock the account so the user can log in immediately after resetting their password.
@@ -744,7 +742,7 @@ public class AccountService(
         {
             logger.LogError(e, "Failed to reset password for {Email}", found.Email.Value);
             await unitOfWork.RollbackAsync(ct);
-            return (ServiceResult.Failure("Account.ResetPasswordFailed", "Error occurred while processing about reset password"), null);
+            return (ServiceResult.Failure("Account.ResetPasswordFailed", ServiceErrorKeys.ResetPasswordFailed), null);
         }
     }
 
@@ -789,7 +787,7 @@ public class AccountService(
         catch (Exception e)
         {
             logger.LogError(e, "Failed to persist registration token for {Email}", account.Email.Value);
-            return RegisterResult.Fail("Error occurred while processing about account status");
+            return RegisterResult.Fail(ServiceErrorKeys.AccountStatusFailed);
         }
 
         string body;
@@ -800,7 +798,7 @@ public class AccountService(
         catch (Exception e)
         {
             logger.LogError(e, "Failed to build confirmation mail body for {Email}", account.Email.Value);
-            return RegisterResult.Fail("Error occurred while processing about sending account authentication mail");
+            return RegisterResult.Fail(ServiceErrorKeys.AuthenticationMailFailed);
         }
 
         bool published = await PublishMailAsync(account.Email.Value, emailTemplate.Subject, body, ct);
@@ -813,7 +811,7 @@ public class AccountService(
                 await accountRepository.UpdateMessageAsync(account.Email.Value, account.Message, account.Updated, ct);
             }
             catch (Exception e) { logger.LogWarning(e, "Failed to update account message after mail send failure for {Email}", account.Email.Value); }
-            return RegisterResult.Fail("Error occurred while processing about sending account authentication mail");
+            return RegisterResult.Fail(ServiceErrorKeys.AuthenticationMailFailed);
         }
 
         if (!setVerifyEmailMessageOnSuccess)
@@ -830,7 +828,7 @@ public class AccountService(
             catch (Exception e)
             {
                 logger.LogError(e, "Failed to update account status for {Email}", account.Email.Value);
-                return RegisterResult.Fail("Error occurred while processing about account status");
+                return RegisterResult.Fail(ServiceErrorKeys.AccountStatusFailed);
             }
         }
 

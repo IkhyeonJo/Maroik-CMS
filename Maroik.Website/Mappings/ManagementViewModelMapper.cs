@@ -1,5 +1,5 @@
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Time;
 using Maroik.Website.Models.ViewModels.Management;
 
 namespace Maroik.Website.Mappings;

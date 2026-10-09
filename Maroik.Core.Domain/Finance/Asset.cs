@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 using Maroik.Core.Domain.ValueObjects;
 
@@ -120,7 +120,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         string? note = null)
     {
         if (string.IsNullOrWhiteSpace(productName))
-            return LocalizableError.Validation("Asset.ProductNameEmpty", "Product name cannot be empty.");
+            return DomainError.Validation("Asset.ProductNameEmpty", "Product name cannot be empty.");
 
         var textResult = ValidateNameAndNote(productName, note);
         if (textResult.IsError) return textResult.Errors;
@@ -129,13 +129,13 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         if (rangeResult.IsError) return rangeResult.Errors;
 
         if (string.IsNullOrWhiteSpace(item))
-            return LocalizableError.Validation("Asset.ItemEmpty", "Asset category (item) cannot be empty.");
+            return DomainError.Validation("Asset.ItemEmpty", "Asset category (item) cannot be empty.");
 
         // Constrain to the known taxonomy here rather than trusting the caller: otherwise the DB
         // Asset_Item_check constraint would be the only thing rejecting anything else, which
         // surfaces as a raw DB exception instead of this validation error.
         if (!AssetItems.IsKnown(item))
-            return LocalizableError.Validation("Asset.ItemInvalid", "Asset category (item) is not a recognised value.");
+            return DomainError.Validation("Asset.ItemInvalid", "Asset category (item) is not a recognised value.");
 
         var emailResult = Email.Create(accountEmailValue);
         if (emailResult.IsError) return emailResult.Errors;
@@ -163,10 +163,10 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
     private static ErrorOr<Success> ValidateNameAndNote(string productName, string? note)
     {
         if (productName.Length > FinanceTextPolicy.MaxTextLength)
-            return LocalizableError.Validation("Asset.ProductNameTooLong", "Product name must be {0} characters or fewer.", FinanceTextPolicy.MaxTextLength);
+            return DomainError.Validation("Asset.ProductNameTooLong", "Product name must be {0} characters or fewer.", FinanceTextPolicy.MaxTextLength);
 
         if (note is { Length: > FinanceTextPolicy.MaxTextLength })
-            return LocalizableError.Validation("Finance.NoteTooLong", "Note must be {0} characters or fewer.", FinanceTextPolicy.MaxTextLength);
+            return DomainError.Validation("Finance.NoteTooLong", "Note must be {0} characters or fewer.", FinanceTextPolicy.MaxTextLength);
 
         return Result.Success;
     }
@@ -175,7 +175,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
     public ErrorOr<Success> Deposit(Money amount, DateTime utcNow)
     {
         if (amount.Currency != Balance.Currency)
-            return LocalizableError.Validation("Asset.CurrencyMismatch", "Cannot deposit a different currency into this asset.");
+            return DomainError.Validation("Asset.CurrencyMismatch", "Cannot deposit a different currency into this asset.");
 
         var addResult = Balance.Add(amount);
         if (addResult.IsError) return addResult.Errors;
@@ -194,7 +194,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
     public ErrorOr<Success> Withdraw(Money amount, DateTime utcNow)
     {
         if (amount.Currency != Balance.Currency)
-            return LocalizableError.Validation("Asset.CurrencyMismatch", "Cannot withdraw a different currency from this asset.");
+            return DomainError.Validation("Asset.CurrencyMismatch", "Cannot withdraw a different currency from this asset.");
 
         var subtractResult = Balance.Subtract(amount);
         if (subtractResult.IsError) return subtractResult.Errors;
@@ -212,7 +212,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
     public ErrorOr<Success> SetBalance(Money newBalance, DateTime utcNow)
     {
         if (newBalance.Currency != Balance.Currency)
-            return LocalizableError.Validation("Asset.CurrencyMismatch", "Cannot change the currency of an existing asset.");
+            return DomainError.Validation("Asset.CurrencyMismatch", "Cannot change the currency of an existing asset.");
 
         var rangeResult = FinanceAmountPolicy.ValidateBalance(newBalance.Amount);
         if (rangeResult.IsError) return rangeResult.Errors;
@@ -229,7 +229,7 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
     public ErrorOr<Success> Update(string productName, string item, decimal amount, string currency, string? note, bool deleted, DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(productName))
-            return LocalizableError.Validation("Asset.ProductNameEmpty", "Product name cannot be empty.");
+            return DomainError.Validation("Asset.ProductNameEmpty", "Product name cannot be empty.");
 
         var textResult = ValidateNameAndNote(productName, note);
         if (textResult.IsError) return textResult.Errors;
@@ -238,10 +238,10 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         if (rangeResult.IsError) return rangeResult.Errors;
 
         if (string.IsNullOrWhiteSpace(item))
-            return LocalizableError.Validation("Asset.ItemEmpty", "Asset category cannot be empty.");
+            return DomainError.Validation("Asset.ItemEmpty", "Asset category cannot be empty.");
 
         if (!AssetItems.IsKnown(item))
-            return LocalizableError.Validation("Asset.ItemInvalid", "Asset category (item) is not a recognised value.");
+            return DomainError.Validation("Asset.ItemInvalid", "Asset category (item) is not a recognised value.");
 
         var moneyResult = Money.Create(amount, currency);
         if (moneyResult.IsError) return moneyResult.Errors;

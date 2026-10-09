@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 using Maroik.Core.Domain.ValueObjects;
 
@@ -173,7 +173,7 @@ public sealed class FixedIncome : AggregateRoot<long>
         if (moneyResult.IsError) return moneyResult.Errors;
 
         if (!FixedSchedulePolicy.IsAcceptableMaturityDate(maturityDate, utcNow))
-            return LocalizableError.Validation("FixedIncome.MaturityDateInPast",
+            return DomainError.Validation("FixedIncome.MaturityDateInPast",
                 "The maturity date cannot be earlier than the current date.");
 
         (string validMainClass, string validSubClass, string validDepositAsset) = coreResult.Value;
@@ -194,19 +194,19 @@ public sealed class FixedIncome : AggregateRoot<long>
         short depositMonth, short depositDay, decimal amount, string? content, string? note)
     {
         if (string.IsNullOrWhiteSpace(mainClass))
-            return LocalizableError.Validation("FixedIncome.MainClassEmpty", "Main income category cannot be empty.");
+            return DomainError.Validation("FixedIncome.MainClassEmpty", "Main income category cannot be empty.");
 
         if (string.IsNullOrWhiteSpace(subClass))
-            return LocalizableError.Validation("FixedIncome.SubClassEmpty", "Sub income category cannot be empty.");
+            return DomainError.Validation("FixedIncome.SubClassEmpty", "Sub income category cannot be empty.");
 
         if (string.IsNullOrWhiteSpace(depositMyAssetProductName))
-            return LocalizableError.Validation("FixedIncome.DepositAssetEmpty", "Deposit asset product name cannot be empty.");
+            return DomainError.Validation("FixedIncome.DepositAssetEmpty", "Deposit asset product name cannot be empty.");
 
         if (depositMonth is < 1 or > 12)
-            return LocalizableError.Validation("FixedIncome.InvalidDepositMonth", "Deposit month must be between 1 and 12.");
+            return DomainError.Validation("FixedIncome.InvalidDepositMonth", "Deposit month must be between 1 and 12.");
 
         if (!FixedSchedulePolicy.IsValidDepositDate(depositMonth, depositDay))
-            return LocalizableError.Validation("FixedIncome.InvalidDepositDay", "Deposit day is not valid for the selected month.");
+            return DomainError.Validation("FixedIncome.InvalidDepositDay", "Deposit day is not valid for the selected month.");
 
         var amountResult = FinanceAmountPolicy.ValidateAmount(amount);
         if (amountResult.IsError) return amountResult.Errors;
@@ -262,7 +262,7 @@ public sealed class FixedIncome : AggregateRoot<long>
         // past date untouched through, so an expired schedule's other fields stay editable.
         if (maturityDate.Date != MaturityDate.Date
             && !FixedSchedulePolicy.IsAcceptableMaturityDate(maturityDate, utcNow))
-            return LocalizableError.Validation("FixedIncome.MaturityDateInPast",
+            return DomainError.Validation("FixedIncome.MaturityDateInPast",
                 "The maturity date cannot be earlier than the current date.");
 
         (string validMainClass, string validSubClass, string validDepositAsset) = coreResult.Value;

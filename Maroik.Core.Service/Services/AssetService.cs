@@ -45,7 +45,7 @@ public class AssetService(
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         if (!AssetItems.IsKnown(request.Item))
-            return ServiceResult.Validation("Asset.ItemInvalid", "Asset category (item) is not a recognised value.");
+            return ServiceResult.Validation("Asset.ItemInvalid", ServiceErrorKeys.AssetItemInvalid);
 
         // Reject duplicate product names within the same account, including a soft-deleted asset
         // under that name: its row still occupies the (ProductName, AccountEmail) primary key, and
@@ -54,7 +54,7 @@ public class AssetService(
         // user believes is unrelated. A name freed up by soft-deletion is never reusable.
         Asset? existing = await FindAssetAsync(accountEmail, request.ProductName ?? "", ct);
         if (existing != null)
-            return ServiceResult.Conflict("Asset.Duplicate", "The asset already exists.");
+            return ServiceResult.Conflict("Asset.Duplicate", ServiceErrorKeys.AssetExists);
 
         var createResult = Asset.Create(
             request.ProductName,
@@ -80,7 +80,7 @@ public class AssetService(
             // requests for the same (ProductName, AccountEmail) can both pass it. The primary
             // key constraint on that pair still rejects the second insert — turn that into the
             // same friendly result instead of letting the raw DB exception escape.
-            return ServiceResult.Conflict("Asset.Duplicate", "The asset already exists.");
+            return ServiceResult.Conflict("Asset.Duplicate", ServiceErrorKeys.AssetExists);
         }
         catch (Exception e)
         {
@@ -103,7 +103,7 @@ public class AssetService(
             if (!AssetItems.IsKnown(request.Item))
             {
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.Validation("Asset.ItemInvalid", "Asset category (item) is not a recognised value.");
+                return ServiceResult.Validation("Asset.ItemInvalid", ServiceErrorKeys.AssetItemInvalid);
             }
 
             // Row-locks the asset for the rest of this transaction (held until commit/rollback),
@@ -113,7 +113,7 @@ public class AssetService(
             if (asset == null)
             {
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.NotFound("Asset.NotFound", "Fail to find the asset by given product name");
+                return ServiceResult.NotFound("Asset.NotFound", ServiceErrorKeys.AssetNotFoundByProductName);
             }
 
             // Fall back to the existing currency when the request does not specify one.
@@ -129,7 +129,7 @@ public class AssetService(
             if (updated <= 0)
             {
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.Failure("Asset.UpdateFailed", "Input is invalid");
+                return ServiceResult.Failure("Asset.UpdateFailed", ServiceErrorKeys.InputInvalid);
             }
 
             // A ProductName change propagates to every referencing row — Income / FixedIncome and
@@ -146,7 +146,7 @@ public class AssetService(
             // (ProductName, AccountEmail) primary key CreateAsync guards against — report the
             // same friendly message instead of the generic fallback below.
             await unitOfWork.RollbackAsync(ct);
-            return ServiceResult.Conflict("Asset.Duplicate", "The asset already exists.");
+            return ServiceResult.Conflict("Asset.Duplicate", ServiceErrorKeys.AssetExists);
         }
         catch (Exception ex)
         {
@@ -171,7 +171,7 @@ public class AssetService(
             if (asset == null)
             {
                 await unitOfWork.RollbackAsync(ct);
-                return ServiceResult.NotFound("Asset.NotFound", "Fail to find the asset by given product name");
+                return ServiceResult.NotFound("Asset.NotFound", ServiceErrorKeys.AssetNotFoundByProductName);
             }
 
             // Soft-delete preserves the record for historical reporting while hiding it from active use.

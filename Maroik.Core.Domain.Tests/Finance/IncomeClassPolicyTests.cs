@@ -39,7 +39,7 @@ public class IncomeClassPolicyTests
     }
 
     /// <summary>
-    /// A recognized main class with an unrecognized subclass is built via <c>LocalizableError</c>:
+    /// A recognized main class with an unrecognized subclass is built via <c>DomainError</c>:
     /// its Metadata carries the composite-format resource template and the raw main-class name
     /// separately, so <c>ServiceResult.FromError</c> can hand the UI something resx-localizable
     /// instead of the already-baked, value-embedding sentence in <see cref="ErrorOr.Error.Description"/>.
@@ -50,8 +50,8 @@ public class IncomeClassPolicyTests
         var result = IncomeClassPolicy.Validate("RegularIncome", "UnknownSub");
 
         Assert.Equal("Invalid sub-class for RegularIncome.", result.FirstError.Description);
-        Assert.Equal("Invalid sub-class for {0}.", result.FirstError.Metadata!["ResourceKey"]);
-        Assert.Equal(["RegularIncome"], (object[])result.FirstError.Metadata["ResourceArgs"]);
+        Assert.Equal("Invalid sub-class for {0}.", result.FirstError.Metadata!["MessageTemplate"]);
+        Assert.Equal(["RegularIncome"], (object[])result.FirstError.Metadata["MessageArgs"]);
     }
 
     // -- IrregularIncome -------------------------------------------------------

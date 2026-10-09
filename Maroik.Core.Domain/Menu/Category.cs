@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Core.Domain.Menu;
@@ -63,7 +63,7 @@ public sealed class Category : AggregateRoot<long>
         string? controller, string? action, string? role, long order)
     {
         if (string.IsNullOrWhiteSpace(name))
-            return LocalizableError.Validation("Category.NameEmpty", "Category name cannot be empty.");
+            return DomainError.Validation("Category.NameEmpty", "Category name cannot be empty.");
 
         var fieldsResult = MenuFieldPolicy.Validate(name, displayName, iconPath, controller, action, role, order);
         if (fieldsResult.IsError) return fieldsResult.Errors;
@@ -77,7 +77,7 @@ public sealed class Category : AggregateRoot<long>
         string? controller, string? action, string? role, long order)
     {
         if (string.IsNullOrWhiteSpace(name))
-            return LocalizableError.Validation("Category.NameEmpty", "Category name cannot be empty.");
+            return DomainError.Validation("Category.NameEmpty", "Category name cannot be empty.");
 
         var fieldsResult = MenuFieldPolicy.Validate(name, displayName, iconPath, controller, action, role, order);
         if (fieldsResult.IsError) return fieldsResult.Errors;

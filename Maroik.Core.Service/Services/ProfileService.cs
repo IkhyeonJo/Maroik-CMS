@@ -53,7 +53,7 @@ public class ProfileService(
         {
             Account? account = await FindByEmailAsync(email, ct);
             if (account == null)
-                return ServiceResult.NotFound("Account.NotFound", "Input is invalid");
+                return ServiceResult.NotFound("Account.NotFound", ServiceErrorKeys.InputInvalid);
 
             // Column-scoped write: touch only AvatarImagePath/Updated so a concurrent timezone or
             // password change on the same account is not clobbered by a full-row overwrite.
@@ -74,7 +74,7 @@ public class ProfileService(
         {
             Account? account = await FindByEmailAsync(email, ct);
             if (account == null)
-                return ServiceResult.NotFound("Account.NotFound", "Input is invalid");
+                return ServiceResult.NotFound("Account.NotFound", ServiceErrorKeys.InputInvalid);
 
             var tzResult = TimeZoneId.Create(timeZoneIanaId);
             if (tzResult.IsError)
@@ -104,12 +104,12 @@ public class ProfileService(
             // "forgot password" on another device.
             Account? account = await accountRepository.FindByEmailForUpdateAsync(email, ct);
             if (account == null)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Account.NotFound", "Input is invalid"), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("Account.NotFound", ServiceErrorKeys.InputInvalid), ct);
 
             if (!passwordService.VerifyPassword(currentPassword, account.HashedPassword))
             {
                 logger.LogWarning("Password change refused: wrong current password for {Email}", email);
-                return await unitOfWork.FailAsync(ServiceResult.Validation("Profile.WrongPassword", "Invalid password. Please check again."), ct);
+                return await unitOfWork.FailAsync(ServiceResult.Validation("Profile.WrongPassword", ServiceErrorKeys.InvalidPassword), ct);
             }
 
             // Enforce the complexity rule server-side, before hashing — Account.ChangePassword only sees the hash.
@@ -161,7 +161,7 @@ public class ProfileService(
             if (!ImageUploadPolicy.IsAllowedExtension(extension))
             {
                 logger.LogWarning("Avatar upload refused: extension not allowed ({Extension}) for {Email}", extension, email);
-                return ServiceResult.Validation("Profile.InvalidImage", "invalid-image");
+                return ServiceResult.Validation("Profile.InvalidImage", ServiceErrorKeys.Signals.InvalidImage);
             }
 
             // SVG first: IsValidImage only accepts JPEG/PNG, so an SVG would otherwise be reported as a
@@ -169,13 +169,13 @@ public class ProfileService(
             if (imageValidator.IsSvg(imageBytes))
             {
                 logger.LogWarning("Avatar upload refused: SVG is not allowed for {Email}", email);
-                return ServiceResult.Validation("Profile.SvgNotAllowed", "svg-not-allowed");
+                return ServiceResult.Validation("Profile.SvgNotAllowed", ServiceErrorKeys.Signals.SvgNotAllowed);
             }
 
             if (!imageValidator.IsValidImage(imageBytes))
             {
                 logger.LogWarning("Avatar upload refused: not a valid image for {Email}", email);
-                return ServiceResult.Validation("Profile.InvalidImage", "invalid-image");
+                return ServiceResult.Validation("Profile.InvalidImage", ServiceErrorKeys.Signals.InvalidImage);
             }
 
             // Re-encode without metadata: a phone photo's EXIF (GPS position, camera, capture time)
@@ -196,10 +196,10 @@ public class ProfileService(
             {
                 case FileUploadResult.Infected:
                     logger.LogWarning("Avatar upload refused: virus detected for {Email}", email);
-                    return ServiceResult.Validation("Profile.VirusDetected", "virus-detected");
+                    return ServiceResult.Validation("Profile.VirusDetected", ServiceErrorKeys.Signals.VirusDetected);
                 case FileUploadResult.ScanUnavailable:
                     logger.LogError("Avatar upload failed: virus scanner unavailable for {Email}", email);
-                    return ServiceResult.Failure("Profile.ScanUnavailable", "scan-unavailable");
+                    return ServiceResult.Failure("Profile.ScanUnavailable", ServiceErrorKeys.Signals.ScanUnavailable);
                 case FileUploadResult.Failed:
                     logger.LogError("Avatar upload failed: file storage refused the upload for {Email}", email);
                     return ServiceResult.Failure("Profile.UploadAvatarFailed", ServiceResult.TemporaryErrorKey);

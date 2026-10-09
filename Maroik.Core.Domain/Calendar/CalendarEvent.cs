@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 using Maroik.Core.Domain.ValueObjects;
 
@@ -150,21 +150,21 @@ public sealed class CalendarEvent : AggregateRoot<long>
         long? recurrenceId = null)
     {
         if (string.IsNullOrWhiteSpace(title))
-            return LocalizableError.Validation("CalendarEvent.TitleEmpty", "Event title cannot be empty.");
+            return DomainError.Validation("CalendarEvent.TitleEmpty", "Event title cannot be empty.");
 
         if (title.Length > TitledContentPolicy.MaxTitleLength)
-            return LocalizableError.Validation("CalendarEvent.TitleTooLong", "Event title must be {0} characters or fewer.", TitledContentPolicy.MaxTitleLength);
+            return DomainError.Validation("CalendarEvent.TitleTooLong", "Event title must be {0} characters or fewer.", TitledContentPolicy.MaxTitleLength);
 
         if (description?.Length > TitledContentPolicy.MaxBodyLength)
-            return LocalizableError.Validation("CalendarEvent.DescriptionTooLong", "Event description must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
+            return DomainError.Validation("CalendarEvent.DescriptionTooLong", "Event description must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
 
         // Persisted in a character varying(255) column: reject an over-long value here (a clean
         // validation error) instead of a raw "value too long" (SQLSTATE 22001) from the write.
         if (location?.Length > ShortTextPolicy.MaxLength)
-            return LocalizableError.Validation("CalendarEvent.LocationTooLong", "Event location must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
+            return DomainError.Validation("CalendarEvent.LocationTooLong", "Event location must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
 
         if (!string.IsNullOrWhiteSpace(status) && !CalendarEventStatuses.IsKnown(status))
-            return LocalizableError.Validation("CalendarEvent.StatusInvalid", "Event status is not a recognised value.");
+            return DomainError.Validation("CalendarEvent.StatusInvalid", "Event status is not a recognised value.");
 
         var timesResult = ValidateDatesAndZones(allDay, startDate, endDate, startTz, endTz);
         if (timesResult.IsError) return timesResult.Errors;
@@ -187,12 +187,12 @@ public sealed class CalendarEvent : AggregateRoot<long>
     {
         bool rangeInvalid = allDay ? endDate.Date < startDate.Date : endDate < startDate;
         if (rangeInvalid)
-            return LocalizableError.Validation("CalendarEvent.InvalidDateRange", "End date must not be earlier than start date.");
+            return DomainError.Validation("CalendarEvent.InvalidDateRange", "End date must not be earlier than start date.");
 
         foreach (string? tz in new[] { startTz, endTz })
         {
             if (!string.IsNullOrWhiteSpace(tz) && TimeZoneId.Create(tz).IsError)
-                return LocalizableError.Validation("CalendarEvent.InvalidTimeZone", "'{0}' is not a recognised time-zone ID.", tz);
+                return DomainError.Validation("CalendarEvent.InvalidTimeZone", "'{0}' is not a recognised time-zone ID.", tz);
         }
 
         return Result.Success;
@@ -224,21 +224,21 @@ public sealed class CalendarEvent : AggregateRoot<long>
         DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(title))
-            return LocalizableError.Validation("CalendarEvent.TitleEmpty", "Event title cannot be empty.");
+            return DomainError.Validation("CalendarEvent.TitleEmpty", "Event title cannot be empty.");
 
         if (title.Length > TitledContentPolicy.MaxTitleLength)
-            return LocalizableError.Validation("CalendarEvent.TitleTooLong", "Event title must be {0} characters or fewer.", TitledContentPolicy.MaxTitleLength);
+            return DomainError.Validation("CalendarEvent.TitleTooLong", "Event title must be {0} characters or fewer.", TitledContentPolicy.MaxTitleLength);
 
         if (description?.Length > TitledContentPolicy.MaxBodyLength)
-            return LocalizableError.Validation("CalendarEvent.DescriptionTooLong", "Event description must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
+            return DomainError.Validation("CalendarEvent.DescriptionTooLong", "Event description must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
 
         // Persisted in a character varying(255) column: reject an over-long value here (a clean
         // validation error) instead of a raw "value too long" (SQLSTATE 22001) from the write.
         if (location?.Length > ShortTextPolicy.MaxLength)
-            return LocalizableError.Validation("CalendarEvent.LocationTooLong", "Event location must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
+            return DomainError.Validation("CalendarEvent.LocationTooLong", "Event location must be {0} characters or fewer.", ShortTextPolicy.MaxLength);
 
         if (!string.IsNullOrWhiteSpace(status) && !CalendarEventStatuses.IsKnown(status))
-            return LocalizableError.Validation("CalendarEvent.StatusInvalid", "Event status is not a recognised value.");
+            return DomainError.Validation("CalendarEvent.StatusInvalid", "Event status is not a recognised value.");
 
         var timesResult = ValidateDatesAndZones(allDay, startDate, endDate, startTz, endTz);
         if (timesResult.IsError) return timesResult.Errors;

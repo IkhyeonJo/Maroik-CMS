@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Core.Domain.Menu;
@@ -57,14 +57,14 @@ public static class MenuFieldPolicy
         foreach ((string field, string? value) in texts)
         {
             if (value is { Length: > ShortTextPolicy.MaxLength })
-                return LocalizableError.Validation("Menu.FieldTooLong", "'{0}' must be {1} characters or fewer.", field, ShortTextPolicy.MaxLength);
+                return DomainError.Validation("Menu.FieldTooLong", "'{0}' must be {1} characters or fewer.", field, ShortTextPolicy.MaxLength);
         }
 
         if (role != null && !Roles.IsKnown(role))
-            return LocalizableError.Validation("Menu.RoleInvalid", "Role must be Admin, User or Anonymous.");
+            return DomainError.Validation("Menu.RoleInvalid", "Role must be Admin, User or Anonymous.");
 
         if (order < 0)
-            return LocalizableError.Validation("Menu.OrderNegative", "Order cannot be negative.");
+            return DomainError.Validation("Menu.OrderNegative", "Order cannot be negative.");
 
         return Result.Success;
     }

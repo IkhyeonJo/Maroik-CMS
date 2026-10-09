@@ -1,5 +1,5 @@
 using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 namespace Maroik.Core.Domain.Tests.Account;
 
 /// <summary>
@@ -183,8 +183,8 @@ public class NicknamePolicyTests
         var result = NicknamePolicy.Validate("  ADMIN ");
 
         Assert.Equal("Account.NicknameReserved", result.FirstError.Code);
-        Assert.Equal("'{0}' cannot be used as a Nickname.", result.FirstError.Metadata![LocalizableError.ResourceKeyMetadataKey]);
-        Assert.Equal(["ADMIN"], (object[])result.FirstError.Metadata[LocalizableError.ResourceArgsMetadataKey]);
+        Assert.Equal("'{0}' cannot be used as a Nickname.", result.FirstError.Metadata![DomainError.MessageTemplateMetadataKey]);
+        Assert.Equal(["ADMIN"], (object[])result.FirstError.Metadata[DomainError.MessageArgsMetadataKey]);
     }
 
     /// <summary>An administrator may deliberately use a reserved name.</summary>

@@ -114,7 +114,7 @@ public class MenuService(
             // between this read and the write below.
             Category? category = await categoryRepository.FindByIdForUpdateAsync(request.Id, ct);
             if (category == null)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Category.NotFound", "Input is invalid"), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("Category.NotFound", ServiceErrorKeys.InputInvalid), ct);
 
             var updateResult = category.Update(request.Name, request.DisplayName, request.IconPath,
                 request.Controller, request.Action, request.Role, request.Order);
@@ -187,7 +187,7 @@ public class MenuService(
             // transaction wrapper is required for the lock to mean anything.
             SubCategory? subCategory = await subCategoryRepository.FindByIdForUpdateAsync(request.Id, ct);
             if (subCategory == null)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("SubCategory.NotFound", "Input is invalid"), ct);
+                return await unitOfWork.FailAsync(ServiceResult.NotFound("SubCategory.NotFound", ServiceErrorKeys.InputInvalid), ct);
 
             var updateResult = subCategory.Update(request.CategoryId, request.Name,
                 request.DisplayName, request.IconPath, request.Action, request.Role, request.Order);

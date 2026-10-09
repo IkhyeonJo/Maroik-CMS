@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Core.Domain.ValueObjects;
@@ -60,7 +60,7 @@ public sealed class Money : ValueObject
     public ErrorOr<Money> Add(Money other)
     {
         if (Currency != other.Currency)
-            return LocalizableError.Validation("Money.CurrencyMismatch", "Cannot add {0} and {1}.", Currency.Value, other.Currency.Value);
+            return DomainError.Validation("Money.CurrencyMismatch", "Cannot add {0} and {1}.", Currency.Value, other.Currency.Value);
 
         return new Money(Amount + other.Amount, Currency);
     }
@@ -72,7 +72,7 @@ public sealed class Money : ValueObject
     public ErrorOr<Money> Subtract(Money other)
     {
         if (Currency != other.Currency)
-            return LocalizableError.Validation("Money.CurrencyMismatch", "Cannot subtract {0} from {1}.", other.Currency.Value, Currency.Value);
+            return DomainError.Validation("Money.CurrencyMismatch", "Cannot subtract {0} from {1}.", other.Currency.Value, Currency.Value);
 
         return new Money(Amount - other.Amount, Currency);
     }

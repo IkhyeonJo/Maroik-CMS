@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Core.Domain.Account;
@@ -34,7 +34,7 @@ public sealed class AccountRole : ValueObject
     {
         Role.Admin => Admin,
         Role.User => User,
-        _ => LocalizableError.Validation("Account.RoleInvalid", "Role must be either Admin or User.")
+        _ => DomainError.Validation("Account.RoleInvalid", "Role must be either Admin or User.")
     };
 
     /// <inheritdoc/>

@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 using Maroik.Core.Domain.ValueObjects;
 
@@ -241,7 +241,7 @@ public sealed class Account : AggregateRoot<string>
         nickname = nicknameResult.Value;
 
         if (string.IsNullOrWhiteSpace(hashedPassword))
-            return LocalizableError.Validation("Account.PasswordEmpty", "Hashed password cannot be empty.");
+            return DomainError.Validation("Account.PasswordEmpty", "Hashed password cannot be empty.");
 
         var account = new Account(
             emailResult.Value, hashedPassword, nickname, role,
@@ -263,10 +263,10 @@ public sealed class Account : AggregateRoot<string>
     public ErrorOr<Success> ConfirmEmail(string token, DateTime utcNow)
     {
         if (EmailConfirmed)
-            return LocalizableError.Conflict("Account.AlreadyConfirmed", "Email address is already confirmed.");
+            return DomainError.Conflict("Account.AlreadyConfirmed", "Email address is already confirmed.");
 
         if (!TokensMatch(RegistrationToken, token) || !GuidToken.IsTokenAlive(RegistrationToken!, utcNow))
-            return LocalizableError.Validation("Account.InvalidToken", "Invalid email confirmation token.");
+            return DomainError.Validation("Account.InvalidToken", "Invalid email confirmation token.");
 
         EmailConfirmed = true;
         RegistrationToken = null;
@@ -283,7 +283,7 @@ public sealed class Account : AggregateRoot<string>
     public ErrorOr<Success> RequestPasswordReset(string resetToken, DateTime utcNow)
     {
         if (!EmailConfirmed)
-            return LocalizableError.Failure("Account.NotConfirmed", "Email must be confirmed before resetting the password.");
+            return DomainError.Failure("Account.NotConfirmed", "Email must be confirmed before resetting the password.");
 
         ResetPasswordToken = resetToken;
         Updated = utcNow;
@@ -299,10 +299,10 @@ public sealed class Account : AggregateRoot<string>
     public ErrorOr<Success> ResetPassword(string token, string newHashedPassword, DateTime utcNow)
     {
         if (!TokensMatch(ResetPasswordToken, token) || !GuidToken.IsTokenAlive(ResetPasswordToken!, utcNow))
-            return LocalizableError.Validation("Account.InvalidToken", "Invalid or expired password-reset token.");
+            return DomainError.Validation("Account.InvalidToken", "Invalid or expired password-reset token.");
 
         if (string.IsNullOrWhiteSpace(newHashedPassword))
-            return LocalizableError.Validation("Account.PasswordEmpty", "New hashed password cannot be empty.");
+            return DomainError.Validation("Account.PasswordEmpty", "New hashed password cannot be empty.");
 
         HashedPassword = newHashedPassword;
         ResetPasswordToken = null;
@@ -388,7 +388,7 @@ public sealed class Account : AggregateRoot<string>
     public ErrorOr<Success> ChangePassword(string newHashedPassword, DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(newHashedPassword))
-            return LocalizableError.Validation("Account.PasswordEmpty", "New hashed password cannot be empty.");
+            return DomainError.Validation("Account.PasswordEmpty", "New hashed password cannot be empty.");
 
         if (Locked)
             Unlock(utcNow);
@@ -414,7 +414,7 @@ public sealed class Account : AggregateRoot<string>
     public ErrorOr<Success> AdminResetPassword(string newHashedPassword, DateTime utcNow)
     {
         if (string.IsNullOrWhiteSpace(newHashedPassword))
-            return LocalizableError.Validation("Account.PasswordEmpty", "New hashed password cannot be empty.");
+            return DomainError.Validation("Account.PasswordEmpty", "New hashed password cannot be empty.");
 
         HashedPassword = newHashedPassword;
         ResetPasswordToken = null;
@@ -450,7 +450,7 @@ public sealed class Account : AggregateRoot<string>
         string hashedPassword, string nickname, string timeZoneValue, string registrationToken, bool agreedServiceTerms, DateTime utcNow)
     {
         if (EmailConfirmed)
-            return LocalizableError.Conflict("Account.AlreadyConfirmed", "Email address is already confirmed.");
+            return DomainError.Conflict("Account.AlreadyConfirmed", "Email address is already confirmed.");
 
         var nicknameResult = NicknamePolicy.Validate(nickname);
         if (nicknameResult.IsError) return nicknameResult.Errors;
@@ -459,7 +459,7 @@ public sealed class Account : AggregateRoot<string>
         if (tzResult.IsError) return tzResult.Errors;
 
         if (string.IsNullOrWhiteSpace(hashedPassword))
-            return LocalizableError.Validation("Account.PasswordEmpty", "Hashed password cannot be empty.");
+            return DomainError.Validation("Account.PasswordEmpty", "Hashed password cannot be empty.");
 
         HashedPassword = hashedPassword;
         Nickname = nicknameResult.Value;

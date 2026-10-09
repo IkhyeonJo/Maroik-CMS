@@ -89,7 +89,7 @@ public class AttachmentContentServiceTests
     /// maxBytes/(1024*1024) at the call site.
     /// </summary>
     [Fact]
-    public void ValidateAttachedFile_ReturnsLocalizableErrorArgs_WhenSizeExceedsMax()
+    public void ValidateAttachedFile_ReturnsDomainErrorArgs_WhenSizeExceedsMax()
     {
         var settings = Options.Create(new ServerSetting { MaxAttachedFileSizeBytes = 5 * 1024 * 1024, FileStorageBaseUrl = "http://filestorage.local" });
         var sut = new AttachmentContentService(

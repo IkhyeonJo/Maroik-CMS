@@ -177,31 +177,31 @@ public class DomainArchitectureTests
     }
 
     /// <summary>
-    /// Every Domain error message must be built via <c>LocalizableError.Validation</c>/<c>Conflict</c>/
-    /// <c>Failure</c>, never the raw <c>ErrorOr.Error</c> factories directly. <c>LocalizableError</c> is
-    /// what attaches the composite-format template + args to <c>Error.Metadata</c> so the UI can
-    /// localize the message via resx instead of falling back to an already-baked, unlocalizable
-    /// sentence (see <c>Maroik.Core.Domain.Localization.LocalizableError</c>'s doc comment). This was
+    /// Every Domain error message must be built via <c>DomainError.Validation</c>/<c>Conflict</c>/
+    /// <c>Failure</c>, never the raw <c>ErrorOr.Error</c> factories directly. <c>DomainError</c> is
+    /// what attaches the English composite-format template + args to <c>Error.Metadata</c> so an outer
+    /// layer can translate the message via resx instead of falling back to an already-baked,
+    /// untranslatable sentence (see <c>Maroik.Core.Domain.Errors.DomainError</c>'s doc comment). This was
     /// previously true for only 6 of 104 Domain call sites — the rest called <c>Error.Validation</c>/
     /// <c>Conflict</c>/<c>Failure</c> directly, and for <see cref="Maroik.Core.Domain.ValueObjects.Money"/>'s
     /// currency-mismatch errors that bug was live: a genuinely runtime currency code was baked straight
     /// into <c>Error.Description</c> with no template, so the resx localizer could never match it.
     /// </summary>
     [Fact]
-    public void Domain_ErrorMessages_MustGoThrough_LocalizableError()
+    public void Domain_ErrorMessages_MustGoThrough_DomainError()
     {
         NetArchTest.Rules.TestResult result = Types.InAssembly(_domainAssembly)
             .That()
-            .DoNotResideInNamespace("Maroik.Core.Domain.Localization")
+            .DoNotResideInNamespace("Maroik.Core.Domain.Errors")
             .Should()
             .MeetCustomRule(new DoesNotCallRawErrorFactory())
             .GetResult();
 
         Assert.True(
             result.IsSuccessful,
-            "Domain types must build errors via LocalizableError.Validation/Conflict/Failure, not the " +
+            "Domain types must build errors via DomainError.Validation/Conflict/Failure, not the " +
             "raw ErrorOr.Error.Validation/Conflict/Failure/NotFound/Forbidden/Unexpected factories " +
-            "directly — only Maroik.Core.Domain.Localization.LocalizableError is allowed to call those.\n" +
+            "directly — only Maroik.Core.Domain.Errors.DomainError is allowed to call those.\n" +
             "Failing types: " + string.Join(", ", result.FailingTypeNames ?? []));
     }
 

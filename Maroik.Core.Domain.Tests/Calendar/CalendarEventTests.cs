@@ -128,7 +128,7 @@ public class CalendarEventTests
     }
 
     /// <summary>
-    /// The rejection is built via <c>LocalizableError</c>: its Metadata carries the composite-format
+    /// The rejection is built via <c>DomainError</c>: its Metadata carries the composite-format
     /// resource template and the raw offending zone separately, so <c>ServiceResult.FromError</c> can
     /// hand the UI something resx-localizable instead of the already-baked, value-embedding sentence
     /// in <see cref="ErrorOr.Error.Description"/>.
@@ -139,8 +139,8 @@ public class CalendarEventTests
         var result = CalendarEvent.Create(10, "Title", null, false, _start, _end, "Not/AZone", "UTC", null, null, Now);
 
         Assert.Equal("'Not/AZone' is not a recognised time-zone ID.", result.FirstError.Description);
-        Assert.Equal("'{0}' is not a recognised time-zone ID.", result.FirstError.Metadata!["ResourceKey"]);
-        Assert.Equal(["Not/AZone"], (object[])result.FirstError.Metadata["ResourceArgs"]);
+        Assert.Equal("'{0}' is not a recognised time-zone ID.", result.FirstError.Metadata!["MessageTemplate"]);
+        Assert.Equal(["Not/AZone"], (object[])result.FirstError.Metadata["MessageArgs"]);
     }
 
     /// <summary>

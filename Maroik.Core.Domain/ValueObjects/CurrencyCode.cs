@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Core.Domain.ValueObjects;
@@ -30,11 +30,11 @@ public sealed class CurrencyCode : ValueObject
     public static ErrorOr<CurrencyCode> Create(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            return LocalizableError.Validation("Money.CurrencyEmpty", "Currency code cannot be empty.");
+            return DomainError.Validation("Money.CurrencyEmpty", "Currency code cannot be empty.");
 
         string trimmed = value.Trim();
         if (trimmed.Length > MaxLength)
-            return LocalizableError.Validation("Money.CurrencyTooLong", "Currency code must be {0} characters or fewer.", MaxLength);
+            return DomainError.Validation("Money.CurrencyTooLong", "Currency code must be {0} characters or fewer.", MaxLength);
 
         return new CurrencyCode(trimmed.ToUpperInvariant());
     }

@@ -1,6 +1,6 @@
 using System.Net.Mail;
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Core.Domain.ValueObjects;
@@ -36,7 +36,7 @@ public sealed class Email : ValueObject
     public static ErrorOr<Email> Create(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            return LocalizableError.Validation("Email.Empty", "Email address cannot be empty.");
+            return DomainError.Validation("Email.Empty", "Email address cannot be empty.");
 
         string trimmed = value.Trim();
 
@@ -44,10 +44,10 @@ public sealed class Email : ValueObject
         // an over-long address is a clean validation error here, not a raw "value too long" (SQLSTATE
         // 22001) from the write.
         if (trimmed.Length > MaxLength)
-            return LocalizableError.Validation("Email.TooLong", "Email address must be {0} characters or fewer.", MaxLength);
+            return DomainError.Validation("Email.TooLong", "Email address must be {0} characters or fewer.", MaxLength);
 
         if (!TryParseAddress(trimmed, out string normalized))
-            return LocalizableError.Validation("Email.Invalid", "'{0}' is not a valid email address.", value);
+            return DomainError.Validation("Email.Invalid", "'{0}' is not a valid email address.", value);
 
         return new Email(normalized);
     }

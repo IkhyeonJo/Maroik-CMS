@@ -1,10 +1,10 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 namespace Maroik.Core.Domain.Tests.Boundaries;
 
 /// <summary>
 /// Asserts a domain error's full contract: its code, its type, and — because the Website resolves the
-/// translation from the message TEMPLATE (see <see cref="LocalizableError"/>) — the exact template and the
+/// translation from the message TEMPLATE (see <see cref="DomainError"/>) — the exact template and the
 /// arguments that fill it. A changed template silently loses its ko-KR translation, so the text is part of
 /// the behavior, not decoration.
 /// </summary>
@@ -17,8 +17,8 @@ internal static class ErrorAssert
         Error error = result.FirstError;
         Assert.Equal(code, error.Code);
         Assert.Equal(type, error.Type);
-        Assert.Equal(template, error.Metadata![LocalizableError.ResourceKeyMetadataKey]);
-        Assert.Equal(args, (object[])error.Metadata![LocalizableError.ResourceArgsMetadataKey]);
+        Assert.Equal(template, error.Metadata![DomainError.MessageTemplateMetadataKey]);
+        Assert.Equal(args, (object[])error.Metadata![DomainError.MessageArgsMetadataKey]);
         Assert.Equal(string.Format(template, args), error.Description);
     }
 

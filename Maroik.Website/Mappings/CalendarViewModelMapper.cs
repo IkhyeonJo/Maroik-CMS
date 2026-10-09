@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Domain.Calendar;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Time;
 using Maroik.Website.Extensions;
 using Maroik.Website.Models.ViewModels.Calendar;
 

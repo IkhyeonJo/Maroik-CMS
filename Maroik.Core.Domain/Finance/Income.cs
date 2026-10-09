@@ -1,5 +1,5 @@
 using ErrorOr;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Primitives;
 using Maroik.Core.Domain.ValueObjects;
 
@@ -156,19 +156,19 @@ public sealed class Income : AggregateRoot<long>
         string? mainClass, string? subClass, string? depositMyAssetProductName, string? content, decimal amount, string? note)
     {
         if (string.IsNullOrWhiteSpace(mainClass))
-            return LocalizableError.Validation("Income.MainClassEmpty", "Main income category cannot be empty.");
+            return DomainError.Validation("Income.MainClassEmpty", "Main income category cannot be empty.");
 
         if (string.IsNullOrWhiteSpace(subClass))
-            return LocalizableError.Validation("Income.SubClassEmpty", "Sub income category cannot be empty.");
+            return DomainError.Validation("Income.SubClassEmpty", "Sub income category cannot be empty.");
 
         if (string.IsNullOrWhiteSpace(depositMyAssetProductName))
-            return LocalizableError.Validation("Income.DepositAssetEmpty", "Deposit asset product name cannot be empty.");
+            return DomainError.Validation("Income.DepositAssetEmpty", "Deposit asset product name cannot be empty.");
 
         // Content is NOT NULL / non-blank at the DB (Income_Content_check: Content ~ '\S') and
         // [Required] on the ViewModel; mirror that here so a blank value is a clean validation
         // error rather than a raw 23514 from the database.
         if (string.IsNullOrWhiteSpace(content))
-            return LocalizableError.Validation("Income.ContentEmpty", "Content cannot be empty.");
+            return DomainError.Validation("Income.ContentEmpty", "Content cannot be empty.");
 
         var amountResult = FinanceAmountPolicy.ValidateAmount(amount);
         if (amountResult.IsError) return amountResult.Errors;

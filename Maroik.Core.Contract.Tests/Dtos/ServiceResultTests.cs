@@ -1,6 +1,6 @@
 using ErrorOr;
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Errors;
 
 namespace Maroik.Core.Contract.Tests.Dtos;
 
@@ -93,7 +93,7 @@ public class ServiceResultTests
     }
 
     /// <summary>
-    /// FromError on a plain domain <see cref="Error"/> (no <see cref="LocalizableError"/> metadata) falls
+    /// FromError on a plain domain <see cref="Error"/> (no <see cref="DomainError"/> metadata) falls
     /// back to the already-formatted <see cref="Error.Description"/> with no args -- the pre-existing
     /// behavior every other caller of FromError still relies on.
     /// </summary>
@@ -107,7 +107,7 @@ public class ServiceResultTests
     }
 
     /// <summary>
-    /// FromError on an <see cref="Error"/> built via <see cref="LocalizableError.Validation"/> surfaces
+    /// FromError on an <see cref="Error"/> built via <see cref="DomainError.Validation"/> surfaces
     /// the composite-format resource template in <see cref="ServiceResult.ErrorKey"/> and the original
     /// (unformatted) values in <see cref="ServiceResult.ErrorArgs"/> -- not the already-baked sentence --
     /// so the caller can hand both straight to an <c>IHtmlLocalizer</c> indexer.
@@ -115,7 +115,7 @@ public class ServiceResultTests
     [Fact]
     public void FromError_WithLocalizationMetadata_SurfacesTemplateAndArgs()
     {
-        Error error = LocalizableError.Validation("TimeZoneId.Invalid", "'{0}' is not a recognised time-zone ID.", "Mars/OlympusMons");
+        Error error = DomainError.Validation("TimeZoneId.Invalid", "'{0}' is not a recognised time-zone ID.", "Mars/OlympusMons");
 
         var result = ServiceResult.FromError(error);
 

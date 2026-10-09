@@ -1,6 +1,6 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Domain.Finance;
-using Maroik.Core.Domain.Localization;
+using Maroik.Core.Domain.Time;
 using Maroik.Website.Models.ViewModels.Notice;
 
 namespace Maroik.Website.Mappings;
