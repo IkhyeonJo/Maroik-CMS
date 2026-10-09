@@ -23,6 +23,8 @@
  * IIFE-wrapped, no `import` / `export`.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { check, parseJson, fieldValue, optionalFieldValue } = window;
     // Cached element references — the "other event" popup and every field of the
     // read-only "view event" modal, plus the anti-forgery input and the two
     // hidden inputs the view uses to hand data to this script.
@@ -72,14 +74,14 @@
     // Authoritative in CalendarReminderPolicy (server); serialized into these hidden fields by
     // AnonymousIndex.cshtml and mirrored here for form UX only. No hardcoded fallback: the limit
     // is a Domain rule, not a client constant.
-    const maxMinutesBeforeEvent = parseInt($("#maxMinutesBeforeEvent").val() as string, 10);
-    const maxHoursBeforeEvent = parseInt($("#maxHoursBeforeEvent").val() as string, 10);
-    const maxDaysBeforeEvent = parseInt($("#maxDaysBeforeEvent").val() as string, 10);
-    const maxWeeksBeforeEvent = parseInt($("#maxWeeksBeforeEvent").val() as string, 10);
+    const maxMinutesBeforeEvent = parseInt(optionalFieldValue($("#maxMinutesBeforeEvent")) ?? "", 10);
+    const maxHoursBeforeEvent = parseInt(optionalFieldValue($("#maxHoursBeforeEvent")) ?? "", 10);
+    const maxDaysBeforeEvent = parseInt(optionalFieldValue($("#maxDaysBeforeEvent")) ?? "", 10);
+    const maxWeeksBeforeEvent = parseInt(optionalFieldValue($("#maxWeeksBeforeEvent")) ?? "", 10);
     // "Notify at HH:MM" options for all-day reminders and the default selection, both published
     // by the server (CalendarViewModelMapper / CalendarReminderPolicy). Was regenerated inline
     // as Array.from({length:96}) in several places.
-    const reminderTimeIntervals = JSON.parse(($("#reminderTimeIntervals").val() as string) || "[]") as string[];
+    const reminderTimeIntervals = parseJson(optionalFieldValue($("#reminderTimeIntervals")) || "[]", check.array(check.string), "#reminderTimeIntervals");
 
     /** base64 -> Blob, for turning the server-embedded inline-image payloads into object URLs. */
     function base64ToBlob(base64: string, mime: string) {
@@ -275,7 +277,7 @@
                         $.ajax({
                             url: "/Calendar/IsOtherCalendarEventExists" + "?id=" + popup.data("event-id"),
                             type: "POST",
-                            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                             dataType: "json",
                             contentType: "application/json; charset=utf-8",
                             success: function(data: ReadReply<CalendarEventPayload>) {
@@ -486,7 +488,7 @@
                                     $.ajax({
                                         url: "/Calendar/GetOtherCalendars",
                                         method: "POST",
-                                        headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                                        headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                                         dataType: "json",
                                         contentType: "application/json; charset=utf-8",
                                         success: function(response: ReadReply<OtherCalendarsPayload>) {
@@ -525,7 +527,7 @@
         });
 
         // --- Seed the calendar with the server-rendered events ---------------
-        (JSON.parse($otherCalendarEventOutputViewModels.val() as string) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
+        (JSON.parse(fieldValue($otherCalendarEventOutputViewModels)) as CalendarEventJson[]).forEach((item: CalendarEventJson) => {
             calendar.addEvent({
                 id: String(item.Id),
                 title: item.Title,
@@ -580,7 +582,7 @@
             $.ajax({
                 url: "/Calendar/GetCalendarEvents",
                 method: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 data: JSON.stringify(paramValue),
                 contentType: "application/json; charset=utf-8",
@@ -638,7 +640,7 @@
         $.ajax({
             url: "/Calendar/DownloadCalendarEventAttachedFile",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             data: { calendarEventId: calendarEventId },
             xhrFields: { responseType: "blob" },
             // Without a declared dataType jQuery infers "json" from a refusal's Content-Type and fails to

@@ -20,6 +20,8 @@
  * IIFE-wrapped, no `import` / `export`.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { check, parseJson, fieldValue, selectValue, optionalFieldValue, attribute } = window;
     // Cached references: tab containers, grid search box, the two maturity-date
     // inputs, the deposit-asset wrapper divs, every field of both modals, the
     // amount labels, and the anti-forgery input.
@@ -40,7 +42,7 @@
     const $confirmDeleteFixedExpenditureDialogModal = $("#confirmDeleteFixedExpenditureDialogModal");
     const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
     // Localized toast shown when the amount-label request itself fails (transport error).
-    const failedToLoadAmountLabelMessage = $("#localizerFailedToLoadAmountLabel").val() as string;
+    const failedToLoadAmountLabelMessage = fieldValue($("#localizerFailedToLoadAmountLabel"));
     const $createFixedExpenditureDialogModal = $("#createFixedExpenditureDialogModal");
     const $createFixedExpenditurePaymentMethod = $("#createFixedExpenditurePaymentMethod");
     const $editFixedExpenditurePaymentMethod = $("#editFixedExpenditurePaymentMethod");
@@ -67,12 +69,12 @@
 
     // Server-published rules (FixedExpenditure.cshtml). Authoritative in ExpenditureClassPolicy /
     // FixedSchedulePolicy; mirrored here for form UX only, the server re-validates on save.
-    const expenditureSubClassMap = JSON.parse(($("#expenditureSubClassMap").val() as string) || "{}") as Record<string, string[]>;
-    const expenditureDepositAssetSubClasses = JSON.parse(($("#expenditureDepositAssetSubClasses").val() as string) || "[]") as string[];
-    const maxDepositDayByMonth = JSON.parse(($("#maxDepositDayByMonth").val() as string) || "{}") as Record<string, number>;
+    const expenditureSubClassMap = parseJson(optionalFieldValue($("#expenditureSubClassMap")) || "{}", check.record(check.array(check.string)), "#expenditureSubClassMap");
+    const expenditureDepositAssetSubClasses = parseJson(optionalFieldValue($("#expenditureDepositAssetSubClasses")) || "[]", check.array(check.string), "#expenditureDepositAssetSubClasses");
+    const maxDepositDayByMonth = parseJson(optionalFieldValue($("#maxDepositDayByMonth")) || "{}", check.record(check.number), "#maxDepositDayByMonth");
     // Far-future stand-in for "no maturity date", published by the server (FixedSchedulePolicy)
     // as a yyyy-MM-dd string so the client and server never drift on the value.
-    const noMaturityIso = $("#noMaturityDate").val() as string;
+    const noMaturityIso = fieldValue($("#noMaturityDate"));
     const [nmYear, nmMonth, nmDay] = noMaturityIso.split("-").map(Number);
     const NO_MATURITY_DATE = new Date(nmYear, nmMonth - 1, nmDay);
 
@@ -102,15 +104,15 @@
     }
 
     // The "deposit asset" field is only relevant for transfer-type subclasses.
-    function ToggleCreateFixedExpenditureMyDepositAsset(subClassValue: string) {
-        expenditureDepositAssetSubClasses.indexOf(subClassValue) !== -1
+    function ToggleCreateFixedExpenditureMyDepositAsset(subClassValue: string | null) {
+        subClassValue !== null && expenditureDepositAssetSubClasses.indexOf(subClassValue) !== -1
             ? $divCreateFixedExpenditureMyDepositAsset.show()
             : $divCreateFixedExpenditureMyDepositAsset.hide();
     }
 
     /** Same as `ToggleCreateFixedExpenditureMyDepositAsset` for the edit modal. */
-    function ToggleEditFixedExpenditureMyDepositAsset(subClassValue: string) {
-        expenditureDepositAssetSubClasses.indexOf(subClassValue) !== -1
+    function ToggleEditFixedExpenditureMyDepositAsset(subClassValue: string | null) {
+        subClassValue !== null && expenditureDepositAssetSubClasses.indexOf(subClassValue) !== -1
             ? $divEditFixedExpenditureMyDepositAsset.show()
             : $divEditFixedExpenditureMyDepositAsset.hide();
     }
@@ -362,7 +364,7 @@
     /** Create form main-class change: re-filter the subclass options and re-evaluate the deposit-asset block. */
     function CreateFormShowFixedExpenditureSubClassBySelectedFixedExpenditureMainClass(createFixedExpenditureMainClass: HTMLSelectElement) {
         ApplyAllowedOptions($createFixedExpenditureSubClass, expenditureSubClassMap[createFixedExpenditureMainClass.value] || [], null);
-        ToggleCreateFixedExpenditureMyDepositAsset($createFixedExpenditureSubClass.val() as string);
+        ToggleCreateFixedExpenditureMyDepositAsset(selectValue($createFixedExpenditureSubClass));
     }
 
     /** Create form subclass change: show/hide the deposit-asset block for it. */
@@ -378,7 +380,7 @@
     /** Edit form main-class change: same as the create-form version. */
     function EditFormShowFixedExpenditureSubClassBySelectedFixedExpenditureMainClass(editFixedExpenditureMainClass: HTMLSelectElement) {
         ApplyAllowedOptions($editFixedExpenditureSubClass, expenditureSubClassMap[editFixedExpenditureMainClass.value] || [], null);
-        ToggleEditFixedExpenditureMyDepositAsset($editFixedExpenditureSubClass.val() as string);
+        ToggleEditFixedExpenditureMyDepositAsset(selectValue($editFixedExpenditureSubClass));
     }
 
     /** Edit form subclass change: show/hide the deposit-asset block for it. */
@@ -425,7 +427,7 @@
         $.ajax({
             url: "/Notice/CreateFixedExpenditure",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -473,7 +475,7 @@
         $.ajax({
             url: "/Notice/IsFixedExpenditureExists" + "?id=" + selectedRowId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<FixedExpenditurePayload>) {
@@ -557,7 +559,7 @@
         $.ajax({
             url: "/Notice/UpdateFixedExpenditure",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -621,7 +623,7 @@
         $.ajax({
             url: "/Notice/IsFixedExpenditureExists" + "?id=" + selectedRowId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<FixedExpenditurePayload>) {
@@ -634,7 +636,7 @@
                     $.ajax({
                         url: "/Notice/DeleteFixedExpenditure",
                         type: "POST",
-                        headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                        headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
@@ -671,7 +673,7 @@
         form.action = "/Notice/ExportExcelFixedExpenditure";
 
         element1.name = "__RequestVerificationToken";
-        element1.value = $__RequestVerificationToken.val() as string;
+        element1.value = fieldValue($__RequestVerificationToken);
         form.appendChild(element1);
 
         element2.name = "fileName";
@@ -691,7 +693,7 @@
         $.ajax({
             url: "/Notice/GetFixedExpenditureAmountLabel" + "?productName=" + encodeURIComponent(productName),
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: AmountLabelReply) {
@@ -712,7 +714,7 @@
         $.ajax({
             url: "/Notice/GetFixedExpenditureAmountLabel" + "?productName=" + encodeURIComponent(productName),
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: AmountLabelReply) {
@@ -787,6 +789,10 @@
 
     // On load, set the create-form amount label for whichever method is preselected.
     $(function() {
-        ChangeCreateFixedExpenditureAmountLabel($createFixedExpenditurePaymentMethod.find("option:selected").val() as string);
+        // An account without assets has nothing preselected, and so no label to ask for.
+        const preselected = selectValue($createFixedExpenditurePaymentMethod);
+        if (preselected !== null) {
+            ChangeCreateFixedExpenditureAmountLabel(preselected);
+        }
     });
 })();

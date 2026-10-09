@@ -23,6 +23,9 @@ import jqueryImport from "jquery";
 /** The website's wwwroot, where the compiled scripts live. */
 const WWWROOT = resolve(__dirname, "../../wwwroot");
 
+/** What Views/Shared/_Layout.cshtml renders on every page that the scripts read. */
+const LAYOUT_CHROME = `<input id="_LocalizerTemporaryError" type="hidden" value="L_TemporaryError" />`;
+
 /** The options object a script passed to `$.ajax`. */
 export interface AjaxCall {
     url: string;
@@ -220,7 +223,8 @@ export function loadSite(
 ): SiteHandle {
     const win = window as PageWindow;
 
-    win.document.body.innerHTML = fixtureHtml;
+    // Views/Shared/_Layout.cshtml's hidden inputs ride along with every page it lays out (not the account pages).
+    win.document.body.innerHTML = (feature === "Account" ? "" : LAYOUT_CHROME) + fixtureHtml;
 
     const $ = bindJquery(win);
     win.$ = win.jQuery = $;
@@ -281,26 +285,6 @@ export function loadSite(
     // --- globals -----------------------------------------------------------
     const toastr = { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() };
     win.toastr = toastr;
-
-    // Normally set by each area's _Layout/js/site.ts, loaded before a page's own script in a real
-    // page load; loadSite only loads the one-page script under test, so provide the same
-    // implementation here (kept byte-identical to _Layout's) for pages that call it unconditionally.
-    win.escapeHtml = function(value: string): string {
-        return value.replace(/[&<>"']/g, function(ch: string) {
-            switch (ch) {
-                case "&":
-                    return "&amp;";
-                case "<":
-                    return "&lt;";
-                case ">":
-                    return "&gt;";
-                case "\"":
-                    return "&quot;";
-                default:
-                    return "&#39;";
-            }
-        });
-    };
 
     // Stub MvcGrid: records each instance, with a fixed URL and a spy `reload`.
     const MvcGridInstances: FakeMvcGrid[] = [];
@@ -404,6 +388,12 @@ export function loadSite(
     const code = readFileSync(file, "utf8");
     vi.useFakeTimers();
     try {
+        // A real page load runs the role's _Layout script first (Views/Shared/_Layout.cshtml): it defines the
+        // window helpers every page script uses (escapeHtml, check, onReply, fieldValue, …). The account pages
+        // have a layout of their own without it.
+        if (feature !== "_Layout" && feature !== "Account") {
+            win.eval(readFileSync(resolve(WWWROOT, area, "custom", "_Layout", "js", "site.js"), "utf8"));
+        }
         win.eval(code);
         vi.runOnlyPendingTimers();
     } finally {

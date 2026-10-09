@@ -15,6 +15,8 @@
  * IIFE-wrapped, no `import` / `export`. Client checks mirror server rules.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { fieldValue, optionalFieldValue, attribute } = window;
     // Cached references. Many exist only on one sub-view, so `.length` is checked.
     const $writeBoardContent = $("#writeBoardContent");
     const $editBoardContent = $("#editBoardContent");
@@ -49,7 +51,7 @@
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
     // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
     // missing or unparseable.
-    const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || window.MaroikDefaultMaxAttachedFileSizeBytes;
+    const maxFileSize = parseInt(optionalFieldValue($("#maxAttachedFileSizeBytes")) ?? "") || window.MaroikDefaultMaxAttachedFileSizeBytes;
     // Editor height (px) of both summernote instances.
     const boardHeight = 300;
 
@@ -153,7 +155,7 @@
 
     /** Reloads the list filtered by the chosen search type + text. */
     function SearchBoard() {
-        window.location.href = "/Management/PrivateNote?searchType=" + encodeURIComponent($searchType.val() as string) + "&searchText=" + encodeURIComponent($btnPrivateNoteSearchText.val() as string);
+        window.location.href = "/Management/PrivateNote?searchType=" + encodeURIComponent(fieldValue($searchType)) + "&searchText=" + encodeURIComponent(fieldValue($btnPrivateNoteSearchText));
     }
 
     /** Write form: show the `#loading` overlay only if the form validates. */
@@ -192,7 +194,7 @@
         $.ajax({
             url: "/Management/UploadImageFile",
             data: formData,
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             type: "POST",
             enctype: "multipart/form-data",
             processData: false,
@@ -232,7 +234,7 @@
         $.ajax({
             url: "/Management/UploadImageFile",
             data: formData,
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             type: "POST",
             enctype: "multipart/form-data",
             processData: false,
@@ -289,7 +291,7 @@
         $.ajax({
             url: "/Management/WritePrivateNoteBoard",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: formData,
             contentType: false,
@@ -333,7 +335,7 @@
         $.ajax({
             url: "/Management/EditPrivateNoteBoard",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: formData,
             contentType: false,
@@ -372,7 +374,7 @@
         $.ajax({
             url: "/Management/IsBoardExists" + "?id=" + detailBoardId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<PrivateNoteBoardPayload>) {
@@ -385,7 +387,7 @@
                     $.ajax({
                         url: "/Management/DeleteBoard",
                         type: "POST",
-                        headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                        headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
@@ -427,7 +429,7 @@
         $.ajax({
             url: "/Management/WritePrivateNoteComment",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -448,7 +450,7 @@
         $.ajax({
             url: "/Management/DeleteComment" + "?id=" + commentId,
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ActionReply) {
@@ -596,7 +598,7 @@
             $.ajax({
                 url: "/Management/DownloadPrivateNoteAttachedFile",
                 type: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 data: { boardId: boardId },
                 xhrFields: { responseType: "blob" },
                 // Without a declared dataType jQuery infers "json" from a refusal's Content-Type and fails to

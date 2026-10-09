@@ -10,7 +10,7 @@ const subClassMap = { Living: ["Rent"], Transfer: ["ToSavings"] };
 /** Sub-classes that need a deposit (transfer target) asset. */
 const depositAssetSubClasses = ["ToSavings"];
 /** Last selectable deposit day per month (a month missing here gets no day options). */
-const maxDepositDayByMonth = { "2": "28" };
+const maxDepositDayByMonth = { "2": 28 };
 
 /** The fixed-expenditure page DOM (server constants, create/edit forms). */
 function fixture(): string {
@@ -103,6 +103,7 @@ describeGridCrudScript({
 describeAmountLabel({
     label: "user/Notice/FixedExpenditure",
     load: () => loadSite("user", "Notice", "FixedExpenditure", fixture()),
+    loadWithoutCreateChoices: () => loadSite("user", "Notice", "FixedExpenditure", fixture().replace('<select id="createFixedExpenditurePaymentMethod"><option value="Card" selected>Card</option></select>', '<select id="createFixedExpenditurePaymentMethod"></select>')),
     url: "GetFixedExpenditureAmountLabel",
     create: { trigger: "#createFixedExpenditurePaymentMethod", span: "#labelCreateFixedExpenditureAmount" },
     edit: { trigger: "#editFixedExpenditurePaymentMethod", span: "#labelEditFixedExpenditureAmount" },

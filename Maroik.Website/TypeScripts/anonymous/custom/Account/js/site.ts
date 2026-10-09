@@ -16,6 +16,16 @@
  * `.off(...).on(...)` so re-running the file cannot double-bind.
  */
 (function() {
+    /**
+     * The text of a field the account layout always renders. The account pages do not load the
+     * `_Layout` script, so this is their own copy of its `window.fieldValue`: a missing field is a
+     * mismatch between the view and this script, and throws instead of sending `undefined` on.
+     */
+    function fieldValue($field: JQuery): string {
+        const value = $field.val();
+        if (typeof value !== "string") throw new Error("A required field is missing from the page");
+        return value;
+    }
     // One helper per form. Each returns a boolean purely as documentation of
     // "did we let it through" — the click handlers below ignore the value and
     // the browser performs the real submit. If the form is invalid, hide the
@@ -83,12 +93,12 @@
             type: "POST",
             // Anti-forgery token from MVC's hidden input; `.val()` is a union, so
             // narrow it to `string` for the request header.
-            headers: { "RequestVerificationToken": $("input[name=\"__RequestVerificationToken\"]").val() as string },
+            headers: { "RequestVerificationToken": fieldValue($("input[name=\"__RequestVerificationToken\"]")) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
             success: function() {
-                window.location.href = $("#returnUri").val() as string;
+                window.location.href = fieldValue($("#returnUri"));
             }
         });
     }

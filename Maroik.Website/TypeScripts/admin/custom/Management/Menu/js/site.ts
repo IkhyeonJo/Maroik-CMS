@@ -18,6 +18,8 @@
  * IIFE-wrapped, no `import` / `export`.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { fieldValue, attribute } = window;
     // Cached references: jQuery-UI tab containers, the grid search box, and every
     // field of the four modals (create category / sub, edit category / sub) plus
     // the anti-forgery input.
@@ -160,7 +162,7 @@
         $.ajax({
             url: "/Management/CreateCategory",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -211,7 +213,7 @@
         $.ajax({
             url: "/Management/CreateSubCategory",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -261,7 +263,7 @@
             $.ajax({
                 url: "/Management/IsCategoryExists" + "?id=" + selectedRowId,
                 type: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
                 success: function(data: ReadReply<CategoryPayload>) {
@@ -293,7 +295,7 @@
             $.ajax({
                 url: "/Management/IsSubCategoryExists" + "?id=" + selectedRowId,
                 type: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
                 success: function(data: ReadReply<SubCategoryPayload>) {
@@ -352,7 +354,7 @@
         $.ajax({
             url: "/Management/UpdateCategory",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -401,7 +403,7 @@
         $.ajax({
             url: "/Management/UpdateSubCategory",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -474,7 +476,7 @@
             $.ajax({
                 url: "/Management/IsCategoryExists" + "?id=" + selectedRowId,
                 type: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
                 success: function(data: ReadReply<CategoryPayload>) {
@@ -494,7 +496,7 @@
                         $.ajax({
                             url: "/Management/DeleteCategory",
                             type: "POST",
-                            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                             dataType: "json",
                             data: paramValue,
                             contentType: "application/json; charset=utf-8",
@@ -520,7 +522,7 @@
             $.ajax({
                 url: "/Management/IsSubCategoryExists" + "?id=" + selectedRowId,
                 type: "POST",
-                headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
                 success: function(data: ReadReply<SubCategoryPayload>) {
@@ -540,7 +542,7 @@
                         $.ajax({
                             url: "/Management/DeleteSubCategory",
                             type: "POST",
-                            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                             dataType: "json",
                             data: paramValue,
                             contentType: "application/json; charset=utf-8",
@@ -579,7 +581,7 @@
         form.action = "/Management/ExportExcelMenu";
 
         element1.name = "__RequestVerificationToken";
-        element1.value = $__RequestVerificationToken.val() as string;
+        element1.value = fieldValue($__RequestVerificationToken);
         form.appendChild(element1);
 
         element2.name = "fileName";

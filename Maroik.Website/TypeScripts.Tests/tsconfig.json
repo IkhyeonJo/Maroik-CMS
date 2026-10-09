@@ -16,5 +16,5 @@
     // vitest.config.mts `resolve.alias`. TS 7 removed `baseUrl`; `./*` is required.
     "paths": { "@tests/*": ["./*"] }
   },
-  "include": ["**/*.ts"]
+  "include": ["**/*.ts", "../TypeScripts/global.d.ts"]
 }

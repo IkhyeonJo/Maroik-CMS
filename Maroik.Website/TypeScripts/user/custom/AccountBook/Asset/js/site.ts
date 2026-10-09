@@ -20,6 +20,8 @@
  * IIFE-wrapped, no `import` / `export`.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { fieldValue, attribute } = window;
     // Cached references: jQuery-UI tab containers, the grid search box, and every
     // field of the creation/edit modals plus the anti-forgery token input.
     const $createAssetTabs = $("#createAssetTabs");
@@ -140,7 +142,7 @@
         $.ajax({
             url: "/AccountBook/CreateAsset",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -189,7 +191,7 @@
         $.ajax({
             url: "/AccountBook/IsAssetExists" + "?productName=" + encodeURIComponent(selectedRowProductName),
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<AssetPayload>) {
@@ -251,7 +253,7 @@
         $.ajax({
             url: "/AccountBook/UpdateAsset",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -322,7 +324,7 @@
         $.ajax({
             url: "/AccountBook/IsAssetExists" + "?productName=" + encodeURIComponent(selectedRowProductName),
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<AssetPayload>) {
@@ -335,7 +337,7 @@
                     $.ajax({
                         url: "/AccountBook/DeleteAsset",
                         type: "POST",
-                        headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                        headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
@@ -374,7 +376,7 @@
         form.action = "/AccountBook/ExportExcelAsset";
 
         element1.name = "__RequestVerificationToken";
-        element1.value = $__RequestVerificationToken.val() as string;
+        element1.value = fieldValue($__RequestVerificationToken);
         form.appendChild(element1);
 
         element2.name = "fileName";

@@ -16,6 +16,8 @@
  * Wrapped in an IIFE, no `import` / `export`; handlers use `.off(...).on(...)`.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { check, parseJson, fieldValue, optionalFieldValue } = window;
     // Cached form / field references (jQuery objects) and the anti-forgery input.
     const $formUpdateProfilePassword = $("#formUpdateProfilePassword");
     const $formUpdateProfileAvatar = $("#formUpdateProfileAvatar");
@@ -26,10 +28,10 @@
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
     // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
     // missing or unparseable.
-    const maxFileSize = parseInt($("#maxAttachedFileSizeBytes").val() as string) || window.MaroikDefaultMaxAttachedFileSizeBytes;
+    const maxFileSize = parseInt(optionalFieldValue($("#maxAttachedFileSizeBytes")) ?? "") || window.MaroikDefaultMaxAttachedFileSizeBytes;
     // Accepted avatar image MIME types, published by Profile.cshtml (ImageUploadPolicy). The
     // server re-validates by extension; this is the client mirror.
-    const allowedImageContentTypes = (JSON.parse(($("#allowedImageContentTypes").val() as string) || "[]") as string[]).map(function(t: string) {
+    const allowedImageContentTypes = parseJson(optionalFieldValue($("#allowedImageContentTypes")) || "[]", check.array(check.string), "#allowedImageContentTypes").map(function(t: string) {
         return t.toLowerCase();
     });
 
@@ -120,7 +122,7 @@
         $.ajax({
             url: "/Management/UpdateProfilePassword",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",

@@ -8,7 +8,7 @@ import { loadSite, hidden, antiForgery } from "@tests/_common/harness";
 /** Main class → sub-classes, as the page publishes it. */
 const subClassMap = { Labor: ["Salary"] };
 /** Last selectable deposit day per month (a month missing here gets no day options). */
-const maxDepositDayByMonth = { "2": "28", "1": "31" };
+const maxDepositDayByMonth = { "2": 28, "1": 31 };
 
 /** The fixed-income page DOM (server constants, create/edit forms). */
 function fixture(): string {
@@ -109,6 +109,7 @@ describeGridCrudScript({
 describeAmountLabel({
     label: "user/Notice/FixedIncome",
     load: () => loadSite("user", "Notice", "FixedIncome", fixture()),
+    loadWithoutCreateChoices: () => loadSite("user", "Notice", "FixedIncome", fixture().replace('<select id="createFixedIncomeDepositMyAssetProductName"><option value="A" selected>A</option></select>', '<select id="createFixedIncomeDepositMyAssetProductName"></select>')),
     url: "GetFixedIncomeAmountLabel",
     create: { trigger: "#createFixedIncomeDepositMyAssetProductName", span: "#labelCreateFixedIncomeAmount" },
     edit: { trigger: "#editFixedIncomeDepositMyAssetProductName", span: "#labelEditFixedIncomeAmount" },

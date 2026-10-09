@@ -18,6 +18,8 @@
  * IIFE-wrapped, no `import` / `export`.
  */
 (function() {
+    // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
+    const { fieldValue, attribute } = window;
     // Cached references: the jQuery-UI tab containers, the grid search box, and
     // every field of the creation / edit modals plus the anti-forgery input.
     const $createAccountTabs = $("#createAccountTabs");
@@ -130,7 +132,7 @@
         $.ajax({
             url: "/Management/CreateAccount",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -178,7 +180,7 @@
         $.ajax({
             url: "/Management/IsAccountExists" + "?email=" + encodeURIComponent(selectedRowEmail),
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<AccountPayload>) {
@@ -242,7 +244,7 @@
         $.ajax({
             url: "/Management/UpdateAccount",
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             data: paramValue,
             contentType: "application/json; charset=utf-8",
@@ -306,7 +308,7 @@
         $.ajax({
             url: "/Management/IsAccountExists" + "?email=" + encodeURIComponent(selectedRowEmail),
             type: "POST",
-            headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+            headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: function(data: ReadReply<AccountPayload>) {
@@ -319,7 +321,7 @@
                     $.ajax({
                         url: "/Management/DeleteAccount",
                         type: "POST",
-                        headers: { "RequestVerificationToken": $__RequestVerificationToken.val() as string },
+                        headers: { "RequestVerificationToken": fieldValue($__RequestVerificationToken) },
                         dataType: "json",
                         data: paramValue,
                         contentType: "application/json; charset=utf-8",
@@ -357,7 +359,7 @@
         form.action = "/Management/ExportExcelAccount";
 
         element1.name = "__RequestVerificationToken";
-        element1.value = $__RequestVerificationToken.val() as string;
+        element1.value = fieldValue($__RequestVerificationToken);
         form.appendChild(element1);
 
         element2.name = "fileName";
