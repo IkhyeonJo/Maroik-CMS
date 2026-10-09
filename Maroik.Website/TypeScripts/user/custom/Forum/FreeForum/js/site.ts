@@ -19,7 +19,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, onReplyText, byId, instanceOf, fieldValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, onReplyText, byId, instanceOf, fieldValue, parseJson, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const doneReply = check.oneOf(check.object({ result: check.literal(true) }), replies.failed);
@@ -29,9 +29,8 @@
         check.object({ result: check.literal(false), errorMessage: check.string }));
     const freeBoardReply = replies.read({ freeBoard: check.object({ id: check.number }) });
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
-    // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
-    // missing or unparseable.
-    const maxFileSize = parseInt(optionalFieldValue($("#maxAttachedFileSizeBytes")) ?? "") || window.MaroikDefaultMaxAttachedFileSizeBytes;
+    // only. Required: there is no safe client-side default (a copy of the server's would drift).
+    const maxFileSize = parseJson(fieldValue($("#maxAttachedFileSizeBytes")), check.number, "#maxAttachedFileSizeBytes");
     const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
     // Cached element references. Many exist only on one sub-view, so `.length` is
     // checked before use.

@@ -29,9 +29,6 @@ declare class MvcGrid {
 
 // Shared helpers each role's _Layout script puts on `window` (see "Client scripts" in CLAUDE.md).
 interface Window {
-    /** Fallback upload limit for a page whose `#maxAttachedFileSizeBytes` hidden field is missing. */
-    MaroikDefaultMaxAttachedFileSizeBytes: number;
-
     /** HTML-escapes a value before it is put into string-built markup. */
     escapeHtml(value: string): string;
 }

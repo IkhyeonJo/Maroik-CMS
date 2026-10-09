@@ -426,7 +426,4 @@
   <data name="Today" xml:space="preserve">
     <value>Today</value>
   </data>
-  <data name="The maturity date cannot be earlier than the current date." xml:space="preserve">
-    <value>The maturity date cannot be earlier than the current date.</value>
-  </data>
 </root>

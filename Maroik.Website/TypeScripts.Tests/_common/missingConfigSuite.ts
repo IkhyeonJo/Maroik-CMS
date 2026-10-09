@@ -8,10 +8,10 @@ import { loadSite } from "@tests/_common/harness";
 
 /**
  * Removes every `<input type="hidden" id="...">` except the localizer texts and the inputs the scripts REQUIRE rather than default:
- * `noMaturityDate` and the server-rendered event data (`calendarEventOutputViewModels`, `otherCalendarEventOutputViewModels`).
+ * `noMaturityDate`, `maxAttachedFileSizeBytes`, `defaultReminderTimeOfDay` and the server-rendered event data (`calendarEventOutputViewModels`, `otherCalendarEventOutputViewModels`).
  */
 export function withoutServerConstants(html: string): string {
-    return html.replace(/<input type="hidden" id="(?!localizer|noMaturityDate|calendarEventOutputViewModels|otherCalendarEventOutputViewModels)[^"]*"[^>]*\/?>/g, "");
+    return html.replace(/<input type="hidden" id="(?!localizer|noMaturityDate|maxAttachedFileSizeBytes|defaultReminderTimeOfDay|calendarEventOutputViewModels|otherCalendarEventOutputViewModels)[^"]*"[^>]*\/?>/g, "");
 }
 
 /** Registers a test that the page script still initializes with its server-published constants removed. */
@@ -28,6 +28,21 @@ export function describeMissingServerConstants(area: "admin" | "anonymous" | "us
             } finally {
                 warn.mockRestore();
             }
+        });
+    });
+}
+
+/**
+ * Registers, per id, a test that the page script refuses to start when that server-published hidden input is missing.
+ * These are the values with no safe built-in default — a copy of the server's value would drift from it — so the script
+ * reads them as required (window.fieldValue throws), like `noMaturityDate`.
+ */
+export function describeRequiredServerConstants(area: "admin" | "anonymous" | "user", feature: string, page: string, fixture: () => string, ids: string[]): void {
+    describe(`${area}/${feature}/${page} — required server-published constants`, () => {
+        it.each(ids)("refuses to start without #%s", (id) => {
+            const html = fixture().replace(new RegExp(`<input type="hidden" id="${id}"[^>]*/?>`), "");
+            expect(html).not.toBe(fixture()); // the fixture really did carry it
+            expect(() => loadSite(area, feature, page, html)).toThrow("A required element is missing from the page");
         });
     });
 }

@@ -87,10 +87,14 @@
     // popups ("My" and "Other") and the anti-forgery input.
     const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
-    // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
-    // missing or unparseable.
-    const maxFileSize = parseInt(optionalFieldValue($("#maxAttachedFileSizeBytes")) ?? "") || window.MaroikDefaultMaxAttachedFileSizeBytes;
+    // only. Required: there is no safe client-side default (a copy of the server's would drift).
+    const maxFileSize = parseJson(fieldValue($("#maxAttachedFileSizeBytes")), check.number, "#maxAttachedFileSizeBytes");
+    // The "my calendars" list is ordered by name under the request culture (CalendarService, OrderBy(Name) with
+    // the request's CurrentCulture); the server publishes that culture so a re-sort after a create / rename here
+    // collates the same way instead of by code point.
+    const calendarNameCollator = new Intl.Collator(optionalFieldValue($("#calendarNameCulture")) || undefined);
     // Authoritative in CalendarReminderPolicy (server); rendered into hidden inputs by the view.
+    const minLeadTimeBeforeEvent = parseInt(optionalFieldValue($("#minLeadTimeBeforeEvent")) ?? "", 10);
     const maxMinutesBeforeEvent = parseInt(optionalFieldValue($("#maxMinutesBeforeEvent")) ?? "", 10);
     const maxHoursBeforeEvent = parseInt(optionalFieldValue($("#maxHoursBeforeEvent")) ?? "", 10);
     const maxDaysBeforeEvent = parseInt(optionalFieldValue($("#maxDaysBeforeEvent")) ?? "", 10);
@@ -99,7 +103,7 @@
     // by the server (CalendarViewModelMapper / CalendarReminderPolicy). Was regenerated inline
     // as Array.from({length:96}) in several places.
     const reminderTimeIntervals = parseJson(optionalFieldValue($("#reminderTimeIntervals")) || "[]", check.array(check.string), "#reminderTimeIntervals");
-    const defaultBeforeAt = optionalFieldValue($("#defaultReminderTimeOfDay")) || "09:00";
+    const defaultBeforeAt = fieldValue($("#defaultReminderTimeOfDay")); // required: no safe client-side default
     const $createCalendarEventDescription = $("#createCalendarEventDescription");
     const $createCalendarEventTaskDialogModal = $("#createCalendarEventTaskDialogModal");
     const $editCalendarEventDescription = $("#editCalendarEventDescription");
@@ -1485,12 +1489,12 @@
             } else {
                 value = parseInt(value, 10);
                 if (timeType === "Days") {
-                    if (value < 0 || value > maxDaysBeforeEvent) {
+                    if (value < minLeadTimeBeforeEvent || value > maxDaysBeforeEvent) {
                         isValid = false;
                         errorMessage = `${localizer.ErrorRangeDay}`;
                     }
                 } else if (timeType === "Weeks") {
-                    if (value < 0 || value > maxWeeksBeforeEvent) {
+                    if (value < minLeadTimeBeforeEvent || value > maxWeeksBeforeEvent) {
                         isValid = false;
                         errorMessage = `${localizer.ErrorRangeWeek}`;
                     }
@@ -1525,22 +1529,22 @@
             } else {
                 value = parseInt(value, 10);
                 if (timeType === "Minutes") {
-                    if (value < 0 || value > maxMinutesBeforeEvent) {
+                    if (value < minLeadTimeBeforeEvent || value > maxMinutesBeforeEvent) {
                         isValid = false;
                         errorMessage = `${localizer.ErrorRangeMinute}`;
                     }
                 } else if (timeType === "Hours") {
-                    if (value < 0 || value > maxHoursBeforeEvent) {
+                    if (value < minLeadTimeBeforeEvent || value > maxHoursBeforeEvent) {
                         isValid = false;
                         errorMessage = `${localizer.ErrorRangeHour}`;
                     }
                 } else if (timeType === "Days") {
-                    if (value < 0 || value > maxDaysBeforeEvent) {
+                    if (value < minLeadTimeBeforeEvent || value > maxDaysBeforeEvent) {
                         isValid = false;
                         errorMessage = `${localizer.ErrorRangeDay}`;
                     }
                 } else if (timeType === "Weeks") {
-                    if (value < 0 || value > maxWeeksBeforeEvent) {
+                    if (value < minLeadTimeBeforeEvent || value > maxWeeksBeforeEvent) {
                         isValid = false;
                         errorMessage = `${localizer.ErrorRangeWeek}`;
                     }
@@ -1575,22 +1579,22 @@
             } else {
                 value = parseInt(value, 10);
                 if (timeType === "Minutes") {
-                    if (value < 0 || value > maxMinutesBeforeEvent) {
+                    if (value < minLeadTimeBeforeEvent || value > maxMinutesBeforeEvent) {
                         isValid = false;
                         errorMessage = `${localizer.ErrorRangeMinute}`;
                     }
                 } else if (timeType === "Hours") {
-                    if (value < 0 || value > maxHoursBeforeEvent) {
+                    if (value < minLeadTimeBeforeEvent || value > maxHoursBeforeEvent) {
                         isValid = false;
                         errorMessage = `${localizer.ErrorRangeHour}`;
                     }
                 } else if (timeType === "Days") {
-                    if (value < 0 || value > maxDaysBeforeEvent) {
+                    if (value < minLeadTimeBeforeEvent || value > maxDaysBeforeEvent) {
                         isValid = false;
                         errorMessage = `${localizer.ErrorRangeDay}`;
                     }
                 } else if (timeType === "Weeks") {
-                    if (value < 0 || value > maxWeeksBeforeEvent) {
+                    if (value < minLeadTimeBeforeEvent || value > maxWeeksBeforeEvent) {
                         isValid = false;
                         errorMessage = `${localizer.ErrorRangeWeek}`;
                     }
@@ -1625,12 +1629,12 @@
             } else {
                 value = parseInt(value, 10);
                 if (timeType === "Days") {
-                    if (value < 0 || value > maxDaysBeforeEvent) {
+                    if (value < minLeadTimeBeforeEvent || value > maxDaysBeforeEvent) {
                         isValid = false;
                         errorMessage = `${localizer.ErrorRangeDay}`;
                     }
                 } else if (timeType === "Weeks") {
-                    if (value < 0 || value > maxWeeksBeforeEvent) {
+                    if (value < minLeadTimeBeforeEvent || value > maxWeeksBeforeEvent) {
                         isValid = false;
                         errorMessage = `${localizer.ErrorRangeWeek}`;
                     }
@@ -2237,12 +2241,7 @@
                             let calendars = $myCalendars.find("label[id^=\"lblCalendar\"]").get();
 
                             calendars.sort(function(a, b) {
-                                let nameA = $(a).text().trim().toUpperCase();
-                                let nameB = $(b).text().trim().toUpperCase();
-
-                                if (nameA < nameB) return -1;
-                                if (nameA > nameB) return 1;
-                                return 0;
+                                return calendarNameCollator.compare($(a).text().trim(), $(b).text().trim());
                             });
 
                             $.each(calendars, function(_, label: HTMLElement) {
@@ -2459,12 +2458,7 @@
                     let calendars = $myCalendars.find("label[id^=\"lblCalendar\"]").get();
 
                     calendars.sort(function(a, b) {
-                        let nameA = $(a).text().trim().toUpperCase();
-                        let nameB = $(b).text().trim().toUpperCase();
-
-                        if (nameA < nameB) return -1;
-                        if (nameA > nameB) return 1;
-                        return 0;
+                        return calendarNameCollator.compare($(a).text().trim(), $(b).text().trim());
                     });
 
                     $.each(calendars, function(_, label: HTMLElement) {

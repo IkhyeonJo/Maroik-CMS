@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
+import { describeMissingServerConstants, describeRequiredServerConstants } from "@tests/_common/missingConfigSuite";
 import { describeProfileScript } from "@tests/_common/profileSuite";
 import { loadSite, hidden, antiForgery, stubPlugin } from "@tests/_common/harness";
 
@@ -64,3 +64,4 @@ describe("user/Management/Profile", () => {
 describeProfileScript("user");
 
 describeMissingServerConstants("user", "Management", "Profile", () => fixture);
+describeRequiredServerConstants("user", "Management", "Profile", () => fixture, ["maxAttachedFileSizeBytes"]);

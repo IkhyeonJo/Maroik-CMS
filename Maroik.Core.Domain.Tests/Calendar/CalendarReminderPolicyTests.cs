@@ -17,6 +17,25 @@ public class CalendarReminderPolicyTests
         Assert.Equal(CalendarReminderPolicy.MaxMinutesBeforeEvent, CalendarReminderPolicy.MaxHoursBeforeEvent * 60);
     }
 
+    /// <summary>
+    /// The published minimum (rendered into the calendar pages for the client's UX mirror) is 0 and is the bound
+    /// <see cref="CalendarReminderPolicy.IsLeadTimeWithinRange"/> enforces for every unit.
+    /// </summary>
+    [Fact]
+    public void MinLeadTimeBeforeEvent_IsZero_AndIsTheLowerBoundOfEveryUnit()
+    {
+        const long min = CalendarReminderPolicy.MinLeadTimeBeforeEvent;
+        Assert.Equal(0L, min);
+        Assert.True(CalendarReminderPolicy.IsLeadTimeWithinRange(min, null, null, null));
+        Assert.True(CalendarReminderPolicy.IsLeadTimeWithinRange(null, min, null, null));
+        Assert.True(CalendarReminderPolicy.IsLeadTimeWithinRange(null, null, min, null));
+        Assert.True(CalendarReminderPolicy.IsLeadTimeWithinRange(null, null, null, min));
+        Assert.False(CalendarReminderPolicy.IsLeadTimeWithinRange(min - 1, null, null, null));
+        Assert.False(CalendarReminderPolicy.IsLeadTimeWithinRange(null, min - 1, null, null));
+        Assert.False(CalendarReminderPolicy.IsLeadTimeWithinRange(null, null, min - 1, null));
+        Assert.False(CalendarReminderPolicy.IsLeadTimeWithinRange(null, null, null, min - 1));
+    }
+
     /// <summary>Is lead time within range returns true, at the lower bound of each unit.</summary>
     [Theory]
     [InlineData(0L, null, null, null)]

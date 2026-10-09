@@ -51,10 +51,6 @@ export function describeLayoutScript(area: "admin" | "user" | "anonymous"): void
                     .toBe("&lt;div class=&quot;test&quot; data-value=&#39;a&amp;b&#39;&gt;text&lt;/div&gt;");
                 expect(h.win.escapeHtml("plain")).toBe("plain");
             });
-
-            it("publishes the 10 MB default for the client-side upload-size check", () => {
-                expect(load().win.MaroikDefaultMaxAttachedFileSizeBytes).toBe(10485760);
-            });
         }
 
         it("a POST disables the submit controls; a GET does not", () => {

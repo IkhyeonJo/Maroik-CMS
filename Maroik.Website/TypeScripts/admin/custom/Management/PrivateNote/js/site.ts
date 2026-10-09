@@ -16,7 +16,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, onReplyText, byId, instanceOf, fieldValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, onReplyText, byId, instanceOf, fieldValue, parseJson, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const doneReply = check.oneOf(check.object({ result: check.literal(true) }), replies.failed);
@@ -57,9 +57,8 @@
     const $btnPrivateNoteShowWriteBoardLoading = $("#btnPrivateNoteShowWriteBoardLoading");
     const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
-    // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
-    // missing or unparseable.
-    const maxFileSize = parseInt(optionalFieldValue($("#maxAttachedFileSizeBytes")) ?? "") || window.MaroikDefaultMaxAttachedFileSizeBytes;
+    // only. Required: there is no safe client-side default (a copy of the server's would drift).
+    const maxFileSize = parseJson(fieldValue($("#maxAttachedFileSizeBytes")), check.number, "#maxAttachedFileSizeBytes");
     // Editor height (px) of both summernote instances.
     const boardHeight = 300;
 

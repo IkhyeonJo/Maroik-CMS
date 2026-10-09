@@ -21,13 +21,6 @@
  * `.off(...).on(...)` so re-running the script can never stack duplicates.
  */
 (function() {
-    // Default fallback for the client-side file-size UX check on every user upload form, used only
-    // when a page's `#maxAttachedFileSizeBytes` hidden field (authoritative: ServerSetting.MaxAttachedFileSizeBytes,
-    // rendered per-page from ViewBag by ViewBagPopulatorFilter) is missing or unparseable. Declared
-    // once here — loaded before every user page's own script — instead of duplicated as a literal at
-    // each upload form; must match ServerSetting.MaxAttachedFileSizeBytes's own default (10 MB).
-    window.MaroikDefaultMaxAttachedFileSizeBytes = 10485760;
-
     // Shared HTML-escaping helper for pages that interpolate user-controlled text (e.g. a
     // calendar name) into a raw HTML template literal. Declared once here — loaded before every
     // user page's own script — instead of duplicated per page (see user/Calendar/UserIndex).

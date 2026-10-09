@@ -29,9 +29,8 @@
     const $password = $("#Password");
     const $__RequestVerificationToken = $("input[name=\"__RequestVerificationToken\"]");
     // Authoritative in ServerSetting.MaxAttachedFileSizeBytes (server); mirrored here for form UX
-    // only. Falls back to the shared per-role default (_Layout/site.ts) if the hidden field is
-    // missing or unparseable.
-    const maxFileSize = parseInt(optionalFieldValue($("#maxAttachedFileSizeBytes")) ?? "") || window.MaroikDefaultMaxAttachedFileSizeBytes;
+    // only. Required: there is no safe client-side default (a copy of the server's would drift).
+    const maxFileSize = parseJson(fieldValue($("#maxAttachedFileSizeBytes")), check.number, "#maxAttachedFileSizeBytes");
     // Accepted avatar image MIME types, published by Profile.cshtml (ImageUploadPolicy). The
     // server re-validates by extension; this is the client mirror.
     const allowedImageContentTypes = parseJson(optionalFieldValue($("#allowedImageContentTypes")) || "[]", check.array(check.string), "#allowedImageContentTypes").map(function(t: string) {

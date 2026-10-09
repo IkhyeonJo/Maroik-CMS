@@ -21,6 +21,7 @@
 @Html.Hidden(nameof(maxAttachedFileSizeBytes), maxAttachedFileSizeBytes)
 @Html.Hidden("loggedInAccountTimeZoneIanaId", loggedInAccount.TimeZoneIanaId)
 @* Reminder lead-time bounds — authoritative in CalendarReminderPolicy; the client check reads these instead of hardcoding. *@
+@Html.Hidden("minLeadTimeBeforeEvent", CalendarReminderPolicy.MinLeadTimeBeforeEvent)
 @Html.Hidden("maxMinutesBeforeEvent", CalendarReminderPolicy.MaxMinutesBeforeEvent)
 @Html.Hidden("maxHoursBeforeEvent", CalendarReminderPolicy.MaxHoursBeforeEvent)
 @Html.Hidden("maxDaysBeforeEvent", CalendarReminderPolicy.MaxDaysBeforeEvent)
@@ -28,6 +29,8 @@
 @* "Notify at HH:MM" options + default, from CalendarReminderPolicy / the view model, so the client stops regenerating the 15-minute list. *@
 @Html.Hidden("reminderTimeIntervals", JsonSerialization.ToClientJson(Model.TimeIntervals))
 @Html.Hidden("defaultReminderTimeOfDay", CalendarReminderPolicy.DefaultReminderTimeOfDay)
+@* The culture CalendarService orders the "my calendars" list under, so the client re-sorts it the same way. *@
+@Html.Hidden("calendarNameCulture", System.Globalization.CultureInfo.CurrentCulture.Name)
 @Html.Hidden("localizerEmail", Localizer["Email"].Value)
 @Html.Hidden("localizerNotification", Localizer["Notification"].Value)
 @Html.Hidden("localizerMinutes", Localizer["Minutes"].Value)
