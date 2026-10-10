@@ -19,7 +19,8 @@ function fixture(): string {
      <select id="monetaryUnit"><option value="KRW" selected>KRW</option></select>` +
         CANVAS_IDS.map((id) => `<canvas id="${id}"></canvas>`).join("") +
         // the Number($('#…').val()) inputs — absent ones just become NaN, which is fine
-        ["regularIncomeLaborIncomeYear", "regularIncomeBusinessIncomeYear"].map((id) => hidden(id, "10")).join("")
+        ["regularIncomeLaborIncomeYear", "regularIncomeBusinessIncomeYear"].map((id) => hidden(id, "10")).join("") +
+        hidden("amountMaxDecimalPlaces", "4")
     );
 }
 
@@ -52,7 +53,7 @@ describe("Dashboard/UserIndex", () => {
 // ---- chart data and tooltips ------------------------------------------------------------------
 // Every `$("#id")` the compiled script reads is discovered from the script itself, so the fixture
 // stays in step with it: value inputs get 1500, percentage inputs 12.5, localizers their own id.
-function fullFixture(): string {
+function fullFixture(amount = "1500"): string {
     const source = readFileSync(resolve(__dirname, "../../../../../../wwwroot/user/custom/Dashboard/UserIndex/js/site.js"), "utf8");
     const ids = [...new Set([...source.matchAll(/\$\("#(\w+)"\)/g)].map((m) => present(m[1])))];
     const base = fixture().replace(/<input[^>]*type="hidden"[^>]*id="regularIncome\w+Year"[^>]*>/g, "");
@@ -60,7 +61,7 @@ function fullFixture(): string {
     return (
         base +
         ids.filter((id) => !skip.has(id)).map((id) =>
-            hidden(id, id.startsWith("percentageOf") ? "12.5" : id.startsWith("localizer") ? id : "1500")).join("")
+            hidden(id, id.startsWith("percentageOf") ? "12.5" : id.startsWith("localizer") ? id : amount)).join("")
     );
 }
 
@@ -88,6 +89,25 @@ describe("Dashboard/UserIndex — donut charts", () => {
             });
         }
         expect(checked).toBeGreaterThan(40);
+    });
+
+    it("every tooltip shows the amount to the server-supplied number of decimal places (1234.5678 keeps all four)", () => {
+        const h = loadSite("user", "Dashboard", "UserIndex", fullFixture("1234.5678"));
+        const shown = (1234.5678).toLocaleString(undefined, { maximumFractionDigits: 4 });
+        expect(shown).toContain("5678");
+        let checked = 0;
+        for (const { cfg } of h.charts) {
+            const label = cfg.options.tooltips.callbacks.label;
+            cfg.data.labels.forEach((name: string, index: number) => {
+                expect(label({ index }, cfg.data)).toBe(`${name}: ${shown} (12.50%)`);
+                checked++;
+            });
+        }
+        expect(checked).toBeGreaterThan(40);
+    });
+
+    it("fails fast when the page does not supply the number of decimal places", () => {
+        expect(() => loadSite("user", "Dashboard", "UserIndex", fixture().replace(hidden("amountMaxDecimalPlaces", "4"), ""))).toThrow();
     });
 });
 

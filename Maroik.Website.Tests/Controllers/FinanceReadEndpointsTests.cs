@@ -135,6 +135,63 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
 
     // -- Grid partials -----------------------------------------------------------------------------------
 
+    /// <summary>
+    /// Every finance grid shows an amount with every decimal place the column stores (up to four, trailing zeros
+    /// dropped) and with a thousands separator: 1234.5678 is listed as "1,234.5678", not rounded to "1234.57".
+    /// </summary>
+    [Theory]
+    [InlineData("/AccountBook/Asset")]
+    [InlineData("/AccountBook/Income")]
+    [InlineData("/AccountBook/Expenditure")]
+    [InlineData("/Notice/FixedIncome")]
+    [InlineData("/Notice/FixedExpenditure")]
+    public async Task Grid_ShowsEveryStoredDecimalPlace_WithAThousandsSeparator(string url)
+    {
+        string email = $"fin-read-grid-decimals-{url.Replace("/", "-").ToLowerInvariant()}@test.com";
+        var session = await LoginAsync(email);
+        const decimal amount = 1234.5678m;
+        string asset = "Decimals-" + url.Split('/')[^1];
+        Seed(db => db.Assets.Add(new Asset
+        {
+            ProductName = asset, AccountEmail = email, Item = "FreeDepositAndWithdrawal", MonetaryUnit = "USD",
+            Amount = url == "/AccountBook/Asset" ? amount : 0m, Note = "", Deleted = false, Created = DateTime.UtcNow, Updated = DateTime.UtcNow
+        }));
+        switch (url)
+        {
+            case "/AccountBook/Income":
+                SeedIncome(email, asset, "Decimals-IG", amount);
+                break;
+            case "/AccountBook/Expenditure":
+                Seed(db => db.Expenditures.Add(new Expenditure
+                {
+                    AccountEmail = email, PaymentMethod = asset, MyDepositAsset = null, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses",
+                    Content = "Decimals-EG", Amount = amount, Note = "", Created = DateTime.UtcNow, Updated = DateTime.UtcNow
+                }));
+                break;
+            case "/Notice/FixedIncome":
+                Seed(db => db.FixedIncomes.Add(new FixedIncome
+                {
+                    AccountEmail = email, DepositMyAssetProductName = asset, MainClass = "RegularIncome", SubClass = "LaborIncome",
+                    Content = "Decimals-FIG", Amount = amount, DepositMonth = 1, DepositDay = 25, MaturityDate = DateTime.UtcNow.AddYears(1),
+                    Note = "", Unpunctuality = false, Created = DateTime.UtcNow, Updated = DateTime.UtcNow
+                }));
+                break;
+            case "/Notice/FixedExpenditure":
+                Seed(db => db.FixedExpenditures.Add(new FixedExpenditure
+                {
+                    AccountEmail = email, PaymentMethod = asset, MyDepositAsset = null, MainClass = "ConsumerSpending", SubClass = "Tax",
+                    Content = "Decimals-FEG", Amount = amount, DepositMonth = 1, DepositDay = 25, MaturityDate = DateTime.UtcNow.AddYears(1),
+                    Note = "", Unpunctuality = false, Created = DateTime.UtcNow, Updated = DateTime.UtcNow
+                }));
+                break;
+        }
+
+        string grid = await (await GetAsync(url, session, ajax: true)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains("1,234.5678", grid);
+    }
+
+
     /// <summary>The grid partial lists the caller's own rows only, and the whole-row search narrows it.</summary>
     [Fact]
     public async Task IncomeGrid_ListsOnlyTheCallersRows_AndTheSearchNarrowsThem()

@@ -11,6 +11,7 @@
 
 @model UserIndexOutputViewModel
 
+@Html.Hidden("amountMaxDecimalPlaces", Maroik.Core.Domain.Finance.FinanceAmountPolicy.MaxDecimalPlaces)
 @Html.Hidden("localizerLaborIncome", Localizer["LaborIncome"].Value)
 @Html.Hidden("localizerBusinessIncome", Localizer["BusinessIncome"].Value)
 @Html.Hidden("localizerPensionIncome", Localizer["PensionIncome"].Value)
