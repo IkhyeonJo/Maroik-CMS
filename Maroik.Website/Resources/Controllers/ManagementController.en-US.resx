@@ -240,6 +240,9 @@
   <data name="Successfully updated the subCategory" xml:space="preserve">
     <value>Successfully updated the subCategory</value>
   </data>
+  <data name="The last active administrator cannot be locked, deleted or demoted." xml:space="preserve">
+    <value>The last active administrator cannot be locked, deleted or demoted.</value>
+  </data>
   <data name="This account has already been created." xml:space="preserve">
     <value>This account has already been created.</value>
   </data>
@@ -254,6 +257,15 @@
   </data>
   <data name="TimeZoneIanaId" xml:space="preserve">
     <value>TimeZone</value>
+  </data>
+  <data name="You cannot delete your own account." xml:space="preserve">
+    <value>You cannot delete your own account.</value>
+  </data>
+  <data name="You cannot lock your own account." xml:space="preserve">
+    <value>You cannot lock your own account.</value>
+  </data>
+  <data name="You cannot remove the Admin role from your own account." xml:space="preserve">
+    <value>You cannot remove the Admin role from your own account.</value>
   </data>
   <data name="content length is must be between 0 and 16384 characters." xml:space="preserve">
     <value>content length is must be between 0 and 16384 characters.</value>
