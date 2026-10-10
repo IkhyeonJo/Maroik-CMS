@@ -65,9 +65,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
     {
         var response = await client.GetAsync(url, TestContext.Current.CancellationToken);
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
- #pragma warning disable SYSLIB1045
         Match token = Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
- #pragma warning restore SYSLIB1045
         Assert.True(token.Success);
         string cookie = response.Headers.GetValues("Set-Cookie")
             .Select(h => h.Split(';', 2)[0]).First(c => c.StartsWith("__Secure-.AspNetCore.Antiforgery.", StringComparison.Ordinal));

@@ -232,9 +232,7 @@ public class BoardService(
                     // adminClearingSomeoneElsesLock: an admin acting on a post they don't own may only
                     // clear its lock -- title and content are left untouched.
                     board.Unlock(utcNow);
- #pragma warning disable CA1873
                     logger.LogInformation("Lock on post {BoardId} of {Writer} cleared by admin {Requester}", board.Id, board.Writer, writerNickname);
- #pragma warning restore CA1873
                     break;
             }
 
@@ -290,9 +288,7 @@ public class BoardService(
 
             await boardRepository.UpdateEntityAsync(board, ct);
             await unitOfWork.CommitAsync(ct);
- #pragma warning disable CA1873
             logger.LogInformation("Board post {BoardId} of {Writer} deleted by {Requester} (admin: {IsAdmin})", boardId, board.Writer, requesterNickname, isAdmin);
- #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -429,9 +425,7 @@ public class BoardService(
 
             await boardCommentRepository.UpdateEntityAsync(comment, ct);
             await unitOfWork.CommitAsync(ct);
- #pragma warning disable CA1873
             logger.LogInformation("Comment {CommentId} of {Writer} deleted by {Requester} (admin: {IsAdmin})", commentId, comment.Writer, requesterNickname, isAdmin);
- #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)

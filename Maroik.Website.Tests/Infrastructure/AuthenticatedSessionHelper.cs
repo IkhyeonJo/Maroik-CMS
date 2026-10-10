@@ -155,9 +155,7 @@ public static class AuthenticatedSessionHelper
     /// <summary>The hidden <c>__RequestVerificationToken</c> value in <paramref name="html"/>; throws if there is none.</summary>
     private static string ExtractAntiForgeryToken(string html)
     {
- #pragma warning disable SYSLIB1045
         Match match = Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
- #pragma warning restore SYSLIB1045
         return !match.Success ? throw new InvalidOperationException("Could not find __RequestVerificationToken in the response HTML.") : match.Groups[1].Value;
     }
 }

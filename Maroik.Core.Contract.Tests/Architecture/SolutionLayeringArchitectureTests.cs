@@ -348,17 +348,13 @@ public class SolutionLayeringArchitectureTests
         {
             string text = File.ReadAllText(path);
 
- #pragma warning disable SYSLIB1045
             Dictionary<string, (string Name, string Path)> byGuid = System.Text.RegularExpressions.Regex
- #pragma warning restore SYSLIB1045
                 .Matches(text, """
                                Project\("\{[^}]+\}"\) = "(?<name>[^"]+)", "(?<path>[^"]+)", "\{(?<guid>[^}]+)\}"
                                """)
                 .ToDictionary(m => m.Groups["guid"].Value.ToUpperInvariant(), m => (m.Groups["name"].Value, m.Groups["path"].Value));
 
- #pragma warning disable SYSLIB1045
             Dictionary<string, string> parentByGuid = System.Text.RegularExpressions.Regex
- #pragma warning restore SYSLIB1045
                 .Matches(text, @"\{(?<child>[0-9A-Fa-f-]+)\}\s*=\s*\{(?<parent>[0-9A-Fa-f-]+)\}")
                 .ToDictionary(m => m.Groups["child"].Value.ToUpperInvariant(), m => m.Groups["parent"].Value.ToUpperInvariant());
 

@@ -90,9 +90,7 @@ public class MenuService(
                 return ServiceResult.FromError(result.FirstError);
 
             await categoryRepository.CreateAsync(result.Value, ct);
- #pragma warning disable CA1873
             logger.LogInformation("Menu category {Name} created (role {Role}) by admin {Admin}", request.Name, request.Role, actorEmail);
- #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -123,9 +121,7 @@ public class MenuService(
 
             await categoryRepository.UpdateEntityAsync(category, ct);
             await unitOfWork.CommitAsync(ct);
- #pragma warning disable CA1873
             logger.LogInformation("Menu category {CategoryId} ({Name}) updated (role {Role}) by admin {Admin}", request.Id, request.Name, request.Role, actorEmail);
- #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -142,9 +138,7 @@ public class MenuService(
         try
         {
             await categoryRepository.DeleteByIdAsync(request.Id, ct);
- #pragma warning disable CA1873
             logger.LogInformation("Menu category {CategoryId} ({Name}) deleted by admin {Admin}", request.Id, request.Name, actorEmail);
- #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -165,9 +159,7 @@ public class MenuService(
                 return ServiceResult.FromError(result.FirstError);
 
             await subCategoryRepository.CreateAsync(result.Value, ct);
- #pragma warning disable CA1873
             logger.LogInformation("Menu sub-category {Name} created (role {Role}) by admin {Admin}", request.Name, request.Role, actorEmail);
- #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -196,9 +188,7 @@ public class MenuService(
 
             await subCategoryRepository.UpdateEntityAsync(subCategory, ct);
             await unitOfWork.CommitAsync(ct);
- #pragma warning disable CA1873
             logger.LogInformation("Menu sub-category {SubCategoryId} ({Name}) updated (role {Role}) by admin {Admin}", request.Id, request.Name, request.Role, actorEmail);
- #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -215,9 +205,7 @@ public class MenuService(
         try
         {
             await subCategoryRepository.DeleteByIdAsync(request.Id, ct);
- #pragma warning disable CA1873
             logger.LogInformation("Menu sub-category {SubCategoryId} ({Name}) deleted by admin {Admin}", request.Id, request.Name, actorEmail);
- #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)

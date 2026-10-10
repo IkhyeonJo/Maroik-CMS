@@ -312,9 +312,7 @@ public class WebsiteArchitectureTests
         List<string> offendingFiles =
         [
             .. Directory.GetFiles(controllersDirectory, "*.cs", SearchOption.AllDirectories)
- #pragma warning disable SYSLIB1045
                 .Where(path => Regex.IsMatch(File.ReadAllText(path), @"\bpartial\s+class\s+\w*Controller\b"))
- #pragma warning restore SYSLIB1045
         ];
 
         Assert.True(

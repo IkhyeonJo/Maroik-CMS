@@ -46,9 +46,7 @@ public class FileController(IFileValidationService fileValidationService, IOptio
                 return BadRequest(error);
             }
 
-#pragma warning disable CA1873
             logger.LogInformation("File uploaded: {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
-#pragma warning restore CA1873
             return Ok("File uploaded successfully.");
         }
         catch (Exception ex)
@@ -92,9 +90,7 @@ public class FileController(IFileValidationService fileValidationService, IOptio
             if (!_contentTypeProvider.TryGetContentType(sanitizedFileName, out var contentType))
                 contentType = "application/octet-stream";
 
-#pragma warning disable CA1873
             logger.LogInformation("File downloaded: {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
-#pragma warning restore CA1873
             return File(fileStream, contentType, sanitizedFileName, enableRangeProcessing: true);
         }
         catch (Exception ex)

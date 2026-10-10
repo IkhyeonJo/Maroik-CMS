@@ -304,9 +304,7 @@ public class ForumControllerTests(MaroikWebApplicationFactory factory)
     /// <summary>Extracts the antiforgery hidden-input value from a rendered form's HTML.</summary>
     private static string ExtractAntiForgeryToken(string html)
     {
- #pragma warning disable SYSLIB1045
         Match match = Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
- #pragma warning restore SYSLIB1045
         Assert.True(match.Success, "Could not find __RequestVerificationToken in the login page HTML.");
         return match.Groups[1].Value;
     }

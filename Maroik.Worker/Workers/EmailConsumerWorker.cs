@@ -139,9 +139,7 @@ public sealed class EmailConsumerWorker(
                     consumer: consumer,
                     cancellationToken: stoppingToken);
 
-#pragma warning disable CA1873
                 logger.LogInformation("Email consumer started, listening on queue '{Queue}'", QueueNames.Email);
-#pragma warning restore CA1873
                 return;
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

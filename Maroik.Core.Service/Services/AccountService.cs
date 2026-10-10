@@ -131,9 +131,7 @@ public class AccountService(
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
 
- #pragma warning disable CA1873
             logger.LogInformation("Login succeeded for {Email}", email);
- #pragma warning restore CA1873
             return LoginResult.Ok(AccountMapper.ToResponse(account));
         }
         catch
@@ -213,9 +211,7 @@ public class AccountService(
                 return RegisterResult.Fail(ServiceErrorKeys.RegistrationFailed);
             }
 
- #pragma warning disable CA1873
             logger.LogInformation("Account registered: {Email}", account.Email.Value);
- #pragma warning restore CA1873
 
             // The account was just created with UserCreatedVerifyEmail already set above, so a
             // successful send should not overwrite it with VerifyEmail.
@@ -298,9 +294,7 @@ public class AccountService(
                 throw;
             }
 
- #pragma warning disable CA1873
             logger.LogInformation("Unconfirmed registration replaced for {Email}", locked.Email.Value);
- #pragma warning restore CA1873
 
             // Mail send + final status write run unlocked, after the row lock above was released.
             // SendConfirmationEmailAndUpdateStatusAsync re-persists the same token it finds on
@@ -560,9 +554,7 @@ public class AccountService(
             // way as "account not found" rather than a false AccountCreated success.
             if (rowsAffected != 0)
             {
- #pragma warning disable CA1873
                 logger.LogInformation("Email confirmed for {Email}", locked.Email.Value);
- #pragma warning restore CA1873
                 return new ConfirmEmailResult { InvalidToken = false, AccountCreated = true };
             }
 
@@ -631,9 +623,7 @@ public class AccountService(
             string body = mailClient.GetMailResetPasswordBody(rsa.Encrypt(resetPasswordToken), emailTemplate.Title, emailTemplate.Content0, emailTemplate.Content1, settings.Value.DomainName ?? "");
             bool published = await PublishMailAsync(account.Email.Value, emailTemplate.Subject, body, ct);
             if (published)
- #pragma warning disable CA1873
                 logger.LogInformation("Password reset requested for {Email}", account.Email.Value);
- #pragma warning restore CA1873
 
             account.SetMessage(EnumHelper.GetDescription(published ? AccountMessage.ResetPasswordMail : AccountMessage.FailToMailSent), utcNow);
             await accountRepository.UpdateMessageAsync(account.Email.Value, account.Message, account.Updated, ct);
@@ -727,9 +717,7 @@ public class AccountService(
 
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
- #pragma warning disable CA1873
             logger.LogInformation("Password reset completed for {Email}", account.Email.Value);
- #pragma warning restore CA1873
 
             // The holder of the mailed link has just proven the mailbox and chosen the password, so they may be
             // signed in straight away — nothing a password guesser could use (the lockout guards guessing; this
@@ -845,9 +833,7 @@ public class AccountService(
         var correlationId = Activity.Current?.Id ?? "";
         try
         {
-#pragma warning disable CA1873
             logger.LogInformation("Publishing email to {Email}. CorrelationId={CorrelationId}", to, correlationId);
-#pragma warning restore CA1873
             await emailPublisher.PublishAsync(new SendEmailMessage(to, subject, body, correlationId), ct);
             return true;
         }

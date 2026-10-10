@@ -65,9 +65,7 @@ public class FileClient(IHttpClientFactory httpClientFactory, ILogger<FileClient
         if (!IsSafeRelativePath(filePath))
             throw new ArgumentException($"Unsafe storage path: '{filePath}'.", nameof(filePath));
 
-#pragma warning disable CA1873
         logger.LogInformation("Requesting file download: {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
-#pragma warning restore CA1873
 
         // Not disposed: a client from IHttpClientFactory does not own its pooled handler, and the
         // streaming caller still reads the response body after this method returns.
@@ -141,9 +139,7 @@ public class FileClient(IHttpClientFactory httpClientFactory, ILogger<FileClient
             }
 
             var correlationId = Activity.Current?.Id ?? "";
-#pragma warning disable CA1873
             logger.LogInformation("Requesting file upload: {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
-#pragma warning restore CA1873
 
             using HttpClient httpClient = httpClientFactory.CreateClient();
             using MultipartFormDataContent content = [];

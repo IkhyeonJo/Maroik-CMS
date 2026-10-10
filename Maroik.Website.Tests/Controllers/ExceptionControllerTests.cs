@@ -110,9 +110,7 @@ public class ExceptionControllerTests(MaroikWebApplicationFactory factory)
         using var getRequest = new HttpRequestMessage(HttpMethod.Get, "/Account/Login");
         var getResponse = await client.SendAsync(getRequest, TestContext.Current.CancellationToken);
         string formHtml = await getResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
- #pragma warning disable SYSLIB1045
         string token = Regex.Match(formHtml, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
- #pragma warning restore SYSLIB1045
         string cookie = getResponse.Headers.GetValues("Set-Cookie")
             .Select(h => h.Split(';', 2)[0])
             .First(c => c.StartsWith("__Secure-.AspNetCore.Antiforgery.", StringComparison.Ordinal));

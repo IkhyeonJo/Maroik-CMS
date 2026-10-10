@@ -109,10 +109,8 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         Assert.Equal(0, DeletableComments(otherHtml));                  // a bystander gets none
         return;
 
- #pragma warning disable SYSLIB1045
         // Number of distinct comments the page offers a delete link for.
         static int DeletableComments(string html) => System.Text.RegularExpressions.Regex
- #pragma warning restore SYSLIB1045
             .Matches(html, "aFreeForumDeleteComment\" href=\"#\" data-commentId=\"(\\d+)\"").Select(m => m.Groups[1].Value).Distinct().Count();
     }
 
