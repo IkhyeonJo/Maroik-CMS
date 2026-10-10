@@ -290,9 +290,7 @@ public class ManagementController(
     [HttpGet]
     public async Task<IActionResult> Account(string wholeSearch)
     {
-#pragma warning disable ASP0015
-        if (HttpContext.Request.Headers["X-Requested-With"] != "XMLHttpRequest")
-#pragma warning restore ASP0015
+        if (HttpContext.Request.Headers.XRequestedWith != "XMLHttpRequest")
         {
             return View();
         }
@@ -517,9 +515,7 @@ public class ManagementController(
     [HttpGet]
     public async Task<IActionResult> Menu(string wholeSearch)
     {
-#pragma warning disable ASP0015
-        if (HttpContext.Request.Headers["X-Requested-With"] != "XMLHttpRequest") // ajax
-#pragma warning restore ASP0015
+        if (HttpContext.Request.Headers.XRequestedWith != "XMLHttpRequest") // ajax
         {
             return View();
         }

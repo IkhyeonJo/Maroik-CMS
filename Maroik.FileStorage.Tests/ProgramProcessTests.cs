@@ -57,10 +57,10 @@ public class ProgramProcessTests
                 if (process.HasExited) break;
                 try
                 {
- #pragma warning disable IDE0028
-                    using var form = new MultipartFormDataContent();
- #pragma warning restore IDE0028
-                    form.Add(new StringContent("upload/none.png"), "filePath");
+                    using var form = new MultipartFormDataContent
+                    {
+                        { new StringContent("upload/none.png"), "filePath" }
+                    };
                     response = await _http.PostAsync($"http://127.0.0.1:{port}/api/File/download", form, TestContext.Current.CancellationToken);
                 }
                 catch (HttpRequestException) { /* not listening yet */ }
