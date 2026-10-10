@@ -1,3 +1,4 @@
+using System.Globalization;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Settings;
@@ -1050,5 +1051,27 @@ public class DashboardServiceTests
 
         Assert.Equal("", summary.HostCpuInfo);
         Assert.Equal(0, summary.HostCpuNumeric);
+    }
+
+    /// <summary>
+    /// The resource log is written by a shell script with a '.' decimal point, so the CPU figure is read with the
+    /// invariant culture, not the request's: under a ',' decimal culture "45.5" would otherwise read as 455.
+    /// </summary>
+    [Fact]
+    public void GetServerResourceSummary_ReadsTheHostCpuWithADotDecimalPoint_WhateverTheCurrentCulture()
+    {
+        CultureInfo original = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+        try
+        {
+            ServerResourceDto summary = SummarizeResources(
+                "Host CPU Information: 45.5%\nHost Memory Information: Memory: 4GB/8GB\nHost Disk Information: Disk: 1GB/2GB", "");
+
+            Assert.Equal(45.5, summary.HostCpuNumeric);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
     }
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Settings;
@@ -264,13 +265,13 @@ public class DashboardService(
                 diskUsageLimit = temp[1].Trim() + " / " + temp[0].Trim();
         }
 
-#pragma warning disable CA1806
-        double.TryParse(
-#pragma warning restore CA1806
-#pragma warning disable IDE0305
-            new string(hostCpuInfo.Where(c => char.IsDigit(c) || c == '.').ToArray()),
-#pragma warning restore IDE0305
-            out double hostCpuNumeric);
+        // The log is written by a shell script with a '.' decimal point, so read it with the invariant culture,
+        // not the request's; an unreadable figure stays 0.
+        double hostCpuNumeric = double.TryParse(
+            [.. hostCpuInfo.Where(c => char.IsDigit(c) || c == '.')], NumberStyles.Float, CultureInfo.InvariantCulture,
+            out double parsedCpu)
+            ? parsedCpu
+            : 0;
 
         return new ServerResourceDto
         {
@@ -322,8 +323,6 @@ public class DashboardService(
 
         int startIndex = markerIndex + startMarker.Length;
         int endIndex = endMarker != null ? input.IndexOf(endMarker, startIndex, StringComparison.Ordinal) : input.Length;
-#pragma warning disable IDE0057
-        return endIndex < 0 ? "" : input.Substring(startIndex, endIndex - startIndex).Trim();
-#pragma warning restore IDE0057
+        return endIndex < 0 ? "" : input[startIndex..endIndex].Trim();
     }
 }
