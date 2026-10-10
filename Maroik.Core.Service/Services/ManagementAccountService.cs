@@ -24,12 +24,12 @@ public class ManagementAccountService(
     TimeProvider timeProvider) : IManagementAccountService
 {
     /// <inheritdoc />
-    public async Task<List<AdminAccountResponse>> GetAllAccountsAsync(CancellationToken ct = default)
-        => [.. (await accountRepository.GetAllAsync(ct)).Select(AccountMapper.ToAdminResponse)];
+    public async Task<List<AccountResponse>> GetAllAccountsAsync(CancellationToken ct = default)
+        => [.. (await accountRepository.GetAllAsync(ct)).Select(AccountMapper.ToResponse)];
 
     /// <inheritdoc />
-    public async Task<List<AdminAccountResponse>> SearchAccountsAsync(string search, CancellationToken ct = default)
-        => [.. (await accountRepository.SearchAsync(search, ct)).Select(AccountMapper.ToAdminResponse)];
+    public async Task<List<AccountResponse>> SearchAccountsAsync(string search, CancellationToken ct = default)
+        => [.. (await accountRepository.SearchAsync(search, ct)).Select(AccountMapper.ToResponse)];
 
     /// <inheritdoc />
     public async Task<AccountResponse?> GetAccountByEmailAsync(string email, CancellationToken ct = default)

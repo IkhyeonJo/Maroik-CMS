@@ -12,10 +12,9 @@ namespace Maroik.Website.Tests.Mappings;
 public class ManagementViewModelMapperTests
 {
     /// <summary>An admin account view created/updated at the given UTC times.</summary>
-    private static AdminAccountResponse SampleAccount(DateTime created, DateTime updated) => new()
+    private static AccountResponse SampleAccount(DateTime created, DateTime updated) => new()
     {
         Email = "user@example.com",
-        HashedPassword = "hashed",
         Nickname = "Nick",
         AvatarImagePath = "/avatars/a.png",
         Role = "User",
@@ -24,8 +23,6 @@ public class ManagementViewModelMapperTests
         LoginAttempt = 3,
         EmailConfirmed = true,
         AgreedServiceTerms = true,
-        RegistrationToken = "reg-token",
-        ResetPasswordToken = "reset-token",
         Created = created,
         Updated = updated,
         Message = "note",
@@ -45,7 +42,6 @@ public class ManagementViewModelMapperTests
 
         var item = Assert.Single(vms);
         Assert.Equal("user@example.com", item.Email);
-        Assert.Equal("hashed", item.HashedPassword);
         Assert.Equal("Nick", item.Nickname);
         Assert.Equal("/avatars/a.png", item.AvatarImagePath);
         Assert.Equal("User", item.Role);
@@ -54,8 +50,6 @@ public class ManagementViewModelMapperTests
         Assert.Equal(3, item.LoginAttempt);
         Assert.True(item.EmailConfirmed);
         Assert.True(item.AgreedServiceTerms);
-        Assert.Equal("reg-token", item.RegistrationToken);
-        Assert.Equal("reset-token", item.ResetPasswordToken);
         Assert.Equal("note", item.Message);
         Assert.False(item.Deleted);
     }
@@ -130,7 +124,7 @@ public class ManagementViewModelMapperTests
     [Fact]
     public void ToDisplayViewModels_EmptySequence_ReturnsEmptyList()
     {
-        var vms = Array.Empty<AdminAccountResponse>().ToDisplayViewModels("UTC");
+        var vms = Array.Empty<AccountResponse>().ToDisplayViewModels("UTC");
 
         Assert.Empty(vms);
     }

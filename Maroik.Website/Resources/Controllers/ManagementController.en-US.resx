@@ -168,9 +168,6 @@
   <data name="'{0}' is a Nickname that already exists. Please enter another Nickname." xml:space="preserve">
     <value>'{0}' is a Nickname that already exists. Please enter another Nickname.</value>
   </data>
-  <data name="HashedPassword" xml:space="preserve">
-    <value>HashedPassword</value>
-  </data>
   <data name="IconPath" xml:space="preserve">
     <value>IconPath</value>
   </data>
@@ -215,12 +212,6 @@
   </data>
   <data name="Please enter Nickname" xml:space="preserve">
     <value>Please enter Nickname</value>
-  </data>
-  <data name="RegistrationToken" xml:space="preserve">
-    <value>RegistrationToken</value>
-  </data>
-  <data name="ResetPasswordToken" xml:space="preserve">
-    <value>ResetPasswordToken</value>
   </data>
   <data name="Role" xml:space="preserve">
     <value>Role</value>

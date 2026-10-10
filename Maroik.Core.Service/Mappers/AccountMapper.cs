@@ -34,24 +34,4 @@ internal static class AccountMapper
         PopulateCommon(response, account);
         return response;
     }
-
-    /// <summary>
-    /// Same as <see cref="ToResponse"/> but returns an <see cref="AdminAccountResponse"/> that also
-    /// carries <see cref="AdminAccountResponse.HashedPassword"/>,
-    /// <see cref="AdminAccountResponse.RegistrationToken"/>, and
-    /// <see cref="AdminAccountResponse.ResetPasswordToken"/>. Use ONLY for the admin
-    /// account-management grid / search / export — the return type keeps these fields off the
-    /// plain <see cref="AccountResponse"/> that the logged-in user's session is built from.
-    /// </summary>
-    internal static AdminAccountResponse ToAdminResponse(Account account)
-    {
-        var response = new AdminAccountResponse
-        {
-            HashedPassword = account.HashedPassword,
-            RegistrationToken = account.RegistrationToken,
-            ResetPasswordToken = account.ResetPasswordToken,
-        };
-        PopulateCommon(response, account);
-        return response;
-    }
 }

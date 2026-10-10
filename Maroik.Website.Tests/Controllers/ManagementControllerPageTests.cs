@@ -242,6 +242,34 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
         Assert.DoesNotContain("mgmt-page-findme8@test.com", other);
     }
 
+    /// <summary>
+    /// The grid never sends an account's password hash or its live registration / reset token to the
+    /// browser: a token in the page would let anyone who sees the admin screen (or a script running in it)
+    /// take the account over while the token is valid.
+    /// </summary>
+    [Fact]
+    public async Task AccountGrid_DoesNotRenderTheHashOrTheTokens()
+    {
+        var admin = await LoginAsync("mgmt-page-secretadmin@test.com", Role.Admin);
+        await LoginAsync("mgmt-page-secret10@test.com");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var account = await db.Accounts.SingleAsync(a => a.Email == "mgmt-page-secret10@test.com", TestContext.Current.CancellationToken);
+            account.HashedPassword = "hash-secret10-value";
+            account.RegistrationToken = "reg-secret10-value";
+            account.ResetPasswordToken = "reset-secret10-value";
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        string body = await BodyAsync(await GetAsync("/Management/Account?wholeSearch=mgmt-page-secret10", admin, ajax: true));
+
+        Assert.Contains("mgmt-page-secret10@test.com", body);
+        Assert.DoesNotContain("hash-secret10-value", body);
+        Assert.DoesNotContain("reg-secret10-value", body);
+        Assert.DoesNotContain("reset-secret10-value", body);
+    }
+
     /// <summary>Several matching accounts are listed ordered by e-mail address.</summary>
     [Fact]
     public async Task AccountGrid_ListsSeveralMatches_OrderedByEmail()

@@ -168,9 +168,6 @@
   <data name="'{0}' is a Nickname that already exists. Please enter another Nickname." xml:space="preserve">
     <value>'{0}'은(는) 이미 존재하는 닉네임입니다. 다른 닉네임을 입력해 주세요.</value>
   </data>
-  <data name="HashedPassword" xml:space="preserve">
-    <value>해쉬 비밀번호</value>
-  </data>
   <data name="IconPath" xml:space="preserve">
     <value>아이콘경로</value>
   </data>
@@ -215,12 +212,6 @@
   </data>
   <data name="Please enter Nickname" xml:space="preserve">
     <value>닉네임을 입력해주세요.</value>
-  </data>
-  <data name="RegistrationToken" xml:space="preserve">
-    <value>등록토큰</value>
-  </data>
-  <data name="ResetPasswordToken" xml:space="preserve">
-    <value>비밀번호 초기화 토큰</value>
   </data>
   <data name="Role" xml:space="preserve">
     <value>역할</value>

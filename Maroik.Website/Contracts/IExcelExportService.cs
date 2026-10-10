@@ -47,7 +47,7 @@ public interface IExcelExportService
 
     /// <summary>Creates an Excel workbook for the given account records.</summary>
     MemoryStream CreateAccountExcel(
-        IEnumerable<AdminAccountResponse> items,
+        IEnumerable<AccountResponse> items,
         Func<string, string> localize,
         string timeZoneIanaId);
 

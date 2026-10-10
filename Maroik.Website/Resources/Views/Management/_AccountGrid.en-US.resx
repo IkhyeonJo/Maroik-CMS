@@ -138,9 +138,6 @@
   <data name="Nickname" xml:space="preserve">
     <value>Nickname</value>
   </data>
-  <data name="HashedPassword" xml:space="preserve">
-    <value>HashedPassword</value>
-  </data>
   <data name="Locked" xml:space="preserve">
     <value>Locked</value>
   </data>
@@ -152,12 +149,6 @@
   </data>
   <data name="No data found" xml:space="preserve">
     <value>No data found</value>
-  </data>
-  <data name="RegistrationToken" xml:space="preserve">
-    <value>RegistrationToken</value>
-  </data>
-  <data name="ResetPasswordToken" xml:space="preserve">
-    <value>ResetPasswordToken</value>
   </data>
   <data name="Role" xml:space="preserve">
     <value>Role</value>
