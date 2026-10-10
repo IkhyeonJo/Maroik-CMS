@@ -86,19 +86,29 @@ script (no `import`/`export`); keep it that way.
    `dotnet build` also runs `TypeScripts.Tests` (Vitest) — or `npm test` in
    `Maroik.Website/`.
 
-## Current state (2026-09-02)
+## Current state (2026-10-10)
 
 * The DDD/Clean-Architecture move of business logic out of the client scripts and
-  views is substantially complete (commit `88941c57 feat: DDD + Clean architecture`).
-  Policies exist for Finance class taxonomies, calendar reminders, fixed schedules,
-  passwords and image upload. Treat new findings as regressions to fix,
-  not a fresh migration.
+  views is complete (started in commit `88941c57 feat: DDD + Clean architecture`).
+  Domain policies cover accounts (passwords, nicknames, the admin safeguards, the
+  account view), finance (income / expenditure class taxonomies, amounts, breakdowns,
+  free text, the default monetary unit, fixed schedules), calendar reminders, menu
+  fields, short / titled text, and image / attachment uploads. Treat new findings as
+  regressions to fix, not a fresh migration.
+* No server rule is left as a literal in the client scripts (2026-10-10, `d35dfe5`):
+  the attachment size limit, the default reminder time, the reminder lead-time bounds
+  and the calendar-name collation culture are read from hidden fields the views render
+  from the Domain policies / the request culture.
 * `CulturePolicy` (supported UI cultures, the culture → default time-zone pre-select) is a
   presentation setting, not a business rule: it lives in `Maroik.Website/Constants`, not in
   `Maroik.Core.Domain` (moved 2026-10-09; only the Website ever used it).
 * The 22 client scripts were migrated JS → TypeScript (`TypeScripts/`), byte-faithful,
   with jsdom tests in `TypeScripts.Tests/`. `wwwroot/**/site.js` is now generated
   (and, since 2026-09-27, git-ignored rather than committed).
+* Since 2026-10-09 the scripts and their tests have no `any` (explicit or implicit) and no
+  type assertions, under `strict` plus the extra strict compiler options. Every form field,
+  required attribute and ajax reply goes through the runtime-check toolkit each role's
+  `_Layout` script puts on `window` (see `TypeScripts/README.md`).
 * `site.css` (2026-10-09): the page / layout stylesheets use native nesting and custom properties (no Sass or
   other toolchain); a before/after comparison of every element's computed style in Chromium showed no change, and
   `Maroik.E2E.Tests/Flows/StylesheetFlowTests` pins each rule's computed effect on the real pages.
