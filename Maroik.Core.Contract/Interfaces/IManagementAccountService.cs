@@ -9,17 +9,21 @@ namespace Maroik.Core.Contract.Interfaces;
 /// </summary>
 public interface IManagementAccountService
 {
-    /// <summary>Returns all accounts for display on the admin account list.</summary>
-    Task<List<AdminAccountResponse>> GetAllAccountsAsync(CancellationToken ct = default);
-
-    /// <summary>Returns accounts whose fields contain <paramref name="search"/>, filtered in the database.</summary>
-    Task<List<AdminAccountResponse>> SearchAccountsAsync(string search, CancellationToken ct = default);
+    /// <summary>
+    /// Returns all accounts for display on the admin account list. The rows are plain
+    /// <see cref="AccountResponse"/>s: the password hash and the registration / reset tokens never leave
+    /// the service, so the admin screen cannot leak a live token or a hash.
+    /// </summary>
+    Task<List<AccountResponse>> GetAllAccountsAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// Returns a single account by email for the admin edit form, or null. Returns the plain
-    /// <see cref="AccountResponse"/>: the edit form never reads the password hash or the
-    /// registration / reset tokens, so they are not sent to the browser for this lookup (the grid,
-    /// search and export keep <see cref="AdminAccountResponse"/>, which shows them deliberately).
+    /// Returns accounts whose displayed fields contain <paramref name="search"/>, filtered in the database
+    /// (the password hash and the tokens are not searched).
+    /// </summary>
+    Task<List<AccountResponse>> SearchAccountsAsync(string search, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns a single account by email for the admin edit form, or null.
     /// </summary>
     Task<AccountResponse?> GetAccountByEmailAsync(string email, CancellationToken ct = default);
 

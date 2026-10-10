@@ -294,9 +294,8 @@ public class AccountServiceTests
         Assert.True(result.Success);
         Assert.NotNull(result.Account);
         Assert.Equal(account.Email.Value, result.Account.Email);
-        // The session-bound AccountResponse no longer has a HashedPassword member at all — the
-        // secret-bearing fields live only on AdminAccountResponse (see AccountMapper). The absence
-        // of a password hash here is now a compile-time guarantee, not a runtime assertion.
+        // AccountResponse has no HashedPassword member at all, so the absence of a password hash
+        // in the session payload is a compile-time guarantee, not a runtime assertion.
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

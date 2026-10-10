@@ -253,7 +253,7 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
 
     /// <inheritdoc />
     public MemoryStream CreateAccountExcel(
-        IEnumerable<AdminAccountResponse> items,
+        IEnumerable<AccountResponse> items,
         Func<string, string> localize,
         string timeZoneIanaId)
     {
@@ -263,9 +263,6 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
             .ThenByDescending(m => m.Created).ThenByDescending(m => m.Updated)
             .ToList();
 
-        // Deliberately excludes HashedPassword, RegistrationToken and ResetPasswordToken: a live
-        // reset/registration token in a downloadable spreadsheet is account-takeover-grade material,
-        // and the password hash has no place in a human-readable report.
         var headers = new[]
         {
             localize(nameof(AccountOutputViewModel.Email)),

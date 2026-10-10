@@ -79,9 +79,27 @@ public class ManagementAccountServiceTests
         _accountRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([ActiveAccount()]);
         var sut = CreateSut();
 
-        List<AdminAccountResponse> result = await sut.GetAllAccountsAsync(TestContext.Current.CancellationToken);
+        var result = await sut.GetAllAccountsAsync(TestContext.Current.CancellationToken);
 
         Assert.Single(result);
+    }
+
+    /// <summary>
+    /// The names of the secret account columns that no admin-grid row may carry: a live registration /
+    /// reset token shown on the admin screen hands the account to whoever sees it, and a hash is material
+    /// for an offline cracking attempt.
+    /// </summary>
+    private static readonly string[] SecretColumns = ["HashedPassword", "RegistrationToken", "ResetPasswordToken"];
+
+    /// <summary>The admin grid's rows (all accounts) carry no password hash and no registration / reset token.</summary>
+    [Fact]
+    public async Task GetAllAccountsAsync_RowsCarryNoHashOrTokens()
+    {
+        _accountRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([ActiveAccount()]);
+
+        var row = Assert.Single(await CreateSut().GetAllAccountsAsync(TestContext.Current.CancellationToken));
+
+        Assert.All(SecretColumns, name => Assert.Null(row.GetType().GetProperty(name)));
     }
 
     // -- GetAccountByEmailAsync -----------------------------------------------
@@ -99,9 +117,8 @@ public class ManagementAccountServiceTests
     }
 
     /// <summary>
-    /// The single-account lookup behind the admin edit form must return the plain
-    /// <see cref="AccountResponse"/> — never the <see cref="AdminAccountResponse"/> that carries the
-    /// password hash and the registration / reset tokens, which the form does not read.
+    /// The single-account lookup behind the admin edit form carries no password hash and no
+    /// registration / reset token.
     /// </summary>
     [Fact]
     public async Task GetAccountByEmailAsync_ReturnsPlainAccountResponse_WithoutSecretColumns()
@@ -114,7 +131,7 @@ public class ManagementAccountServiceTests
 
         Assert.NotNull(result);
         Assert.Equal(account.Email.Value, result.Email);
-        Assert.IsNotType<AdminAccountResponse>(result);
+        Assert.All(SecretColumns, name => Assert.Null(result.GetType().GetProperty(name)));
     }
 
     // -- CreateAccountAsync ---------------------------------------------------
@@ -524,15 +541,16 @@ public class ManagementAccountServiceTests
 
     // -- SearchAccountsAsync ------------------------------------------------------
 
-    /// <summary>The admin grid search is delegated to the repository and its rows are mapped to the admin response.</summary>
+    /// <summary>The admin grid search is delegated to the repository and its rows carry no password hash and no token.</summary>
     [Fact]
     public async Task SearchAccountsAsync_DelegatesToRepository_AndMapsTheRows()
     {
         _accountRepo.Setup(r => r.SearchAsync("needle", It.IsAny<CancellationToken>())).ReturnsAsync([ActiveAccount("found@example.com")]);
 
-        List<AdminAccountResponse> result = await CreateSut().SearchAccountsAsync("needle", TestContext.Current.CancellationToken);
+        var row = Assert.Single(await CreateSut().SearchAccountsAsync("needle", TestContext.Current.CancellationToken));
 
-        Assert.Equal("found@example.com", Assert.Single(result).Email);
+        Assert.Equal("found@example.com", row.Email);
+        Assert.All(SecretColumns, name => Assert.Null(row.GetType().GetProperty(name)));
     }
 
     // -- CreateAccountAsync: validation and failures ---------------------------------

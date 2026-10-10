@@ -162,7 +162,7 @@ public class ManagementController(
             await profileService.UpdateTimeZoneAsync(email!, profileInputViewModel.TimeZoneIanaId!, HttpContext.RequestAborted);
 
             // Refresh session with updated timezone. GetProfileAsync returns a plain AccountResponse,
-            // which no longer carries a password hash at all (see AdminAccountResponse).
+            // which carries no password hash at all.
             AccountResponse? updatedAccount = await profileService.GetProfileAsync(email!, HttpContext.RequestAborted);
             sessionService.RemoveAccount();
             sessionService.SetAccount(updatedAccount!);

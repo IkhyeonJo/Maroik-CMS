@@ -628,25 +628,36 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
         Assert.Equal(target.Email, Assert.Single(byEmail).Email.Value);
     }
 
-    /// <summary>
-    /// The registration / reset tokens and the admin message are shown in the admin grid (and used to
-    /// verify a token issue took effect), so the whole-row search must match them too.
-    /// </summary>
+    /// <summary>The admin message is shown in the admin grid, so the whole-row search matches it too.</summary>
     [Fact]
-    public async Task SearchAsync_MatchesRegistrationTokenResetTokenAndMessage()
+    public async Task SearchAsync_MatchesMessage()
     {
-        string regToken = "reg-" + Token;
-        string resetToken = "reset-" + Token;
         string message = "note-" + Token;
-        OrmAccount withReg = NewAccount(registrationToken: regToken);
-        OrmAccount withReset = NewAccount(resetPasswordToken: resetToken);
         OrmAccount withMessage = NewAccount();
         withMessage.Message = message;
-        await SeedAsync(withReg, withReset, withMessage, NewAccount());
+        await SeedAsync(withMessage, NewAccount());
 
-        Assert.Equal(withReg.Email, Assert.Single(await Sut.SearchAsync(regToken, TestContext.Current.CancellationToken)).Email.Value);
-        Assert.Equal(withReset.Email, Assert.Single(await Sut.SearchAsync(resetToken, TestContext.Current.CancellationToken)).Email.Value);
         Assert.Equal(withMessage.Email, Assert.Single(await Sut.SearchAsync(message, TestContext.Current.CancellationToken)).Email.Value);
+    }
+
+    /// <summary>
+    /// The password hash and the registration / reset tokens are not shown in the admin grid, and the search
+    /// must not match them either: otherwise the search box works as an oracle that confirms a guessed live
+    /// token (or a hash prefix) one character at a time.
+    /// </summary>
+    [Fact]
+    public async Task SearchAsync_DoesNotMatchTheHashOrTheTokens()
+    {
+        string hash = "hash-" + Token;
+        string regToken = "reg-" + Token;
+        string resetToken = "reset-" + Token;
+        OrmAccount withHash = NewAccount();
+        withHash.HashedPassword = hash;
+        await SeedAsync(withHash, NewAccount(registrationToken: regToken), NewAccount(resetPasswordToken: resetToken));
+
+        Assert.Empty(await Sut.SearchAsync(hash, TestContext.Current.CancellationToken));
+        Assert.Empty(await Sut.SearchAsync(regToken, TestContext.Current.CancellationToken));
+        Assert.Empty(await Sut.SearchAsync(resetToken, TestContext.Current.CancellationToken));
     }
 
     /// <summary><c>%</c> and <c>_</c> in the search text are literals, not LIKE wildcards.</summary>

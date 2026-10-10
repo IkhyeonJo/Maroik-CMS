@@ -138,9 +138,6 @@
   <data name="Nickname" xml:space="preserve">
     <value>닉네임</value>
   </data>
-  <data name="HashedPassword" xml:space="preserve">
-    <value>해쉬 비밀번호</value>
-  </data>
   <data name="Locked" xml:space="preserve">
     <value>잠금</value>
   </data>
@@ -171,9 +168,6 @@
   <data name="Please enter Nickname" xml:space="preserve">
     <value>닉네임을 입력하여 주십시오.</value>
   </data>
-  <data name="Please enter HashedPassword" xml:space="preserve">
-    <value>해쉬 비밀번호를 입력하여 주십시오.</value>
-  </data>
   <data name="Please enter Locked" xml:space="preserve">
     <value>잠금을 입력해주세요.</value>
   </data>
@@ -183,23 +177,11 @@
   <data name="Please enter Message" xml:space="preserve">
     <value>메시지를 입력해주세요.</value>
   </data>
-  <data name="Please enter RegistrationToken" xml:space="preserve">
-    <value>등록토큰을 입력해주세요.</value>
-  </data>
-  <data name="Please enter ResetPasswordToken" xml:space="preserve">
-    <value>비밀번호 초기화 토큰을 입력해주세요.</value>
-  </data>
   <data name="Please enter Role" xml:space="preserve">
     <value>역할을 입력해주세요.</value>
   </data>
   <data name="Please enter Updated" xml:space="preserve">
     <value>업데이트일을 입력해주세요.</value>
-  </data>
-  <data name="RegistrationToken" xml:space="preserve">
-    <value>등록토큰</value>
-  </data>
-  <data name="ResetPasswordToken" xml:space="preserve">
-    <value>비밀번호 초기화 토큰</value>
   </data>
   <data name="Role" xml:space="preserve">
     <value>역할</value>

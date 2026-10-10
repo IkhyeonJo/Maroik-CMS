@@ -81,9 +81,12 @@ Accounts
   service terms. This does not weaken the lockout: the reset needs the single-use mailed token, not a guessed
   password. Admin sanctions use `AdminResetPassword` + `MustChangePassword`, not `Locked`.
 - Registration and password-reset tokens are stored in the database as plain values (they expire after
-  24 hours). The admin account grid intentionally shows and searches `HashedPassword`,
-  `RegistrationToken` and `ResetPasswordToken`. Its Excel export (`ExcelExportService.CreateAccountExcel`)
-  deliberately leaves those three columns out — keep them out of the export.
+  24 hours). `HashedPassword`, `RegistrationToken` and `ResetPasswordToken` never reach the admin screens:
+  `IManagementAccountService` returns plain `AccountResponse` rows, so the account grid, its whole-row search
+  and the Excel export neither show nor match them (a live token on screen hands the account to whoever sees it;
+  a searchable token or hash is a guessing oracle). Pinned by `AccountGrid_DoesNotRenderTheHashOrTheTokens`,
+  `SearchAsync_DoesNotMatchTheHashOrTheTokens` and the `ManagementAccountServiceTests` row checks. Do not add
+  them back.
 - A successful self-service password change ends the session; the user signs in again (as on other sites), and
   every other session of the account is invalidated through the security stamp. Because it proves the current
   password, it also lifts a lock and clears the failed-login counter (`Account.ChangePassword`) — otherwise an owner

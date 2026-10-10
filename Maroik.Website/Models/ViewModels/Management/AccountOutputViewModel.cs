@@ -5,7 +5,8 @@ namespace Maroik.Website.Models.ViewModels.Management;
 
 /// <summary>
 /// Read-only view model for displaying a user account record in the admin management area.
-/// Exposes all stored account fields including the BCrypt-hashed password and audit timestamps.
+/// Exposes the stored account fields and audit timestamps, but never the password hash or the
+/// registration / reset tokens: a live token on the admin screen would hand the account to whoever sees it.
 /// </summary>
 public class AccountOutputViewModel
 {
@@ -13,11 +14,6 @@ public class AccountOutputViewModel
     [Required(ErrorMessage = "Please enter Email")]
     [Display(Name = "Email")]
     public string? Email { get; set; }
-
-    /// <summary>BCrypt-hashed password stored in the database (never the plain-text value).</summary>
-    [Required(ErrorMessage = "Please enter HashedPassword")]
-    [Display(Name = "HashedPassword")]
-    public string? HashedPassword { get; set; }
 
     /// <summary>Display name (nickname) visible to other users.</summary>
     [Required(ErrorMessage = "Please enter Nickname")]
@@ -55,16 +51,6 @@ public class AccountOutputViewModel
     /// <summary>Whether the user agreed to the service terms of use at registration.</summary>
     [Display(Name = "AgreedServiceTerms")]
     public bool AgreedServiceTerms { get; set; }
-
-    /// <summary>One-time registration confirmation token (null once confirmed).</summary>
-    [Required(ErrorMessage = "Please enter RegistrationToken")]
-    [Display(Name = "RegistrationToken")]
-    public string? RegistrationToken { get; set; }
-
-    /// <summary>One-time password-reset token (null when no reset is pending).</summary>
-    [Required(ErrorMessage = "Please enter ResetPasswordToken")]
-    [Display(Name = "ResetPasswordToken")]
-    public string? ResetPasswordToken { get; set; }
 
     /// <summary>When the account was first created, converted to the viewing admin's time zone.</summary>
     [Required(ErrorMessage = "Please enter Created")]

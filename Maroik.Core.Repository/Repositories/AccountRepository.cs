@@ -85,8 +85,8 @@ public class AccountRepository(ApplicationDbContext context)
     // See ExpenditureRepository.SearchByAccountEmailAsync for why this is raw SQL rather than LINQ
     // (ILIKE is case-insensitive natively, so it also covers the Locked/EmailConfirmed/
     // AgreedServiceTerms/Deleted bool matching). Every column the admin account grid renders is
-    // searchable, HashedPassword / RegistrationToken / ResetPasswordToken included: they are shown
-    // in that grid (and exported), so the whole-row search box must match what the admin sees.
+    // searchable. HashedPassword / RegistrationToken / ResetPasswordToken are neither rendered nor
+    // searched: a search on them would confirm a guessed live token (or a hash prefix) by its hit.
     public async Task<List<Account>> SearchAsync(string search, CancellationToken ct = default)
     {
         string pattern = ToLikePattern(search);
@@ -94,7 +94,6 @@ public class AccountRepository(ApplicationDbContext context)
             SELECT "Email" AS "Value" FROM "Account"
             WHERE
                   "Email" ILIKE {pattern} OR
-                  "HashedPassword" ILIKE {pattern} OR
                   "Nickname" ILIKE {pattern} OR
                   "AvatarImagePath" ILIKE {pattern} OR
                   "Role" ILIKE {pattern} OR
@@ -103,8 +102,6 @@ public class AccountRepository(ApplicationDbContext context)
                   CAST("LoginAttempt" AS TEXT) ILIKE {pattern} OR
                   CAST("EmailConfirmed" AS TEXT) ILIKE {pattern} OR
                   CAST("AgreedServiceTerms" AS TEXT) ILIKE {pattern} OR
-                  "RegistrationToken" ILIKE {pattern} OR
-                  "ResetPasswordToken" ILIKE {pattern} OR
                   CAST("Created" AS TEXT) ILIKE {pattern} OR
                   CAST("Updated" AS TEXT) ILIKE {pattern} OR
                   "Message" ILIKE {pattern} OR

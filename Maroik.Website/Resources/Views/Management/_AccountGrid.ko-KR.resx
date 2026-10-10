@@ -138,9 +138,6 @@
   <data name="Nickname" xml:space="preserve">
     <value>닉네임</value>
   </data>
-  <data name="HashedPassword" xml:space="preserve">
-    <value>해쉬 비밀번호</value>
-  </data>
   <data name="Locked" xml:space="preserve">
     <value>잠금</value>
   </data>
@@ -152,12 +149,6 @@
   </data>
   <data name="No data found" xml:space="preserve">
     <value>자료를 찾을 수 없습니다.</value>
-  </data>
-  <data name="RegistrationToken" xml:space="preserve">
-    <value>등록토큰</value>
-  </data>
-  <data name="ResetPasswordToken" xml:space="preserve">
-    <value>비밀번호 초기화 토큰</value>
   </data>
   <data name="Role" xml:space="preserve">
     <value>역할</value>

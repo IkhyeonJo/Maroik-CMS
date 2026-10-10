@@ -10,13 +10,12 @@ namespace Maroik.Website.Mappings;
 /// </summary>
 public static class ManagementViewModelMapper
 {
-    extension(AdminAccountResponse item)
+    extension(AccountResponse item)
     {
-        /// <summary>Maps a single <see cref="AdminAccountResponse"/> to an <see cref="AccountOutputViewModel"/> for display.</summary>
+        /// <summary>Maps a single <see cref="AccountResponse"/> to an <see cref="AccountOutputViewModel"/> for display.</summary>
         private AccountOutputViewModel ToDisplayViewModel(string timeZoneIanaId) => new()
         {
             Email = item.Email,
-            HashedPassword = item.HashedPassword,
             Nickname = item.Nickname,
             AvatarImagePath = item.AvatarImagePath,
             Role = item.Role,
@@ -25,8 +24,6 @@ public static class ManagementViewModelMapper
             LoginAttempt = item.LoginAttempt,
             EmailConfirmed = item.EmailConfirmed,
             AgreedServiceTerms = item.AgreedServiceTerms,
-            RegistrationToken = item.RegistrationToken,
-            ResetPasswordToken = item.ResetPasswordToken,
             Created = item.Created.ConvertTimeByTimeZoneIanaId(timeZoneIanaId),
             Updated = item.Updated.ConvertTimeByTimeZoneIanaId(timeZoneIanaId),
             Message = item.Message,
@@ -34,9 +31,9 @@ public static class ManagementViewModelMapper
         };
     }
 
-    extension(IEnumerable<AdminAccountResponse> items)
+    extension(IEnumerable<AccountResponse> items)
     {
-        /// <summary>Maps all <see cref="AdminAccountResponse"/> items to display view models.</summary>
+        /// <summary>Maps all <see cref="AccountResponse"/> items to display view models.</summary>
         public List<AccountOutputViewModel> ToDisplayViewModels(string timeZoneIanaId)
             =>
             [
