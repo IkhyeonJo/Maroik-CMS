@@ -71,9 +71,7 @@ public class AccountBookController(
     [HttpGet]
     public async Task<IActionResult> Asset(string wholeSearch, CancellationToken ct)
     {
-#pragma warning disable ASP0015
-        if (HttpContext.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-#pragma warning restore ASP0015
+        if (HttpContext.Request.Headers.XRequestedWith == "XMLHttpRequest")
         {
             AccountResponse account = HttpContext.GetLoggedInAccount();
             var assets = string.IsNullOrEmpty(wholeSearch)
@@ -232,9 +230,7 @@ public class AccountBookController(
     [HttpGet]
     public async Task<IActionResult> Income(string wholeSearch, CancellationToken ct)
     {
-#pragma warning disable ASP0015
-        if (HttpContext.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-#pragma warning restore ASP0015
+        if (HttpContext.Request.Headers.XRequestedWith == "XMLHttpRequest")
         {
             AccountResponse account = HttpContext.GetLoggedInAccount();
             var assets = await assetService.GetAssetsAsync(account.Email!, ct);
@@ -427,9 +423,7 @@ public class AccountBookController(
     [HttpGet]
     public async Task<IActionResult> Expenditure(string wholeSearch, CancellationToken ct)
     {
-#pragma warning disable ASP0015
-        if (HttpContext.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-#pragma warning restore ASP0015
+        if (HttpContext.Request.Headers.XRequestedWith == "XMLHttpRequest")
         {
             AccountResponse account = HttpContext.GetLoggedInAccount();
             var assets = await assetService.GetAssetsAsync(account.Email!, ct);

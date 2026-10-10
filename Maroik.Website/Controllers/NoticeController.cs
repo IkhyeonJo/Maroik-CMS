@@ -86,9 +86,7 @@ public class NoticeController(
     [HttpGet]
     public async Task<IActionResult> FixedIncome(string wholeSearch, CancellationToken ct)
     {
-#pragma warning disable ASP0015
-        if (HttpContext.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-#pragma warning restore ASP0015
+        if (HttpContext.Request.Headers.XRequestedWith == "XMLHttpRequest")
         {
             AccountResponse account = HttpContext.GetLoggedInAccount();
             var assets = await assetService.GetAssetsAsync(account.Email!, ct);
@@ -316,9 +314,7 @@ public class NoticeController(
     [HttpGet]
     public async Task<IActionResult> FixedExpenditure(string wholeSearch, CancellationToken ct)
     {
-#pragma warning disable ASP0015
-        if (HttpContext.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-#pragma warning restore ASP0015
+        if (HttpContext.Request.Headers.XRequestedWith == "XMLHttpRequest")
         {
             AccountResponse account = HttpContext.GetLoggedInAccount();
             var assets = await assetService.GetAssetsAsync(account.Email!, ct);
