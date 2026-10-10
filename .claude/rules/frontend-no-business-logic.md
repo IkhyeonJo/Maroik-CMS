@@ -86,7 +86,7 @@ script (no `import`/`export`); keep it that way.
    `dotnet build` also runs `TypeScripts.Tests` (Vitest) — or `npm test` in
    `Maroik.Website/`.
 
-## Current state (2026-09-02, `refactor-code` branch)
+## Current state (2026-09-02)
 
 * The DDD/Clean-Architecture move of business logic out of the client scripts and
   views is substantially complete (commit `88941c57 feat: DDD + Clean architecture`).

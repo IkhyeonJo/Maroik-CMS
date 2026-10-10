@@ -54,11 +54,11 @@ public class DashboardService(
         // Capped one below DateTime.MaxValue's year: yearEnd below computes `new DateTime(yearInt + 1, ...)`.
         if (yearInt is < 1 or > 9998) yearInt = accountToday.Year;
 
-        // main computes DefaultMonetaryUnit/MonetaryUnits from the account's full asset list,
+        // DefaultMonetaryUnit/MonetaryUnits are computed from the account's full asset list,
         // including deleted ones (AssetRepository.GetAssetsAsync never filters Deleted) — so a
         // user whose only assets happen to be deleted still resolves the same effective currency
-        // and sees the same MonetaryUnits options main would show. Only the visible asset card
-        // list (`assets` below) is deleted-filtered, since main has no such list to match.
+        // and keeps the same MonetaryUnits options. Only the visible asset card list (`assets`
+        // below) is deleted-filtered.
         List<Asset> allAssets = await assetRepository.GetByAccountEmailAsync(accountEmail, ct);
         List<Asset> assets = [.. allAssets.Where(a => !a.Deleted)];
         Account? account = await accountRepository.FindByEmailAsync(accountEmail, ct);

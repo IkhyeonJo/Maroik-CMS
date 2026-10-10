@@ -80,7 +80,7 @@ public static class FixedSchedulePolicy
 
     /// <summary>
     /// The highest valid deposit day for <paramref name="depositMonth"/> (1–12): 31 for 31-day
-    /// months, 30 for 30-day months, 29 for February (regardless of leap year — matches main's
+    /// months, 30 for 30-day months, 29 for February (regardless of leap year — kept from the original
     /// per-month day-range validation), and 0 for an out-of-range month.
     /// <para>
     /// Single source of truth for the month→day rule: <see cref="IsValidDepositDate"/> is derived
@@ -105,7 +105,7 @@ public static class FixedSchedulePolicy
     /// <summary>
     /// Returns <see langword="true"/> when <paramref name="depositDay"/> is a valid day for
     /// <paramref name="depositMonth"/> (30/31-day months, and February capped at 29 regardless
-    /// of leap year — matches main's per-month day-range validation).
+    /// of leap year — kept from the original per-month day-range validation).
     /// </summary>
     public static bool IsValidDepositDate(int depositMonth, int depositDay)
         => depositDay >= 1 && depositDay <= MaxDepositDay(depositMonth);
