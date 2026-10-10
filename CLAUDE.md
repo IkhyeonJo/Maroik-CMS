@@ -355,11 +355,11 @@ session to be running. A solution-wide run must therefore run the modules one at
 
 ## Mutation testing (on demand)
 
-Coverage says code ran, not that a test would notice it breaking. Stryker.NET (pinned in `.config/dotnet-tools.json`) changes the
-production code and reports which changes NO test catches ("survivors"). Run it from the test project's folder, with the
-Microsoft.Testing.Platform runner (this repo uses xUnit v3 / MTP; the default vstest runner reports a false 0 %):
+Coverage says code ran, not that a test would notice it breaking. Stryker.NET (not pinned in the repo — install it
+globally, version 5.0.0) changes the production code and reports which changes NO test catches ("survivors"). Run it from the
+test project's folder, with the Microsoft.Testing.Platform runner (this repo uses xUnit v3 / MTP; the default vstest runner reports a false 0 %):
 
-    dotnet tool restore
+    dotnet tool install -g dotnet-stryker --version 5.0.0   # once
     cd Maroik.Core.Domain.Tests
     dotnet stryker --test-runner mtp --project Maroik.Core.Domain.csproj --reporter json --reporter cleartext
 
