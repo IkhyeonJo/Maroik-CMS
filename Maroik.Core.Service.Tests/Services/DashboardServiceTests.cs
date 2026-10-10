@@ -259,8 +259,7 @@ public class DashboardServiceTests
 
     /// <summary>
     /// Verifies that a soft-deleted asset is excluded from the dashboard's visible asset card
-    /// list, but — matching main's <c>AssetRepository.GetAssetsAsync</c>, which never filters
-    /// Deleted — still counts toward the MonetaryUnit options and effective-currency calculation.
+    /// list, but — as the currency lookup covers the full asset list, deleted included — still counts toward the MonetaryUnit options and effective-currency calculation.
     /// </summary>
     [Fact]
     public async Task GetSummaryAsync_ExcludesDeletedAssets_FromVisibleAssetsListOnly()
@@ -280,10 +279,10 @@ public class DashboardServiceTests
 
         DashboardDto summary = await sut.GetSummaryAsync(email, "2025", "1", "UTC", TestContext.Current.CancellationToken);
 
-        // The visible asset card list excludes deleted assets (main has no equivalent list).
+        // The visible asset card list excludes deleted assets.
         Assert.Single(summary.Assets);
 
-        // main's AssetRepository.GetAssetsAsync never filters Deleted, so the MonetaryUnit
+        // The currency lookup covers the full asset list, deleted included, so the MonetaryUnit
         // options and effective-currency resolution must still see the deleted asset's currency —
         // otherwise an account whose only assets are deleted would resolve to no currency and its
         // whole income/expenditure section would silently disappear from the dashboard.
@@ -297,8 +296,8 @@ public class DashboardServiceTests
 
     /// <summary>
     /// Verifies that when an account's only asset has been soft-deleted, the dashboard still
-    /// resolves a DefaultMonetaryUnit (matching main) instead of going empty, since the currency
-    /// resolution must consider deleted assets the same way main's unfiltered asset list does.
+    /// resolves a DefaultMonetaryUnit instead of going empty, since the currency resolution
+    /// considers deleted assets too.
     /// </summary>
     [Fact]
     public async Task GetSummaryAsync_ResolvesDefaultMonetaryUnit_WhenOnlyAssetIsDeleted()

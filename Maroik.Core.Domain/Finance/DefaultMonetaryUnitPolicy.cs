@@ -15,8 +15,8 @@ public static class DefaultMonetaryUnitPolicy
     /// <paramref name="currentUnit"/> is missing or no longer matches any asset's currency, falls
     /// back to the most common currency among the assets. Returns null when there are no assets
     /// at all (nothing to fall back to). <paramref name="allAssets"/> must be the account's full
-    /// asset list (deleted included), to match main's <c>AssetRepository.GetAssetsAsync</c>, which
-    /// never filters on Deleted.
+    /// asset list (deleted included), as the original asset lookup it replaced never filtered on
+    /// Deleted.
     /// </summary>
     public static CurrencyCode? Resolve(CurrencyCode? currentUnit, IReadOnlyCollection<Asset> allAssets)
     {
