@@ -38,6 +38,14 @@ public interface IAccountRepository : IGenericRepository<Account>
     /// </summary>
     Task<Account?> FindByEmailForUpdateAsync(string email, CancellationToken ct = default);
 
+    /// <summary>
+    /// Returns every active administrator (Admin role, not locked, not deleted), each row locked with
+    /// SELECT ... FOR UPDATE in email order. Must be called inside an active unit-of-work transaction. Taken
+    /// before an administrator's edit or delete of an account, so two concurrent edits cannot each see the other
+    /// administrator as still active and leave the site with none (see <c>AdminSafeguardPolicy</c>).
+    /// </summary>
+    Task<List<Account>> FindActiveAdminsForUpdateAsync(CancellationToken ct = default);
+
     // ---------------------------------------------------------------------------------------------
     // Column-scoped updates. UpdateEntityAsync rewrites EVERY column from the domain snapshot, so
     // two unrelated writers (a profile edit, a mail-status write from the worker, the dashboard's

@@ -29,6 +29,13 @@ public class ManagementAccountServiceTests
     /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<ManagementAccountService> _logger = new();
 
+    /// <summary>
+    /// No active administrator by default (Moq would answer the list with null); the admin-safeguard tests set
+    /// their own.
+    /// </summary>
+    public ManagementAccountServiceTests() =>
+        _accountRepo.Setup(r => r.FindActiveAdminsForUpdateAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
     /// <summary>The fixed "current time" of these tests.</summary>
     private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
     /// <summary>The clock the service under test reads, stopped at <see cref="Now"/>.</summary>
@@ -418,6 +425,8 @@ public class ManagementAccountServiceTests
     {
         Account account = DeletedUnconfirmedAccount();
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        // Another active administrator remains, so the second call may delete this one after it became an Admin.
+        _accountRepo.Setup(r => r.FindActiveAdminsForUpdateAsync(It.IsAny<CancellationToken>())).ReturnsAsync([AdminAccount(Actor)]);
 
         ServiceResult result = await CreateSut().UpdateAccountAsync(new AdminUpdateAccountRequest
         {
@@ -857,5 +866,193 @@ public class ManagementAccountServiceTests
         await CreateSut().DeleteAccountAsync("user@example.com", Actor, TestContext.Current.CancellationToken);
 
         AssertLoggedError("Failed to delete account for user@example.com", thrown);
+    }
+
+    // -- Admin safeguards (AdminSafeguardPolicy) ------------------------------
+
+    /// <summary>A persisted, active administrator account.</summary>
+    private static Account AdminAccount(string email, bool locked = false) =>
+        Account.Reconstitute(email, "$2a$13$placeholder", "Admin-" + email, null, Role.Admin, "UTC", null, locked, 0,
+            true, true, null, null, DateTime.UtcNow, DateTime.UtcNow, null, false, "stamp", false);
+
+    /// <summary>Returns <paramref name="target"/> as the locked account and <paramref name="activeAdmins"/> as the locked active administrators.</summary>
+    private void SetUpAccounts(Account target, params Account[] activeAdmins)
+    {
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(target.Email.Value, It.IsAny<CancellationToken>())).ReturnsAsync(target);
+        _accountRepo.Setup(r => r.FindActiveAdminsForUpdateAsync(It.IsAny<CancellationToken>())).ReturnsAsync([.. activeAdmins]);
+    }
+
+    /// <summary>Asserts a refusal: the exact error, rolled back, nothing written, and a Warning naming account, admin and code.</summary>
+    private void AssertRefused(ServiceResult result, ServiceErrorType type, string code, string key, string loggedMessage)
+    {
+        Assert.False(result.Success);
+        Assert.Equal(type, result.ErrorType);
+        Assert.Equal(code, result.ErrorCode);
+        Assert.Equal(key, result.ErrorKey);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
+        FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
+        Assert.Equal(loggedMessage, record.Message);
+        Assert.Null(record.Exception);
+    }
+
+    /// <summary>An administrator cannot lock their own account, even while other administrators remain.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_RefusesLockingYourOwnAccount()
+    {
+        Account self = AdminAccount(Actor);
+        SetUpAccounts(self, self, AdminAccount("other@example.com"));
+
+        ServiceResult result = await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = Actor, Locked = true }, null, Actor, TestContext.Current.CancellationToken);
+
+        AssertRefused(result, ServiceErrorType.Validation, "Account.CannotLockSelf", "You cannot lock your own account.",
+            $"Admin update refused for {Actor} by admin {Actor}: Account.CannotLockSelf");
+    }
+
+    /// <summary>An administrator cannot take the Admin role off their own account.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_RefusesDemotingYourOwnAccount()
+    {
+        Account self = AdminAccount(Actor);
+        SetUpAccounts(self, self, AdminAccount("other@example.com"));
+
+        ServiceResult result = await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = Actor, Role = Role.User }, null, Actor, TestContext.Current.CancellationToken);
+
+        AssertRefused(result, ServiceErrorType.Validation, "Account.CannotDemoteSelf", "You cannot remove the Admin role from your own account.",
+            $"Admin update refused for {Actor} by admin {Actor}: Account.CannotDemoteSelf");
+    }
+
+    /// <summary>An administrator cannot delete their own account from the edit form either.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_RefusesDeletingYourOwnAccount()
+    {
+        Account self = AdminAccount(Actor);
+        SetUpAccounts(self, self, AdminAccount("other@example.com"));
+
+        ServiceResult result = await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = Actor, Deleted = true }, null, Actor, TestContext.Current.CancellationToken);
+
+        AssertRefused(result, ServiceErrorType.Validation, "Account.CannotDeleteSelf", "You cannot delete your own account.",
+            $"Admin update refused for {Actor} by admin {Actor}: Account.CannotDeleteSelf");
+    }
+
+    /// <summary>Editing your own account without locking, deleting or demoting it still works.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_AllowsAnOrdinaryEditOfYourOwnAccount()
+    {
+        Account self = AdminAccount(Actor);
+        SetUpAccounts(self, self);
+
+        ServiceResult result = await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = Actor, Message = "note" }, null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal("note", self.Message);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>Nobody can lock the last active administrator.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_RefusesLockingTheLastActiveAdmin()
+    {
+        Account target = AdminAccount("last@example.com");
+        SetUpAccounts(target, target);
+
+        ServiceResult result = await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = "last@example.com", Locked = true }, null, Actor, TestContext.Current.CancellationToken);
+
+        AssertRefused(result, ServiceErrorType.Conflict, "Account.LastActiveAdmin", "The last active administrator cannot be locked, deleted or demoted.",
+            $"Admin update refused for last@example.com by admin {Actor}: Account.LastActiveAdmin");
+    }
+
+    /// <summary>Another administrator can be locked while a different active administrator remains.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_AllowsLockingAnotherAdmin_WhileAnotherActiveAdminRemains()
+    {
+        Account target = AdminAccount("other@example.com");
+        SetUpAccounts(target, AdminAccount(Actor), target);
+
+        ServiceResult result = await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = "other@example.com", Locked = true }, null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.True(target.Locked);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// The active administrators are locked before the edited account, so every admin edit takes its row locks
+    /// in the same order and two concurrent edits cannot each count the other administrator as still active.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAccountAsync_LocksTheActiveAdminsBeforeTheEditedAccount()
+    {
+        List<string> calls = [];
+        _accountRepo.Setup(r => r.FindActiveAdminsForUpdateAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("admins")).ReturnsAsync([AdminAccount(Actor)]);
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync("user@example.com", It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("account")).ReturnsAsync(ActiveAccount());
+
+        await CreateSut().UpdateAccountAsync(new AdminUpdateAccountRequest { Email = "user@example.com" }, null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["admins", "account"], calls);
+    }
+
+    /// <summary>An administrator cannot delete their own account; the comparison ignores the e-mail's case.</summary>
+    [Fact]
+    public async Task DeleteAccountAsync_RefusesDeletingYourOwnAccount_WhateverTheCase()
+    {
+        Account self = AdminAccount(Actor);
+        SetUpAccounts(self, self, AdminAccount("other@example.com"));
+
+        ServiceResult result = await CreateSut().DeleteAccountAsync(Actor, Actor.ToUpperInvariant(), TestContext.Current.CancellationToken);
+
+        AssertRefused(result, ServiceErrorType.Validation, "Account.CannotDeleteSelf", "You cannot delete your own account.",
+            $"Admin delete refused for {Actor} by admin {Actor.ToUpperInvariant()}: Account.CannotDeleteSelf");
+    }
+
+    /// <summary>Nobody can delete the last active administrator.</summary>
+    [Fact]
+    public async Task DeleteAccountAsync_RefusesDeletingTheLastActiveAdmin()
+    {
+        Account target = AdminAccount("last@example.com");
+        SetUpAccounts(target, target);
+
+        ServiceResult result = await CreateSut().DeleteAccountAsync("last@example.com", Actor, TestContext.Current.CancellationToken);
+
+        AssertRefused(result, ServiceErrorType.Conflict, "Account.LastActiveAdmin", "The last active administrator cannot be locked, deleted or demoted.",
+            $"Admin delete refused for last@example.com by admin {Actor}: Account.LastActiveAdmin");
+    }
+
+    /// <summary>Another administrator can be deleted while a different active administrator remains.</summary>
+    [Fact]
+    public async Task DeleteAccountAsync_AllowsDeletingAnotherAdmin_WhileAnotherActiveAdminRemains()
+    {
+        Account target = AdminAccount("other@example.com");
+        SetUpAccounts(target, AdminAccount(Actor), target);
+
+        ServiceResult result = await CreateSut().DeleteAccountAsync("other@example.com", Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.True(target.Deleted);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>A delete locks the active administrators before the deleted account (same order as an update).</summary>
+    [Fact]
+    public async Task DeleteAccountAsync_LocksTheActiveAdminsBeforeTheDeletedAccount()
+    {
+        List<string> calls = [];
+        _accountRepo.Setup(r => r.FindActiveAdminsForUpdateAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("admins")).ReturnsAsync([AdminAccount(Actor)]);
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync("user@example.com", It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("account")).ReturnsAsync(ActiveAccount());
+
+        await CreateSut().DeleteAccountAsync("user@example.com", Actor, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["admins", "account"], calls);
     }
 }

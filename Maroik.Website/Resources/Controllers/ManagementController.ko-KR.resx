@@ -240,6 +240,9 @@
   <data name="Successfully updated the subCategory" xml:space="preserve">
     <value>서브카테고리가 성공적으로 업데이트되었습니다.</value>
   </data>
+  <data name="The last active administrator cannot be locked, deleted or demoted." xml:space="preserve">
+    <value>마지막 활성 관리자는 잠그거나 삭제하거나 강등할 수 없습니다.</value>
+  </data>
   <data name="This account has already been created." xml:space="preserve">
     <value>이미 생성된 계정입니다.</value>
   </data>
@@ -254,6 +257,15 @@
   </data>
   <data name="TimeZoneIanaId" xml:space="preserve">
     <value>시간대</value>
+  </data>
+  <data name="You cannot delete your own account." xml:space="preserve">
+    <value>자기 계정은 삭제할 수 없습니다.</value>
+  </data>
+  <data name="You cannot lock your own account." xml:space="preserve">
+    <value>자기 계정은 잠글 수 없습니다.</value>
+  </data>
+  <data name="You cannot remove the Admin role from your own account." xml:space="preserve">
+    <value>자기 계정의 Admin 권한은 해제할 수 없습니다.</value>
   </data>
   <data name="content length is must be between 0 and 16384 characters." xml:space="preserve">
     <value>내용 길이는 1~16384 글자여야 합니다.</value>

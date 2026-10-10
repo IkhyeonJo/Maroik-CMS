@@ -61,8 +61,12 @@ Authorization and navigation
 - `AuthorizationFilter.Deny()` redirects to `/Dashboard/AnonymousIndex`, and each role's `_Layout`
   script has a global `ajaxError` handler that sends every failed AJAX call to the same page. The two
   work as a pair; keep both.
-- An administrator can change, lock or delete their own account and edit or delete any menu entry,
-  including the ones that grant their own access. No self-lockout or last-admin protection is wanted.
+- Admin safeguards (`AdminSafeguardPolicy`, applied by `ManagementAccountService` update and delete): an administrator
+  cannot lock, delete or demote their own account (re-saving it unchanged, unlocking and restoring it stay allowed), and
+  nobody can lock, delete or demote the last active administrator (Admin, not locked, not deleted). Each admin edit / delete
+  first locks the active administrators' rows (`FindActiveAdminsForUpdateAsync`, email order), then the edited row, so two
+  concurrent edits cannot leave no administrator. A failed-login lockout is not covered (see Accounts). The menu has no
+  safeguard: an administrator can still edit or delete any menu entry, including the ones that grant their own access.
 - The admin-only GET pages (`Management/Account`, `Management/Menu`, `Dashboard/AdminIndex`, ...) are protected
   by the menu alone, while their POSTs also carry a role attribute. Getting the menu's `Role` right is the
   administrator's job; do not add a second role check to those GETs.

@@ -611,6 +611,56 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
         Assert.Equal(5, updated.LoginAttempt);
     }
 
+    // -- FindActiveAdminsForUpdateAsync -------------------------------------------
+
+    /// <summary>
+    /// Only administrators that are neither locked nor deleted come back, ordered by email (the lock order).
+    /// The seed has active administrators of its own, so the check is scoped to the rows this test inserted.
+    /// </summary>
+    [Fact]
+    public async Task FindActiveAdminsForUpdateAsync_ReturnsOnlyUnlockedUndeletedAdmins_InEmailOrder()
+    {
+        string first = UniqueEmail("a-admin");
+        string second = UniqueEmail("b-admin");
+        string locked = UniqueEmail("locked-admin");
+        string deleted = UniqueEmail("deleted-admin");
+        string user = UniqueEmail("user");
+        await SeedAsync(
+            NewAccount(second, role: Role.Admin), NewAccount(first, role: Role.Admin),
+            NewAccount(locked, role: Role.Admin, locked: true), NewAccount(deleted, role: Role.Admin, deleted: true),
+            NewAccount(user));
+
+        await using var unitOfWork = new UnitOfWork(Context);
+        await unitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
+        List<Account> result = await Sut.FindActiveAdminsForUpdateAsync(TestContext.Current.CancellationToken);
+        await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
+
+        string[] mine = [first, second, locked, deleted, user];
+        Assert.Equal([first, second], result.Select(a => a.Email.Value).Where(mine.Contains));
+    }
+
+    /// <summary>The returned rows stay locked until the transaction ends: another transaction cannot take them meanwhile.</summary>
+    [Fact]
+    public async Task FindActiveAdminsForUpdateAsync_LocksTheRowsUntilTheTransactionEnds()
+    {
+        string admin = UniqueEmail("admin");
+        await SeedAsync(NewAccount(admin, role: Role.Admin));
+
+        await using var unitOfWork = new UnitOfWork(Context);
+        await unitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
+        _ = await Sut.FindActiveAdminsForUpdateAsync(TestContext.Current.CancellationToken);
+
+        await using var other = NewDbContext();
+        await using var otherUnitOfWork = new UnitOfWork(other);
+        await otherUnitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
+        var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(() => other.Database.ExecuteSqlInterpolatedAsync(
+            $"""SELECT 1 FROM "Account" WHERE "Email" = {admin} FOR UPDATE NOWAIT""", TestContext.Current.CancellationToken));
+        Assert.Equal(Npgsql.PostgresErrorCodes.LockNotAvailable, ex.SqlState);
+        await otherUnitOfWork.RollbackAsync(TestContext.Current.CancellationToken);
+
+        await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
+    }
+
     // -- SearchAsync ----------------------------------------------------------------
 
     /// <summary>The admin grid search matches nickname/e-mail case-insensitively.</summary>

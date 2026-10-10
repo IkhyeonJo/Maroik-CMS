@@ -139,6 +139,8 @@ public class ManagementAccountService(
         await unitOfWork.BeginAsync(ct: ct);
         try
         {
+            // The active administrators first (see LockActiveAdminsAsync), then the edited account.
+            List<Account> activeAdmins = await LockActiveAdminsAsync(ct);
             // FOR UPDATE: hold the row lock from read to commit so a concurrent self-service
             // column-scoped write (profile avatar/timezone/password change) on the same account
             // serializes behind this admin edit instead of being silently reverted by the full-row
@@ -154,6 +156,7 @@ public class ManagementAccountService(
             AccountRole oldRole = account.Role;
             bool oldLocked = account.Locked;
             bool oldDeleted = account.Deleted;
+            AdminStanding before = AdminStanding.Of(account);
 
             if (newHashedPassword != null)
             {
@@ -173,6 +176,14 @@ public class ManagementAccountService(
             {
                 await unitOfWork.RollbackAsync(ct);
                 return ServiceResult.FromError(updateResult.FirstError);
+            }
+
+            var safeguardResult = CheckAdminSafeguards(account, before, activeAdmins, actorEmail);
+            if (safeguardResult.IsError)
+            {
+                await unitOfWork.RollbackAsync(ct);
+                logger.LogWarning("Admin update refused for {Email} by admin {Admin}: {ErrorCode}", account.Email.Value, actorEmail, safeguardResult.FirstError.Code);
+                return ServiceResult.FromError(safeguardResult.FirstError);
             }
 
             await accountRepository.UpdateEntityAsync(account, ct);
@@ -252,6 +263,29 @@ public class ManagementAccountService(
         return Result.Success;
     }
 
+    /// <summary>
+    /// Locks every active administrator's row (in email order) for the rest of the transaction. Every admin edit and
+    /// delete takes these locks first, before the edited account's own row, so two administrators demoting, locking or
+    /// deleting each other at the same time run one after the other: the second one sees the first one's result and
+    /// <see cref="AdminSafeguardPolicy"/> keeps the last active administrator. Taking them in one fixed order also
+    /// means the two cannot deadlock on each other's rows.
+    /// </summary>
+    private Task<List<Account>> LockActiveAdminsAsync(CancellationToken ct)
+        => accountRepository.FindActiveAdminsForUpdateAsync(ct);
+
+    /// <summary>
+    /// Applies <see cref="AdminSafeguardPolicy"/> to the change <paramref name="account"/> has just been given in memory:
+    /// the actor is acting on their own account when the e-mails match ignoring case, and the other active
+    /// administrators are the locked ones other than <paramref name="account"/>.
+    /// </summary>
+    private static ErrorOr<Success> CheckAdminSafeguards(Account account, AdminStanding before, List<Account> activeAdmins, string actorEmail)
+    {
+        string email = account.Email.Value;
+        bool actingOnSelf = string.Equals(email, actorEmail, StringComparison.OrdinalIgnoreCase);
+        int otherActiveAdmins = activeAdmins.Count(a => !string.Equals(a.Email.Value, email, StringComparison.OrdinalIgnoreCase));
+        return AdminSafeguardPolicy.CheckChange(actingOnSelf, before, AdminStanding.Of(account), otherActiveAdmins);
+    }
+
     /// <summary>Unlocked lookup of an account by email.</summary>
     private Task<Account?> FindByEmailAsync(string email, CancellationToken ct = default)
         => accountRepository.FindByEmailAsync(email, ct);
@@ -263,6 +297,8 @@ public class ManagementAccountService(
         await unitOfWork.BeginAsync(ct: ct);
         try
         {
+            // The active administrators first, as in UpdateAccountAsync (see LockActiveAdminsAsync).
+            List<Account> activeAdmins = await LockActiveAdminsAsync(ct);
             // FOR UPDATE, same reason as UpdateAccountAsync: SoftDelete is persisted as a full-row
             // write, so the row must stay locked from read to commit or a concurrent self-service
             // column-scoped change would be reverted.
@@ -274,7 +310,16 @@ public class ManagementAccountService(
                 return ServiceResult.NotFound("Account.NotFound", ServiceErrorKeys.AccountNotFoundByEmail);
             }
 
+            AdminStanding before = AdminStanding.Of(account);
             account.SoftDelete(utcNow);
+
+            var safeguardResult = CheckAdminSafeguards(account, before, activeAdmins, actorEmail);
+            if (safeguardResult.IsError)
+            {
+                await unitOfWork.RollbackAsync(ct);
+                logger.LogWarning("Admin delete refused for {Email} by admin {Admin}: {ErrorCode}", account.Email.Value, actorEmail, safeguardResult.FirstError.Code);
+                return ServiceResult.FromError(safeguardResult.FirstError);
+            }
 
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);

@@ -1,6 +1,10 @@
+using System.Globalization;
+using System.Text.Json;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
+using Maroik.Website.Controllers;
 using Maroik.Website.Tests.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -548,5 +552,104 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Contains("Fail to find the account by given email address", json);
+    }
+
+    // -- Admin safeguards (AdminSafeguardPolicy) ---------------------------------------
+
+    /// <summary>Sends <paramref name="request"/> (optionally as a <paramref name="culture"/> browser) and returns its <c>error</c>, asserting a refusal.</summary>
+    private async Task<string> ErrorOf(HttpRequestMessage request, string? culture = null)
+    {
+        if (culture != null) request.Headers.AcceptLanguage.ParseAdd(culture);
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.False(doc.RootElement.GetProperty("result").GetBoolean());
+        return doc.RootElement.GetProperty("error").GetString()!;
+    }
+
+    /// <summary>The stored row of <paramref name="email"/>, read fresh.</summary>
+    private Maroik.Core.PostgreSQL.Models.Account StoredAccount(string email)
+    {
+        using var scope = factory.Services.CreateScope();
+        return scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Accounts.AsNoTracking().Single(a => a.Email == email);
+    }
+
+    /// <summary>An admin edit of <paramref name="email"/> as an active, confirmed administrator, changed by <paramref name="change"/>.</summary>
+    private static Dictionary<string, object> AdminEdit(string email, Action<Dictionary<string, object>> change)
+    {
+        var body = new Dictionary<string, object>
+        {
+            ["Email"] = email, ["Password"] = "", ["Role"] = Role.Admin, ["TimeZoneIanaId"] = "UTC", ["Locked"] = false,
+            ["EmailConfirmed"] = true, ["AgreedServiceTerms"] = true, ["Message"] = "", ["Deleted"] = false
+        };
+        change(body);
+        return body;
+    }
+
+    /// <summary>An administrator cannot delete their own account: refused in English and Korean, and the row stays.</summary>
+    [Fact]
+    public async Task DeleteAccount_OwnAccount_IsRefused_AndTheAccountStays()
+    {
+        const string self = "safeguard-delete-self@test.com";
+        var session = await LoginAsAdminAsync(self);
+
+        Assert.Equal("You cannot delete your own account.",
+            await ErrorOf(session.BuildJsonPostRequest("/Management/DeleteAccount", new { Email = self })));
+        Assert.Equal("자기 계정은 삭제할 수 없습니다.",
+            await ErrorOf(session.BuildJsonPostRequest("/Management/DeleteAccount", new { Email = self }), "ko-KR"));
+        Assert.False(StoredAccount(self).Deleted);
+    }
+
+    /// <summary>An administrator cannot lock their own account from the edit form: refused in both cultures, the row stays unlocked.</summary>
+    [Fact]
+    public async Task UpdateAccount_LockingOwnAccount_IsRefused_AndTheAccountStaysUnlocked()
+    {
+        const string self = "safeguard-lock-self@test.com";
+        var session = await LoginAsAdminAsync(self);
+
+        Assert.Equal("You cannot lock your own account.",
+            await ErrorOf(session.BuildJsonPostRequest("/Management/UpdateAccount", AdminEdit(self, b => b["Locked"] = true))));
+        Assert.Equal("자기 계정은 잠글 수 없습니다.",
+            await ErrorOf(session.BuildJsonPostRequest("/Management/UpdateAccount", AdminEdit(self, b => b["Locked"] = true)), "ko-KR"));
+        Assert.False(StoredAccount(self).Locked);
+    }
+
+    /// <summary>An administrator cannot demote their own account: refused in both cultures, the role stays Admin.</summary>
+    [Fact]
+    public async Task UpdateAccount_DemotingOwnAccount_IsRefused_AndTheRoleStaysAdmin()
+    {
+        const string self = "safeguard-demote-self@test.com";
+        var session = await LoginAsAdminAsync(self);
+
+        Assert.Equal("You cannot remove the Admin role from your own account.",
+            await ErrorOf(session.BuildJsonPostRequest("/Management/UpdateAccount", AdminEdit(self, b => b["Role"] = Role.User))));
+        Assert.Equal("자기 계정의 Admin 권한은 해제할 수 없습니다.",
+            await ErrorOf(session.BuildJsonPostRequest("/Management/UpdateAccount", AdminEdit(self, b => b["Role"] = Role.User)), "ko-KR"));
+        Assert.Equal(Role.Admin, StoredAccount(self).Role);
+    }
+
+    /// <summary>
+    /// The last-active-administrator refusal is translated by this controller's resx pair. The shared test database always
+    /// holds other active administrators (the seed's among them), so this key is checked through the controller's localizer
+    /// rather than by driving the host into the refusal; the service tests cover when it is returned.
+    /// </summary>
+    [Theory]
+    [InlineData("en-US", "The last active administrator cannot be locked, deleted or demoted.")]
+    [InlineData("ko-KR", "마지막 활성 관리자는 잠그거나 삭제하거나 강등할 수 없습니다.")]
+    public void LastActiveAdminRefusal_IsLocalized(string culture, string expected)
+    {
+        var localizer = factory.Services.GetRequiredService<IHtmlLocalizer<ManagementController>>();
+        CultureInfo previous = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo(culture);
+        try
+        {
+            LocalizedHtmlString text = localizer["The last active administrator cannot be locked, deleted or demoted."];
+            Assert.False(text.IsResourceNotFound);
+            Assert.Equal(expected, text.Value);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
     }
 }

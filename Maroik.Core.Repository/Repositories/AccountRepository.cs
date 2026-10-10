@@ -171,6 +171,25 @@ public class AccountRepository(ApplicationDbContext context)
         return entity == null ? null : ToDomain(entity);
     }
 
+    /// <inheritdoc />
+    public async Task<List<Account>> FindActiveAdminsForUpdateAsync(CancellationToken ct = default)
+    {
+        // Raw SQL + AsNoTracking for the same reasons as FindByEmailForUpdateAsync. ORDER BY "Email" takes the
+        // locks in one fixed order, so two administrators editing accounts at the same time queue up here
+        // instead of each holding one administrator row and waiting for the other's (the same ORDER BY +
+        // FOR UPDATE technique as AssetRepository.FindByEmailAndProductNamesForUpdateAsync).
+        var entities = await Set.FromSqlInterpolated(
+            $"""
+             SELECT *
+             FROM "Account"
+             WHERE "Role" = {Role.Admin} AND NOT "Locked" AND NOT "Deleted"
+             ORDER BY "Email"
+             FOR UPDATE
+             """).AsNoTracking().ToListAsync(ct);
+
+        return [.. entities.Select(ToDomain)];
+    }
+
     // -- Column-scoped updates (see IAccountRepository for the rationale) ---------------------------
     // ExecuteUpdateAsync emits one UPDATE that sets only the listed columns and runs immediately
     // (inside the ambient transaction if one is open), so it never overwrites a column a concurrent

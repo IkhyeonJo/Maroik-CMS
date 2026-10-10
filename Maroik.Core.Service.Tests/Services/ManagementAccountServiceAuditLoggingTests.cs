@@ -31,6 +31,13 @@ public class ManagementAccountServiceAuditLoggingTests
     /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<ManagementAccountService> _logger = new();
 
+    /// <summary>
+    /// No active administrator by default (Moq would answer the list with null); the admin-safeguard tests set
+    /// their own.
+    /// </summary>
+    public ManagementAccountServiceAuditLoggingTests() =>
+        _accountRepo.Setup(r => r.FindActiveAdminsForUpdateAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
     /// <summary>The fixed "current time" of these tests.</summary>
     private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
     /// <summary>The clock the service under test reads, stopped at <see cref="Now"/>.</summary>
