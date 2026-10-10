@@ -169,9 +169,7 @@ public class LogicGapTests
         string stamp1 = DomainAccount.Create(Email, "$2a$h", "Nick", AccountRole.User, "UTC", null, GuidToken.Generate(Now), true, Now).Value.SecurityStamp;
         string stamp2 = DomainAccount.Create(Email, "$2a$h", "Nick", AccountRole.User, "UTC", null, GuidToken.Generate(Now), true, Now).Value.SecurityStamp;
 
- #pragma warning disable SYSLIB1045
         Assert.Matches(new Regex("^[0-9a-f]{32}$"), stamp1);
- #pragma warning restore SYSLIB1045
         Assert.NotEqual(stamp1, stamp2);
     }
 

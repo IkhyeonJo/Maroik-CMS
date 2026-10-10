@@ -96,9 +96,7 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
         string html = await BodyAsync(await GetAsync(Detail(id), owner));
 
         Assert.Contains("font-weight:bold;", html);
- #pragma warning disable SYSLIB1045
         int deletable = System.Text.RegularExpressions.Regex
- #pragma warning restore SYSLIB1045
             .Matches(html, "aPrivateNoteDeleteComment\" href=\"#\" data-commentId=\"(\\d+)\"").Select(m => m.Groups[1].Value).Distinct().Count();
         Assert.Equal(1, deletable);
     }

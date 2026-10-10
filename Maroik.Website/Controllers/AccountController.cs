@@ -325,9 +325,7 @@ public class AccountController(
         HttpContext.RegenerateSession();
         sessionService.SetAccount(signIn);
         await HttpContext.Session.CommitAsync(ct);
- #pragma warning disable CA1873
         logger.LogInformation("Signed in after password reset: {Email}", signIn.Email);
- #pragma warning restore CA1873
 
         return RedirectToAction("AnonymousIndex", "Dashboard");
     }

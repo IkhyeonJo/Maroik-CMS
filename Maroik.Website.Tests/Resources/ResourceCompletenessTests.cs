@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -38,7 +37,6 @@ public class ResourceCompletenessTests
         Directory.EnumerateFiles(_resourcesDir, "*.resx", SearchOption.AllDirectories).Order();
 
     /// <summary>The path of <paramref name="resxPath"/> relative to <see cref="_resourcesDir"/>, without its culture suffix and extension.</summary>
-    [SuppressMessage("Performance", "SYSLIB1045:\'GeneratedRegexAttribute\'로 변환합니다.")]
     private static string Stem(string resxPath)
     {
         string relative = Path.GetRelativePath(_resourcesDir, resxPath).Replace('\\', '/');
@@ -51,9 +49,7 @@ public class ResourceCompletenessTests
     {
         var byStem = ResxFiles().GroupBy(Stem).ToList();
         var problems = (from @group in byStem
- #pragma warning disable SYSLIB1045
             let cultures = @group.Select(f => Regex.Match(f, @"\.(en-US|ko-KR)\.resx$").Groups[1].Value).Order().ToList()
- #pragma warning restore SYSLIB1045
             where !cultures.SequenceEqual([
                 "en-US", "ko-KR"
             ])
@@ -88,9 +84,7 @@ public class ResourceCompletenessTests
         var blank = new List<string>();
         foreach (string file in ResxFiles())
         {
- #pragma warning disable SYSLIB1045
             string culture = Regex.Match(file, @"\.(en-US|ko-KR)\.resx$").Groups[1].Value;
- #pragma warning restore SYSLIB1045
             foreach (var (key, value) in ReadResx(file))
                 if (string.IsNullOrWhiteSpace(value) && !_allowedEmpty.Contains((culture, key))) blank.Add($"{Stem(file)} [{culture}]: '{key}'");
         }
@@ -99,11 +93,9 @@ public class ResourceCompletenessTests
     }
 
     // A literal key asked of a localizer: Localizer["..."], _localizer["..."], localizer["..."] (C# string escapes for \" only).
- #pragma warning disable SYSLIB1045
     private static readonly Regex _literalKey = new("""
                                                     \b_?[Ll]ocalizer\s*\[\s*"((?:[^"\\]|\\.)*)"
                                                     """, RegexOptions.Compiled);
- #pragma warning restore SYSLIB1045
 
     /// <summary>The distinct literal localizer keys in the file at <paramref name="path"/>, unescaped.</summary>
     private static IEnumerable<string> LiteralKeys(string path) =>

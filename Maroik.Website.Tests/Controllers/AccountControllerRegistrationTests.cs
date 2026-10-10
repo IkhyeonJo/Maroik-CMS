@@ -72,9 +72,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     /// <summary>The hidden <c>__RequestVerificationToken</c> value in <paramref name="html"/>; fails the test if there is none.</summary>
     private static string ExtractAntiForgeryToken(string html)
     {
- #pragma warning disable SYSLIB1045
         Match match = Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
- #pragma warning restore SYSLIB1045
         Assert.True(match.Success, "Could not find __RequestVerificationToken in the page HTML.");
         return match.Groups[1].Value;
     }
@@ -226,9 +224,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
- #pragma warning disable SYSLIB1045
         Match error = Regex.Match(html, "<span style=\"font-weight:bold; color: red; \">(.*?)</span>", RegexOptions.Singleline);
- #pragma warning restore SYSLIB1045
         Assert.True(error.Success, "The registration error message was not rendered.");
 
         // What the browser shows is the HTML-decoded text; it must read exactly like the typed nickname.
@@ -259,9 +255,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
- #pragma warning disable SYSLIB1045
         Match error = Regex.Match(html, "<span style=\"font-weight:bold; color: red; \">(.*?)</span>", RegexOptions.Singleline);
- #pragma warning restore SYSLIB1045
         Assert.True(error.Success, "The registration error message was not rendered.");
 
         Assert.StartsWith($"'{typed}' ", System.Net.WebUtility.HtmlDecode(error.Groups[1].Value));

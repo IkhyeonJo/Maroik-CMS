@@ -22,9 +22,7 @@ public class ExportExcelExtensionsTests
     {
         string fileName = "Menu".ToExcelFileName("UTC", DateTime.UtcNow);
 
- #pragma warning disable SYSLIB1045
         Assert.Matches(new Regex(@"^Menu-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-\d{3}\.xlsx$"), fileName);
- #pragma warning restore SYSLIB1045
     }
 
     /// <summary>

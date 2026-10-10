@@ -19,9 +19,7 @@ public class NoticeFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture)
         await Assertions.Expect(row).ToBeVisibleAsync();
         // The first column is the hidden ID; click the first visible cell.
         await row.Locator("td:not(.mvc-grid-hidden)").First.ClickAsync();
- #pragma warning disable SYSLIB1045
         await Assertions.Expect(row).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("table-primary"));
- #pragma warning restore SYSLIB1045
     }
 
     // -- Fixed income ---------------------------------------------------------------

@@ -106,9 +106,7 @@ public class ManagementAccountService(
                     : ServiceResult.Conflict("Account.AlreadyExists", ServiceErrorKeys.AccountAlreadyCreated);
             }
 
- #pragma warning disable CA1873
             logger.LogInformation("Admin created account {Email} with role {Role} by admin {Admin}", account.Email.Value, account.Role, actorEmail);
- #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -188,9 +186,7 @@ public class ManagementAccountService(
 
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
- #pragma warning disable CA1873
             logger.LogInformation(
- #pragma warning restore CA1873
                 "Admin updated account {Email}: role {OldRole} -> {NewRole}, locked {OldLocked} -> {NewLocked}, deleted {OldDeleted} -> {NewDeleted}, password reset {PasswordReset} by admin {Admin}",
                 account.Email.Value, oldRole, account.Role, oldLocked, account.Locked, oldDeleted, account.Deleted, newHashedPassword != null, actorEmail);
             return ServiceResult.Ok();
@@ -323,9 +319,7 @@ public class ManagementAccountService(
 
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
- #pragma warning disable CA1873
             logger.LogInformation("Admin deleted account {Email} by admin {Admin}", account.Email.Value, actorEmail);
- #pragma warning restore CA1873
             return ServiceResult.Ok();
         }
         catch (Exception e)
