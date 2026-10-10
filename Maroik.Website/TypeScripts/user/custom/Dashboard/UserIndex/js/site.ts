@@ -15,7 +15,8 @@
  * All the numbers are computed on the server and rendered into hidden inputs
  * (`#<seriesName>Year` for the slice value, `#percentageOf<seriesName>Year` for
  * its share). This script only reads those inputs and plots them — no maths
- * beyond `Number(...)` and `toLocaleString()` for display.
+ * beyond `Number(...)` and `toLocaleString()` for display — to as many decimal
+ * places as the server says an amount is stored with (`#amountMaxDecimalPlaces`).
  *
  * Every chart block has the identical shape (see the first one, which is fully
  * commented); the rest carry only a one-line marker. The data / options objects
@@ -28,6 +29,9 @@
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const resultReply = check.object({ result: check.boolean });
+    // Authoritative in FinanceAmountPolicy.MaxDecimalPlaces (server): the stored scale of an amount, so a
+    // tooltip shows 1234.5678 as "1,234.5678" instead of the browser default's three decimals.
+    const amountMaxDecimalPlaces = parseInt(fieldValue($("#amountMaxDecimalPlaces")), 10);
     // Localized category names, read from hidden inputs the view rendered from
     // the resource files. Used as the chart slice labels below.
     const localizer = {
@@ -151,7 +155,7 @@
                             Number($("#percentageOfRegularIncomeOtherIncomeYear").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString(undefined, { maximumFractionDigits: amountMaxDecimalPlaces })} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -204,7 +208,7 @@
                             Number($("#percentageOfIrregularIncomeOtherIncomeYear").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString(undefined, { maximumFractionDigits: amountMaxDecimalPlaces })} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -255,7 +259,7 @@
                             Number($("#percentageOfRegularSavingsInvestmentYear").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString(undefined, { maximumFractionDigits: amountMaxDecimalPlaces })} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -318,7 +322,7 @@
                             Number($("#percentageOfNonConsumerSpendingNonProfitOrganizationTransferYear").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString(undefined, { maximumFractionDigits: amountMaxDecimalPlaces })} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -399,7 +403,7 @@
                             Number($("#percentageOfConsumerSpendingUnknownExpenditureYear").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString(undefined, { maximumFractionDigits: amountMaxDecimalPlaces })} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -463,7 +467,7 @@
                             Number($("#percentageOfRegularIncomeOtherIncomeYearMonth").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString(undefined, { maximumFractionDigits: amountMaxDecimalPlaces })} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -515,7 +519,7 @@
                             Number($("#percentageOfIrregularIncomeOtherIncomeYearMonth").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString(undefined, { maximumFractionDigits: amountMaxDecimalPlaces })} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -566,7 +570,7 @@
                             Number($("#percentageOfRegularSavingsInvestmentYearMonth").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString(undefined, { maximumFractionDigits: amountMaxDecimalPlaces })} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -629,7 +633,7 @@
                             Number($("#percentageOfNonConsumerSpendingNonProfitOrganizationTransferYearMonth").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString(undefined, { maximumFractionDigits: amountMaxDecimalPlaces })} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }
@@ -710,7 +714,7 @@
                             Number($("#percentageOfConsumerSpendingUnknownExpenditureYearMonth").val())
                         ];
 
-                        return `${label}: ${value.toLocaleString()} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
+                        return `${label}: ${value.toLocaleString(undefined, { maximumFractionDigits: amountMaxDecimalPlaces })} (${required(percentages[index], "the slice percentage").toFixed(2)}%)`;
                     }
                 }
             }

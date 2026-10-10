@@ -17,7 +17,7 @@
         columns.Add(model => model.MainClass).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Notice.FixedIncomeOutputViewModel.MainClass)]);
         columns.Add(model => model.SubClass).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Notice.FixedIncomeOutputViewModel.SubClass)]);
         columns.Add(model => model.Content).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Notice.FixedIncomeOutputViewModel.Content)]);
-        columns.Add(model => model.Amount).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Notice.FixedIncomeOutputViewModel.Amount)]).Formatted("{0:0.##}");
+        columns.Add(model => model.Amount).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Notice.FixedIncomeOutputViewModel.Amount)]).Formatted(Maroik.Website.Constants.AmountDisplay.GridFormat);
         columns.Add(model => model.MonetaryUnit).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Notice.FixedIncomeOutputViewModel.MonetaryUnit)]);
         columns.Add(model => model.DepositMonth).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Notice.FixedIncomeOutputViewModel.DepositMonth)]);
         columns.Add(model => model.DepositDay).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Notice.FixedIncomeOutputViewModel.DepositDay)]);

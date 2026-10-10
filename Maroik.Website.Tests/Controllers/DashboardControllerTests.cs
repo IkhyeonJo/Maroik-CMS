@@ -132,6 +132,22 @@ public class DashboardControllerTests
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>
+    /// The page hands its chart script the number of decimal places an amount may show — the stored scale,
+    /// <c>FinanceAmountPolicy.MaxDecimalPlaces</c> — so the tooltips do not round 1234.5678 to 1,234.568.
+    /// </summary>
+    [Fact]
+    public async Task UserIndex_RendersTheAmountDecimalPlacesForTheChartScript()
+    {
+        var session = await LoginAsUserAsync();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/Dashboard/UserIndex?year=&month=");
+        request.Headers.Add("Cookie", session.CookieHeader);
+
+        string html = await (await _client.SendAsync(request, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains("<input id=\"amountMaxDecimalPlaces\" name=\"amountMaxDecimalPlaces\" type=\"hidden\" value=\"4\" />", html);
+    }
+
     // -- UserUpdateDefaultMonetary --------------------------------------------------
 
     /// <summary>User update default monetary logged-in user returns success result.</summary>
