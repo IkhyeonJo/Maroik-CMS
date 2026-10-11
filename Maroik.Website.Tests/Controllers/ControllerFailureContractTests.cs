@@ -86,6 +86,8 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         (Role.User, "/AccountBook/IsAssetExists?productName=x", false),
         (Role.User, "/AccountBook/IsIncomeExists?id=1", false),
         (Role.User, "/AccountBook/IsExpenditureExists?id=1", false),
+        (Role.User, "/Forum/DownloadFreeBoardAttachedFile?boardId=1", false),
+        (Role.User, "/Management/DownloadPrivateNoteAttachedFile?boardId=1", false),
     ];
 
     /// <summary>The endpoints that return an amount label (currency) for the selected asset.</summary>
@@ -476,5 +478,141 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
+    }
+
+    /// <summary>A multipart form carrying a small .png under <paramref name="field"/>, which passes the controllers' own size / extension checks.</summary>
+    private static MultipartFormDataContent PngForm(string field)
+    {
+        var form = new MultipartFormDataContent();
+        var part = new ByteArrayContent([1, 2, 3, 4]);
+        part.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
+        form.Add(part, field, "picture.png");
+        return form;
+    }
+
+    /// <summary>The image-upload endpoints: the editor (Summernote) uploads of the three editors, and the profile avatar.</summary>
+    internal static readonly string[] UploadEndpoints =
+    [
+        "/Forum/UploadImageFile", "/Management/UploadImageFile", "/Calendar/UploadImageFile", "/Management/UpdateProfileAvatar",
+    ];
+
+    /// <summary>
+    /// The image-upload endpoints answer a failing service with <c>{ result: false, errorMessage: &lt;temporary error&gt; }</c> (the
+    /// field their pages read), never an error page or the exception text, and log the failure once at Error with the exception
+    /// and the uploader's email.
+    /// </summary>
+    [Fact]
+    public async Task AServiceFailure_InAnImageUpload_BecomesTheGenericFailure_AndIsLogged()
+    {
+        var forumLogger = new FakeLogger<ForumController>();
+        var managementLogger = new FakeLogger<ManagementController>();
+        var calendarLogger = new FakeLogger<CalendarController>();
+        await using var host = CreateBrokenHost().WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+        {
+            services.AddSingleton<ILogger<ForumController>>(forumLogger);
+            services.AddSingleton<ILogger<ManagementController>>(managementLogger);
+            services.AddSingleton<ILogger<CalendarController>>(calendarLogger);
+        }));
+        var client = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false
+        });
+        const string email = "failure-upload@test.com";
+        var session = await AuthenticatedSessionHelper.LoginAsync(host, client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
+
+        List<string> failures = [];
+        foreach (string url in UploadEndpoints)
+        {
+            forumLogger.Collector.Clear(); managementLogger.Collector.Clear(); calendarLogger.Collector.Clear();
+            using var request = session.BuildFormPostRequest(url, PngForm(url.EndsWith("Avatar", StringComparison.Ordinal) ? "ProfileAvatarFiles" : "summernoteImageFile"));
+            var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+            string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+            if (response.StatusCode != System.Net.HttpStatusCode.OK) { failures.Add($"{url}: HTTP {(int)response.StatusCode}"); continue; }
+            using JsonDocument doc = JsonDocument.Parse(json);
+            if (doc.RootElement.GetProperty("result").GetBoolean()) failures.Add($"{url}: reported success");
+            if (doc.RootElement.GetProperty("errorMessage").GetString() != Temporary) failures.Add($"{url}: unexpected message ({json})");
+            if (json.Contains(Secret)) failures.Add($"{url}: leaked the exception text");
+
+            var errors = forumLogger.Collector.GetSnapshot().Concat(managementLogger.Collector.GetSnapshot()).Concat(calendarLogger.Collector.GetSnapshot())
+                .Where(r => r.Level == LogLevel.Error).ToList();
+            if (errors.Count != 1) { failures.Add($"{url}: {errors.Count} Error entries"); continue; }
+            if (errors[0].Exception?.Message != Secret) failures.Add($"{url}: the exception is not attached");
+            if (!errors[0].Message.Contains(email)) failures.Add($"{url}: the uploader is not named ({errors[0].Message})");
+        }
+
+        Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
+    }
+
+    // -- every POST action is accounted for -----------------------------------------------------------------
+
+    /// <summary>POST actions whose failure contract a dedicated test of this class or another one exercises, with that test.</summary>
+    private static readonly Dictionary<string, string> _coveredByDedicatedTests = new()
+    {
+        ["/Management/CreateAccount"] = nameof(AServiceFailure_InCreateAccountAndDefaultMonetary_ReportsFailure_WithoutLeakingTheException),
+        ["/Dashboard/UserUpdateDefaultMonetary"] = nameof(AServiceFailure_InCreateAccountAndDefaultMonetary_ReportsFailure_WithoutLeakingTheException),
+        ["/Management/UpdateProfileTimeZone"] = nameof(ATimeZoneUpdate_WhoseServiceFails_ReturnsToTheProfilePage),
+        ["/Management/IsCategoryExists"] = nameof(AMenuServiceFailure_BecomesTheGenericFailureResult_WithoutLeakingTheException),
+        ["/Management/IsSubCategoryExists"] = nameof(AMenuServiceFailure_BecomesTheGenericFailureResult_WithoutLeakingTheException),
+        ["/Management/CreateCategory"] = nameof(AMenuServiceFailure_BecomesTheGenericFailureResult_WithoutLeakingTheException),
+        ["/Management/CreateSubCategory"] = nameof(AMenuServiceFailure_BecomesTheGenericFailureResult_WithoutLeakingTheException),
+        ["/Management/UpdateCategory"] = nameof(AMenuServiceFailure_BecomesTheGenericFailureResult_WithoutLeakingTheException),
+        ["/Management/UpdateSubCategory"] = nameof(AMenuServiceFailure_BecomesTheGenericFailureResult_WithoutLeakingTheException),
+        ["/Management/DeleteCategory"] = nameof(AMenuServiceFailure_BecomesTheGenericFailureResult_WithoutLeakingTheException),
+        ["/Management/DeleteSubCategory"] = nameof(AMenuServiceFailure_BecomesTheGenericFailureResult_WithoutLeakingTheException),
+        ["/Account/ConfirmEmail"] = "RepositoryFailureContractTests",
+        ["/Account/ResetPassword"] = "RepositoryFailureContractTests",
+    };
+
+    /// <summary>POST actions outside the <c>{ result, error }</c> failure contract, each with the reason.</summary>
+    private static readonly Dictionary<string, string> _exemptPosts = new()
+    {
+        ["/Account/Login"] = "non-AJAX form post that renders a page: a failure goes to the global exception page, like a page GET",
+        ["/Account/Logout"] = "non-AJAX form post that renders a page: a failure goes to the global exception page, like a page GET",
+        ["/Account/Register"] = "non-AJAX form post that renders a page: a failure goes to the global exception page, like a page GET",
+        ["/Account/ForgotPassword"] = "non-AJAX form post that renders a page: a failure goes to the global exception page, like a page GET",
+        ["/AccountBook/ExportExcelAsset"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
+        ["/AccountBook/ExportExcelIncome"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
+        ["/AccountBook/ExportExcelExpenditure"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
+        ["/Notice/ExportExcelFixedIncome"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
+        ["/Notice/ExportExcelFixedExpenditure"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
+        ["/Management/ExportExcelAccount"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
+        ["/Management/ExportExcelMenu"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
+        ["/Dashboard/CultureManagement"] = "only sets the culture cookie; calls no service",
+    };
+
+    /// <summary>The path of <paramref name="url"/> without its query string.</summary>
+    private static string PathOf(string url) => url.Split('?')[0];
+
+    /// <summary>
+    /// Every <c>[HttpPost]</c> action of the Website is either exercised by a failure-contract test (a throwing service must
+    /// become HTTP 200 with the generic message, never an error page) or listed in <see cref="_exemptPosts"/> with its reason.
+    /// A new POST action fails this test until it is given one of the two, so the per-action catch cannot be forgotten
+    /// silently (CLAUDE.md "Error handling"). A listed path that no longer exists fails it too.
+    /// </summary>
+    [Fact]
+    public void EveryPostAction_IsCoveredByAFailureContractTest_OrExemptWithAReason()
+    {
+        var actions = typeof(Program).Assembly.GetTypes()
+            .Where(t => t.IsSubclassOf(typeof(Microsoft.AspNetCore.Mvc.Controller)) && !t.IsAbstract)
+            .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                .Where(m => m.GetCustomAttribute<Microsoft.AspNetCore.Mvc.HttpPostAttribute>() != null)
+                .Select(m => $"/{t.Name[..^"Controller".Length]}/{m.Name}"))
+            .ToHashSet();
+
+        var covered = _endpoints.Select(e => PathOf(e.Url))
+            .Concat(BodyEndpoints.Select(e => e.Url))
+            .Concat(_amountLabelEndpoints)
+            .Concat(UploadEndpoints)
+            .Concat(_coveredByDedicatedTests.Keys)
+            .ToHashSet();
+
+        var unaccounted = actions.Except(covered).Except(_exemptPosts.Keys).Order().ToList();
+        var stale = covered.Concat(_exemptPosts.Keys).Except(actions).Order().ToList();
+        var both = covered.Intersect(_exemptPosts.Keys).Order().ToList();
+
+        Assert.True(unaccounted.Count == 0, "POST actions with no failure-contract test and no exemption:" + Environment.NewLine + string.Join(Environment.NewLine, unaccounted));
+        Assert.True(stale.Count == 0, "Listed paths that are not POST actions:" + Environment.NewLine + string.Join(Environment.NewLine, stale));
+        Assert.True(both.Count == 0, "Paths both covered and exempt:" + Environment.NewLine + string.Join(Environment.NewLine, both));
     }
 }

@@ -118,7 +118,16 @@ public class ManagementController(
 
         string? email = HttpContext.GetLoggedInAccount().Email;
 
-        ServiceResult avatarResult = await profileService.UploadAndUpdateAvatarAsync(email!, imageBytes, extension, HttpContext.RequestAborted);
+        ServiceResult avatarResult;
+        try
+        {
+            avatarResult = await profileService.UploadAndUpdateAvatarAsync(email!, imageBytes, extension, HttpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Avatar upload failed for {Email}", email);
+            return Ok(new { result = false, errorMessage = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
 
         if (!avatarResult.Success)
         {
@@ -938,7 +947,16 @@ public class ManagementController(
 
         AttachedFileDto file = (await summernoteImageFile.ToAttachedFileInfoAsync(serverSettings.Value.MaxAttachedFileSizeBytes, HttpContext.RequestAborted))!;
 
-        SummernoteUploadResult uploadResult = await boardService.UploadSummernoteImageAsync(file, "Management", BoardTypes.PrivateNote, uploaderEmail, HttpContext.RequestAborted);
+        SummernoteUploadResult uploadResult;
+        try
+        {
+            uploadResult = await boardService.UploadSummernoteImageAsync(file, "Management", BoardTypes.PrivateNote, uploaderEmail, HttpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Editor image upload failed for {Email}", uploaderEmail);
+            return Ok(new { result = false, errorMessage = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
 
         if (!uploadResult.Success)
             return Ok(new { result = false, errorMessage = localizer[uploadResult.ErrorKey ?? "Input is invalid"].Value });
