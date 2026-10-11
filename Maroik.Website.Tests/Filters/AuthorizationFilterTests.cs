@@ -340,13 +340,13 @@ public class AuthorizationFilterTests
         Assert.Null(context.Result);
     }
 
-    /// <summary>The allowance is for Exception/Error only: another Exception action (AccessDenied) is still gated on POST.</summary>
+    /// <summary>The allowance is for Exception/Error only: any other Exception action is still gated on POST.</summary>
     [Fact]
-    public async Task OnAuthorizationAsync_ExceptionAccessDenied_Post_NotLoggedIn_StillRedirects()
+    public async Task OnAuthorizationAsync_AnotherExceptionAction_Post_NotLoggedIn_StillRedirects()
     {
         _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
         SetupMenu([], []);
-        var context = BuildContext("Exception", "AccessDenied", "POST");
+        var context = BuildContext("Exception", "Other", "POST");
 
         await CreateSut().OnAuthorizationAsync(context);
 
