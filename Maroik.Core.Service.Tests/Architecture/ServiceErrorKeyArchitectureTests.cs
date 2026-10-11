@@ -24,6 +24,10 @@ public partial class ServiceErrorKeyArchitectureTests
     [GeneratedRegex(@"\bServiceResult\.(?:Validation|NotFound|Conflict|Failure)\(\s*""(?:[^""\\]|\\.)*""\s*,\s*""(?<key>(?:[^""\\]|\\.)*)""")]
     private static partial Regex LiteralCategorizedKey();
 
+    /// <summary><c>ErrorKey = "…"</c> in a result's object initializer (e.g. <c>ConfirmEmailResult</c>, which has no <c>Fail</c> factory).</summary>
+    [GeneratedRegex(@"\bErrorKey\s*=\s*""(?<key>(?:[^""\\]|\\.)*)""")]
+    private static partial Regex LiteralInitializerKey();
+
     /// <summary>A whole-line <c>//</c> or <c>///</c> comment, which may quote a call as an example.</summary>
     [GeneratedRegex(@"^\s*//.*$", RegexOptions.Multiline)]
     private static partial Regex CommentLine();
@@ -40,7 +44,7 @@ public partial class ServiceErrorKeyArchitectureTests
     private static IEnumerable<string> LiteralKeysIn(string source)
     {
         string code = CommentLine().Replace(source, "");
-        return LiteralFailKey().Matches(code).Concat(LiteralCategorizedKey().Matches(code))
+        return LiteralFailKey().Matches(code).Concat(LiteralCategorizedKey().Matches(code)).Concat(LiteralInitializerKey().Matches(code))
             .Select(m => $"'{m.Groups["key"].Value}'");
     }
 
@@ -74,6 +78,8 @@ public partial class ServiceErrorKeyArchitectureTests
                 ServiceResult.Validation(
                     "Expenditure.SameAsset", "The values cannot be the same.");
                 """, "'The values cannot be the same.'")]
+    [InlineData("""return new ConfirmEmailResult { InvalidToken = true, ErrorKey = "Something failed" };""", "'Something failed'")]
+    [InlineData("""return new ConfirmEmailResult { ErrorKey = ServiceErrorKeys.ConfirmEmailFailed };""", null)]
     [InlineData("""return ServiceResult.Fail(ServiceErrorKeys.InputInvalid);""", null)]
     [InlineData("""return ServiceResult.NotFound("Board.NotFound", ServiceErrorKeys.PostNotFound);""", null)]
     [InlineData("""/// <c>ServiceResult.Fail("example")</c>""", null)]
