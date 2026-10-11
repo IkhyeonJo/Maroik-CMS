@@ -173,7 +173,7 @@ public static class AccountBookViewModelMapper
         public void PopulateTimeData(string timeZoneIanaId, DateTime utcNow)
         {
             DateTime ct = utcNow.ConvertTimeByTimeZoneIanaId(timeZoneIanaId);
-            vm.CurrentDate = ct.ToString("yyyy-MM-dd");
+            vm.CurrentDate = ct.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             vm.CurrentHour = ct.Hour;
             vm.CurrentMinute = ct.Minute;
             vm.CurrentSecond = ct.Second;
