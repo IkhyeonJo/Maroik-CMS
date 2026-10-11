@@ -35,11 +35,10 @@ public class RsaServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
-    /// <summary>The service under test configured with the shared key pair and <paramref name="algorithm"/>.</summary>
-    private static RsaService CreateSut(RsaType algorithm = RsaType.Rsa2) =>
+    /// <summary>The service under test configured with the shared key pair.</summary>
+    private static RsaService CreateSut() =>
         new(Options.Create(new ServerSetting
         {
-            RsaAlgorithm = algorithm,
             RsaPrivateKey = _privateKeyBase64,
             RsaPublicKey = _publicKeyBase64
         }));
@@ -52,19 +51,6 @@ public class RsaServiceTests
     {
         var sut = CreateSut();
         const string plaintext = "hello-maroik-rsa";
-
-        string cipher = sut.Encrypt(plaintext);
-        string recovered = sut.Decrypt(cipher);
-
-        Assert.Equal(plaintext, recovered);
-    }
-
-    /// <summary>Verifies that <c>Encrypt</c> then decrypt with sha1 algorithm returns original plaintext.</summary>
-    [Fact]
-    public void Encrypt_ThenDecrypt_WithSha1Algorithm_ReturnsOriginalPlaintext()
-    {
-        var sut = CreateSut(RsaType.Rsa);
-        const string plaintext = "sha1-roundtrip";
 
         string cipher = sut.Encrypt(plaintext);
         string recovered = sut.Decrypt(cipher);
@@ -116,7 +102,7 @@ public class RsaServiceTests
 
     /// <summary>
     /// Regression: the SHA-1 OAEP fallback has been retired (CLAUDE.md TODO — "Retire the RSA SHA-1
-    /// fallback"), so ciphertext produced the way the old <see cref="RsaType.Rsa"/> config did no
+    /// fallback"), so ciphertext produced the way the old SHA-1 configuration did no
     /// longer decrypts — <c>Decrypt</c> must now surface it as the same <see cref="CryptographicException"/>
     /// any other undecryptable ciphertext produces, not silently retry under SHA-1.
     /// </summary>
@@ -135,7 +121,6 @@ public class RsaServiceTests
 
         var sut = new RsaService(Options.Create(new ServerSetting
         {
-            RsaAlgorithm = RsaType.Rsa2,
             RsaPrivateKey = privateKey,
             RsaPublicKey = publicKey
         }));
@@ -169,7 +154,7 @@ public class RsaServiceTests
     [Fact]
     public void Decrypt_Throws_WhenNoPrivateKeyIsConfigured()
     {
-        var sut = new RsaService(Options.Create(new ServerSetting { RsaAlgorithm = RsaType.Rsa2, RsaPrivateKey = "", RsaPublicKey = _publicKeyBase64 }));
+        var sut = new RsaService(Options.Create(new ServerSetting { RsaPrivateKey = "", RsaPublicKey = _publicKeyBase64 }));
 
         var ex = Assert.Throws<InvalidOperationException>(() => sut.Decrypt("anything"));
 
@@ -180,7 +165,7 @@ public class RsaServiceTests
     [Fact]
     public void Encrypt_Throws_WhenNoPublicKeyIsConfigured()
     {
-        var sut = new RsaService(Options.Create(new ServerSetting { RsaAlgorithm = RsaType.Rsa2, RsaPrivateKey = "", RsaPublicKey = "" }));
+        var sut = new RsaService(Options.Create(new ServerSetting { RsaPrivateKey = "", RsaPublicKey = "" }));
 
         var ex = Assert.Throws<InvalidOperationException>(() => sut.Encrypt("anything"));
 

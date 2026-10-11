@@ -5,7 +5,6 @@
 
 using System.Globalization;
 using Maroik.Core.Client.Extensions;
-using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Contract.Misc.Settings;
 using Maroik.Core.Repository.Extensions;
 using Maroik.Core.Service.Extensions;
@@ -57,10 +56,6 @@ try
         target.ClamavHost = configuration["Clamav:Host"];
         target.ClamavPort = configuration.GetValue<int>("Clamav:Port");
         target.FileStorageBaseUrl = configuration["FileStorage:BaseUrl"];
-        target.RsaAlgorithm =
-            Enum.TryParse<RsaType>(configuration["ServerSetting:RsaAlgorithm"], ignoreCase: true, out var parsed)
-                ? parsed
-                : RsaType.Rsa2;
     }
 
     // A local copy for the values needed before the DI container is built (middleware).

@@ -4,8 +4,7 @@ namespace Maroik.Core.Contract.Interfaces;
 /// Service interface for RSA cryptographic operations used to protect values that leave the server
 /// and come back (the registration / password-reset tokens embedded in mailed links, and the storage
 /// path of each inline Summernote image carried in its <c>alt</c> attribute). Padding is always
-/// OAEP with SHA-256; <see cref="Maroik.Core.Contract.Misc.Settings.ServerSetting.RsaAlgorithm"/> is a legacy
-/// setting that no longer changes it.
+/// OAEP with SHA-256.
 /// </summary>
 public interface IRsaService
 {
