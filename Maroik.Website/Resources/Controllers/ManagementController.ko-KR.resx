@@ -351,9 +351,6 @@
   <data name="Cannot add a comment to a locked post." xml:space="preserve">
     <value>잠긴 게시글에는 댓글을 추가할 수 없습니다.</value>
   </data>
-  <data name="Cannot change the currency of an existing asset." xml:space="preserve">
-    <value>기존 자산의 화폐단위는 변경할 수 없습니다.</value>
-  </data>
   <data name="Cannot deposit a different currency into this asset." xml:space="preserve">
     <value>이 자산에는 다른 화폐단위로 입금할 수 없습니다.</value>
   </data>

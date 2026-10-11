@@ -351,9 +351,6 @@
   <data name="Cannot add a comment to a locked post." xml:space="preserve">
     <value>Cannot add a comment to a locked post.</value>
   </data>
-  <data name="Cannot change the currency of an existing asset." xml:space="preserve">
-    <value>Cannot change the currency of an existing asset.</value>
-  </data>
   <data name="Cannot deposit a different currency into this asset." xml:space="preserve">
     <value>Cannot deposit a different currency into this asset.</value>
   </data>

@@ -312,9 +312,6 @@
   <data name="Asset category cannot be empty." xml:space="preserve">
     <value>Asset category cannot be empty.</value>
   </data>
-  <data name="Cannot change the currency of an existing asset." xml:space="preserve">
-    <value>Cannot change the currency of an existing asset.</value>
-  </data>
   <data name="Cannot deposit a different currency into this asset." xml:space="preserve">
     <value>Cannot deposit a different currency into this asset.</value>
   </data>

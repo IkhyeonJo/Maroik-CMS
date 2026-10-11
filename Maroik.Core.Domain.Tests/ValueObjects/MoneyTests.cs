@@ -42,16 +42,6 @@ public class MoneyTests
         Assert.Equal("USD", result.Value.Currency.Value);
     }
 
-    /// <summary>Zero returns zero balance.</summary>
-    [Fact]
-    public void Zero_ReturnsZeroBalance()
-    {
-        var money = Money.Zero(CurrencyCode.Create("KRW").Value);
-
-        Assert.Equal(0m, money.Amount);
-        Assert.Equal("KRW", money.Currency.Value);
-    }
-
     /// <summary>Add returns sum money, when same currency.</summary>
     [Fact]
     public void Add_ReturnsSumMoney_WhenSameCurrency()

@@ -43,9 +43,6 @@ public sealed class Money : ValueObject
         return new Money(amount, currencyResult.Value);
     }
 
-    /// <summary>Creates a zero-balance <see cref="Money"/> with the given currency.</summary>
-    public static Money Zero(CurrencyCode currency) => new(0m, currency);
-
     /// <summary>
     /// Returns a new <see cref="Money"/> with the same currency as this instance but a different
     /// amount. No validation is needed since the currency is inherited from an already-valid

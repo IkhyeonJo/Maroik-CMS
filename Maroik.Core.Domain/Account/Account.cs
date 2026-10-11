@@ -362,19 +362,6 @@ public sealed class Account : AggregateRoot<string>
     }
 
     /// <summary>
-    /// Updates the account's profile fields. Nickname is not included — it is set at registration
-    /// and never changed afterward (the profile edit UI shows it read-only); the only exception is
-    /// <see cref="ReplaceUnconfirmedRegistration"/>, before the registration is confirmed.
-    /// </summary>
-    public void UpdateProfile(string? avatarImagePath, TimeZoneId timeZone, CurrencyCode? defaultMonetaryUnit, DateTime utcNow)
-    {
-        AvatarImagePath = avatarImagePath;
-        TimeZone = timeZone;
-        DefaultMonetaryUnit = defaultMonetaryUnit;
-        Updated = utcNow;
-    }
-
-    /// <summary>
     /// Replaces the stored BCrypt hash for a self-service password change. Regenerates
     /// <see cref="SecurityStamp"/> (invalidating any other open session on its next request) and
     /// clears <see cref="MustChangePassword"/>, since supplying a new hash here always goes through

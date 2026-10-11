@@ -203,34 +203,6 @@ public class AssetTests
         Assert.Equal(1000m, asset.Balance.Amount);
     }
 
-    // -- SetBalance ------------------------------------------------------------
-
-    /// <summary>Set balance succeeds, when same currency.</summary>
-    [Fact]
-    public void SetBalance_Succeeds_WhenSameCurrency()
-    {
-        var asset = ValidAsset(amount: 1000m, currency: "KRW");
-        var newBalance = Money.Create(9999m, "KRW").Value;
-
-        var result = asset.SetBalance(newBalance, Now);
-
-        Assert.False(result.IsError);
-        Assert.Equal(9999m, asset.Balance.Amount);
-    }
-
-    /// <summary>Set balance returns error, when currency mismatch.</summary>
-    [Fact]
-    public void SetBalance_ReturnsError_WhenCurrencyMismatch()
-    {
-        var asset = ValidAsset(currency: "KRW");
-        var usdBalance = Money.Create(100m, "USD").Value;
-
-        var result = asset.SetBalance(usdBalance, Now);
-
-        Assert.True(result.IsError);
-        Assert.Equal("Asset.CurrencyMismatch", result.FirstError.Code);
-    }
-
     // -- Update ----------------------------------------------------------------
 
     /// <summary>Update succeeds, when valid.</summary>
@@ -297,31 +269,6 @@ public class AssetTests
         Assert.True(result.IsError);
         Assert.Equal("Money.CurrencyEmpty", result.FirstError.Code);
         Assert.Equal(originalCurrency, asset.Balance.Currency.Value);
-    }
-
-    // -- UpdateNote ------------------------------------------------------------
-
-    /// <summary>Update note sets note.</summary>
-    [Fact]
-    public void UpdateNote_SetsNote()
-    {
-        var asset = ValidAsset();
-
-        asset.UpdateNote("memo text", Now);
-
-        Assert.Equal("memo text", asset.Note);
-    }
-
-    /// <summary>Update note clears note, when null.</summary>
-    [Fact]
-    public void UpdateNote_ClearsNote_WhenNull()
-    {
-        var asset = ValidAsset();
-        asset.UpdateNote("memo", Now);
-
-        asset.UpdateNote(null, Now);
-
-        Assert.Null(asset.Note);
     }
 
     // -- SoftDelete ------------------------------------------------------------

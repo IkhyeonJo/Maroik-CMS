@@ -649,36 +649,6 @@ public class AccountTests
         Assert.Equal(token, account.RegistrationToken);
     }
 
-    // -- UpdateProfile --------------------------------------------------------
-
-    /// <summary>Update profile updates all fields.</summary>
-    [Fact]
-    public void UpdateProfile_UpdatesAllFields()
-    {
-        var account = ValidAccount();
-        var newTz = TimeZoneId.Create("Asia/Seoul").Value;
-
-        account.UpdateProfile("/avatar.png", newTz, CurrencyCode.Create("USD").Value, Now);
-
-        Assert.Equal("/avatar.png", account.AvatarImagePath);
-        Assert.Equal("Asia/Seoul", account.TimeZone.Value);
-        Assert.Equal("USD", account.DefaultMonetaryUnit?.Value);
-    }
-
-    /// <summary>Update profile clears avatar and currency, when null.</summary>
-    [Fact]
-    public void UpdateProfile_ClearsAvatarAndCurrency_WhenNull()
-    {
-        var account = ValidAccount();
-        var tz = TimeZoneId.Create("UTC").Value;
-        account.UpdateProfile("/avatar.png", tz, CurrencyCode.Create("KRW").Value, Now);
-
-        account.UpdateProfile(null, tz, null, Now);
-
-        Assert.Null(account.AvatarImagePath);
-        Assert.Null(account.DefaultMonetaryUnit);
-    }
-
     // -- ChangePassword -------------------------------------------------------
 
     /// <summary>Change password replaces hashed password.</summary>
