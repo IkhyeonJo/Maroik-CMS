@@ -176,7 +176,7 @@ public sealed class FixedExpenditure : AggregateRoot<long>
         DateTime utcNow,
         string? note = null)
     {
-        var coreResult = ValidateCoreFields(mainClass, subClass, paymentMethod, depositMonth, depositDay, amount, content, note);
+        var coreResult = ValidateCoreFields(mainClass, subClass, paymentMethod, myDepositAsset, depositMonth, depositDay, amount, content, note);
         if (coreResult.IsError) return coreResult.Errors;
 
         var emailResult = Email.Create(accountEmailValue);
@@ -189,21 +189,22 @@ public sealed class FixedExpenditure : AggregateRoot<long>
             return DomainError.Validation("FixedExpenditure.MaturityDateInPast",
                 "The maturity date cannot be earlier than the current date.");
 
-        (string validMainClass, string validSubClass, string validPaymentMethod) = coreResult.Value;
+        (string validMainClass, string validSubClass, string validPaymentMethod, string? validDepositAsset) = coreResult.Value;
         var fixedExpenditure = new FixedExpenditure(0, emailResult.Value, validMainClass, validSubClass, content,
-            moneyResult.Value, validPaymentMethod, myDepositAsset, depositMonth, depositDay, maturityDate, note, utcNow);
+            moneyResult.Value, validPaymentMethod, validDepositAsset, depositMonth, depositDay, maturityDate, note, utcNow);
 
         return fixedExpenditure;
     }
 
     /// <summary>
     /// Shared validation for the fields <see cref="Register"/> and <see cref="Update"/> both take,
-    /// returning the three required strings once confirmed non-blank so callers keep the compiler's
+    /// returning the three required strings once confirmed non-blank (plus the deposit asset the transfer rule of
+    /// <see cref="ExpenditureClassPolicy.ResolveDepositAsset"/> keeps) so callers keep the compiler's
     /// non-null flow. Each entry point still applies its own remaining rules — <see cref="Email"/>
     /// on register, and the <see cref="Money"/> value — in its own order.
     /// </summary>
-    private static ErrorOr<(string MainClass, string SubClass, string PaymentMethod)> ValidateCoreFields(
-        string? mainClass, string? subClass, string? paymentMethod,
+    private static ErrorOr<(string MainClass, string SubClass, string PaymentMethod, string? DepositAsset)> ValidateCoreFields(
+        string? mainClass, string? subClass, string? paymentMethod, string? myDepositAsset,
         short depositMonth, short depositDay, decimal amount, string? content, string? note)
     {
         if (string.IsNullOrWhiteSpace(mainClass))
@@ -215,11 +216,8 @@ public sealed class FixedExpenditure : AggregateRoot<long>
         if (string.IsNullOrWhiteSpace(paymentMethod))
             return DomainError.Validation("FixedExpenditure.PaymentMethodEmpty", "Payment method cannot be empty.");
 
-        if (depositMonth is < 1 or > 12)
-            return DomainError.Validation("FixedExpenditure.InvalidDepositMonth", "Deposit month must be between 1 and 12.");
-
-        if (!FixedSchedulePolicy.IsValidDepositDate(depositMonth, depositDay))
-            return DomainError.Validation("FixedExpenditure.InvalidDepositDay", "Deposit day is not valid for the selected month.");
+        var dateResult = FixedSchedulePolicy.ValidateDepositDate("FixedExpenditure", depositMonth, depositDay);
+        if (dateResult.IsError) return dateResult.Errors;
 
         var amountResult = FinanceAmountPolicy.ValidateAmount(amount);
         if (amountResult.IsError) return amountResult.Errors;
@@ -230,7 +228,10 @@ public sealed class FixedExpenditure : AggregateRoot<long>
         var classResult = ExpenditureClassPolicy.Validate(mainClass, subClass);
         if (classResult.IsError) return classResult.Errors;
 
-        return (mainClass, subClass, paymentMethod);
+        var depositResult = ExpenditureClassPolicy.ResolveDepositAsset("FixedExpenditure", classResult.Value, paymentMethod, myDepositAsset);
+        if (depositResult.IsError) return depositResult.Errors;
+
+        return (mainClass, subClass, paymentMethod, depositResult.Value);
     }
 
     // ------------------------------------------------------------------------
@@ -266,7 +267,7 @@ public sealed class FixedExpenditure : AggregateRoot<long>
         string? note,
         DateTime utcNow)
     {
-        var coreResult = ValidateCoreFields(mainClass, subClass, paymentMethod, depositMonth, depositDay, amount, content, note);
+        var coreResult = ValidateCoreFields(mainClass, subClass, paymentMethod, myDepositAsset, depositMonth, depositDay, amount, content, note);
         if (coreResult.IsError) return coreResult.Errors;
 
         var moneyResult = Money.Create(amount, currency);
@@ -279,13 +280,13 @@ public sealed class FixedExpenditure : AggregateRoot<long>
             return DomainError.Validation("FixedExpenditure.MaturityDateInPast",
                 "The maturity date cannot be earlier than the current date.");
 
-        (string validMainClass, string validSubClass, string validPaymentMethod) = coreResult.Value;
+        (string validMainClass, string validSubClass, string validPaymentMethod, string? validDepositAsset) = coreResult.Value;
         MainClass = validMainClass;
         SubClass = validSubClass;
         Content = content;
         Amount = moneyResult.Value;
         PaymentMethod = validPaymentMethod;
-        MyDepositAsset = myDepositAsset;
+        MyDepositAsset = validDepositAsset;
         DepositMonth = depositMonth;
         DepositDay = depositDay;
         MaturityDate = maturityDate;

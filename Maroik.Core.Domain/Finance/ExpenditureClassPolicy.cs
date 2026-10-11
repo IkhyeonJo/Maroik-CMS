@@ -73,4 +73,25 @@ public static class ExpenditureClassPolicy
 
         return DepositAssetSubClasses.Contains(subClass);
     }
+
+    /// <summary>
+    /// The deposit asset an expenditure (one-off or fixed) keeps, given whether its class is a transfer
+    /// (<paramref name="requiresDepositAsset"/>, from <see cref="Validate"/>): a transfer moves money from
+    /// <paramref name="paymentMethod"/> into <paramref name="myDepositAsset"/>, so it needs one, and not the same asset;
+    /// any other expenditure has none, whatever was submitted. <paramref name="codePrefix"/> names the aggregate in the
+    /// error code (<c>Expenditure</c> / <c>FixedExpenditure</c>).
+    /// </summary>
+    public static ErrorOr<string?> ResolveDepositAsset(string codePrefix, bool requiresDepositAsset, string paymentMethod, string? myDepositAsset)
+    {
+        if (!requiresDepositAsset)
+            return (string?)null;
+
+        if (string.IsNullOrWhiteSpace(myDepositAsset))
+            return DomainError.Validation($"{codePrefix}.DepositAssetEmpty", "Deposit asset product name cannot be empty.");
+
+        if (string.Equals(paymentMethod, myDepositAsset, StringComparison.Ordinal))
+            return DomainError.Validation($"{codePrefix}.SameAsset", "The PaymentMethod and MyDepositAsset value cannot be the same.");
+
+        return myDepositAsset;
+    }
 }

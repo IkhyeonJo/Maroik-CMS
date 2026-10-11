@@ -2,7 +2,6 @@ using ErrorOr;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Finance;
-using Maroik.Core.Domain.Errors;
 using Maroik.Core.Service.Mappers;
 
 namespace Maroik.Core.Service.Services;
@@ -129,20 +128,15 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
     /// <summary>
     /// Validates the income class and deposit month/day of a fixed-income request.
     /// (The maturity date is already a parsed <see cref="DateTime"/> by this point — the
-    /// controller enforces its yyyy-MM-dd string format via ParseExact.)
+    /// controller enforces its yyyy-MM-dd string format.)
     /// </summary>
     private static ErrorOr<Success> ValidateRequest(FixedIncomeRequest request)
     {
         var classResult = IncomeClassPolicy.Validate(request.MainClass, request.SubClass);
         if (classResult.IsError) return classResult.FirstError;
 
-        if (request.DepositMonth is < 1 or > 12)
-            return Error.Validation("FixedIncome.DepositMonth", "Deposit month must be between 1 and 12.");
-
-        if (!FixedSchedulePolicy.IsValidDepositDate(request.DepositMonth, request.DepositDay))
-            return DomainError.Validation("FixedIncome.DepositDay",
-                "Deposit day must be between 1 and {0} for month {1}.",
-                FixedSchedulePolicy.MaxDepositDay(request.DepositMonth), request.DepositMonth);
+        var dateResult = FixedSchedulePolicy.ValidateDepositDate("FixedIncome", request.DepositMonth, request.DepositDay);
+        if (dateResult.IsError) return dateResult.FirstError;
 
         return Result.Success;
     }

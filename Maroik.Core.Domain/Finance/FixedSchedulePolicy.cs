@@ -1,4 +1,6 @@
 using System.Globalization;
+using ErrorOr;
+using Maroik.Core.Domain.Errors;
 
 namespace Maroik.Core.Domain.Finance;
 
@@ -109,6 +111,23 @@ public static class FixedSchedulePolicy
     /// </summary>
     public static bool IsValidDepositDate(int depositMonth, int depositDay)
         => depositDay >= 1 && depositDay <= MaxDepositDay(depositMonth);
+
+    /// <summary>
+    /// The deposit month / day rule as a result: month 1–12, then a day valid for that month (see
+    /// <see cref="IsValidDepositDate"/>). The one place both fixed-schedule aggregates and the services' early check take it
+    /// from; <paramref name="codePrefix"/> names the aggregate in the error code (<c>FixedIncome</c> / <c>FixedExpenditure</c>).
+    /// </summary>
+    public static ErrorOr<Success> ValidateDepositDate(string codePrefix, short depositMonth, short depositDay)
+    {
+        if (depositMonth is < 1 or > 12)
+            return DomainError.Validation($"{codePrefix}.InvalidDepositMonth", "Deposit month must be between 1 and 12.");
+
+        if (!IsValidDepositDate(depositMonth, depositDay))
+            return DomainError.Validation($"{codePrefix}.InvalidDepositDay",
+                "Deposit day must be between 1 and {0} for month {1}.", MaxDepositDay(depositMonth), depositMonth);
+
+        return Result.Success;
+    }
 
     /// <summary>
     /// Returns the notice-grid row status for a schedule, prioritizing

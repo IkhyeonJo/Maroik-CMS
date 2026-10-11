@@ -54,8 +54,8 @@ public class LogicGapTests
     [Fact]
     public void FixedIncomeAndExpenditure_ErrorContract()
     {
-        ErrorAssert.Validation(Income(2, 30), "FixedIncome.InvalidDepositDay", "Deposit day is not valid for the selected month.");
-        ErrorAssert.Validation(Expense(2, 30), "FixedExpenditure.InvalidDepositDay", "Deposit day is not valid for the selected month.");
+        ErrorAssert.Validation(Income(2, 30), "FixedIncome.InvalidDepositDay", "Deposit day must be between 1 and {0} for month {1}.", 29, (short)2);
+        ErrorAssert.Validation(Expense(2, 30), "FixedExpenditure.InvalidDepositDay", "Deposit day must be between 1 and {0} for month {1}.", 29, (short)2);
 
         ErrorAssert.Validation(FixedIncome.Register(Email, " ", "LaborIncome", "c", 1m, "KRW", "a", 1, 1, Now.AddDays(1), Now), "FixedIncome.MainClassEmpty", "Main income category cannot be empty.");
         ErrorAssert.Validation(FixedIncome.Register(Email, "RegularIncome", " ", "c", 1m, "KRW", "a", 1, 1, Now.AddDays(1), Now), "FixedIncome.SubClassEmpty", "Sub income category cannot be empty.");

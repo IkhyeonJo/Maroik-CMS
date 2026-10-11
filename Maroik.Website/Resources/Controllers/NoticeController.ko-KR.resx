@@ -330,9 +330,6 @@
   <data name="Deposit asset product name cannot be empty." xml:space="preserve">
     <value>입금 자산 상품명은 비워둘 수 없습니다.</value>
   </data>
-  <data name="Deposit day is not valid for the selected month." xml:space="preserve">
-    <value>입금일이 선택한 월에 유효하지 않습니다.</value>
-  </data>
   <data name="Deposit day must be between 1 and {0} for month {1}." xml:space="preserve">
     <value>입금일은 {1}월 기준 1에서 {0} 사이여야 합니다.</value>
   </data>

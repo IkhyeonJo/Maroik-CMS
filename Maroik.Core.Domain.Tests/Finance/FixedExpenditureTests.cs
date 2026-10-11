@@ -232,4 +232,35 @@ public class FixedExpenditureTests
         Assert.True(result.IsError);
         Assert.Equal("FixedExpenditure.SubClassEmpty", result.FirstError.Code);
     }
+
+    // -- The transfer (deposit-asset) invariant ----------------------------------
+
+    /// <summary>A transfer-type schedule needs a deposit asset, different from the payment method.</summary>
+    [Theory]
+    [InlineData(null, "FixedExpenditure.DepositAssetEmpty")]
+    [InlineData("", "FixedExpenditure.DepositAssetEmpty")]
+    [InlineData("My Card", "FixedExpenditure.SameAsset")]
+    public void Register_ReturnsError_WhenATransferDepositAssetIsMissingOrTheSame(string? depositAsset, string expectedCode)
+    {
+        var result = FixedExpenditure.Register("user@example.com", "NonConsumerSpending", "DebtRepayment", "Loan",
+            1000m, "KRW", "My Card", depositAsset, 1, 1, _maturity, Now);
+
+        Assert.Equal(expectedCode, result.FirstError.Code);
+    }
+
+    /// <summary>A non-transfer schedule never keeps a deposit asset, on register or on update.</summary>
+    [Fact]
+    public void ANonTransferSchedule_DropsTheSubmittedDepositAsset()
+    {
+        var fe = FixedExpenditure.Register("user@example.com", "ConsumerSpending", "LeisureOrCulture", "Netflix",
+            15000m, "KRW", "My Card", "Savings", 1, 1, _maturity, Now).Value;
+        Assert.Null(fe.MyDepositAsset);
+
+        Assert.False(fe.Update("RegularSavings", "Deposit", "Save", 1m, "KRW", "My Card", "Savings", 1, 1, _maturity, null, Now).IsError);
+        Assert.Equal("Savings", fe.MyDepositAsset);
+        Assert.Equal("FixedExpenditure.SameAsset",
+            fe.Update("RegularSavings", "Deposit", "Save", 1m, "KRW", "My Card", "My Card", 1, 1, _maturity, null, Now).FirstError.Code);
+        Assert.False(fe.Update("ConsumerSpending", "PinMoney", "Gift", 1m, "KRW", "My Card", "Savings", 1, 1, _maturity, null, Now).IsError);
+        Assert.Null(fe.MyDepositAsset);
+    }
 }

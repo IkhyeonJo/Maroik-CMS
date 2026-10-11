@@ -2,7 +2,6 @@ using ErrorOr;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Finance;
-using Maroik.Core.Domain.Errors;
 using Maroik.Core.Service.Mappers;
 
 namespace Maroik.Core.Service.Services;
@@ -53,25 +52,23 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
         if (payAsset == null) return AssetNotFoundResult;
         if (payAsset.Deleted) return DeletedAssetResult;
 
-        string? myDepositAsset = null;
         if (requiresDepositAsset)
         {
-            if (request.PaymentMethod == request.MyDepositAsset)
-                return SameAssetResult;
+            var depositCheck = ExpenditureClassPolicy.ResolveDepositAsset("FixedExpenditure", true, request.PaymentMethod ?? "", request.MyDepositAsset);
+            if (depositCheck.IsError)
+                return ServiceResult.FromError(depositCheck.FirstError);
 
             Asset? depAsset = await assetBalance.GetAssetForReadAsync(accountEmail, request.MyDepositAsset ?? "", ct);
             if (depAsset == null) return AssetNotFoundResult;
             if (depAsset.Deleted) return DeletedAssetResult;
             if (payAsset.Balance.Currency != depAsset.Balance.Currency)
                 return CurrencyMismatchResult;
-
-            myDepositAsset = request.MyDepositAsset;
         }
 
         string currency = payAsset.Balance.Currency.Value;
         var registerResult = FixedExpenditure.Register(accountEmail, request.MainClass, request.SubClass,
             request.Content, Math.Abs(request.Amount), currency, request.PaymentMethod,
-            myDepositAsset, request.DepositMonth, request.DepositDay, request.MaturityDate, utcNow, request.Note);
+            request.MyDepositAsset, request.DepositMonth, request.DepositDay, request.MaturityDate, utcNow, request.Note);
 
         if (registerResult.IsError)
             return ServiceResult.FromError(registerResult.FirstError);
@@ -96,8 +93,9 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
 
         if (requiresDepositAsset)
         {
-            if (request.PaymentMethod == request.MyDepositAsset)
-                return SameAssetResult;
+            var depositCheck = ExpenditureClassPolicy.ResolveDepositAsset("FixedExpenditure", true, request.PaymentMethod ?? "", request.MyDepositAsset);
+            if (depositCheck.IsError)
+                return ServiceResult.FromError(depositCheck.FirstError);
 
             var depAsset = await assetBalance.GetAssetForReadAsync(accountEmail, request.MyDepositAsset ?? "", ct);
             if (depAsset == null) return AssetNotFoundResult;
@@ -111,10 +109,9 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
             return ServiceResult.NotFound("FixedExpenditure.NotFound", ServiceErrorKeys.FixedExpenditureNotFound);
 
         string currency = payAsset.Balance.Currency.Value;
-        string? myDepositAsset = requiresDepositAsset ? request.MyDepositAsset : null;
-
+        // A non-transfer schedule drops any submitted deposit asset (FixedExpenditure / ExpenditureClassPolicy.ResolveDepositAsset).
         var updateResult = fe.Update(request.MainClass, request.SubClass, request.Content,
-            Math.Abs(request.Amount), currency, request.PaymentMethod, myDepositAsset,
+            Math.Abs(request.Amount), currency, request.PaymentMethod, request.MyDepositAsset,
             request.DepositMonth, request.DepositDay, request.MaturityDate, request.Note, utcNow);
 
         if (updateResult.IsError) return ServiceResult.FromError(updateResult.FirstError);
@@ -147,10 +144,6 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
             fixedExpenditure.ClearUnpunctuality(utcNow);
     }
 
-    /// <summary>Failure returned when a transfer's payment asset and deposit asset are the same asset.</summary>
-    private static ServiceResult SameAssetResult => ServiceResult.Validation(
-        "FixedExpenditure.SameAsset", ServiceErrorKeys.SameAsset);
-
     /// <summary>Failure returned when a transfer's payment asset and deposit asset hold different currencies.</summary>
     private static ServiceResult CurrencyMismatchResult => ServiceResult.Validation(
         "FixedExpenditure.CurrencyMismatch", ServiceErrorKeys.CurrencyMismatch);
@@ -167,7 +160,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
     /// Validates the MainClass/SubClass combination and the deposit month/day of a fixed-expenditure
     /// request, and reports whether the entry requires a deposit asset (savings / debt-repayment
     /// categories) as the success value. The maturity date is already a parsed <see cref="DateTime"/>
-    /// here — the controller enforces its yyyy-MM-dd string format via ParseExact.
+    /// here — the controller enforces its yyyy-MM-dd string format.
     /// </summary>
     private static ErrorOr<bool> ValidateClassAndDate(FixedExpenditureRequest req)
     {
@@ -175,13 +168,8 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
         if (classResult.IsError) return classResult.FirstError;
         bool requiresDeposit = classResult.Value;
 
-        if (req.DepositMonth is < 1 or > 12)
-            return Error.Validation("FixedExpenditure.DepositMonth", "Deposit month must be between 1 and 12.");
-
-        if (!FixedSchedulePolicy.IsValidDepositDate(req.DepositMonth, req.DepositDay))
-            return DomainError.Validation("FixedExpenditure.DepositDay",
-                "Deposit day must be between 1 and {0} for month {1}.",
-                FixedSchedulePolicy.MaxDepositDay(req.DepositMonth), req.DepositMonth);
+        var dateResult = FixedSchedulePolicy.ValidateDepositDate("FixedExpenditure", req.DepositMonth, req.DepositDay);
+        if (dateResult.IsError) return dateResult.FirstError;
 
         return requiresDeposit;
     }

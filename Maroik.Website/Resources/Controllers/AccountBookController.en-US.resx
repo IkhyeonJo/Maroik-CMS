@@ -381,9 +381,6 @@
   <data name="Deposit asset product name cannot be empty." xml:space="preserve">
     <value>Deposit asset product name cannot be empty.</value>
   </data>
-  <data name="Deposit day is not valid for the selected month." xml:space="preserve">
-    <value>Deposit day is not valid for the selected month.</value>
-  </data>
   <data name="Deposit month must be between 1 and 12." xml:space="preserve">
     <value>Deposit month must be between 1 and 12.</value>
   </data>
