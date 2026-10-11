@@ -113,28 +113,6 @@ public class ViewRenderingTests(MaroikWebApplicationFactory factory)
         Assert.Contains("href=\"/Notice/FixedExpenditure\" class=\"dropdown-item\"", html);
     }
 
-    /// <summary>The access-denied page renders (for a signed-in user) once the authorization filter — which otherwise always redirects away from it — is out of the way.</summary>
-    [Fact]
-    public async Task AccessDenied_RendersItsView_WhenNotRedirectedAway()
-    {
-        var session = await AuthenticatedSessionHelper.LoginAsync(factory, _client, "view-denied@test.com", "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
-        await using var host = factory.WithWebHostBuilder(b => b.ConfigureTestServices(services =>
-            services.Configure<MvcOptions>(o =>
-            {
-                foreach (var filter in o.Filters.Where(f => f is TypeFilterAttribute { ImplementationType.Name: "AuthorizationFilter" } or ServiceFilterAttribute { ServiceType.Name: "AuthorizationFilter" }).ToList())
-                    o.Filters.Remove(filter);
-            })));
-        var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false });
-
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/Exception/AccessDenied");
-        request.Headers.Add("Cookie", session.CookieHeader);
-        var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
-        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-
-        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("AccessDenied", html);
-    }
-
     // -- the MVC Grid table template in the filter modes the site's own grids do not use ---------------------------
 
     /// <summary>A grid row with two text columns.</summary>

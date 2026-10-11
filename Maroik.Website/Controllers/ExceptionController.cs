@@ -4,16 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Maroik.Website.Controllers;
 
-/// <summary>Handles application error and access-denied pages.</summary>
+/// <summary>Serves the application error page.</summary>
 public class ExceptionController : Controller
 {
-    /// <summary>Returns the access-denied view.</summary>
-    [HttpGet]
-    public IActionResult AccessDenied()
-    {
-        return View();
-    }
-
     /// <summary>
     /// Returns the generic error view. Reached through <c>UseExceptionHandler("/Exception/Error")</c>,
     /// which re-executes the pipeline with the <em>original</em> request's HTTP method — a POST that

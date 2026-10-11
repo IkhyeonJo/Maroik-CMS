@@ -12,8 +12,7 @@ namespace Maroik.Website.Tests.Controllers;
 /// <summary>
 /// Integration tests for <c>ExceptionController</c>. <c>Error</c> is explicitly allow-listed in
 /// <see cref="Maroik.Website.Filters.AuthorizationFilter"/> for both anonymous and logged-in GET
-/// requests, so it must render regardless of session state. <c>AccessDenied</c> is not in that
-/// allow-list, so a direct GET is redirected away by the filter before the view ever renders.
+/// requests, so it must render regardless of session state.
 /// </summary>
 [Collection("Website Integration")]
 public class ExceptionControllerTests(MaroikWebApplicationFactory factory)
@@ -129,35 +128,5 @@ public class ExceptionControllerTests(MaroikWebApplicationFactory factory)
 
         Assert.Equal(System.Net.HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.Contains("Request ID:", html);
-    }
-
-    // -- AccessDenied -----------------------------------------------------------
-
-    /// <summary>Access denied anonymous session is redirected by authorization filter.</summary>
-    [Fact]
-    public async Task AccessDenied_AnonymousSession_IsRedirectedByAuthorizationFilter()
-    {
-        // AccessDenied is not allow-listed in AuthorizationFilter (only "Exception"/"Error" is),
-        // and it has no registered menu Category, so an anonymous GET never reaches the view.
-        var response = await _client.GetAsync("/Exception/AccessDenied", TestContext.Current.CancellationToken);
-
-        Assert.Equal(System.Net.HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Contains("/Dashboard/AnonymousIndex", response.Headers.Location!.ToString());
-    }
-
-    /// <summary>Access denied logged-in user is redirected by authorization filter.</summary>
-    [Fact]
-    public async Task AccessDenied_LoggedInUser_IsRedirectedByAuthorizationFilter()
-    {
-        var session = await AuthenticatedSessionHelper.LoginAsync(
-            factory, _client, "exception-accessdenied-user@test.com", "UserPassword1!", Core.Domain.Account.Role.User,
-            TestContext.Current.CancellationToken);
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/Exception/AccessDenied");
-        request.Headers.Add("Cookie", session.CookieHeader);
-
-        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        Assert.Equal(System.Net.HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Contains("/Dashboard/AnonymousIndex", response.Headers.Location!.ToString());
     }
 }
