@@ -21,17 +21,8 @@ public static class MenuFieldPolicy
     /// <summary>Role a menu item is restricted to (the values <c>Role</c> may hold in the database).</summary>
     public static class Roles
     {
-        /// <summary>Visible to administrators.</summary>
-        private const string Admin = "Admin";
-
-        /// <summary>Visible to signed-in users.</summary>
-        private const string User = "User";
-
-        /// <summary>Visible to signed-out visitors.</summary>
-        private const string Anonymous = "Anonymous";
-
-        /// <summary>Membership set backing <see cref="All"/> / <see cref="IsKnown"/>.</summary>
-        private static readonly StringTaxonomy _taxonomy = new(Admin, User, Anonymous);
+        /// <summary>Membership set backing <see cref="All"/> / <see cref="IsKnown"/>: the three <see cref="Account.Role"/> values.</summary>
+        private static readonly StringTaxonomy _taxonomy = new(Account.Role.Admin, Account.Role.User, Account.Role.Anonymous);
 
         /// <summary>Every role a menu item may carry.</summary>
         public static IReadOnlySet<string> All => _taxonomy.All;

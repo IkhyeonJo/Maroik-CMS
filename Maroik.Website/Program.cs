@@ -368,12 +368,9 @@ try
 
     #region Multi-Language
 
-    string[] supportedCultures = [.. CulturePolicy.SupportedCultures];
-    var localizationOptions = new RequestLocalizationOptions().SetDefaultCulture(CulturePolicy.DefaultCulture)
-        .AddSupportedCultures(supportedCultures)
-        .AddSupportedUICultures(supportedCultures);
-
-    app.UseRequestLocalization(localizationOptions);
+    // The cultures are the RequestLocalizationOptions configured above from CulturePolicy (one definition, not a second
+    // hand-built copy here).
+    app.UseRequestLocalization();
 
     #endregion
 

@@ -141,7 +141,8 @@ public class FileClient(IHttpClientFactory httpClientFactory, ILogger<FileClient
             var correlationId = Activity.Current?.Id ?? "";
             logger.LogInformation("Requesting file upload: {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
 
-            using HttpClient httpClient = httpClientFactory.CreateClient();
+            // Not disposed, as in SendDownloadRequestAsync: a client from IHttpClientFactory does not own its pooled handler.
+            HttpClient httpClient = httpClientFactory.CreateClient();
             using MultipartFormDataContent content = [];
 
             // Wrap raw bytes with the correct MIME type
@@ -158,7 +159,7 @@ public class FileClient(IHttpClientFactory httpClientFactory, ILogger<FileClient
             // So Maroik.FileStorage's failure logs for this call can be traced back to this request.
             content.Add(new StringContent(correlationId), "correlationId");
 
-            HttpResponseMessage response = await httpClient.PostAsync($"{fileStorageBaseUrl}/api/File/upload", content, ct);
+            using HttpResponseMessage response = await httpClient.PostAsync($"{fileStorageBaseUrl}/api/File/upload", content, ct);
 
             // Any 2xx means the storage service accepted the file — don't treat a 201/204 as a
             // failure (which would make the caller roll back over a file that was actually stored).

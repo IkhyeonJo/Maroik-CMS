@@ -435,6 +435,7 @@ public class AccountService(
         }
 
         Account? account = await FindByRegistrationTokenAsync(rawToken, ct);
+        // A live link: show the password form, echoing the still-encrypted token back into it.
         if (account != null && GuidToken.IsTokenAlive(rawToken, utcNow))
             return new ConfirmEmailResult
             {
@@ -442,8 +443,6 @@ public class AccountService(
             };
         logger.LogWarning("Email confirmation link rejected: invalid or expired token");
         return new ConfirmEmailResult { InvalidToken = true, AccountCreated = false };
-
-        // A live link: show the password form, echoing the still-encrypted token back into it.
     }
 
     /// <inheritdoc />
@@ -650,6 +649,7 @@ public class AccountService(
         // Reject if account not found, deleted, token has expired, or email is unconfirmed. Mirrors
         // the same guard on ForgotPasswordAsync / ResetPasswordAsync so a soft-deleted account's
         // lingering token can never be reported "valid" here only to be rejected at the actual reset.
+        // A valid link returns the still-encrypted token so the client can pass it back during the actual reset.
         if (account != null && !account.Deleted && GuidToken.IsTokenAlive(rawToken, utcNow) && account.EmailConfirmed)
             return new ResetPasswordValidationResult
             {
@@ -657,8 +657,6 @@ public class AccountService(
             };
         logger.LogWarning("Password reset link rejected: invalid or expired token");
         return new ResetPasswordValidationResult { FailToReset = true };
-
-        // Return the still-encrypted token so the client can pass it back during the actual reset.
     }
 
     /// <inheritdoc />
