@@ -126,7 +126,10 @@ public sealed class EmailConsumerWorker(
             try
             {
                 _connection = await connectionFactory.CreateConnectionAsync(stoppingToken);
-                Channel = await _connection.CreateChannelAsync(cancellationToken: stoppingToken);
+                // Publisher confirms: the retry copy (RepublishWithIncrementedRetryAsync) is confirmed by the broker before the
+                // original delivery is acked, so a copy the broker refuses never leaves the mail acked away with nothing queued.
+                Channel = await _connection.CreateChannelAsync(
+                    new CreateChannelOptions(publisherConfirmationsEnabled: true, publisherConfirmationTrackingEnabled: true), stoppingToken);
 
                 // Dead-letter queue first, so it exists before the main queue can route a rejected
                 // message to it.
@@ -325,7 +328,8 @@ public sealed class EmailConsumerWorker(
     /// <see cref="RetryDelays"/> entry; when it expires the broker dead-letters it back onto the "maroik.email" queue (and
     /// drops the expiration, so it does not expire again there). The caller acks the
     /// original delivery once this returns, so exactly one copy (this republished one) remains live
-    /// -- the original is never itself requeued. Note: if this publish succeeds but the following
+    /// -- the original is never itself requeued. The channel tracks publisher confirms, so this returns only once the
+    /// broker has accepted the copy (a refusal throws, and the original stays unacked). Note: if this publish succeeds but the following
     /// ack then fails (e.g. the channel drops in between), both the original (redelivered via
     /// connection recovery) and this republished copy can end up live, risking a duplicate send on
     /// retry -- the same class of narrow, accepted race as a post-send ack failure elsewhere in this
@@ -388,9 +392,10 @@ public sealed class EmailConsumerWorker(
             // send is still running at this point, cancel it via _sendCts (every HandleAsync call
             // is given its token) instead of disposing the channel straight out from under it below
             // -- that would throw from the handler's own ack/nack and force a redelivery/resend of
-            // a send that may already have completed. Cancellation instead lets
-            // OnMessageReceivedAsync's own catch nack the message cleanly. Give it a short, separate
-            // window to actually unwind before disposing regardless.
+            // a send that may already have completed. Cancellation instead lets OnMessageReceivedAsync's own
+            // catch settle the message cleanly: it counts as a failed attempt, so the message goes to the next
+            // retry queue (one retry spent, re-sent after its delay) or, out of retries, to the dead-letter queue.
+            // Give it a short, separate window to actually unwind before disposing regardless.
             if (!_inFlight.IsEmpty)
             {
                 logger.LogWarning(
