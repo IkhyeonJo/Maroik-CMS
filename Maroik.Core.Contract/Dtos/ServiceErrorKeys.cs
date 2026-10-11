@@ -35,6 +35,8 @@ public static class ServiceErrorKeys
     public const string RegistrationFailed = "Error occurred while processing about account registration";
     /// <summary>An account-status write failed.</summary>
     public const string AccountStatusFailed = "Error occurred while processing about account status";
+    /// <summary>The email-confirmation write failed.</summary>
+    public const string ConfirmEmailFailed = "Error occurred while processing about confirm email account status";
     /// <summary>The confirmation mail could not be queued.</summary>
     public const string AuthenticationMailFailed = "Error occurred while processing about sending account authentication mail";
     /// <summary>The confirmation mail could not be re-sent.</summary>

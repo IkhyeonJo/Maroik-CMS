@@ -511,7 +511,7 @@ public class AccountService(
                 {
                     await unitOfWork.RollbackAsync(ct);
                     logger.LogWarning("Email confirmation rejected: invalid or expired token for {Email}", locked.Email.Value);
-                    return new ConfirmEmailResult { InvalidToken = true, AccountCreated = true };
+                    return new ConfirmEmailResult { InvalidToken = true, AccountCreated = false };
                 }
 
                 // Email was already confirmed by a previous request.
@@ -545,7 +545,7 @@ public class AccountService(
                 {
                     InvalidToken = true,
                     AccountCreated = true,
-                    ErrorKey = "Error occurred while processing about confirm email account status"
+                    ErrorKey = ServiceErrorKeys.ConfirmEmailFailed
                 };
             }
 

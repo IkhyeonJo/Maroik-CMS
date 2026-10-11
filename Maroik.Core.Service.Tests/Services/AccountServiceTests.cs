@@ -1617,9 +1617,12 @@ public class AccountServiceTests
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    /// <summary>A token superseded by a concurrent resend (no longer matches the locked row) is invalid but the account exists.</summary>
+    /// <summary>
+    /// A token superseded by a concurrent resend (no longer matches the locked row) is answered like any other invalid link
+    /// (InvalidToken, not AccountCreated), so the page shows the invalid-link message rather than the error state.
+    /// </summary>
     [Fact]
-    public async Task ConfirmEmailAsync_ReturnsInvalidTokenButCreated_WhenTheTokenWasSupersededUnderTheLock()
+    public async Task ConfirmEmailAsync_ReturnsInvalidToken_WhenTheTokenWasSupersededUnderTheLock()
     {
         string token = GuidToken.Generate(Now);
         var stale = ActiveAccount(emailConfirmed: false, registrationToken: token);
@@ -1629,7 +1632,7 @@ public class AccountServiceTests
         ConfirmEmailResult result = await CreateSut().ConfirmEmailAsync("enc", ConfirmPassword, TestContext.Current.CancellationToken);
 
         Assert.True(result.InvalidToken);
-        Assert.True(result.AccountCreated);
+        Assert.False(result.AccountCreated);
         _accountRepo.Verify(r => r.UpdateEmailConfirmationAsync(
             It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
