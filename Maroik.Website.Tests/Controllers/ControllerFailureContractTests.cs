@@ -2,11 +2,14 @@ using System.Reflection;
 using System.Text.Json;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Account;
+using Maroik.Website.Controllers;
 using Maroik.Website.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 
 namespace Maroik.Website.Tests.Controllers;
 
@@ -207,6 +210,26 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         MaturityDate = "2030-12-31", Note = "", PaymentMethod = "Bank", MyDepositAsset = "N/A", Unpunctuality = false,
     };
 
+    /// <summary>A valid asset JSON body.</summary>
+    private static object Asset() => new
+    {
+        ProductName = "Bank", Item = "FreeDepositAndWithdrawal", Amount = 100, MonetaryUnit = "KRW", Note = "", Deleted = false, OriginalProductName = "Bank",
+    };
+
+    /// <summary>A valid income JSON body with id <paramref name="id"/>.</summary>
+    private static object Income(long id) => new
+    {
+        Id = id, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "Salary", Amount = 100, Created = "2026-01-15 10:30:00",
+        DepositMyAssetProductName = "Bank", Note = "",
+    };
+
+    /// <summary>A valid expenditure JSON body with id <paramref name="id"/>.</summary>
+    private static object Expenditure(long id) => new
+    {
+        Id = id, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Lunch", Amount = 100, Created = "2026-01-15 10:30:00",
+        PaymentMethod = "Bank", MyDepositAsset = "", Note = "",
+    };
+
     /// <summary>A valid timed-event form with id <paramref name="id"/> in calendar 1.</summary>
     private static MultipartFormDataContent EventForm(long id) => Form(
         ("Id", id.ToString()), ("CalendarId", "1"), ("Title", "Lunch"), ("AllDay", "false"), ("StartDate", "2024-05-01 10:00"),
@@ -233,6 +256,15 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         (Role.User, "/Notice/CreateFixedExpenditure", s => s.BuildJsonPostRequest("/Notice/CreateFixedExpenditure", FixedExpenditure(0))),
         (Role.User, "/Notice/UpdateFixedExpenditure", s => s.BuildJsonPostRequest("/Notice/UpdateFixedExpenditure", FixedExpenditure(1))),
         (Role.User, "/Notice/DeleteFixedExpenditure", s => s.BuildJsonPostRequest("/Notice/DeleteFixedExpenditure", FixedExpenditure(1))),
+        (Role.User, "/AccountBook/CreateAsset", s => s.BuildJsonPostRequest("/AccountBook/CreateAsset", Asset())),
+        (Role.User, "/AccountBook/UpdateAsset", s => s.BuildJsonPostRequest("/AccountBook/UpdateAsset", Asset())),
+        (Role.User, "/AccountBook/DeleteAsset", s => s.BuildJsonPostRequest("/AccountBook/DeleteAsset", Asset())),
+        (Role.User, "/AccountBook/CreateIncome", s => s.BuildJsonPostRequest("/AccountBook/CreateIncome", Income(0))),
+        (Role.User, "/AccountBook/UpdateIncome", s => s.BuildJsonPostRequest("/AccountBook/UpdateIncome", Income(1))),
+        (Role.User, "/AccountBook/DeleteIncome", s => s.BuildJsonPostRequest("/AccountBook/DeleteIncome", Income(1))),
+        (Role.User, "/AccountBook/CreateExpenditure", s => s.BuildJsonPostRequest("/AccountBook/CreateExpenditure", Expenditure(0))),
+        (Role.User, "/AccountBook/UpdateExpenditure", s => s.BuildJsonPostRequest("/AccountBook/UpdateExpenditure", Expenditure(1))),
+        (Role.User, "/AccountBook/DeleteExpenditure", s => s.BuildJsonPostRequest("/AccountBook/DeleteExpenditure", Expenditure(1))),
         (Role.User, "/Calendar/CreateCalendarEvent", s => s.BuildFormPostRequest("/Calendar/CreateCalendarEvent", EventForm(0))),
         (Role.User, "/Calendar/UpdateCalendarEvent", s => s.BuildFormPostRequest("/Calendar/UpdateCalendarEvent", EventForm(1))),
         (Role.Admin, "/Calendar/UpdateCalendarShared", s => s.BuildJsonPostRequest("/Calendar/UpdateCalendarShared", new[] { new { CalendarId = 1, User = true, Anonymous = false } })),
@@ -266,6 +298,40 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             if (!json.Contains(Temporary)) failures.Add($"{url}: unexpected message ({json})");
         }
 
+        Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
+    }
+
+    /// <summary>
+    /// The account-book write endpoints log the service failure once, at Error, with the exception attached and the
+    /// signed-in owner named, so an operator sees the fault the user was only told was "temporary".
+    /// </summary>
+    [Fact]
+    public async Task AServiceFailure_InAnAccountBookWriteEndpoint_IsLoggedAsAnErrorWithTheException()
+    {
+        var logger = new FakeLogger<AccountBookController>();
+        await using var host = CreateBrokenHost().WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.AddSingleton<ILogger<AccountBookController>>(logger)));
+        var client = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false
+        });
+        const string email = "failure-accountbook-log@test.com";
+        var session = await AuthenticatedSessionHelper.LoginAsync(host, client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
+
+        List<string> failures = [];
+        foreach (var (_, url, build) in BodyEndpoints.Where(e => e.Url.StartsWith("/AccountBook/", StringComparison.Ordinal)))
+        {
+            logger.Collector.Clear();
+            using var request = build(session);
+            _ = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+            var errors = logger.Collector.GetSnapshot().Where(r => r.Level == LogLevel.Error).ToList();
+            if (errors.Count != 1) { failures.Add($"{url}: {errors.Count} Error entries"); continue; }
+            if (errors[0].Exception?.Message != Secret) failures.Add($"{url}: the exception is not attached");
+            if (!errors[0].Message.Contains(email)) failures.Add($"{url}: the owner is not named ({errors[0].Message})");
+        }
+
+        Assert.Equal(9, BodyEndpoints.Count(e => e.Url.StartsWith("/AccountBook/", StringComparison.Ordinal)));
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
     }
 
