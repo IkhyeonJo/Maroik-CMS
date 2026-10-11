@@ -55,8 +55,10 @@ public class ExpenditureService(
                 return await unitOfWork.FailAsync(classResult.FirstError, ct);
 
             bool isTransfer = classResult.Value;
-            if (isTransfer && request.PaymentMethod == request.MyDepositAsset)
-                return await unitOfWork.FailAsync(SameAssetResult, ct);
+            // The transfer rule (ExpenditureClassPolicy.ResolveDepositAsset) is checked before any asset is looked up or locked.
+            var depositCheck = ExpenditureClassPolicy.ResolveDepositAsset("Expenditure", isTransfer, request.PaymentMethod ?? "", request.MyDepositAsset);
+            if (depositCheck.IsError)
+                return await unitOfWork.FailAsync(depositCheck.FirstError, ct);
 
             // GetAssetsOrdinalAsync takes row locks held until commit/rollback, always in ordinal
             // name order, so that concurrent transactions touching the same asset pair (here,
@@ -83,7 +85,7 @@ public class ExpenditureService(
             }
 
             string currency = paymentAsset.Balance.Currency.Value;
-            string? myDepositAsset = isTransfer ? request.MyDepositAsset : null;
+            string? myDepositAsset = depositCheck.Value;
 
             var expenditureResult = Expenditure.Record(accountEmail, request.MainClass, request.SubClass,
                 request.Content, Math.Abs(request.Amount), currency, request.PaymentMethod, myDepositAsset, utcNow, request.Note, request.Created);
@@ -127,8 +129,10 @@ public class ExpenditureService(
             if (classResult.IsError)
                 return await unitOfWork.FailAsync(classResult.FirstError, ct);
 
-            if (classResult.Value && request.PaymentMethod == request.MyDepositAsset)
-                return await unitOfWork.FailAsync(SameAssetResult, ct);
+            // The transfer rule (ExpenditureClassPolicy.ResolveDepositAsset) is checked before any asset is looked up or locked.
+            var depositCheck = ExpenditureClassPolicy.ResolveDepositAsset("Expenditure", classResult.Value, request.PaymentMethod ?? "", request.MyDepositAsset);
+            if (depositCheck.IsError)
+                return await unitOfWork.FailAsync(depositCheck.FirstError, ct);
 
             // FOR UPDATE: lock the record for the rest of the transaction so a concurrent
             // UpdateAsync/DeleteAsync of the same expenditure cannot read a stale amount here and
@@ -176,7 +180,7 @@ public class ExpenditureService(
 
             // newPayAsset is guaranteed non-null past the AssetNotFoundResult guard above.
             string newCurrency = newPayAsset.Balance.Currency.Value;
-            string? myDepositAsset = classResult.Value ? request.MyDepositAsset : null;
+            string? myDepositAsset = depositCheck.Value;
 
             var oldSnapshot = new ExpenditureSnapshot(previous.PaymentMethod, previous.MyDepositAsset, previous.Amount.Amount, previous.Amount.Currency.Value);
 
@@ -240,10 +244,6 @@ public class ExpenditureService(
             return await unitOfWork.FailAsync(UnexpectedFailure, ct);
         }
     }
-
-    /// <summary>Failure returned when a transfer's payment asset and deposit asset are the same asset.</summary>
-    private static ServiceResult SameAssetResult => ServiceResult.Validation(
-        "Expenditure.SameAsset", ServiceErrorKeys.SameAsset);
 
     /// <summary>Failure returned when a transfer's payment asset and deposit asset hold different currencies.</summary>
     private static ServiceResult CurrencyMismatchResult => ServiceResult.Validation(

@@ -97,8 +97,6 @@ public static class ServiceErrorKeys
     public const string SelectedAssetNotFound = "The selected asset could not be found.";
     /// <summary>The asset an income / expenditure refers to is soft-deleted.</summary>
     public const string AssetAlreadyDeleted = "Actions cannot be executed with assets that have already been deleted.";
-    /// <summary>A transfer's payment asset and deposit asset are the same.</summary>
-    public const string SameAsset = "The PaymentMethod and MyDepositAsset value cannot be the same.";
     /// <summary>A transfer's payment asset and deposit asset carry different currency labels.</summary>
     public const string CurrencyMismatch = "PaymentMethod MonetaryUnit must be same as MyDepositAsset MonetaryUnit.";
     /// <summary>The income does not exist.</summary>

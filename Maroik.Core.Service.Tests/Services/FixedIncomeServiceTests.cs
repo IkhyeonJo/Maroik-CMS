@@ -122,7 +122,7 @@ public class FixedIncomeServiceTests
 
         ServiceResult result = await sut.CreateAsync("user@example.com", request, TestContext.Current.CancellationToken);
 
-        Assert.Equal("FixedIncome.DepositDay", result.ErrorCode);
+        Assert.Equal("FixedIncome.InvalidDepositDay", result.ErrorCode);
         Assert.Equal("Deposit day must be between 1 and {0} for month {1}.", result.ErrorKey);
         Assert.Equal([31, (short)1], result.ErrorArgs);
     }
@@ -481,7 +481,7 @@ public class FixedIncomeServiceTests
         ServiceResult result = await CreateSut().CreateAsync(Email, request, TestContext.Current.CancellationToken);
 
         Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
-        Assert.Equal("FixedIncome.DepositMonth", result.ErrorCode);
+        Assert.Equal("FixedIncome.InvalidDepositMonth", result.ErrorCode);
         Assert.Equal("Deposit month must be between 1 and 12.", result.ErrorKey);
     }
 

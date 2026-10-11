@@ -202,11 +202,8 @@ public sealed class FixedIncome : AggregateRoot<long>
         if (string.IsNullOrWhiteSpace(depositMyAssetProductName))
             return DomainError.Validation("FixedIncome.DepositAssetEmpty", "Deposit asset product name cannot be empty.");
 
-        if (depositMonth is < 1 or > 12)
-            return DomainError.Validation("FixedIncome.InvalidDepositMonth", "Deposit month must be between 1 and 12.");
-
-        if (!FixedSchedulePolicy.IsValidDepositDate(depositMonth, depositDay))
-            return DomainError.Validation("FixedIncome.InvalidDepositDay", "Deposit day is not valid for the selected month.");
+        var dateResult = FixedSchedulePolicy.ValidateDepositDate("FixedIncome", depositMonth, depositDay);
+        if (dateResult.IsError) return dateResult.Errors;
 
         var amountResult = FinanceAmountPolicy.ValidateAmount(amount);
         if (amountResult.IsError) return amountResult.Errors;
