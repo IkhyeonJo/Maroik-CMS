@@ -16,6 +16,12 @@ namespace Maroik.Core.Domain.Finance;
 public static class ExpenditureClassPolicy
 {
     /// <summary>
+    /// The expenditure main classes in display order; the first is the create form's default. The forms render their
+    /// main-class options from this list (a dictionary's key order is not guaranteed).
+    /// </summary>
+    public static readonly IReadOnlyList<string> MainClasses = ["RegularSavings", "NonConsumerSpending", "ConsumerSpending"];
+
+    /// <summary>
     /// The recognized subClasses for each expenditure main class, in display order.
     /// </summary>
     public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> SubClassesByMainClass =

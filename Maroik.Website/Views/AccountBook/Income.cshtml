@@ -121,8 +121,10 @@
                                 <label for="createIncomeMainClass">@Localizer["MainClass"].Value</label>
                                 <br />
                                 <select id="createIncomeMainClass" name="createIncomeMainClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
-                                    <option value="RegularIncome" selected="selected">@Localizer["RegularIncome"].Value</option>
-                                    <option value="IrregularIncome">@Localizer["IrregularIncome"].Value</option>
+                                    @foreach (string mainClass in IncomeClassPolicy.MainClasses)
+                                    {
+                                        <option value="@mainClass" selected="@(mainClass == IncomeClassPolicy.MainClasses[0])">@Localizer[mainClass].Value</option>
+                                    }
                                 </select>
                             </div>
                             <div class="form-group col-md-6 mb-3">
@@ -255,8 +257,10 @@
                                 <label for="editIncomeMainClass">@Localizer["MainClass"].Value</label>
                                 <br />
                                 <select id="editIncomeMainClass" name="editIncomeMainClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
-                                    <option value="RegularIncome">@Localizer["RegularIncome"].Value</option>
-                                    <option value="IrregularIncome">@Localizer["IrregularIncome"].Value</option>
+                                    @foreach (string mainClass in IncomeClassPolicy.MainClasses)
+                                    {
+                                        <option value="@mainClass" selected="@(mainClass == IncomeClassPolicy.MainClasses[0])">@Localizer[mainClass].Value</option>
+                                    }
                                 </select>
                             </div>
                             <div class="form-group col-md-6 mb-3">
