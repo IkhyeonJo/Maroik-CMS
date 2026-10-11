@@ -101,6 +101,31 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
         Assert.Equal("UTC", account.TimeZoneIanaId); // unchanged from seed default
     }
 
+    /// <summary>
+    /// A refused time-zone change is not silent: the redirect carries the reason (TempData) and the profile page shows it
+    /// beside the time-zone form; an accepted change shows nothing there.
+    /// </summary>
+    [Theory]
+    [InlineData("Not/ARealZone", "&#x27;Not/ARealZone&#x27; is not a recognised time-zone ID.")]
+    [InlineData("Asia/Seoul", null)]
+    public async Task UpdateProfileTimeZone_ShowsWhyTheChangeWasRefused_OnTheProfilePage(string timeZone, string? expectedError)
+    {
+        var session = await LoginAsUserAsync($"management-profile-tz-msg-{timeZone.Replace('/', '-').ToLowerInvariant()}@test.com");
+        using var post = session.BuildFormPostRequest("/Management/UpdateProfileTimeZone",
+            new MultipartFormDataContent { { new StringContent(timeZone), "TimeZoneIanaId" } });
+        var postResponse = await _client.SendAsync(post, TestContext.Current.CancellationToken);
+
+        // Follow the redirect by hand with the session and whatever cookies the POST set (the TempData cookie).
+        string setCookies = string.Join("; ", (postResponse.Headers.TryGetValues("Set-Cookie", out var values) ? values : [])
+            .Select(c => c.Split(';')[0]));
+        using var get = new HttpRequestMessage(HttpMethod.Get, "/Management/Profile");
+        get.Headers.Add("Cookie", string.IsNullOrEmpty(setCookies) ? session.CookieHeader : $"{session.CookieHeader}; {setCookies}");
+        string html = await (await _client.SendAsync(get, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        string errorSpan = System.Text.RegularExpressions.Regex.Match(html, "<span id=\"timeZoneError\"[^>]*>(.*?)</span>").Groups[1].Value;
+        Assert.Equal(expectedError ?? "", errorSpan);
+    }
+
     // -- UpdateProfilePassword ----------------------------------------------------------
 
     /// <summary>Update profile password correct current password changes password.</summary>
