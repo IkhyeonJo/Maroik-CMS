@@ -1,4 +1,5 @@
 using Maroik.Core.Contract.Interfaces;
+using Maroik.Core.Domain.Media;
 
 namespace Maroik.Website.Middlewares;
 
@@ -17,6 +18,16 @@ public sealed class AvatarCacheMiddleware(RequestDelegate next)
 {
     /// <summary>Request-path prefix of avatar URLs (matched case-sensitively; see InvokeAsync).</summary>
     private const string UrlPrefix = "/upload/Management/Profile/Avatar/";
+
+    /// <summary>
+    /// Whether <paramref name="fileName"/> is a name an uploaded avatar can have: a GUID (ProfileService names new uploads
+    /// <c>{Guid:N}</c>; the seeded ones use the hyphenated form) with an <see cref="ImageUploadPolicy"/> extension. Any
+    /// other name cannot exist in file storage, so it is left to the static-file 404 instead of costing a file-storage
+    /// request (and its failure log) per made-up URL.
+    /// </summary>
+    private static bool IsUploadedAvatarName(string fileName) =>
+        Guid.TryParse(Path.GetFileNameWithoutExtension(fileName), out _)
+        && ImageUploadPolicy.IsAllowedExtension(Path.GetExtension(fileName));
 
     /// <summary>Lazily populates this replica's local avatar cache from file storage, then forwards the request.</summary>
     public async Task InvokeAsync(
@@ -37,7 +48,7 @@ public sealed class AvatarCacheMiddleware(RequestDelegate next)
         {
             // GetFileName drops any directory component, so a "../" in the URL cannot escape the cache dir.
             string fileName = Path.GetFileName(path);
-            if (!string.IsNullOrEmpty(fileName))
+            if (IsUploadedAvatarName(fileName))
             {
                 string localDir = Path.Combine(env.WebRootPath, "upload", "Management", "Profile", "Avatar");
                 string localPath = Path.Combine(localDir, fileName);
