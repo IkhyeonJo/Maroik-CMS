@@ -66,7 +66,29 @@ public sealed class EmailConsumerWorker(
     internal const string RetryCountHeader = "x-maroik-retry-count";
 
     /// <summary>How many of our own retries (via <see cref="RetryCountHeader"/>) a message gets before dead-lettering.</summary>
-    internal const int MaxRetries = 1;
+    internal const int MaxRetries = 3;
+
+    /// <summary>
+    /// How long a failed message waits before each retry: 30 seconds, then 5 minutes, then 30 minutes, so an SMTP outage of
+    /// about half an hour is ridden out instead of every queued mail burning its retries within milliseconds and landing in
+    /// the dead-letter queue. One entry per retry (<see cref="MaxRetries"/>). Overridable in tests.
+    /// </summary>
+    internal IReadOnlyList<TimeSpan> RetryDelays { get; set; } = [TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30)];
+
+    /// <summary>
+    /// The queue a message waits in before its <paramref name="retry"/>-th retry (1-based). Each retry has its own queue, so
+    /// every message in one queue waits the same delay and an expiring message is never stuck behind a longer one (RabbitMQ
+    /// only expires messages at the head of a queue). The queue has no consumer: the message's per-message expiration
+    /// dead-letters it back into <see cref="QueueNames.Email"/>.
+    /// </summary>
+    internal static string RetryQueueName(int retry) => $"{QueueNames.Email}.retry.{retry}";
+
+    /// <summary>Declaration arguments of every retry queue: an expired message is dead-lettered back into <see cref="QueueNames.Email"/>.</summary>
+    private static Dictionary<string, object?> CreateRetryQueueArguments() => new()
+    {
+        ["x-dead-letter-exchange"] = "",
+        ["x-dead-letter-routing-key"] = QueueNames.Email,
+    };
 
     /// <summary>
     /// Establishes the RabbitMQ topology and starts consuming, then runs for the lifetime of the
@@ -126,6 +148,18 @@ public sealed class EmailConsumerWorker(
                     arguments: QueueNames.CreateEmailQueueArguments(),
                     cancellationToken: stoppingToken);
 
+                // The retry queues hold a failed message for its delay, then hand it back to the email queue.
+                for (int retry = 1; retry <= MaxRetries; retry++)
+                {
+                    await Channel.QueueDeclareAsync(
+                        queue: RetryQueueName(retry),
+                        durable: true,
+                        exclusive: false,
+                        autoDelete: false,
+                        arguments: CreateRetryQueueArguments(),
+                        cancellationToken: stoppingToken);
+                }
+
                 // Cap unacked messages held at the client so one slow SMTP send doesn't let the
                 // broker push unbounded messages into this process's memory.
                 await Channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 10, global: false, cancellationToken: stoppingToken);
@@ -184,8 +218,9 @@ public sealed class EmailConsumerWorker(
     /// <summary>
     /// Deserializes and processes one delivered message in a fresh DI scope, then acks it.
     /// A failure gets <see cref="MaxRetries"/> retries (via <see cref="RetryCountHeader"/>, our own
-    /// counter — see its doc comment for why this isn't just <c>BasicDeliverEventArgs.Redelivered</c>)
-    /// to survive a transient SMTP/network blip; once exhausted, the message is nacked without
+    /// counter — see its doc comment for why this isn't just <c>BasicDeliverEventArgs.Redelivered</c>),
+    /// each after the matching <see cref="RetryDelays"/> wait in its retry queue, to survive a
+    /// transient SMTP/network outage; once exhausted, the message is nacked without
     /// requeue so a poison message cannot block the queue forever — the queue's dead-letter policy
     /// then routes it to <see cref="QueueNames.EmailDeadLetter"/> for inspection instead of
     /// discarding it. A failure to ack a message that was already handled successfully is logged
@@ -236,11 +271,12 @@ public sealed class EmailConsumerWorker(
                     int retryCount = GetRetryCount(ea.BasicProperties);
                     if (retryCount < MaxRetries)
                     {
-                        logger.LogWarning(ex, "Failed to process email message (delivery tag {DeliveryTag}, retry {RetryCount}); republishing for retry", ea.DeliveryTag, retryCount);
+                        logger.LogWarning(ex, "Failed to process email message (delivery tag {DeliveryTag}, retry {RetryCount}); retrying in {RetryDelay}", ea.DeliveryTag, retryCount, RetryDelays[retryCount]);
                         // A plain nack(requeue:true) can't carry our incremented counter -- RabbitMQ
-                        // requeues the original message unchanged, headers included. Publish a copy
-                        // with RetryCountHeader bumped, then ack the original so it's this republished
-                        // copy (not the original) that the broker redelivers next.
+                        // requeues the original message unchanged, headers included -- and would hand
+                        // it straight back. Publish a copy with RetryCountHeader bumped into the next
+                        // retry queue, then ack the original so it's this delayed copy (not the
+                        // original) that comes back.
                         await RepublishWithIncrementedRetryAsync(ea, retryCount + 1);
                         await Channel!.BasicAckAsync(ea.DeliveryTag, multiple: false);
                     }
@@ -284,8 +320,10 @@ public sealed class EmailConsumerWorker(
     }
 
     /// <summary>
-    /// Publishes a copy of <paramref name="ea"/>'s body back onto the "maroik.email" queue with
-    /// <see cref="RetryCountHeader"/> set to <paramref name="nextRetryCount"/>. The caller acks the
+    /// Publishes a copy of <paramref name="ea"/>'s body into <see cref="RetryQueueName"/>(<paramref name="nextRetryCount"/>)
+    /// with <see cref="RetryCountHeader"/> set to <paramref name="nextRetryCount"/> and an expiration of the matching
+    /// <see cref="RetryDelays"/> entry; when it expires the broker dead-letters it back onto the "maroik.email" queue (and
+    /// drops the expiration, so it does not expire again there). The caller acks the
     /// original delivery once this returns, so exactly one copy (this republished one) remains live
     /// -- the original is never itself requeued. Note: if this publish succeeds but the following
     /// ack then fails (e.g. the channel drops in between), both the original (redelivered via
@@ -300,11 +338,15 @@ public sealed class EmailConsumerWorker(
             : [];
         headers[RetryCountHeader] = nextRetryCount;
 
-        var properties = new BasicProperties(ea.BasicProperties) { Headers = headers };
+        var properties = new BasicProperties(ea.BasicProperties)
+        {
+            Headers = headers,
+            Expiration = ((long)RetryDelays[nextRetryCount - 1].TotalMilliseconds).ToString(System.Globalization.CultureInfo.InvariantCulture),
+        };
 
         await Channel!.BasicPublishAsync(
             exchange: "",
-            routingKey: QueueNames.Email,
+            routingKey: RetryQueueName(nextRetryCount),
             mandatory: false,
             basicProperties: properties,
             body: ea.Body);

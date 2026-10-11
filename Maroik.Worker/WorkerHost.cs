@@ -81,6 +81,7 @@ internal static class WorkerHost
                 ClientProvidedName = "maroik-worker-email-consumer"
             });
         builder.Services.AddHostedService<EmailConsumerWorker>();
+        builder.Services.AddSingleton<EmailDeadLetterRedriver>();
 
         return builder.Build();
     }
