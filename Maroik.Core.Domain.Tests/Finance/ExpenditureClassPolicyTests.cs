@@ -176,4 +176,20 @@ public class ExpenditureClassPolicyTests
         var allPublished = ExpenditureClassPolicy.SubClassesByMainClass.Values.SelectMany(x => x).ToHashSet();
         Assert.All(ExpenditureClassPolicy.DepositAssetSubClasses, sub => Assert.Contains(sub, allPublished));
     }
+
+    // -- MainClasses -----------------------------------------------------------
+
+    /// <summary>MainClasses lists the main classes in the order the forms offer them, the first being the create form's default.</summary>
+    [Fact]
+    public void MainClasses_ListsTheMainClasses_InDisplayOrder()
+    {
+        Assert.Equal(["RegularSavings", "NonConsumerSpending", "ConsumerSpending"], ExpenditureClassPolicy.MainClasses);
+    }
+
+    /// <summary>MainClasses names exactly the main classes the taxonomy recognizes, so a form never offers one Validate rejects.</summary>
+    [Fact]
+    public void MainClasses_MatchesTheTaxonomysKeys()
+    {
+        Assert.Equal(ExpenditureClassPolicy.SubClassesByMainClass.Keys.Order(), ExpenditureClassPolicy.MainClasses.Order());
+    }
 }

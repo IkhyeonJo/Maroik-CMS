@@ -123,9 +123,10 @@
                                 <label for="createExpenditureMainClass">@Localizer["MainClass"].Value</label>
                                 <br />
                                 <select id="createExpenditureMainClass" name="createExpenditureMainClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
-                                    <option value="RegularSavings" selected="selected">@Localizer["RegularSavings"].Value</option>
-                                    <option value="NonConsumerSpending">@Localizer["NonConsumerSpending"].Value</option>
-                                    <option value="ConsumerSpending">@Localizer["ConsumerSpending"].Value</option>
+                                    @foreach (string mainClass in ExpenditureClassPolicy.MainClasses)
+                                    {
+                                        <option value="@mainClass" selected="@(mainClass == ExpenditureClassPolicy.MainClasses[0])">@Localizer[mainClass].Value</option>
+                                    }
                                 </select>
                             </div>
                             <div class="form-group col-md-6 mb-3">
@@ -270,9 +271,10 @@
                                 <label for="editExpenditureMainClass">@Localizer["MainClass"].Value</label>
                                 <br />
                                 <select id="editExpenditureMainClass" name="editExpenditureMainClass" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
-                                    <option value="RegularSavings" selected="selected">@Localizer["RegularSavings"].Value</option>
-                                    <option value="NonConsumerSpending">@Localizer["NonConsumerSpending"].Value</option>
-                                    <option value="ConsumerSpending">@Localizer["ConsumerSpending"].Value</option>
+                                    @foreach (string mainClass in ExpenditureClassPolicy.MainClasses)
+                                    {
+                                        <option value="@mainClass" selected="@(mainClass == ExpenditureClassPolicy.MainClasses[0])">@Localizer[mainClass].Value</option>
+                                    }
                                 </select>
                             </div>
                             <div class="form-group col-md-6 mb-3">

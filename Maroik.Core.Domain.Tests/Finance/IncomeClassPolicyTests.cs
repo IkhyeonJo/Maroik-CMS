@@ -123,4 +123,20 @@ public class IncomeClassPolicyTests
         foreach (var sub in everySubClass.Except(published))
             Assert.True(IncomeClassPolicy.Validate(mainClass, sub).IsError);
     }
+
+    // -- MainClasses -----------------------------------------------------------
+
+    /// <summary>MainClasses lists the main classes in the order the forms offer them, the first being the create form's default.</summary>
+    [Fact]
+    public void MainClasses_ListsTheMainClasses_InDisplayOrder()
+    {
+        Assert.Equal(["RegularIncome", "IrregularIncome"], IncomeClassPolicy.MainClasses);
+    }
+
+    /// <summary>MainClasses names exactly the main classes the taxonomy recognizes, so a form never offers one Validate rejects.</summary>
+    [Fact]
+    public void MainClasses_MatchesTheTaxonomysKeys()
+    {
+        Assert.Equal(IncomeClassPolicy.SubClassesByMainClass.Keys.Order(), IncomeClassPolicy.MainClasses.Order());
+    }
 }
