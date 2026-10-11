@@ -5,10 +5,11 @@
 ## Introduction
 Maroik is a modern web application built with ASP.NET Core MVC, featuring a comprehensive set of tools for personal and business management. It includes features such as expense tracking, calendar management, bulletin boards, and role-based user management.
 
-This repository is the open-source portfolio edition of Maroik: the full application source and test suites, a local Docker Compose stack, and a seed database that contains only the default admin and demo accounts. Production deployment scripts, CI/CD pipelines, and production data are not included.
-
-### About the commit history
-This repository is a portfolio snapshot of Maroik. The original Maroik repository is private, and its full development history (nearly 4,000 commits) lives there — so the short history on this repository's `main` branch does not reflect how the project was actually built. To see that ongoing activity, check the contribution graph on [IkhyeonJo's GitHub profile](https://github.com/IkhyeonJo).
+Domain Registrar: AWS Route 53 Domains
+DNS: Cloudflare DNS
+DDoS Protection / Web Proxy / Tunnel: Cloudflare
+Incoming Email: Zoho Mail
+Outgoing Email / SMTP: Brevo
 
 ## Key Features
 
@@ -28,7 +29,7 @@ This repository is a portfolio snapshot of Maroik. The original Maroik repositor
 ### 3. Bulletin Board System
 - Post creation, editing, and deletion
 - Comment system
-- File attachments (virus-scanned with ClamAV), downloaded through a separate access-checked POST action and streamed — the post page itself carries only the file's name and size
+- File attachments, downloaded through a separate access-checked POST action and streamed — the post page itself carries only the file's name and size
 - Rich-text editor images, embedded in the post when it is viewed
 - Search functionality
 
@@ -61,42 +62,50 @@ This repository is a portfolio snapshot of Maroik. The original Maroik repositor
 
 ### Layers — DDD + Clean Architecture
 
+Solid arrows show which project calls which, always through an interface in `Maroik.Core.Contract`
+(interfaces and DTOs only, so it calls nothing and is not drawn). The Website calls the Service layer and nothing
+else. Maroik.Worker and Maroik.FileStorage are separate processes: when a use case sends mail or stores a file,
+the Service hands it to Client, and Client puts the mail job on RabbitMQ for the Worker (which sends it over SMTP)
+or uploads / downloads the file over HTTP to FileStorage — the dotted lines. Repository and Client implementations
+are registered only in each host's composition root (`Program.cs`, `WorkerHost`), never called from controllers,
+views or handlers.
+
 ```mermaid
 flowchart TB
-    subgraph hosts["Application hosts"]
-        Website["Maroik.Website<br/>MVC controllers · views · TypeScript"]
-        Worker["Maroik.Worker<br/>e-mail consumer"]
-        FileStorage["Maroik.FileStorage<br/>internal file API"]
-    end
+    Website["Maroik.Website<br/>MVC controllers · views · TypeScript"]
     Service["Maroik.Core.Service<br/>use cases · transactions · logging"]
-    Contract["Maroik.Core.Contract<br/>interfaces · DTOs"]
     Domain["Maroik.Core.Domain<br/>aggregates · value objects · policies"]
     Repository["Maroik.Core.Repository<br/>EF Core repositories"]
     PostgreSQL["Maroik.Core.PostgreSQL<br/>DbContext · mapped models"]
-    Client["Maroik.Core.Client<br/>SMTP · file storage · ClamAV · RabbitMQ"]
+    Client["Maroik.Core.Client<br/>file storage · RabbitMQ · SMTP · ClamAV"]
+    Worker["Maroik.Worker<br/>e-mail consumer"]
+    FileStorage["Maroik.FileStorage<br/>internal file API"]
 
     Website --> Service
-    Worker --> Service
-    Service --> Contract --> Domain
-    Repository --> Contract
+    Service --> Domain
+    Service --> Repository
+    Service -- "files · mail body · mail queue" --> Client
+    Repository -- "rows ↔ aggregates" --> Domain
     Repository --> PostgreSQL
-    Client --> Contract
-    FileStorage --> Client
-    Website -. "composition root only" .-> Repository
-    Website -. "composition root only" .-> Client
-    Worker -. "composition root only" .-> Repository
-    Worker -. "composition root only" .-> Client
+
+    Client -. "mail jobs (RabbitMQ)" .-> Worker
+    Client -. "HTTP upload / download" .-> FileStorage
+
+    Worker -- "mail status" --> Service
+    Worker -- "send mail (SMTP)" --> Client
+    FileStorage -- "virus scan (ClamAV)" --> Client
 ```
 
 - **Domain** holds the business rules — aggregates, value objects (`Email`, `Money`, `CurrencyCode`, …) and policies
-  (finance class taxonomies, reminder limits, fixed schedules, passwords, image uploads). It references no other
+  (finance class taxonomies, reminder limits, fixed schedules, passwords, image uploads). It calls no other
   project, logs nothing, never reads the clock (the current time is passed in) and reports every error through
   `DomainError`, so the outer layers can translate it.
 - **Service** orchestrates a use case: it loads aggregates through repository interfaces, calls domain methods, owns
   the transaction (each write spells out `BeginAsync` / `CommitAsync` / `RollbackAsync`), maps to DTOs and logs. It
-  depends on **Contract** only.
-- **Repository** (EF Core) and **Client** (SMTP, file storage, ClamAV, RabbitMQ) implement the Contract interfaces.
-  The hosts reference them only to register them in the composition root; controllers and views cannot see them.
+  calls Repository and Client only through their Contract interfaces.
+- **Repository** (EF Core) and **Client** (file storage over HTTP, RabbitMQ publishing, SMTP, ClamAV) implement the
+  Contract interfaces. Website controllers and views never call them; the Worker calls the SMTP client itself and
+  FileStorage calls the ClamAV client itself.
 - **Website** controllers bind the request, call a service and return the view model or a `{ result, error }`
   JSON reply; views only render. The navigation menu doubles as the access-control list (`AuthorizationFilter`).
 - **No business logic on the client.** The client scripts do DOM wiring and AJAX only; a rule the UI mirrors comes
@@ -114,15 +123,17 @@ All of this is enforced by architecture tests that fail the build, among them:
 
 ```mermaid
 flowchart LR
-    Browser --> Website["Maroik.Website"]
+    Browser --> Cloudflare["Cloudflare"]
+    cloudflared["cloudflared<br/>(outbound tunnel)"] -- "connects out" --> Cloudflare
+    cloudflared -- "HTTP :80" --> Website["Maroik.Website"]
     Website --> PostgreSQL[("PostgreSQL 17")]
     Website --> Valkey[("Valkey<br/>session · Data Protection keys")]
-    Website --> FileStorage["Maroik.FileStorage"]
-    Website --> ClamAV["ClamAV"]
-    FileStorage --> ClamAV
-    Website -- "mail jobs" --> RabbitMQ[("RabbitMQ")]
-    RabbitMQ --> Worker["Maroik.Worker"]
-    Worker --> SMTP["SMTP relay"]
+    Website -- "HTTP upload / download" --> FileStorage["Maroik.FileStorage"]
+    FileStorage -- "scan (TCP 3310)" --> ClamAV["ClamAV"]
+    Website -- "publish mail jobs" --> RabbitMQ[("RabbitMQ")]
+    RabbitMQ -- "deliver mail jobs" --> Worker["Maroik.Worker"]
+    Worker -- "mail status" --> PostgreSQL
+    Worker -- "send mail" --> SMTP["SMTP relay"]
 ```
 
 Every service runs as a container under Docker Compose. Uploads are scanned by ClamAV before they are stored, the
@@ -143,13 +154,15 @@ generic error instead of failing half-way through a handler.
 
 ### Backend
 - ASP.NET Core MVC 10.0
+  - Hot Reload
+  - Improved performance
+  - Enhanced routing
+  - Better dependency injection
 - PostgreSQL 17
 - Entity Framework Core 10.0
-- Valkey (Redis-compatible) — session store and Data Protection key ring
-- RabbitMQ 4 — outbound e-mail queue consumed by `Maroik.Worker`
-- ClamAV — upload scanning in `Maroik.FileStorage`
-- Magick.NET — image validation and metadata stripping
-- DocumentFormat.OpenXml — Excel export
+  - Improved query performance
+  - Better async support
+  - Enhanced change tracking
 - Docker
   - Multi-stage builds
   - Container orchestration
@@ -158,6 +171,8 @@ generic error instead of failing half-way through a handler.
   - Session Authentication
   - Role-based access control
 - Cross-Origin Resource Sharing (CORS)
+- Magick.NET — image validation and metadata stripping
+- DocumentFormat.OpenXml — Excel export
 
 ### Frontend
 - AdminLTE 3.1.0
@@ -190,26 +205,9 @@ generic error instead of failing half-way through a handler.
 - Docker Compose
 - Postman
 
-## Project Structure
-```
-Maroik/
-├── Maroik.Core.Domain/      # Entities, value objects, policies (depends on nothing)
-├── Maroik.Core.Contract/    # Interfaces and DTOs
-├── Maroik.Core.Service/     # Use-case orchestration, transactions, DTO mapping
-├── Maroik.Core.Repository/  # EF Core repositories
-├── Maroik.Core.PostgreSQL/  # EF Core DbContext and ORM models
-├── Maroik.Core.Client/      # SMTP, file storage, ClamAV, RabbitMQ clients
-├── Maroik.Website/          # ASP.NET Core MVC host (controllers, views, TypeScript)
-├── Maroik.FileStorage/      # Internal file upload/download API
-├── Maroik.Worker/           # Background e-mail sender (RabbitMQ consumer)
-├── Maroik.DB/               # PostgreSQL init script (schema + admin/demo seed data)
-├── Maroik.SSL/              # Self-signed localhost certificate for local HTTPS
-└── *.Tests/                 # One test project per source project, plus E2E
-```
-
 ## Naming Conventions
 - Code projects (assemblies, namespaces, types) follow the .NET Framework Design Guidelines for acronym casing: acronyms of three or more letters use PascalCase (e.g. `Ssl`, `Http`), while two-letter acronyms stay uppercase (e.g. `DB`, `IO`).
-- Folders that are not code projects — `Maroik.SSL`, `Maroik.DB`, `Maroik.Log` — intentionally keep their existing casing, because docker-compose volume mounts reference them by name.
+- Operational folders that are not code projects — `Maroik.SSL`, `Maroik.DB`, `Maroik.Log`, `Maroik.Crontab`, `Maroik.DeployOps` — intentionally keep their existing casing. These names are referenced by docker-compose volume mounts, deployment scripts, and live directories on the production server, so they are kept stable by design rather than renamed for stylistic consistency.
 
 ## Testing Strategy
 
@@ -238,14 +236,14 @@ The goal is that a test fails whenever the behaviour it describes breaks — not
   testing with Stryker.NET (Domain 92 %, Service 96 % — the survivors left are equivalent mutants).
 
 ### Test projects
-Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all. Coverage target: line >= 80 %, branch >= 65 %. At the time of writing the suites hold about 4,300 tests (about 3,300 .NET + 980 Vitest), all passing.
+Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all; CI runs each with coverage (`.github/workflows/build-and-test.yml`, gate: line >= 80 %, branch >= 65 %).
 
 | Tests | What they cover | Needs Docker |
 |---|---|---|
 | `Maroik.Core.Domain.Tests`, `Maroik.Core.Contract.Tests` | entities, policies, value objects, DTOs, the layering / package-reference architecture rules | no |
 | `Maroik.Core.Service.Tests` | use-case orchestration (mocked repositories) | no |
 | `Maroik.Core.Repository.Tests` | EF Core repositories against a real PostgreSQL 17 loaded from `Maroik.DB/.../Debugging/Init.sql` | yes |
-| `Maroik.Core.PostgreSQL.Tests` | the EF model against the real schema of the init script (tables, columns, keys, foreign keys, indexes) | yes |
+| `Maroik.Core.PostgreSQL.Tests` | the EF model against the real schema of both init scripts (tables, columns, keys, foreign keys, indexes) | yes |
 | `Maroik.Core.Client.Tests` | mail (in-process SMTP server), file storage, ClamAV, RabbitMQ publisher and health check (real RabbitMQ) | yes |
 | `Maroik.Worker.Tests` | the e-mail consumer and the worker host, against a real RabbitMQ and an SMTP relay | yes |
 | `Maroik.FileStorage.Tests` | the file-storage service | no |
@@ -262,20 +260,11 @@ dotnet test --project Maroik.Core.Service.Tests            # any single project
 ## Getting Started
 
 ### Prerequisites
-- .NET 10.0 SDK or later
+- .NET 10.0 SDK
 - Docker and Docker Compose
-- Visual Studio (Windows) or JetBrains Rider (Linux/Mac) — optional, for container debugging
+- Visual Studio (Windows) or JetBrains Rider (Linux/Mac)
 
-### Quick start (Docker Compose)
-```bash
-docker compose -f docker-compose.debug.yml up -d --build
-```
-- Website: https://localhost/ (self-signed certificate — accept the browser warning)
-- Mail inbox (Mailpit): http://localhost:8025 — every e-mail the app sends (registration confirmation, password reset) lands here, so no real mail account is needed.
-
-The database is created from `Maroik.DB/PostgreSQL/SQL_Init_Script/Debugging/Init.sql` on the first start. To start over from a clean seed, run `docker compose -f docker-compose.debug.yml down -v`.
-
-### IDE debugging
+### Running the Project
 
 #### Windows
 1. Install Visual Studio
@@ -285,22 +274,26 @@ The database is created from `Maroik.DB/PostgreSQL/SQL_Init_Script/Debugging/Ini
 
 #### Linux/Mac
 1. Install JetBrains Rider
-2. Start debug mode with docker-compose.debug.yml
+2. Open Maroik.sln
+3. Start debug mode with docker-compose.debug.yml
 
-### Configuration
-All local settings live in `.env.debug` (read by `docker-compose.debug.yml`). Every value in it — database and broker passwords, the RSA key pair, the self-signed certificate in `Maroik.SSL/` — is a throwaway default generated for this public repository. **Generate your own before exposing an instance anywhere.** The file documents how to regenerate the RSA key pair.
+## Deployment
+
+### Ubuntu Server 24.04.4
+1. Configure .env.prod with domain name and mail settings
+2. Set email credentials in DBBackup.sh and UploadFileBackup.sh
+3. Copy Maroik folder to /home/ubuntu/
+4. Run Deploy.sh script
 
 ## Default Accounts
 
 ### Admin Account
 - ID: admin@maroik.com
-- Password: demoO12!!
+- Password: ghfkddl12gh!@
 
-### User Account (demo)
-- ID: demo@maroik.com
-- Password: demoO12!!
-
-The login page is pre-filled with the demo account. Its dashboard is pinned to June 2025, where the seeded sample data lives.
+### User Account
+- ID: user@maroik.com
+- Password: ghfkddl12gh!@
 
 ## Screenshots
 
@@ -336,3 +329,6 @@ For issues and questions, please use the GitHub issue tracker.
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Special Notes
+- Mail account configuration is required for deployment.
