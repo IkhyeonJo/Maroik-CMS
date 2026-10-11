@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Contract.Misc.Settings;
 using Microsoft.Extensions.Options;
 
@@ -32,7 +31,7 @@ public class RsaService : IRsaService
     /// Hash used for OAEP padding on everything this service encrypts <b>and</b> decrypts. Always
     /// SHA-256: SHA-1 is collision-broken and needlessly weak for OAEP. The legacy SHA-1 fallback
     /// this service used to retry <see cref="Decrypt"/> under (for content produced by the old
-    /// <see cref="RsaType.Rsa"/> config) has been retired; SHA-1-produced ciphertext no longer decrypts.
+    /// SHA-1 configuration) has been retired; SHA-1-produced ciphertext no longer decrypts.
     /// </summary>
     private static readonly HashAlgorithmName _hashAlgorithmName = HashAlgorithmName.SHA256;
 

@@ -115,7 +115,6 @@ public class MaroikWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 ["ServerSetting:NoticeMaturityDateDay"] = "7",
                 ["ServerSetting:RsaPrivateKey"] = Convert.ToBase64String(_rsaKeyPair.ExportRSAPrivateKey()),
                 ["ServerSetting:RsaPublicKey"] = Convert.ToBase64String(_rsaKeyPair.ExportSubjectPublicKeyInfo()),
-                ["ServerSetting:RsaAlgorithm"] = "Rsa2",
                 ["ServerSetting:FileStorageBaseUrl"] = "http://localhost:5001",
 
                 // SMTP — not used in route tests
