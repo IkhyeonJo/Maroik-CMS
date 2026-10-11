@@ -208,20 +208,6 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         return Result.Success;
     }
 
-    /// <summary>Directly sets the balance to the given value (e.g. reconciliation).</summary>
-    public ErrorOr<Success> SetBalance(Money newBalance, DateTime utcNow)
-    {
-        if (newBalance.Currency != Balance.Currency)
-            return DomainError.Validation("Asset.CurrencyMismatch", "Cannot change the currency of an existing asset.");
-
-        var rangeResult = FinanceAmountPolicy.ValidateBalance(newBalance.Amount);
-        if (rangeResult.IsError) return rangeResult.Errors;
-
-        Balance = newBalance;
-        Updated = utcNow;
-        return Result.Success;
-    }
-
     /// <summary>
     /// Updates all editable fields of the asset, including renaming and currency changes.
     /// Used by the service layer when an admin/user modifies asset details.
@@ -253,13 +239,6 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         Deleted = deleted;
         Updated = utcNow;
         return Result.Success;
-    }
-
-    /// <summary>Updates the optional memo attached to this asset.</summary>
-    public void UpdateNote(string? note, DateTime utcNow)
-    {
-        Note = note;
-        Updated = utcNow;
     }
 
     /// <summary>Marks the asset as logically deleted.</summary>

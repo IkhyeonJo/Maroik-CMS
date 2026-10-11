@@ -13,9 +13,6 @@ namespace Maroik.Core.Domain.Board;
 /// </summary>
 public sealed class Board : AggregateRoot<long>
 {
-    /// <summary>Backing list for <see cref="Comments"/>: only the comments added in this call, never the stored ones.</summary>
-    private readonly List<BoardComment> _comments = [];
-
     /// <summary>Board type identifier (e.g. "FreeForum", "PrivateNote").</summary>
     public string Type { get; }
 
@@ -48,14 +45,6 @@ public sealed class Board : AggregateRoot<long>
 
     /// <summary>When true, the post is pinned at the top of the list as a notice.</summary>
     public bool Noticed { get; private set; }
-
-    /// <summary>
-    /// Comments added to this post via <see cref="AddComment"/> during the current call, exposed for
-    /// inspection immediately after adding one. Not hydrated from the repository on a normal load
-    /// (comments are fetched separately, e.g. via <c>IBoardCommentRepository</c>), so this is empty
-    /// on a freshly-loaded post and must not be treated as the full comment list.
-    /// </summary>
-    public IReadOnlyList<BoardComment> Comments => _comments.AsReadOnly();
 
     /// <summary>"New post" constructor: stamps <see cref="Created"/>/<see cref="Updated"/>. Used by <see cref="Create"/> only.</summary>
     private Board(
@@ -176,14 +165,9 @@ public sealed class Board : AggregateRoot<long>
         return Result.Success;
     }
 
-    /// <summary>Increments the view counter by one.</summary>
-    public void IncrementView()
-    {
-        View++;
-    }
-
     /// <summary>
-    /// Adds a comment to this post. A locked post rejects new comments from anyone except its
+    /// Accepts a comment for this post (the comment itself is persisted by its own repository) and
+    /// stamps <see cref="Updated"/>. A locked post rejects new comments from anyone except its
     /// owner or an admin, mirroring who is still allowed to view a locked post at all.
     /// </summary>
     public ErrorOr<Success> AddComment(BoardComment comment, DateTime utcNow, string? commenterNickname = null, bool isAdmin = false)
@@ -197,7 +181,6 @@ public sealed class Board : AggregateRoot<long>
         if (comment.BoardId != Id)
             return DomainError.Validation("Board.CommentMismatch", "Comment does not belong to this post.");
 
-        _comments.Add(comment);
         Updated = utcNow;
         return Result.Success;
     }

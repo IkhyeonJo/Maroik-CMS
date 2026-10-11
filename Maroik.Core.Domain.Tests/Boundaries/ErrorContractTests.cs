@@ -48,7 +48,6 @@ public class ErrorContractTests
 
         ErrorAssert.Validation(asset.Deposit(usd, Now), "Asset.CurrencyMismatch", "Cannot deposit a different currency into this asset.");
         ErrorAssert.Validation(asset.Withdraw(usd, Now), "Asset.CurrencyMismatch", "Cannot withdraw a different currency from this asset.");
-        ErrorAssert.Validation(asset.SetBalance(usd, Now), "Asset.CurrencyMismatch", "Cannot change the currency of an existing asset.");
     }
 
     /// <summary>Verifies the empty-name, empty-item and unknown-item errors of <c>Asset.Update</c>.</summary>

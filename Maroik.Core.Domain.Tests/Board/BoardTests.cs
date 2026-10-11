@@ -154,33 +154,20 @@ public class BoardTests
         Assert.Equal("Board.TitleTooLong", result.FirstError.Code);
     }
 
-    // -- IncrementView ---------------------------------------------------------
-
-    /// <summary>Increment view increments counter.</summary>
-    [Fact]
-    public void IncrementView_IncrementsCounter()
-    {
-        var board = ValidBoard();
-
-        board.IncrementView();
-        board.IncrementView();
-
-        Assert.Equal(2, board.View);
-    }
-
     // -- AddComment ------------------------------------------------------------
 
-    /// <summary>Add comment succeeds, when not locked or deleted.</summary>
+    /// <summary>Add comment succeeds, when not locked or deleted, and stamps the post's Updated.</summary>
     [Fact]
     public void AddComment_Succeeds_WhenNotLockedOrDeleted()
     {
         var board = ValidBoard(id: 1);
         var comment = ValidComment(boardId: 1);
+        DateTime later = Now.AddHours(1);
 
-        var result = board.AddComment(comment, Now);
+        var result = board.AddComment(comment, later);
 
         Assert.False(result.IsError);
-        Assert.Single(board.Comments);
+        Assert.Equal(later, board.Updated);
     }
 
     /// <summary>Add comment returns error, when locked.</summary>
@@ -219,7 +206,6 @@ public class BoardTests
         var result = board.AddComment(ValidComment(boardId: 1), Now, commenterNickname: "Alice", isAdmin: false);
 
         Assert.False(result.IsError);
-        Assert.Single(board.Comments);
     }
 
     /// <summary>Add comment succeeds on a locked post, when the commenter is an admin.</summary>
@@ -232,7 +218,6 @@ public class BoardTests
         var result = board.AddComment(ValidComment(boardId: 1), Now, commenterNickname: "Bob", isAdmin: true);
 
         Assert.False(result.IsError);
-        Assert.Single(board.Comments);
     }
 
     /// <summary>Add comment returns error, when deleted.</summary>

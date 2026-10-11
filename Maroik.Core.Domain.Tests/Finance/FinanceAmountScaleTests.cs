@@ -112,15 +112,14 @@ public class FinanceAmountScaleTests
             "Wallet", null, 1, 15, new DateTime(2099, 12, 31), null, Now).FirstError.Code);
     }
 
-    /// <summary>Asset: a typed balance on create, update and a direct set.</summary>
+    /// <summary>Asset: a typed balance on create and update.</summary>
     [Fact]
-    public void Asset_CreateUpdateAndSetBalance_RejectFiveDecimals()
+    public void Asset_CreateAndUpdate_RejectFiveDecimals()
     {
         AssertTooManyDecimals(Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", FiveDecimals, "KRW", Now).FirstError.Code);
 
         var asset = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", 100m, "KRW", Now).Value;
         AssertTooManyDecimals(asset.Update("Wallet", "FreeDepositAndWithdrawal", FiveDecimals, "KRW", null, false, Now).FirstError.Code);
-        AssertTooManyDecimals(asset.SetBalance(Money.Create(FiveDecimals, "KRW").Value, Now).FirstError.Code);
         Assert.Equal(100m, asset.Balance.Amount);
     }
 
