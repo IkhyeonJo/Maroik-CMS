@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Maroik.Core.Contract.Dtos;
@@ -59,8 +60,8 @@ public static class CalendarViewModelMapper
 
                 item.StartDateTimeZoneIanaId = userTimeZoneIanaId;
                 item.EndDateTimeZoneIanaId = userTimeZoneIanaId;
-                item.DisplayStartDate = start.ToString("yyyy-MM-dd");
-                item.DisplayEndDate = end.ToString("yyyy-MM-dd");
+                item.DisplayStartDate = start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                item.DisplayEndDate = end.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
                 item.DisplayStartDateTimeZone = "";
                 item.DisplayEndDateTimeZone = "";
 
@@ -85,8 +86,8 @@ public static class CalendarViewModelMapper
 
                 item.StartDateTimeZoneIanaId = startTzId;
                 item.EndDateTimeZoneIanaId = endTzId;
-                item.DisplayStartDate = localStart.ToString("yyyy-MM-dd HH:mm");
-                item.DisplayEndDate = localEnd.ToString("yyyy-MM-dd HH:mm");
+                item.DisplayStartDate = localStart.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+                item.DisplayEndDate = localEnd.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
                 item.DisplayStartDateTimeZone = startTzId.ToTimeZoneStandardName();
                 item.DisplayEndDateTimeZone = endTzId.ToTimeZoneStandardName();
 
@@ -147,7 +148,7 @@ public static class CalendarViewModelMapper
         public void PopulateTimeData(string timeZoneIanaId, DateTime utcNow)
         {
             DateTime ct = utcNow.ConvertTimeByTimeZoneIanaId(timeZoneIanaId);
-            vm.CurrentDate = ct.ToString("yyyy-MM-dd");
+            vm.CurrentDate = ct.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             vm.CurrentHour = ct.Hour;
             vm.CurrentMinute = ct.Minute;
             vm.CurrentSecond = ct.Second;

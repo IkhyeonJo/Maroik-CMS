@@ -95,6 +95,28 @@ public class DateTimeExtensionsTests
         Assert.Equal("2025-06-15T12:00:00Z", result);
     }
 
+    /// <summary>
+    /// The raw UTC form is ISO-8601 whatever the thread's culture: a culture with another calendar (th-TH counts Buddhist
+    /// years, 2568 for 2025) must not change the year it prints.
+    /// </summary>
+    [Fact]
+    public void ToViewerFormattedString_RawUtcForm_DoesNotDependOnTheCurrentCulture()
+    {
+        CultureInfo original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("th-TH");
+
+            string result = new DateTime(2025, 6, 15, 12, 0, 0, DateTimeKind.Utc).ToViewerFormattedString(viewerSeesLocalTime: false, "UTC");
+
+            Assert.Equal("2025-06-15T12:00:00Z", result);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+    }
+
     // -- ConvertToUtcByTimeZoneIanaId --------------------------------------------
 
     /// <summary>Verifies that <c>ConvertToUtcByTimeZoneIanaId</c> converts local time to UTC for a valid IANA id.</summary>

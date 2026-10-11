@@ -1,6 +1,7 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Domain.Finance;
 using Maroik.Core.Domain.Time;
+using Maroik.Website.Extensions;
 using Maroik.Website.Models.ViewModels.Notice;
 
 namespace Maroik.Website.Mappings;
@@ -46,7 +47,7 @@ public static class NoticeViewModelMapper
                 MonetaryUnit = currencyByProduct.GetValueOrDefault(item.DepositMyAssetProductName ?? ""),
                 DepositMonth = item.DepositMonth,
                 DepositDay = item.DepositDay,
-                MaturityDate = item.MaturityDate.ToString("yyyy-MM-dd"),
+                MaturityDate = item.MaturityDate.ToMaturityDateString(),
                 Note = item.Note,
                 DepositMyAssetProductName = item.DepositMyAssetProductName,
                 Created = item.Created.ConvertTimeByTimeZoneIanaId(timeZoneIanaId),
@@ -101,7 +102,7 @@ public static class NoticeViewModelMapper
                 MyDepositAsset = item.MyDepositAsset,
                 DepositMonth = item.DepositMonth,
                 DepositDay = item.DepositDay,
-                MaturityDate = item.MaturityDate.ToString("yyyy-MM-dd"),
+                MaturityDate = item.MaturityDate.ToMaturityDateString(),
                 Note = item.Note,
                 Created = item.Created.ConvertTimeByTimeZoneIanaId(timeZoneIanaId),
                 Updated = item.Updated.ConvertTimeByTimeZoneIanaId(timeZoneIanaId),

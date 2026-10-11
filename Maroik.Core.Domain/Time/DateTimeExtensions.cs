@@ -46,7 +46,7 @@ public static class DateTimeExtensions
         public string ToViewerFormattedString(bool viewerSeesLocalTime, string timeZoneIanaId) =>
             viewerSeesLocalTime
                 ? value.ConvertTimeByTimeZoneIanaId(timeZoneIanaId).ToString(CultureInfo.InvariantCulture)
-                : value.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                : value.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
 
         /// <summary>
         /// Converts a local (<see cref="DateTimeKind.Unspecified"/>) <see cref="DateTime"/> value to UTC,
