@@ -43,7 +43,7 @@ public class RoleBasedStaticFileMiddleware(RequestDelegate next)
             {
                 // Same validity rule as AuthorizationFilter: a session whose account is gone, deleted or
                 // re-stamped (password changed, admin lock) is no signed-in account at all.
-                var sessionAccount = sessionService.GetAccount();
+                var sessionAccount = await sessionService.GetAccountAsync(context.RequestAborted);
                 var account = sessionAccount == null
                     ? null
                     : await accountService.GetAccountByEmailAsync(sessionAccount.Email ?? "", context.RequestAborted);

@@ -35,8 +35,8 @@ public class RoleBasedStaticFileMiddlewareTests
     private void SetupAccount(string? role)
     {
         _sessionService
-            .Setup(s => s.GetAccount())
-            .Returns(role == null ? null : new AccountResponse { Email = "test@test.com", Nickname = "Test", Role = role, SecurityStamp = Stamp });
+            .Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(role == null ? null : new AccountResponse { Email = "test@test.com", Nickname = "Test", Role = role, SecurityStamp = Stamp });
         SetupDatabaseAccount(role == null ? null : new AccountResponse { Email = "test@test.com", Nickname = "Test", Role = role, SecurityStamp = Stamp });
     }
 

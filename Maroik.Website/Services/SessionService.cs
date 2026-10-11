@@ -16,10 +16,17 @@ namespace Maroik.Website.Services;
 public class SessionService(IHttpContextAccessor httpContextAccessor, ILogger<SessionService> logger) : ISessionService
 {
     /// <inheritdoc />
-    public AccountResponse? GetAccount()
+    public async Task<AccountResponse?> GetAccountAsync(CancellationToken ct = default)
     {
         var session = httpContextAccessor.HttpContext?.Session;
         if (session == null) return null;
+
+        // Load the session asynchronously before reading it. Read without this, ASP.NET Core loads it with a blocking
+        // store (Valkey) call, and when that call fails or times out it only logs and carries on with an EMPTY session.
+        // A page fires ~35 asset requests at once; under that load blocking reads timed out, so a signed-in user's
+        // /user/** scripts were refused (RoleBasedStaticFileMiddleware) and pages came up blank. LoadAsync neither
+        // blocks a thread nor hides the failure: an unreadable store throws to the global exception handler.
+        await session.LoadAsync(ct);
 
         bool exists = session.TryGetValue(SessionKeys.Account, out byte[]? bytes);
         if (!exists || bytes == null || bytes.Length == 0) return null;

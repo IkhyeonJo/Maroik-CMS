@@ -10,7 +10,7 @@ namespace Maroik.Website.Tests.Controllers;
 
 /// <summary>
 /// Integration smoke tests for <c>ForumController</c>.
-/// The free-forum list view uses <c>GetAccount() ?? anonymous</c> so it works
+/// The free-forum list view uses <c>GetLoggedInAccount()</c> (the anonymous placeholder when signed out) so it works
 /// without a session and must respond 200 OK.
 /// </summary>
 [Collection("Website Integration")]

@@ -170,7 +170,7 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
             {
                 // A poisoned or shape-changed cache entry must not turn into a 500 on every request
                 // for the whole 10-minute TTL — leave menusLoaded false so the block below rebuilds
-                // from the database, which also overwrites the bad entry. (SessionService.GetAccount
+                // from the database, which also overwrites the bad entry. (SessionService.GetAccountAsync
                 // guards its own deserialization the same way.)
                 logger.LogWarning(e, "Navigation menu cache entry could not be read; rebuilding it from the database");
             }
@@ -217,7 +217,7 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
         var currentControllerName = context.ActionDescriptor.RouteValues["controller"] ?? ""; // Controller name before execution
         var currentActionName = context.ActionDescriptor.RouteValues["action"] ?? ""; // Action name before execution
         var currentRequestMethod = context.HttpContext.Request.Method; // HTTP method (GET, POST, ...)
-        var sessionAccount = sessionService.GetAccount(); // Check if account session exists after login
+        var sessionAccount = await sessionService.GetAccountAsync(context.HttpContext.RequestAborted); // Check if account session exists after login
 
         AccountResponse? loggedInAccount = null;
         if (sessionAccount != null)
