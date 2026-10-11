@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Website.Attributes;
+using Maroik.Website.Contracts;
 using Maroik.Website.Filters;
 using Microsoft.AspNetCore.Mvc;
 using Mono.Cecil;
@@ -327,12 +328,12 @@ public class WebsiteArchitectureTests
     /// <summary>
     /// Controllers must read the currently logged-in account via <c>HttpContext.GetLoggedInAccount()</c> —
     /// re-fetched from the database by <see cref="ViewBagPopulatorFilter"/> on every request — never
-    /// <c>ISessionService.GetAccount()</c>, which returns the snapshot cached in the session at
+    /// <c>ISessionService.GetAccountAsync()</c>, which returns the snapshot cached in the session at
     /// login time. A mid-session change to Role, Locked, Nickname, TimeZoneIanaId, etc. must take
     /// effect on the very next request; reading the stale session copy instead let a demoted admin
     /// keep an admin's view of a locked post until they logged out and back in (the bug this rule
     /// exists to prevent a recurrence of). <c>SetAccount</c>/<c>RemoveAccount</c> (the write side —
-    /// login/logout/profile-refresh) are unaffected; only the <c>GetAccount</c> read is forbidden.
+    /// login/logout/profile-refresh) are unaffected; only the <c>GetAccountAsync</c> read is forbidden.
     /// </summary>
     [Fact]
     public void Controllers_ShouldNot_CallSessionServiceGetAccount()
@@ -348,8 +349,8 @@ public class WebsiteArchitectureTests
             result.IsSuccessful,
             "Controllers must read the logged-in account via HttpContext.GetLoggedInAccount() (populated " +
             "fresh from the database by ViewBagPopulatorFilter on every request), not " +
-            "ISessionService.GetAccount() (the stale, login-time session snapshot). " +
-            "SetAccount/RemoveAccount are still allowed — only the GetAccount read is forbidden.\n" +
+            "ISessionService.GetAccountAsync() (the stale, login-time session snapshot). " +
+            "SetAccount/RemoveAccount are still allowed — only the GetAccountAsync read is forbidden.\n" +
             "Failing types: " + string.Join(", ", result.FailingTypeNames ?? []));
     }
 
@@ -421,15 +422,15 @@ public class WebsiteArchitectureTests
     }
 
     /// <summary>
-    /// Flags a type whose IL directly calls <c>ISessionService.GetAccount</c>. Checked at the
+    /// Flags a type whose IL directly calls <c>ISessionService.GetAccountAsync</c>. Checked at the
     /// method-call level via Mono.Cecil (not a type-dependency rule) because controllers
     /// legitimately depend on <c>ISessionService</c> itself for <c>SetAccount</c>/<c>RemoveAccount</c>
-    /// — only the <c>GetAccount</c> read is forbidden. Mirrors
+    /// — only the <c>GetAccountAsync</c> read is forbidden. Mirrors
     /// <c>DomainArchitectureTests.DoesNotCallRawErrorFactory</c>'s approach.
     /// </summary>
     private sealed class DoesNotCallSessionServiceGetAccount : ICustomRule
     {
-        /// <summary>Returns <see langword="false"/> when any method body of <paramref name="type"/> (or a type nested in it) calls <c>ISessionService.GetAccount</c>.</summary>
+        /// <summary>Returns <see langword="false"/> when any method body of <paramref name="type"/> (or a type nested in it) calls <c>ISessionService.GetAccountAsync</c>.</summary>
         public bool MeetsRule(TypeDefinition type)
         {
             foreach (var instruction in WithNestedTypes(type).SelectMany(t => t.Methods).Where(method => method.HasBody).SelectMany(method => method.Body.Instructions.Where(instruction => instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)))
@@ -437,7 +438,7 @@ public class WebsiteArchitectureTests
                 if (instruction.Operand is not MethodReference calledMethod) continue;
 
                 if (calledMethod.DeclaringType.FullName == "Maroik.Website.Contracts.ISessionService"
-                    && calledMethod.Name == "GetAccount")
+                    && calledMethod.Name == nameof(ISessionService.GetAccountAsync))
                 {
                     return false;
                 }

@@ -115,7 +115,7 @@ public class AuthorizationFilterTests
     [Fact]
     public async Task OnAuthorizationAsync_Get_NotLoggedIn_BypassRoute_AlwaysAllowed()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         SetupMenu([], []);
         var context = BuildContext("Account", "Login");
 
@@ -129,7 +129,7 @@ public class AuthorizationFilterTests
     [Fact]
     public async Task OnAuthorizationAsync_Get_NotLoggedIn_SingleCategoryMatch_Allows()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         var category = MakeCategory(1, Role.Anonymous, "Dashboard", "AnonymousIndex");
         SetupMenu([category], []);
         var context = BuildContext("Dashboard", "AnonymousIndex");
@@ -144,7 +144,7 @@ public class AuthorizationFilterTests
     [Fact]
     public async Task OnAuthorizationAsync_Get_NotLoggedIn_SubCategoryMatch_Allows()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         var category = MakeCategory(1, Role.Anonymous, "Notice", null); // parent category (no direct Action = has children)
         var subCategory = MakeSubCategory(10, categoryId: 1, role: Role.Anonymous, action: "FixedIncome");
         SetupMenu([category], [subCategory]);
@@ -159,7 +159,7 @@ public class AuthorizationFilterTests
     [Fact]
     public async Task OnAuthorizationAsync_Get_NotLoggedIn_NoMatch_Redirects()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         var category = MakeCategory(1, Role.Anonymous, "Dashboard", "AnonymousIndex");
         SetupMenu([category], []);
         var context = BuildContext("Forum", "FreeForum");
@@ -178,7 +178,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_Get_AdminLoggedIn_SingleCategoryMatch_Allows()
     {
         var admin = new AccountResponse { Email = "admin@test.com", Nickname = "Admin", Role = Role.Admin };
-        _sessionService.Setup(s => s.GetAccount()).Returns(admin);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(admin);
         _accountService.Setup(a => a.GetAccountByEmailAsync("admin@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(admin);
         var category = MakeCategory(1, Role.Admin, "Management", "Account");
         SetupMenu([category], []);
@@ -194,7 +194,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_Get_AdminLoggedIn_SubCategoryMatch_Allows()
     {
         var admin = new AccountResponse { Email = "admin@test.com", Nickname = "Admin", Role = Role.Admin };
-        _sessionService.Setup(s => s.GetAccount()).Returns(admin);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(admin);
         _accountService.Setup(a => a.GetAccountByEmailAsync("admin@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(admin);
         var category = MakeCategory(1, Role.Admin, "Notice", null); // parent category (no direct Action = has children)
         var subCategory = MakeSubCategory(10, categoryId: 1, role: Role.Admin, action: "FixedIncome");
@@ -211,7 +211,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_Get_AdminLoggedIn_NoMatch_Redirects()
     {
         var admin = new AccountResponse { Email = "admin@test.com", Nickname = "Admin", Role = Role.Admin };
-        _sessionService.Setup(s => s.GetAccount()).Returns(admin);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(admin);
         _accountService.Setup(a => a.GetAccountByEmailAsync("admin@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(admin);
         var category = MakeCategory(1, Role.Admin, "Management", "Account");
         SetupMenu([category], []);
@@ -231,7 +231,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_Get_UserLoggedIn_SingleCategoryMatch_Allows()
     {
         var user = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User };
-        _sessionService.Setup(s => s.GetAccount()).Returns(user);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(user);
         _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(user);
         var category = MakeCategory(1, Role.User, "AccountBook", "Income");
         SetupMenu([category], []);
@@ -251,7 +251,7 @@ public class AuthorizationFilterTests
     {
         var session = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, SecurityStamp = "stamp" };
         var locked = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, SecurityStamp = "stamp", Locked = true };
-        _sessionService.Setup(s => s.GetAccount()).Returns(session);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(session);
         _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(locked);
         SetupMenu([MakeCategory(1, Role.User, "AccountBook", "Income")], []);
         var context = BuildContext("AccountBook", "Income");
@@ -267,7 +267,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_Get_UserLoggedIn_NoMatch_Redirects()
     {
         var user = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User };
-        _sessionService.Setup(s => s.GetAccount()).Returns(user);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(user);
         _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(user);
         var category = MakeCategory(1, Role.User, "AccountBook", "Income");
         SetupMenu([category], []);
@@ -289,7 +289,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_Get_UnrecognizedRole_Redirects()
     {
         var account = new AccountResponse { Email = "weird@test.com", Nickname = "Weird", Role = "SuperAdmin" };
-        _sessionService.Setup(s => s.GetAccount()).Returns(account);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountService.Setup(a => a.GetAccountByEmailAsync("weird@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(account);
         SetupMenu([], []);
         var context = BuildContext("AccountBook", "Income");
@@ -314,7 +314,7 @@ public class AuthorizationFilterTests
     [InlineData("DELETE")]
     public async Task OnAuthorizationAsync_ExceptionError_NonGetMethod_NotLoggedIn_Allows(string method)
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         SetupMenu([], []);
         var context = BuildContext("Exception", "Error", method);
 
@@ -330,7 +330,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_ExceptionError_Post_LoggedIn_Allows(string role)
     {
         var account = new AccountResponse { Email = "who@test.com", Nickname = "Who", Role = role };
-        _sessionService.Setup(s => s.GetAccount()).Returns(account);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountService.Setup(a => a.GetAccountByEmailAsync("who@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(account);
         SetupMenu([], []);
         var context = BuildContext("Exception", "Error", "POST");
@@ -344,7 +344,7 @@ public class AuthorizationFilterTests
     [Fact]
     public async Task OnAuthorizationAsync_AnotherExceptionAction_Post_NotLoggedIn_StillRedirects()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         SetupMenu([], []);
         var context = BuildContext("Exception", "Other", "POST");
 
@@ -360,7 +360,7 @@ public class AuthorizationFilterTests
     {
         var sessionAccount = new AccountResponse { Email = "gone@test.com", Nickname = "Gone", Role = Role.User };
         var dbAccount = new AccountResponse { Email = "gone@test.com", Nickname = "Gone", Role = Role.User, Deleted = true };
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(sessionAccount);
         _accountService.Setup(a => a.GetAccountByEmailAsync("gone@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(dbAccount);
         SetupMenu([], []);
         var context = BuildContext("Exception", "Error", "POST");
@@ -379,7 +379,7 @@ public class AuthorizationFilterTests
     {
         var sessionAccount = new AccountResponse { Email = "gone@test.com", Nickname = "Gone", Role = Role.User };
         var dbAccount = new AccountResponse { Email = "gone@test.com", Nickname = "Gone", Role = Role.User, Deleted = true };
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(sessionAccount);
         _accountService.Setup(a => a.GetAccountByEmailAsync("gone@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(dbAccount);
         SetupMenu([], []);
         var context = BuildContext("Dashboard", "UserIndex");
@@ -398,7 +398,7 @@ public class AuthorizationFilterTests
     {
         var sessionAccount = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, SecurityStamp = "old-stamp" };
         var dbAccount = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, SecurityStamp = "new-stamp" };
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(sessionAccount);
         _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(dbAccount);
         SetupMenu([], []);
         var context = BuildContext("Dashboard", "UserIndex");
@@ -418,7 +418,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_MustChangePassword_OtherGet_RedirectsToProfile()
     {
         var account = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, MustChangePassword = true };
-        _sessionService.Setup(s => s.GetAccount()).Returns(account);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(account);
         var category = MakeCategory(1, Role.User, "AccountBook", "Income");
         SetupMenu([category], []);
@@ -436,7 +436,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_MustChangePassword_OtherPost_Blocks()
     {
         var account = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, MustChangePassword = true };
-        _sessionService.Setup(s => s.GetAccount()).Returns(account);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(account);
         SetupMenu([], []);
         var context = BuildContext("AccountBook", "CreateIncome", "POST");
@@ -456,7 +456,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_MustChangePassword_LogsTheRefusedPost_ButNotTheProfileRedirect()
     {
         var account = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, MustChangePassword = true };
-        _sessionService.Setup(s => s.GetAccount()).Returns(account);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(account);
         SetupMenu([MakeCategory(1, Role.User, "AccountBook", "Income")], []);
 
@@ -476,7 +476,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_MustChangePassword_ProfileGet_Allows()
     {
         var account = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, MustChangePassword = true };
-        _sessionService.Setup(s => s.GetAccount()).Returns(account);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(account);
         SetupMenu([], []);
         var context = BuildContext("Management", "Profile");
@@ -492,7 +492,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_MustChangePassword_UpdateProfilePasswordPost_Allows()
     {
         var account = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, MustChangePassword = true };
-        _sessionService.Setup(s => s.GetAccount()).Returns(account);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(account);
         SetupMenu([], []);
         var context = BuildContext("Management", "UpdateProfilePassword", "POST");
@@ -508,7 +508,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_MustChangePassword_LogoutGet_Allows()
     {
         var account = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, MustChangePassword = true };
-        _sessionService.Setup(s => s.GetAccount()).Returns(account);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(account);
         SetupMenu([], []);
         var context = BuildContext("Account", "Logout");
@@ -537,7 +537,7 @@ public class AuthorizationFilterTests
     [Fact]
     public async Task OnAuthorizationAsync_StashesLoadedMenuOnHttpContextItems_SplitByRole()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         var anonymous = MakeCategory(1, Role.Anonymous, "Dashboard", "AnonymousIndex");
         var user = MakeCategory(2, Role.User, "AccountBook", "Income");
         var admin = MakeCategory(3, Role.Admin, "Management", "Account");
@@ -559,7 +559,7 @@ public class AuthorizationFilterTests
     [Fact]
     public async Task OnAuthorizationAsync_DeniedRequest_SetsResult_AndStillStashesMenu()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         SetupMenu([MakeCategory(1, Role.Anonymous, "Dashboard", "AnonymousIndex")], []);
         var context = BuildContext("Management", "Account");
 
@@ -573,7 +573,7 @@ public class AuthorizationFilterTests
     private void SignIn(string role, string email = "gate@test.com")
     {
         var account = new AccountResponse { Email = email, Nickname = "Gate", Role = role };
-        _sessionService.Setup(s => s.GetAccount()).Returns(account);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountService.Setup(a => a.GetAccountByEmailAsync(email, It.IsAny<CancellationToken>())).ReturnsAsync(account);
     }
 
@@ -599,7 +599,7 @@ public class AuthorizationFilterTests
     [Fact]
     public async Task OnAuthorizationAsync_AccountConfirmEmailPost_NotLoggedIn_Allows()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         SetupMenu([], []);
         var context = BuildContext("Account", "ConfirmEmail", "POST");
 
@@ -656,7 +656,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_APoisonedMenuCacheEntry_FallsBackToTheDatabase()
     {
         _cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([.. "this is not json"u8]);
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         SetupMenu([], []);
         var context = BuildContext("Account", "Login");
 
@@ -678,7 +678,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_LogsAWarningWithTheException_WhenTheMenuCacheEntryIsPoisoned()
     {
         _cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([.. "this is not json"u8]);
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         SetupMenu([], []);
 
         await CreateSut().OnAuthorizationAsync(BuildContext("Account", "Login"));
@@ -692,7 +692,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_LogsTheSessionInvalidation_WhenTheAccountWasDeleted()
     {
         var sessionAccount = new AccountResponse { Email = "gone@test.com", Nickname = "Gone", Role = Role.User };
-        _sessionService.Setup(s => s.GetAccount()).Returns(sessionAccount);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(sessionAccount);
         _accountService.Setup(a => a.GetAccountByEmailAsync("gone@test.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AccountResponse { Email = "gone@test.com", Nickname = "Gone", Role = Role.User, Deleted = true });
         SetupMenu([], []);
@@ -707,7 +707,7 @@ public class AuthorizationFilterTests
     [Fact]
     public async Task OnAuthorizationAsync_LogsTheSessionInvalidation_WhenTheSecurityStampChanged()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns(new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, SecurityStamp = "old" });
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, SecurityStamp = "old" });
         _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, SecurityStamp = "new" });
         SetupMenu([], []);
@@ -725,7 +725,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_LogsAnAccessDeniedWarning_WhenALoggedInAccountRequestsAPageOutsideItsMenu()
     {
         var admin = new AccountResponse { Email = "admin@test.com", Nickname = "Admin", Role = Role.Admin };
-        _sessionService.Setup(s => s.GetAccount()).Returns(admin);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(admin);
         _accountService.Setup(a => a.GetAccountByEmailAsync("admin@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(admin);
         SetupMenu([MakeCategory(1, Role.Admin, "Management", "Account")], []);
 
@@ -741,7 +741,7 @@ public class AuthorizationFilterTests
     public async Task OnAuthorizationAsync_LogsAnAccessDeniedWarning_WhenALoggedInPostIsNotPermitted()
     {
         var user = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User };
-        _sessionService.Setup(s => s.GetAccount()).Returns(user);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(user);
         _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(user);
         SetupMenu([], []);
 
@@ -756,7 +756,7 @@ public class AuthorizationFilterTests
     [Fact]
     public async Task OnAuthorizationAsync_LogsAnAccessDeniedWarning_WhenAnAnonymousPostIsNotPermitted()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         SetupMenu([], []);
 
         await CreateSut().OnAuthorizationAsync(BuildContext("Management", "DeleteAccount", "POST"));
@@ -770,7 +770,7 @@ public class AuthorizationFilterTests
     [Fact]
     public async Task OnAuthorizationAsync_LogsNothing_WhenAnAnonymousVisitorIsSentFromAnUnlistedPage()
     {
-        _sessionService.Setup(s => s.GetAccount()).Returns((AccountResponse?)null);
+        _sessionService.Setup(s => s.GetAccountAsync(It.IsAny<CancellationToken>())).ReturnsAsync((AccountResponse?)null);
         SetupMenu([], []);
 
         await CreateSut().OnAuthorizationAsync(BuildContext("Unregistered", "Action"));
