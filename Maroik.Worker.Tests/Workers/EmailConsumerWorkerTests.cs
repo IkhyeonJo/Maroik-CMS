@@ -362,6 +362,8 @@ public class EmailConsumerWorkerTests
         public List<string> Calls { get; } = [];
         /// <summary>Arguments the email queue was declared with.</summary>
         public IDictionary<string, object?>? EmailQueueArguments { get; private set; }
+        /// <summary>The options the worker opened its channel with.</summary>
+        public CreateChannelOptions? ChannelOptions { get; private set; }
         /// <summary>The last <c>BasicQos</c> settings.</summary>
         public (uint PrefetchSize, ushort PrefetchCount, bool Global)? Qos { get; private set; }
         /// <summary>The queue and auto-ack flag of the last <c>BasicConsume</c>.</summary>
@@ -377,7 +379,9 @@ public class EmailConsumerWorkerTests
         /// <summary>Makes <paramref name="connection"/> return <paramref name="channel"/> and records each declare / QoS / consume call on it.</summary>
         private void WireChannel(Mock<IConnection> connection, Mock<IChannel> channel)
         {
-            connection.Setup(c => c.CreateChannelAsync(It.IsAny<CreateChannelOptions?>(), It.IsAny<CancellationToken>())).ReturnsAsync(channel.Object);
+            connection.Setup(c => c.CreateChannelAsync(It.IsAny<CreateChannelOptions?>(), It.IsAny<CancellationToken>()))
+                .Callback((CreateChannelOptions? options, CancellationToken _) => ChannelOptions = options)
+                .ReturnsAsync(channel.Object);
             channel.Setup(c => c.QueueDeclareAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(),
                     It.IsAny<IDictionary<string, object?>?>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
                 .Callback((string queue, bool durable, bool exclusive, bool autoDelete, IDictionary<string, object?>? args, bool _, bool _, CancellationToken _) =>
@@ -438,6 +442,30 @@ public class EmailConsumerWorkerTests
                 Assert.Equal(pair.Value, broker.EmailQueueArguments![pair.Key]);
             Assert.Equal((0u, (ushort)10, false), broker.Qos);
             Assert.Equal((QueueNames.Email, false), broker.Consume);
+        }
+        finally
+        {
+            await worker.StopAsync(CancellationToken.None);
+        }
+    }
+
+    /// <summary>
+    /// The consumer's channel tracks publisher confirms, so the retry copy it publishes is confirmed by the broker before
+    /// the original delivery is acked: a copy the broker refuses throws, the original stays unacked, and the mail is
+    /// redelivered instead of being acked away with no copy left (the same guarantee the dead-letter re-drive relies on).
+    /// </summary>
+    [Fact]
+    public async Task StartAsync_OpensItsChannelWithPublisherConfirms()
+    {
+        var broker = new BrokerFixture();
+        var worker = broker.CreateWorker();
+
+        await worker.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            await WaitUntilAsync(() => broker.Consume != null);
+            Assert.True(broker.ChannelOptions?.PublisherConfirmationsEnabled);
+            Assert.True(broker.ChannelOptions?.PublisherConfirmationTrackingEnabled);
         }
         finally
         {
