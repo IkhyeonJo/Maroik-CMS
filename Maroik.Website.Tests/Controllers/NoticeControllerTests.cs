@@ -90,4 +90,42 @@ public class NoticeControllerTests(MaroikWebApplicationFactory factory)
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("\"result\":false", json);
     }
+
+    /// <summary>
+    /// A maturity date that is not <c>yyyy-MM-dd</c> is the caller's input, not an infrastructure failure: each of the
+    /// four fixed-schedule writes answers "Input is invalid", not the generic temporary error.
+    /// </summary>
+    [Theory]
+    [InlineData("/Notice/CreateFixedIncome")]
+    [InlineData("/Notice/UpdateFixedIncome")]
+    [InlineData("/Notice/CreateFixedExpenditure")]
+    [InlineData("/Notice/UpdateFixedExpenditure")]
+    public async Task AMalformedMaturityDate_IsReportedAsInvalidInput(string url)
+    {
+        var session = await AuthenticatedSessionHelper.LoginAsync(
+            factory, _client, "notice-badmaturity-input@test.com", "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
+
+        bool income = url.Contains("Income", StringComparison.Ordinal);
+        using var request = session.BuildJsonPostRequest(url, new
+        {
+            Id = 1,
+            MainClass = income ? "RegularIncome" : "ConsumerSpending",
+            SubClass = income ? "LaborIncome" : "PinMoney",
+            Content = "Salary",
+            Amount = 1000,
+            DepositMonth = 1,
+            DepositDay = 1,
+            MaturityDate = "13/45/2026", // not yyyy-MM-dd
+            DepositMyAssetProductName = "MyBank",
+            PaymentMethod = "MyBank",
+            Unpunctuality = false
+        });
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"error\":\"Input is invalid\"", json);
+    }
 }

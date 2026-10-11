@@ -1,4 +1,3 @@
-using System.Globalization;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Settings;
@@ -43,7 +42,7 @@ public class NoticeController(
     public async Task<IActionResult> CreateFixedIncome(
         [FromBody] FixedIncomeInputViewModel fixedIncomeInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || !fixedIncomeInputViewModel.MaturityDate.TryParseMaturityDate(out DateTime maturityDate))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         try
@@ -60,9 +59,7 @@ public class NoticeController(
                 DepositMyAssetProductName = fixedIncomeInputViewModel.DepositMyAssetProductName,
                 DepositMonth = fixedIncomeInputViewModel.DepositMonth,
                 DepositDay = fixedIncomeInputViewModel.DepositDay,
-                // ParseExact (not Parse) so only a strict yyyy-MM-dd string is accepted: format-locked
-                // validation instead of culture-dependent free-form parsing.
-                MaturityDate = DateTime.ParseExact(fixedIncomeInputViewModel.MaturityDate!, "yyyy-MM-dd", CultureInfo.InvariantCulture),
+                MaturityDate = maturityDate,
                 Note = fixedIncomeInputViewModel.Note ?? "",
                 Unpunctuality = fixedIncomeInputViewModel.Unpunctuality
             };
@@ -132,7 +129,7 @@ public class NoticeController(
                 Amount = item.Amount,
                 DepositMonth = item.DepositMonth,
                 DepositDay = item.DepositDay,
-                MaturityDate = item.MaturityDate.ToString("yyyy-MM-dd"),
+                MaturityDate = item.MaturityDate.ToMaturityDateString(),
                 Note = item.Note,
                 DepositMyAssetProductName = item.DepositMyAssetProductName,
                 Unpunctuality = item.Unpunctuality
@@ -181,7 +178,7 @@ public class NoticeController(
     public async Task<IActionResult> UpdateFixedIncome(
         [FromBody] FixedIncomeInputViewModel fixedIncomeInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || !fixedIncomeInputViewModel.MaturityDate.TryParseMaturityDate(out DateTime maturityDate))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         try
@@ -198,9 +195,7 @@ public class NoticeController(
                 DepositMyAssetProductName = fixedIncomeInputViewModel.DepositMyAssetProductName,
                 DepositMonth = fixedIncomeInputViewModel.DepositMonth,
                 DepositDay = fixedIncomeInputViewModel.DepositDay,
-                // ParseExact (not Parse) so only a strict yyyy-MM-dd string is accepted: format-locked
-                // validation instead of culture-dependent free-form parsing.
-                MaturityDate = DateTime.ParseExact(fixedIncomeInputViewModel.MaturityDate!, "yyyy-MM-dd", CultureInfo.InvariantCulture),
+                MaturityDate = maturityDate,
                 Note = fixedIncomeInputViewModel.Note ?? "",
                 Unpunctuality = fixedIncomeInputViewModel.Unpunctuality
             };
@@ -270,7 +265,7 @@ public class NoticeController(
     public async Task<IActionResult> CreateFixedExpenditure(
         [FromBody] FixedExpenditureInputViewModel fixedExpenditureInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || !fixedExpenditureInputViewModel.MaturityDate.TryParseMaturityDate(out DateTime maturityDate))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         try
@@ -288,9 +283,7 @@ public class NoticeController(
                 MyDepositAsset = fixedExpenditureInputViewModel.MyDepositAsset,
                 DepositMonth = fixedExpenditureInputViewModel.DepositMonth,
                 DepositDay = fixedExpenditureInputViewModel.DepositDay,
-                // ParseExact (not Parse) so only a strict yyyy-MM-dd string is accepted: format-locked
-                // validation instead of culture-dependent free-form parsing.
-                MaturityDate = DateTime.ParseExact(fixedExpenditureInputViewModel.MaturityDate!, "yyyy-MM-dd", CultureInfo.InvariantCulture),
+                MaturityDate = maturityDate,
                 Note = fixedExpenditureInputViewModel.Note ?? "",
                 Unpunctuality = fixedExpenditureInputViewModel.Unpunctuality
             };
@@ -360,7 +353,7 @@ public class NoticeController(
                 Amount = item.Amount,
                 DepositMonth = item.DepositMonth,
                 DepositDay = item.DepositDay,
-                MaturityDate = item.MaturityDate.ToString("yyyy-MM-dd"),
+                MaturityDate = item.MaturityDate.ToMaturityDateString(),
                 Note = item.Note,
                 PaymentMethod = item.PaymentMethod,
                 MyDepositAsset = item.MyDepositAsset ?? "",
@@ -410,7 +403,7 @@ public class NoticeController(
     public async Task<IActionResult> UpdateFixedExpenditure(
         [FromBody] FixedExpenditureInputViewModel fixedExpenditureInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || !fixedExpenditureInputViewModel.MaturityDate.TryParseMaturityDate(out DateTime maturityDate))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         try
@@ -428,9 +421,7 @@ public class NoticeController(
                 MyDepositAsset = fixedExpenditureInputViewModel.MyDepositAsset,
                 DepositMonth = fixedExpenditureInputViewModel.DepositMonth,
                 DepositDay = fixedExpenditureInputViewModel.DepositDay,
-                // ParseExact (not Parse) so only a strict yyyy-MM-dd string is accepted: format-locked
-                // validation instead of culture-dependent free-form parsing.
-                MaturityDate = DateTime.ParseExact(fixedExpenditureInputViewModel.MaturityDate!, "yyyy-MM-dd", CultureInfo.InvariantCulture),
+                MaturityDate = maturityDate,
                 Note = fixedExpenditureInputViewModel.Note ?? "",
                 Unpunctuality = fixedExpenditureInputViewModel.Unpunctuality
             };
