@@ -57,10 +57,18 @@ public class AccountBookController(
             Deleted = false
         };
 
-        var result = await assetService.CreateAsync(email, request, ct);
-        return result.Success
-            ? Json(new { result = true, message = localizer["The asset has been successfully created."].Value })
-            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        try
+        {
+            var result = await assetService.CreateAsync(email, request, ct);
+            return result.Success
+                ? Json(new { result = true, message = localizer["The asset has been successfully created."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create asset record for {Email}", email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
     }
 
     #endregion
@@ -146,10 +154,18 @@ public class AccountBookController(
             Deleted = assetInputViewModel.Deleted
         };
 
-        var result = await assetService.UpdateAsync(email, request, assetInputViewModel.OriginalProductName!, ct);
-        return result.Success
-            ? Json(new { result = true, message = localizer["The asset has been successfully updated."].Value })
-            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        try
+        {
+            var result = await assetService.UpdateAsync(email, request, assetInputViewModel.OriginalProductName!, ct);
+            return result.Success
+                ? Json(new { result = true, message = localizer["The asset has been successfully updated."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update asset record for {Email}", email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
     }
 
     #endregion
@@ -163,10 +179,18 @@ public class AccountBookController(
     public async Task<IActionResult> DeleteAsset([FromBody] AssetInputViewModel assetInputViewModel, CancellationToken ct)
     {
         string email = HttpContext.GetLoggedInAccount().Email!;
-        var result = await assetService.DeleteAsync(email, assetInputViewModel.ProductName!, ct);
-        return result.Success
-            ? Json(new { result = true, message = localizer["The asset has been successfully deleted."].Value })
-            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        try
+        {
+            var result = await assetService.DeleteAsync(email, assetInputViewModel.ProductName!, ct);
+            return result.Success
+                ? Json(new { result = true, message = localizer["The asset has been successfully deleted."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to delete asset record for {Email}", email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
     }
 
     #endregion
@@ -216,10 +240,18 @@ public class AccountBookController(
             Note = incomeInputViewModel.Note ?? ""
         };
 
-        var result = await incomeService.CreateAsync(account.Email!, request, ct);
-        return result.Success
-            ? Json(new { result = true, message = localizer["The income has been successfully created."].Value })
-            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        try
+        {
+            var result = await incomeService.CreateAsync(account.Email!, request, ct);
+            return result.Success
+                ? Json(new { result = true, message = localizer["The income has been successfully created."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create income record for {Email}", account.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
     }
 
     #endregion
@@ -336,10 +368,18 @@ public class AccountBookController(
             Note = incomeInputViewModel.Note
         };
 
-        var result = await incomeService.UpdateAsync(account.Email!, request, ct);
-        return result.Success
-            ? Json(new { result = true, message = localizer["The income has been successfully updated."].Value })
-            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        try
+        {
+            var result = await incomeService.UpdateAsync(account.Email!, request, ct);
+            return result.Success
+                ? Json(new { result = true, message = localizer["The income has been successfully updated."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update income record for {Email}", account.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
     }
 
     #endregion
@@ -353,10 +393,18 @@ public class AccountBookController(
     public async Task<IActionResult> DeleteIncome([FromBody] IncomeInputViewModel incomeInputViewModel, CancellationToken ct)
     {
         string email = HttpContext.GetLoggedInAccount().Email!;
-        var result = await incomeService.DeleteAsync(email, incomeInputViewModel.Id, ct);
-        return result.Success
-            ? Json(new { result = true, message = localizer["The income has been successfully deleted."].Value })
-            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        try
+        {
+            var result = await incomeService.DeleteAsync(email, incomeInputViewModel.Id, ct);
+            return result.Success
+                ? Json(new { result = true, message = localizer["The income has been successfully deleted."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to delete income record for {Email}", email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
     }
 
     #endregion
@@ -409,10 +457,18 @@ public class AccountBookController(
             Note = expenditureInputViewModel.Note ?? ""
         };
 
-        var result = await expenditureService.CreateAsync(account.Email!, request, ct);
-        return result.Success
-            ? Json(new { result = true, message = localizer["The expenditure has been successfully created."].Value })
-            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        try
+        {
+            var result = await expenditureService.CreateAsync(account.Email!, request, ct);
+            return result.Success
+                ? Json(new { result = true, message = localizer["The expenditure has been successfully created."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create expenditure record for {Email}", account.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
     }
 
     #endregion
@@ -531,10 +587,18 @@ public class AccountBookController(
             Note = expenditureInputViewModel.Note ?? ""
         };
 
-        var result = await expenditureService.UpdateAsync(account.Email!, request, ct);
-        return result.Success
-            ? Json(new { result = true, message = localizer["The expenditure has been successfully updated."].Value })
-            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        try
+        {
+            var result = await expenditureService.UpdateAsync(account.Email!, request, ct);
+            return result.Success
+                ? Json(new { result = true, message = localizer["The expenditure has been successfully updated."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update expenditure record for {Email}", account.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
     }
 
     #endregion
@@ -549,10 +613,18 @@ public class AccountBookController(
         [FromBody] ExpenditureInputViewModel expenditureInputViewModel, CancellationToken ct)
     {
         string email = HttpContext.GetLoggedInAccount().Email!;
-        var result = await expenditureService.DeleteAsync(email, expenditureInputViewModel.Id, ct);
-        return result.Success
-            ? Json(new { result = true, message = localizer["The expenditure has been successfully deleted."].Value })
-            : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        try
+        {
+            var result = await expenditureService.DeleteAsync(email, expenditureInputViewModel.Id, ct);
+            return result.Success
+                ? Json(new { result = true, message = localizer["The expenditure has been successfully deleted."].Value })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to delete expenditure record for {Email}", email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
     }
 
     #endregion
