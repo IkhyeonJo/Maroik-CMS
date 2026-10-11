@@ -86,7 +86,7 @@ public class EmailConsumerWorkerTests
         byte[] body = Encoding.UTF8.GetBytes("not valid json");
         BasicProperties? published = null;
         channel.Setup(c => c.BasicPublishAsync(
-                "", QueueNames.Email, false, It.IsAny<BasicProperties>(), It.IsAny<ReadOnlyMemory<byte>>(), It.IsAny<CancellationToken>()))
+                "", EmailConsumerWorker.RetryQueueName(1), false, It.IsAny<BasicProperties>(), It.IsAny<ReadOnlyMemory<byte>>(), It.IsAny<CancellationToken>()))
             .Callback<string, string, bool, BasicProperties, ReadOnlyMemory<byte>, CancellationToken>((_, _, _, props, _, _) => published = props)
             .Returns(ValueTask.CompletedTask);
 
@@ -95,11 +95,12 @@ public class EmailConsumerWorkerTests
         handler.Verify(h => h.HandleAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
         Assert.NotNull(published);
         Assert.Equal(1, published!.Headers![EmailConsumerWorker.RetryCountHeader]);
+        Assert.Equal("30000", published.Expiration); // the first retry waits 30 s in the first retry queue
         channel.Verify(c => c.BasicAckAsync(3, false, It.IsAny<CancellationToken>()), Times.Once);
         channel.Verify(c => c.BasicNackAsync(It.IsAny<ulong>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    /// <summary>On message received async invalid JSON already retried once nacks without requeue and never calls handler.</summary>
+    /// <summary>On message received async invalid JSON already retried MaxRetries times nacks without requeue and never calls handler.</summary>
     [Fact]
     public async Task OnMessageReceivedAsync_InvalidJson_AlreadyRetried_NacksWithoutRequeueAndNeverCallsHandler()
     {
@@ -131,7 +132,7 @@ public class EmailConsumerWorkerTests
         channel.Verify(c => c.BasicNackAsync(It.IsAny<ulong>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    /// <summary>On message received async null JSON body already retried once nacks without requeue.</summary>
+    /// <summary>On message received async null JSON body already retried MaxRetries times nacks without requeue.</summary>
     [Fact]
     public async Task OnMessageReceivedAsync_NullJsonBody_AlreadyRetried_NacksWithoutRequeue()
     {
@@ -164,6 +165,32 @@ public class EmailConsumerWorkerTests
 
         channel.Verify(c => c.BasicAckAsync(9, false, It.IsAny<CancellationToken>()), Times.Once);
         channel.Verify(c => c.BasicNackAsync(It.IsAny<ulong>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Each retry waits longer: a delivery that has already been retried once goes to the second retry queue with the second
+    /// delay (5 minutes), its retry header bumped to 2.
+    /// </summary>
+    [Fact]
+    public async Task OnMessageReceivedAsync_HandlerThrows_OnTheFirstRetry_WaitsTheSecondDelayInTheSecondRetryQueue()
+    {
+        var handler = new Mock<IEmailMessageHandler>();
+        handler.Setup(h => h.HandleAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("SMTP down"));
+        var worker = CreateSut(handler.Object, out var channel);
+        (string Queue, BasicProperties Props)? published = null;
+        channel.Setup(c => c.BasicPublishAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<BasicProperties>(), It.IsAny<ReadOnlyMemory<byte>>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, bool, BasicProperties, ReadOnlyMemory<byte>, CancellationToken>((_, queue, _, props, _, _) => published = (queue, props))
+            .Returns(ValueTask.CompletedTask);
+
+        await worker.OnMessageReceivedAsync(this, MakeDeliverArgs(JsonSerializer.SerializeToUtf8Bytes(_message), deliveryTag: 21, redelivered: false, retryCount: 1));
+
+        Assert.NotNull(published);
+        Assert.Equal(EmailConsumerWorker.RetryQueueName(2), published.Value.Queue);
+        Assert.Equal("300000", published.Value.Props.Expiration);
+        Assert.Equal(2, published.Value.Props.Headers![EmailConsumerWorker.RetryCountHeader]);
+        channel.Verify(c => c.BasicAckAsync(21, false, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     /// <summary>On message received async, when the handler succeeds but the ack itself throws, the message is neither nacked nor re-queued — it must not be resent since the email already went out.</summary>
@@ -270,7 +297,7 @@ public class EmailConsumerWorkerTests
         channel.Verify(c => c.BasicNackAsync(It.IsAny<ulong>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    /// <summary>On message received async handler throws after already being retried once nacks without requeue, so a genuinely poison message can't block the queue forever.</summary>
+    /// <summary>On message received async handler throws after already being retried MaxRetries times nacks without requeue, so a genuinely poison message can't block the queue forever.</summary>
     [Fact]
     public async Task OnMessageReceivedAsync_HandlerThrows_AlreadyRetried_NacksWithoutRequeue()
     {
@@ -400,6 +427,9 @@ public class EmailConsumerWorkerTests
             [
                 $"declare:{QueueNames.EmailDeadLetter}:durable=True:exclusive=False:autoDelete=False",
                 $"declare:{QueueNames.Email}:durable=True:exclusive=False:autoDelete=False",
+                $"declare:{EmailConsumerWorker.RetryQueueName(1)}:durable=True:exclusive=False:autoDelete=False",
+                $"declare:{EmailConsumerWorker.RetryQueueName(2)}:durable=True:exclusive=False:autoDelete=False",
+                $"declare:{EmailConsumerWorker.RetryQueueName(3)}:durable=True:exclusive=False:autoDelete=False",
                 "qos",
                 "consume",
             ], broker.Calls);

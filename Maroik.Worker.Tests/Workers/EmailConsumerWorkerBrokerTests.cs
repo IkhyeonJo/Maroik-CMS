@@ -30,19 +30,21 @@ public sealed class WorkerBrokerFixture : IAsyncLifetime
     /// <summary>Stops and removes the broker.</summary>
     public async ValueTask DisposeAsync() => await _broker.DisposeAsync();
 
-    /// <summary>Deletes the email queue and its dead-letter queue (if they exist).</summary>
+    /// <summary>Deletes the email queue, its retry queues and its dead-letter queue (if they exist).</summary>
     public async Task ResetQueuesAsync(CancellationToken ct)
     {
         await using IConnection connection = await CreateFactory().CreateConnectionAsync(ct);
         await using IChannel channel = await connection.CreateChannelAsync(cancellationToken: ct);
         await channel.QueueDeleteAsync(QueueNames.Email, ifUnused: false, ifEmpty: false, cancellationToken: ct);
         await channel.QueueDeleteAsync(QueueNames.EmailDeadLetter, ifUnused: false, ifEmpty: false, cancellationToken: ct);
+        for (int retry = 1; retry <= EmailConsumerWorker.MaxRetries; retry++)
+            await channel.QueueDeleteAsync(EmailConsumerWorker.RetryQueueName(retry), ifUnused: false, ifEmpty: false, cancellationToken: ct);
     }
 }
 
 /// <summary>
 /// <see cref="EmailConsumerWorker"/> against a real RabbitMQ broker (Testcontainers; Docker required): the topology it
-/// declares, and — end to end through the broker — the ack, retry-once and dead-letter decisions and the graceful drain.
+/// declares, and — end to end through the broker — the ack, delayed-retry and dead-letter decisions and the graceful drain.
 /// </summary>
 public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClassFixture<WorkerBrokerFixture>
 {
@@ -70,8 +72,11 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         }
     }
 
+    /// <summary>Short retry delays for the tests (one per retry), so a retried message comes back within a fraction of a second.</summary>
+    private static readonly TimeSpan[] _shortRetryDelays = [.. Enumerable.Repeat(TimeSpan.FromMilliseconds(100), EmailConsumerWorker.MaxRetries)];
+
     /// <summary>A worker against the container, resolving <paramref name="handler"/>, with short retry and drain timings.</summary>
-    private EmailConsumerWorker CreateWorker(ScriptedHandler handler)
+    private EmailConsumerWorker CreateWorker(ScriptedHandler handler, IReadOnlyList<TimeSpan>? retryDelays = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IEmailMessageHandler>(handler);
@@ -80,6 +85,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         {
             ConnectRetryInitialDelay = TimeSpan.FromMilliseconds(100),
             DrainTimeout = TimeSpan.FromSeconds(10),
+            RetryDelays = retryDelays ?? _shortRetryDelays,
         };
         return worker;
     }
@@ -150,6 +156,10 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
             // a re-declaration with the shared arguments is accepted, i.e. the worker declared exactly those
             await channel.QueueDeclareAsync(QueueNames.Email, durable: true, exclusive: false, autoDelete: false, arguments: QueueNames.CreateEmailQueueArguments(), cancellationToken: Ct);
             await channel.QueueDeclareAsync(QueueNames.EmailDeadLetter, durable: true, exclusive: false, autoDelete: false, cancellationToken: Ct);
+            // each retry queue dead-letters an expired message back into the email queue
+            for (int retry = 1; retry <= EmailConsumerWorker.MaxRetries; retry++)
+                await channel.QueueDeclareAsync(EmailConsumerWorker.RetryQueueName(retry), durable: true, exclusive: false, autoDelete: false,
+                    arguments: new Dictionary<string, object?> { ["x-dead-letter-exchange"] = "", ["x-dead-letter-routing-key"] = QueueNames.Email }, cancellationToken: Ct);
         }
         finally
         {
@@ -188,7 +198,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         Assert.Equal(0u, await CountAsync(QueueNames.EmailDeadLetter));
     }
 
-    /// <summary>A message whose first attempt fails is retried once (republished with the retry header) and then succeeds — never dead-lettered.</summary>
+    /// <summary>A message whose first attempt fails is retried (through the first retry queue, with the retry header) and then succeeds — never dead-lettered.</summary>
     [Fact]
     public async Task AFirstFailure_IsRetriedOnce_ThenSucceeds()
     {
@@ -211,9 +221,38 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         Assert.Equal(0u, await CountAsync(QueueNames.EmailDeadLetter));
     }
 
-    /// <summary>A message that keeps failing gets exactly one retry and is then dead-lettered by the broker, body intact.</summary>
+    /// <summary>
+    /// A failed message is not handed straight back: it waits in the first retry queue for the first delay, and only then
+    /// returns to the email queue and is retried.
+    /// </summary>
     [Fact]
-    public async Task APoisonMessage_IsRetriedOnce_ThenDeadLettered()
+    public async Task AFailure_WaitsInTheRetryQueue_ForTheRetryDelay_BeforeItIsRetried()
+    {
+        await broker.ResetQueuesAsync(Ct);
+        var handler = new ScriptedHandler((_, n) => n == 1 ? throw new InvalidOperationException("smtp down") : Task.CompletedTask);
+        var worker = CreateWorker(handler, [TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2)]);
+        await worker.StartAsync(Ct);
+        try
+        {
+            await PublishAsync(_message);
+            await WaitAsync(() => handler.Calls == 1);
+            await Task.Delay(500, Ct);
+            Assert.Equal(1, handler.Calls);
+            Assert.Equal(1u, await CountAsync(EmailConsumerWorker.RetryQueueName(1)));
+
+            await WaitAsync(() => handler.Calls == 2);
+        }
+        finally
+        {
+            await worker.StopAsync(Ct);
+        }
+        Assert.Equal(0u, await CountAsync(EmailConsumerWorker.RetryQueueName(1)));
+        Assert.Equal(0u, await CountAsync(QueueNames.EmailDeadLetter));
+    }
+
+    /// <summary>A message that keeps failing gets <see cref="EmailConsumerWorker.MaxRetries"/> retries and is then dead-lettered by the broker, body intact.</summary>
+    [Fact]
+    public async Task APoisonMessage_IsRetriedMaxRetriesTimes_ThenDeadLettered()
     {
         await broker.ResetQueuesAsync(Ct);
         var handler = new ScriptedHandler((_, _) => throw new InvalidOperationException("always fails"));
@@ -222,10 +261,10 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         try
         {
             await PublishAsync(_message);
-            await WaitAsync(() => handler.Calls == 2);
+            await WaitAsync(() => handler.Calls == 1 + EmailConsumerWorker.MaxRetries);
             byte[] dead = await TakeAsync(QueueNames.EmailDeadLetter);
             Assert.Equal(_message, JsonSerializer.Deserialize<SendEmailMessage>(dead));
-            Assert.Equal(2, handler.Calls); // MaxRetries = 1 → first attempt + one retry
+            Assert.Equal(1 + EmailConsumerWorker.MaxRetries, handler.Calls); // the first attempt + every retry
         }
         finally
         {
@@ -267,7 +306,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         await worker.StartAsync(Ct);
         try
         {
-            await PublishRawAsync(JsonSerializer.SerializeToUtf8Bytes(_message), new Dictionary<string, object?> { [EmailConsumerWorker.RetryCountHeader] = 1 });
+            await PublishRawAsync(JsonSerializer.SerializeToUtf8Bytes(_message), new Dictionary<string, object?> { [EmailConsumerWorker.RetryCountHeader] = EmailConsumerWorker.MaxRetries });
             await TakeAsync(QueueNames.EmailDeadLetter);
             Assert.Equal(1, handler.Calls);
         }

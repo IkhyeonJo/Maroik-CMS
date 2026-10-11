@@ -7,10 +7,11 @@ public static class QueueNames
     public const string Email = "maroik.email";
 
     /// <summary>
-    /// Durable dead-letter queue for <see cref="Email"/>. A message that still fails after its one
-    /// retry is rejected without requeue, and the broker routes it here (see
+    /// Durable dead-letter queue for <see cref="Email"/>. A message that still fails after its last
+    /// delayed retry is rejected without requeue, and the broker routes it here (see
     /// <see cref="CreateEmailQueueArguments"/>) instead of discarding it — so a poison email can be
-    /// inspected and re-driven by an operator rather than being lost silently.
+    /// inspected and re-driven by an operator (<c>dotnet Maroik.Worker.dll redrive-email-dead-letters</c>)
+    /// rather than being lost silently.
     /// </summary>
     public const string EmailDeadLetter = "maroik.email.dead";
 

@@ -197,4 +197,51 @@ public class WorkerHostTests(WorkerBrokerFixture broker) : IClassFixture<WorkerB
             if (!process.HasExited) process.Kill(entireProcessTree: true);
         }
     }
+
+    /// <summary>
+    /// <c>dotnet Maroik.Worker.dll redrive-email-dead-letters</c> (run by an operator, e.g. <c>docker exec</c>) moves every
+    /// dead-lettered e-mail back into the e-mail queue and exits with code 0 instead of starting the consumer.
+    /// </summary>
+    [Fact]
+    public async Task TheExecutable_RedrivesTheDeadLetters_WhenAskedTo()
+    {
+        await broker.ResetQueuesAsync(Ct);
+        await using (IConnection connection = await broker.CreateFactory().CreateConnectionAsync(Ct))
+        await using (IChannel channel = await connection.CreateChannelAsync(new CreateChannelOptions(true, true), Ct))
+        {
+            await channel.QueueDeclareAsync(QueueNames.EmailDeadLetter, durable: true, exclusive: false, autoDelete: false, cancellationToken: Ct);
+            await channel.QueueDeclareAsync(QueueNames.Email, durable: true, exclusive: false, autoDelete: false, arguments: QueueNames.CreateEmailQueueArguments(), cancellationToken: Ct);
+            await channel.BasicPublishAsync("", QueueNames.EmailDeadLetter, mandatory: false, new BasicProperties { Persistent = true }, "dead"u8.ToArray(), Ct);
+        }
+        string dll = Path.Combine(AppContext.BaseDirectory, "Maroik.Worker.dll");
+        var info = new System.Diagnostics.ProcessStartInfo("dotnet", $"\"{dll}\" redrive-email-dead-letters")
+        {
+            WorkingDirectory = AppContext.BaseDirectory, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false,
+            Environment =
+            {
+                ["ConnectionStrings__RabbitMQ"] = broker.ConnectionString,
+                ["ConnectionStrings__DefaultConnection"] = "Host=127.0.0.1;Port=1;Database=unused;Username=u;Password=p",
+                ["DOTNET_ENVIRONMENT"] = "Production"
+            }
+        };
+        using var process = System.Diagnostics.Process.Start(info)!;
+        Task<string> stdout = process.StandardOutput.ReadToEndAsync(Ct);
+        Task<string> stderr = process.StandardError.ReadToEndAsync(Ct);
+        try
+        {
+            await process.WaitForExitAsync(Ct).WaitAsync(TimeSpan.FromSeconds(60), Ct);
+        }
+        finally
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+        }
+        string output = await stdout + await stderr;
+
+        Assert.True(process.ExitCode == 0, output);
+        Assert.DoesNotContain("Email consumer started", output);
+        await using IConnection check = await broker.CreateFactory().CreateConnectionAsync(Ct);
+        await using IChannel checkChannel = await check.CreateChannelAsync(cancellationToken: Ct);
+        Assert.Equal(0u, (await checkChannel.QueueDeclarePassiveAsync(QueueNames.EmailDeadLetter, Ct)).MessageCount);
+        Assert.Equal(1u, (await checkChannel.QueueDeclarePassiveAsync(QueueNames.Email, Ct)).MessageCount);
+    }
 }
