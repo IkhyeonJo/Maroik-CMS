@@ -338,6 +338,55 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
     }
 
     /// <summary>
+    /// Every forum action logs a service failure once, at Error, with the exception attached and the signed-in account
+    /// named — not a context-free "unhandled exception" line an operator cannot tie to anyone.
+    /// </summary>
+    [Fact]
+    public async Task AServiceFailure_InAForumAction_IsLoggedWithTheExceptionAndTheAccount()
+    {
+        var logger = new FakeLogger<ForumController>();
+        await using var host = CreateBrokenHost().WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.AddSingleton<ILogger<ForumController>>(logger)));
+        var client = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false
+        });
+        const string email = "failure-forum-log@test.com";
+        var session = await AuthenticatedSessionHelper.LoginAsync(host, client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
+
+        List<(string Url, Func<HttpRequestMessage> Build)> requests =
+        [
+            .. BodyEndpoints.Where(e => e.Url.StartsWith("/Forum/", StringComparison.Ordinal))
+                .Select(e => (e.Url, (Func<HttpRequestMessage>)(() => e.Build(session)))),
+            .. _endpoints.Where(e => e.Url.StartsWith("/Forum/", StringComparison.Ordinal) && !e.Url.Contains("Download", StringComparison.Ordinal))
+                .Select(e => (e.Url, (Func<HttpRequestMessage>)(() => session.BuildJsonPostRequest(e.Url, null)))),
+            .. new[] { "/Forum/FreeForum?method=detail&boardId=1", "/Forum/FreeForum?method=edit&boardId=1" }
+                .Select(url => (url, (Func<HttpRequestMessage>)(() =>
+                {
+                    var get = new HttpRequestMessage(HttpMethod.Get, url);
+                    get.Headers.Add("Cookie", session.CookieHeader);
+                    return get;
+                }))),
+        ];
+
+        List<string> failures = [];
+        foreach (var (url, build) in requests)
+        {
+            logger.Collector.Clear();
+            using var request = build();
+            _ = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+            var errors = logger.Collector.GetSnapshot().Where(r => r.Level == LogLevel.Error).ToList();
+            if (errors.Count != 1) { failures.Add($"{url}: {errors.Count} Error entries"); continue; }
+            if (errors[0].Exception?.Message != Secret) failures.Add($"{url}: the exception is not attached");
+            if (!errors[0].Message.Contains(email)) failures.Add($"{url}: the account is not named ({errors[0].Message})");
+        }
+
+        Assert.Equal(8, requests.Count);
+        Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
+    }
+
+    /// <summary>
     /// Account creation answers a failing service with the temporary-error message, the default-currency change with a bare
     /// <c>result:false</c>. Neither leaks the exception.
     /// </summary>

@@ -259,16 +259,20 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
 
             if (!isAllowedWhileForced)
             {
-                context.Result = string.Equals(
-                    currentRequestMethod,
-                    "GET",
-                    StringComparison.OrdinalIgnoreCase)
-                    ? new RedirectResult("/Management/Profile")
-                    : new RedirectResult("/Dashboard/AnonymousIndex");
-
+                if (string.Equals(currentRequestMethod, "GET", StringComparison.OrdinalIgnoreCase))
+                {
+                    // The ordinary forced-change flow (every page leads to the change-password form): not a denial.
+                    context.Result = new RedirectResult("/Management/Profile");
+                }
+                else
+                {
+                    logger.LogWarning("Access denied: {Method} {Controller}/{Action} for {Account} while a password change is pending",
+                        currentRequestMethod, currentControllerName, currentActionName, loggedInAccount.Email);
+                    context.Result = new RedirectResult("/Dashboard/AnonymousIndex");
+                }
             }
 
-            return; // allowed: no Result set
+            return; // Result set above when refused; the allowed actions pass through
         }
 
         // UseExceptionHandler re-executes /Exception/Error with the ORIGINAL request's method, so a
@@ -286,8 +290,6 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
                 {
                     switch (currentControllerName)
                     {
-                        // Allow exception resource access (Error)
-                        case "Exception" when currentActionName == "Error":
                         // If login page
                         case "Account" when currentActionName == "Login":
                         // If registration page
@@ -318,8 +320,6 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
                 {
                     switch (currentControllerName)
                     {
-                        // Allow exception resource access (Error)
-                        case "Exception" when currentActionName == "Error":
                         // Initial screen
                         case "Dashboard" when currentActionName == "AnonymousIndex":
                             return; // allowed: no Result set

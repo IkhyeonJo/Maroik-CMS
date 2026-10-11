@@ -448,6 +448,29 @@ public class AuthorizationFilterTests
         Assert.Equal("/Dashboard/AnonymousIndex", redirect.Url);
     }
 
+    /// <summary>
+    /// A POST refused because a forced password change is pending is a denial like any other and is logged (method, route,
+    /// account, reason); the GET redirect to the profile page is the ordinary forced-change flow and logs nothing.
+    /// </summary>
+    [Fact]
+    public async Task OnAuthorizationAsync_MustChangePassword_LogsTheRefusedPost_ButNotTheProfileRedirect()
+    {
+        var account = new AccountResponse { Email = "user@test.com", Nickname = "User", Role = Role.User, MustChangePassword = true };
+        _sessionService.Setup(s => s.GetAccount()).Returns(account);
+        _accountService.Setup(a => a.GetAccountByEmailAsync("user@test.com", It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        SetupMenu([MakeCategory(1, Role.User, "AccountBook", "Income")], []);
+
+        await CreateSut().OnAuthorizationAsync(BuildContext("AccountBook", "Income"));
+        Assert.DoesNotContain(_logger.Collector.GetSnapshot(), r => r.Level >= LogLevel.Warning);
+
+        await CreateSut().OnAuthorizationAsync(BuildContext("AccountBook", "CreateIncome", "POST"));
+
+        FakeLogRecord record = OnlyWarning("Access denied");
+        Assert.Contains("POST AccountBook/CreateIncome", record.Message);
+        Assert.Contains("user@test.com", record.Message);
+        Assert.Contains("password change", record.Message);
+    }
+
     /// <summary>A pending forced password change still allows the profile page itself.</summary>
     [Fact]
     public async Task OnAuthorizationAsync_MustChangePassword_ProfileGet_Allows()
