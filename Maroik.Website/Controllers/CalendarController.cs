@@ -143,7 +143,16 @@ public class CalendarController(
 
         AttachedFileDto file = (await summernoteImageFile.ToAttachedFileInfoAsync(serverSettings.Value.MaxAttachedFileSizeBytes, HttpContext.RequestAborted))!;
 
-        SummernoteUploadResult uploadResult = await calendarService.UploadSummernoteImageAsync(file, roleIndex, uploaderEmail, HttpContext.RequestAborted);
+        SummernoteUploadResult uploadResult;
+        try
+        {
+            uploadResult = await calendarService.UploadSummernoteImageAsync(file, roleIndex, uploaderEmail, HttpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Editor image upload failed for {Email}", uploaderEmail);
+            return Ok(new { result = false, errorMessage = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
 
         if (!uploadResult.Success)
             return Ok(new { result = false, errorMessage = localizer[uploadResult.ErrorKey ?? "Input is invalid"].Value });

@@ -196,6 +196,10 @@ Error handling
   `{ result, error }`; exceptions are logged on the server. A genuine input-validation failure shows its
   specific reason (or "Input is invalid"), while an infrastructure failure shows a generic
   "temporary error, please try again" message.
+- Every `[HttpPost]` action is accounted for in `ControllerFailureContractTests`: either a row that makes its service throw
+  and asserts the generic failure (HTTP 200, no exception text), or an `_exemptPosts` entry with the reason (non-AJAX
+  form posts and plain file downloads, which fall to the global exception page). `EveryPostAction_IsCoveredByAFailureContractTest_OrExemptWithAReason`
+  fails for a new POST action until it has one of the two.
 
 ## Reviewing this repo
 

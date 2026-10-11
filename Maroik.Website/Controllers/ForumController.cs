@@ -163,7 +163,16 @@ public class ForumController(
 
         AttachedFileDto file = (await summernoteImageFile.ToAttachedFileInfoAsync(serverSettings.Value.MaxAttachedFileSizeBytes, ct))!;
 
-        SummernoteUploadResult uploadResult = await boardService.UploadSummernoteImageAsync(file, "Forum", BoardTypes.FreeForum, uploaderEmail, ct);
+        SummernoteUploadResult uploadResult;
+        try
+        {
+            uploadResult = await boardService.UploadSummernoteImageAsync(file, "Forum", BoardTypes.FreeForum, uploaderEmail, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Editor image upload failed for {Email}", uploaderEmail);
+            return Ok(new { result = false, errorMessage = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
 
         if (!uploadResult.Success)
             return Ok(new { result = false, errorMessage = localizer[uploadResult.ErrorKey ?? "Input is invalid"].Value });
