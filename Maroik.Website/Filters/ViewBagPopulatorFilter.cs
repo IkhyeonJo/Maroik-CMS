@@ -25,14 +25,12 @@ public class ViewBagPopulatorFilter(
     IDashboardService dashboardService,
     ITimeZoneCatalogService timeZoneCatalogService,
     IOptions<ServerSetting> serverSettings,
-    TimeProvider timeProvider) : IAsyncActionFilter
+    TimeProvider timeProvider,
+    ILogger<ViewBagPopulatorFilter> logger) : IAsyncActionFilter
 {
     /// <summary>Populates shared ViewBag entries before each action executes.</summary>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        var logger = context.HttpContext.RequestServices
-            .GetRequiredService<ILoggerFactory>().CreateLogger<ViewBagPopulatorFilter>();
-
         if (context.Controller is not Controller controller)
         {
             await next();

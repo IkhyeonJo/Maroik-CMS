@@ -81,7 +81,7 @@ public class ForumController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception in forum action");
+            logger.LogError(ex, "Failed to write free-forum post {Title} for {Email}", boardInputViewModel.Title, HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -123,7 +123,7 @@ public class ForumController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception in forum action");
+            logger.LogError(ex, "Failed to write a comment on free-forum post {BoardId} for {Email}", boardCommentInputViewModel.BoardId, HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -283,7 +283,7 @@ public class ForumController(
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Unhandled exception in FreeForum action");
+                    logger.LogError(ex, "Failed to load free-forum post {BoardId} for {Email}", boardId, HttpContext.GetLoggedInAccount().Email);
                     return RedirectToAction(BoardTypes.FreeForum, "Forum");
                 }
             }
@@ -337,7 +337,7 @@ public class ForumController(
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Unhandled exception in FreeForum action");
+                    logger.LogError(ex, "Failed to load the edit form of free-forum post {BoardId} for {Email}", boardId, HttpContext.GetLoggedInAccount().Email);
                     return RedirectToAction(BoardTypes.FreeForum, "Forum");
                 }
             }
@@ -479,7 +479,7 @@ public class ForumController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception in forum action");
+            logger.LogError(ex, "Failed to check free-forum post {BoardId} for {Email}", id, HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -527,7 +527,7 @@ public class ForumController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception in forum action");
+            logger.LogError(ex, "Failed to edit free-forum post {BoardId} for {Email}", boardInputViewModel.Id, HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -563,7 +563,7 @@ public class ForumController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception in forum action");
+            logger.LogError(ex, "Failed to delete free-forum post {BoardId} for {Email}", boardInputViewModel.Id, HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }
@@ -595,7 +595,7 @@ public class ForumController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception in forum action");
+            logger.LogError(ex, "Failed to delete free-forum comment {CommentId} for {Email}", id, HttpContext.GetLoggedInAccount().Email);
             return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
         }
     }

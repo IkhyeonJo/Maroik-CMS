@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -38,9 +40,12 @@ public class ViewBagPopulatorFilterTests
     /// <summary>The clock the filter reads; set to a fixed instant far from the real one.</summary>
     private readonly FakeTimeProvider _timeProvider = new(new DateTimeOffset(2041, 12, 31, 16, 0, 0, TimeSpan.Zero));
 
+    /// <summary>Records the filter's log entries.</summary>
+    private readonly FakeLogger<ViewBagPopulatorFilter> _logger = new();
+
     /// <summary>The filter under test over the mocked dependencies.</summary>
     private ViewBagPopulatorFilter CreateSut() =>
-        new(_dashboardService.Object, _timeZoneCatalogService.Object, _serverSettings, _timeProvider);
+        new(_dashboardService.Object, _timeZoneCatalogService.Object, _serverSettings, _timeProvider, _logger);
 
     /// <summary>
     /// Signs <paramref name="account"/> in for this request the way production does: AuthorizationFilter,
@@ -194,6 +199,28 @@ public class ViewBagPopulatorFilterTests
     }
 
     // -- Signed-in account --------------------------------------------------------
+
+    /// <summary>
+    /// A failure loading the notice badge counts does not break the page (the counts stay 0) but is logged as a Warning
+    /// with the exception and the account, so the degraded badge is visible to an operator.
+    /// </summary>
+    [Fact]
+    public async Task OnActionExecutionAsync_LogsAWarning_AndShowsZeroCounts_WhenTheNoticeCountsCannotBeLoaded()
+    {
+        var account = new AccountResponse { Email = "user@test.com", Role = Role.User };
+        _dashboardService
+            .Setup(d => d.GetNoticeCountsAsync("user@test.com", 7, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("db down"));
+        var (context, controller) = BuildContext();
+        SignIn(context, account);
+
+        await CreateSut().OnActionExecutionAsync(context, EmptyNext());
+
+        Assert.Equal(0, (int)controller.ViewBag.TotalNoticeCount);
+        var warning = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
+        Assert.Equal("db down", warning.Exception?.Message);
+        Assert.Contains("user@test.com", warning.Message);
+    }
 
     /// <summary>
     /// The account AuthorizationFilter stashed (re-validated from the database) is the one the request runs
