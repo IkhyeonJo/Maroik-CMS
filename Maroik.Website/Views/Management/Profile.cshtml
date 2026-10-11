@@ -489,7 +489,7 @@
                                                                     <option value="@timeZoneOption.IanaId">@timeZoneOption.DisplayName</option>
                                                                 }
                                                             </select>
-                                                            <span class="text-danger"></span>
+                                                            <span id="timeZoneError" class="text-danger">@(TempData[Maroik.Website.Constants.TempDataKeys.TimeZoneError] as string)</span>
                                                         </div>
                                                     </div>
                                                     <div class="form-group row">

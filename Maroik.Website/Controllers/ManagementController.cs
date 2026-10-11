@@ -8,6 +8,7 @@ using Maroik.Core.Domain.Board;
 using Maroik.Core.Domain.Time;
 using Maroik.Core.Domain.Media;
 using Maroik.Website.Attributes;
+using Maroik.Website.Constants;
 using Maroik.Website.Contracts;
 using Maroik.Website.Extensions;
 using Maroik.Website.Mappings;
@@ -162,23 +163,23 @@ public class ManagementController(
 
         if (!ModelState.IsValid)
         {
+            TempData[TempDataKeys.TimeZoneError] = localizer["Input is invalid"].Value;
             return RedirectToAction("Profile", "Management");
         }
 
         string? email = HttpContext.GetLoggedInAccount().Email;
         try
         {
-            await profileService.UpdateTimeZoneAsync(email!, profileInputViewModel.TimeZoneIanaId!, HttpContext.RequestAborted);
-
-            // Refresh session with updated timezone. GetProfileAsync returns a plain AccountResponse,
-            // which carries no password hash at all.
-            AccountResponse? updatedAccount = await profileService.GetProfileAsync(email!, HttpContext.RequestAborted);
-            sessionService.RemoveAccount();
-            sessionService.SetAccount(updatedAccount!);
+            // Nothing else to refresh: AuthorizationFilter reloads the account (time zone included) from the database on
+            // every request, and the session only carries what identifies it.
+            ServiceResult result = await profileService.UpdateTimeZoneAsync(email!, profileInputViewModel.TimeZoneIanaId!, HttpContext.RequestAborted);
+            if (!result.Success)
+                TempData[TempDataKeys.TimeZoneError] = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString();
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to update time zone for account {AccountEmail}", email);
+            TempData[TempDataKeys.TimeZoneError] = localizer[ServiceResult.TemporaryErrorKey].Value;
         }
 
         return RedirectToAction("Profile", "Management");
