@@ -8,46 +8,55 @@ namespace Maroik.Core.Domain.Finance;
 /// Returns <c>true</c> when the combination requires a deposit asset (transfer-type spending),
 /// <c>false</c> when no deposit asset is involved, or an error when the combination is invalid.
 /// <para>
-/// <see cref="SubClassesByMainClass"/> and <see cref="DepositAssetSubClasses"/> are the single
-/// source of truth; <see cref="Validate"/> is derived from them, and the presentation layer
-/// serializes them into the create/edit forms so the client no longer hard-codes the same lists.
+/// <see cref="Taxonomy"/> and <see cref="DepositAssetSubClasses"/> (typed by the <see cref="ExpenditureMainClass"/> / <see cref="ExpenditureSubClass"/> enums)
+/// is the single source of truth; the string views and <see cref="Validate"/> are derived from it, and the presentation
+/// layer serializes them into the create/edit forms so the client no longer hard-codes the same lists.
 /// </para>
 /// </summary>
 public static class ExpenditureClassPolicy
 {
     /// <summary>
-    /// The expenditure main classes in display order; the first is the create form's default. The forms render their
-    /// main-class options from this list (a dictionary's key order is not guaranteed).
+    /// The recognized sub-classes of each expenditure main class, in display order — the single source of truth, typed so a
+    /// misspelt class is a compile error. The string views below are generated from it.
     /// </summary>
-    public static readonly IReadOnlyList<string> MainClasses = ["RegularSavings", "NonConsumerSpending", "ConsumerSpending"];
-
-    /// <summary>
-    /// The recognized subClasses for each expenditure main class, in display order.
-    /// </summary>
-    public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> SubClassesByMainClass =
-        new Dictionary<string, IReadOnlyList<string>>
+    public static readonly IReadOnlyDictionary<ExpenditureMainClass, IReadOnlyList<ExpenditureSubClass>> Taxonomy =
+        new Dictionary<ExpenditureMainClass, IReadOnlyList<ExpenditureSubClass>>
         {
-            ["RegularSavings"] = ["Deposit", "Investment"],
-            ["NonConsumerSpending"] =
+            [ExpenditureMainClass.RegularSavings] = [ExpenditureSubClass.Deposit, ExpenditureSubClass.Investment],
+            [ExpenditureMainClass.NonConsumerSpending] =
             [
-                "PublicPension", "DebtRepayment", "Tax", "SocialInsurance",
-                "InterHouseholdTransferExpenses", "NonProfitOrganizationTransfer"
+                ExpenditureSubClass.PublicPension, ExpenditureSubClass.DebtRepayment, ExpenditureSubClass.Tax, ExpenditureSubClass.SocialInsurance,
+                ExpenditureSubClass.InterHouseholdTransferExpenses, ExpenditureSubClass.NonProfitOrganizationTransfer
             ],
-            ["ConsumerSpending"] =
+            [ExpenditureMainClass.ConsumerSpending] =
             [
-                "MealOrEatOutExpenses", "HousingOrSuppliesCost", "EducationExpenses",
-                "MedicalExpenses", "TransportationCost", "CommunicationCost",
-                "LeisureOrCulture", "ClothingOrShoes", "PinMoney",
-                "ProtectionTypeInsurance", "OtherExpenses", "UnknownExpenditure"
+                ExpenditureSubClass.MealOrEatOutExpenses, ExpenditureSubClass.HousingOrSuppliesCost, ExpenditureSubClass.EducationExpenses,
+                ExpenditureSubClass.MedicalExpenses, ExpenditureSubClass.TransportationCost, ExpenditureSubClass.CommunicationCost,
+                ExpenditureSubClass.LeisureOrCulture, ExpenditureSubClass.ClothingOrShoes, ExpenditureSubClass.PinMoney,
+                ExpenditureSubClass.ProtectionTypeInsurance, ExpenditureSubClass.OtherExpenses, ExpenditureSubClass.UnknownExpenditure
             ]
         };
+
+    /// <summary>
+    /// The expenditure main classes in display order (the enum's declaration order); the first is the create form's default.
+    /// The forms render their main-class options from this list.
+    /// </summary>
+    public static readonly IReadOnlyList<string> MainClasses = [.. Enum.GetValues<ExpenditureMainClass>().Select(m => m.ToString())];
+
+    /// <summary>
+    /// <see cref="Taxonomy"/> as the strings stored in the database: what <see cref="Validate"/> checks and what the
+    /// presentation layer serializes into the create/edit forms.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> SubClassesByMainClass =
+        Taxonomy.ToDictionary(pair => pair.Key.ToString(), IReadOnlyList<string> (pair) => [.. pair.Value.Select(sub => sub.ToString())]);
 
     /// <summary>
     /// SubClasses that represent a transfer into an asset and therefore require the user to
     /// pick a deposit asset. Every other recognized subClass does not.
     /// </summary>
     public static readonly IReadOnlyList<string> DepositAssetSubClasses =
-        ["Deposit", "Investment", "PublicPension", "DebtRepayment"];
+        [.. new[] { ExpenditureSubClass.Deposit, ExpenditureSubClass.Investment, ExpenditureSubClass.PublicPension, ExpenditureSubClass.DebtRepayment }
+            .Select(sub => sub.ToString())];
 
     /// <summary>
     /// Validates <paramref name="mainClass"/> / <paramref name="subClass"/> and returns whether

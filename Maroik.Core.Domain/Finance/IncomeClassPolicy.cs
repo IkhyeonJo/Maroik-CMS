@@ -8,32 +8,40 @@ namespace Maroik.Core.Domain.Finance;
 /// Returns <see cref="Result.Success"/> when the combination is recognized,
 /// or a validation error when it is not.
 /// <para>
-/// <see cref="SubClassesByMainClass"/> is the single source of truth for the taxonomy;
-/// <see cref="Validate"/> is derived from it, and the presentation layer serializes it
-/// into the create/edit forms so the client no longer hard-codes the same lists.
+/// <see cref="Taxonomy"/> (typed by the <see cref="IncomeMainClass"/> / <see cref="IncomeSubClass"/> enums)
+/// is the single source of truth; the string views and <see cref="Validate"/> are derived from it, and the presentation
+/// layer serializes them into the create/edit forms so the client no longer hard-codes the same lists.
 /// </para>
 /// </summary>
 public static class IncomeClassPolicy
 {
     /// <summary>
-    /// The income main classes in display order; the first is the create form's default. The forms render their
-    /// main-class options from this list (a dictionary's key order is not guaranteed).
+    /// The recognized sub-classes of each income main class, in display order — the single source of truth, typed so a
+    /// misspelt class is a compile error. The string views below are generated from it.
     /// </summary>
-    public static readonly IReadOnlyList<string> MainClasses = ["RegularIncome", "IrregularIncome"];
+    public static readonly IReadOnlyDictionary<IncomeMainClass, IReadOnlyList<IncomeSubClass>> Taxonomy =
+        new Dictionary<IncomeMainClass, IReadOnlyList<IncomeSubClass>>
+        {
+            [IncomeMainClass.RegularIncome] =
+            [
+                IncomeSubClass.LaborIncome, IncomeSubClass.BusinessIncome, IncomeSubClass.PensionIncome,
+                IncomeSubClass.FinancialIncome, IncomeSubClass.RentalIncome, IncomeSubClass.OtherIncome
+            ],
+            [IncomeMainClass.IrregularIncome] = [IncomeSubClass.LaborIncome, IncomeSubClass.OtherIncome]
+        };
 
     /// <summary>
-    /// The recognized subClasses for each income main class, in display order.
+    /// The income main classes in display order (the enum's declaration order); the first is the create form's default. The
+    /// forms render their main-class options from this list.
+    /// </summary>
+    public static readonly IReadOnlyList<string> MainClasses = [.. Enum.GetValues<IncomeMainClass>().Select(m => m.ToString())];
+
+    /// <summary>
+    /// <see cref="Taxonomy"/> as the strings stored in the database: what <see cref="Validate"/> checks and what the
+    /// presentation layer serializes into the create/edit forms.
     /// </summary>
     public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> SubClassesByMainClass =
-        new Dictionary<string, IReadOnlyList<string>>
-        {
-            ["RegularIncome"] =
-            [
-                "LaborIncome", "BusinessIncome", "PensionIncome",
-                "FinancialIncome", "RentalIncome", "OtherIncome"
-            ],
-            ["IrregularIncome"] = ["LaborIncome", "OtherIncome"]
-        };
+        Taxonomy.ToDictionary(pair => pair.Key.ToString(), IReadOnlyList<string> (pair) => [.. pair.Value.Select(sub => sub.ToString())]);
 
     /// <summary>
     /// Validates <paramref name="mainClass"/> / <paramref name="subClass"/>.
