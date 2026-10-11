@@ -39,7 +39,7 @@ public static class ServiceCollectionExtensions
                     configuration.GetConnectionString("DefaultConnection"),
                     // Disable automatic retry so transient failures surface immediately to the caller.
                     npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(0)
-                )//.EnableSensitiveDataLogging()
+                )
             );
         }
 

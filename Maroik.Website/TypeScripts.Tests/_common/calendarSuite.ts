@@ -22,7 +22,7 @@ export const evt = (id: number, calendarId: number, type = "My") => ({
 
 /** The "my calendars" side list: ids 1 (Zeta, checked), 2 (Alpha), 3 (Mid, checked). */
 export const mine = `<div id="myCalendars">
-  <label id="lblCalendar1"><input type="checkbox" class="chkCalendar" checked /><label>Zeta</label><i id="1" class="edit-calendar"></i><i id="1" class="delete-calendar"></i></label>
+  <label id="lblCalendar1"><input type="checkbox" class="chkCalendar" checked /><label>Zeta</label><i class="edit-calendar"></i><i class="delete-calendar"></i></label>
   <label id="lblCalendar2"><input type="checkbox" class="chkCalendar" /><label>Alpha</label></label>
   <label id="lblCalendar3"><input type="checkbox" class="chkCalendar" checked /><label>Mid</label></label></div>`;
 
@@ -342,6 +342,9 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(labels(h)).toEqual(["lblCalendar2", "lblCalendar7", "lblCalendar3", "lblCalendar1"]); // Alpha, Beta, Mid, Zeta
             expect(h.$("#lblCalendar7 input").css("accent-color")).toBe("rgb(171, 205, 239)"); // #abcdef, as jsdom normalizes it
             expect(h.toastr.success).toHaveBeenCalledWith("made");
+            // The edit / delete icons carry no id of their own (the handlers read the label's), as in the server-rendered list:
+            // two icons sharing the calendar id would give the page duplicate ids.
+            expect(h.$("#lblCalendar7 .edit-calendar, #lblCalendar7 .delete-calendar").map((_, i) => i.id).get()).toEqual(["", ""]);
         });
 
         // The server orders the list with the request culture (CalendarService: OrderBy(Name) under the

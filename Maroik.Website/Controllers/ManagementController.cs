@@ -1001,8 +1001,8 @@ public class ManagementController(
                     LoggedInAccount = loggedInAccount,
                     LoggedInAccountTimeZoneIanaId = loggedInAccount.TimeZoneIanaId ?? ""
                 };
-                bool isAccountSessionExist = loggedInAccount.Role != Role.Anonymous;
-                return isAccountSessionExist ? View(privateNoteOutputViewModel) : RedirectToAction("Login", "Account");
+                // Management is in no anonymous menu, so AuthorizationFilter only lets a signed-in account reach this page.
+                return View(privateNoteOutputViewModel);
             }
             // Detail view
             case "detail":
