@@ -192,4 +192,33 @@ public class ExpenditureClassPolicyTests
     {
         Assert.Equal(ExpenditureClassPolicy.SubClassesByMainClass.Keys.Order(), ExpenditureClassPolicy.MainClasses.Order());
     }
+
+    // -- The taxonomy's persisted values -----------------------------------------
+
+    /// <summary>
+    /// The exact strings stored in Expenditure.MainClass / SubClass and used as resx keys: generated from the
+    /// <see cref="ExpenditureMainClass"/> / <see cref="ExpenditureSubClass"/> enums, so renaming a member changes stored data and must fail here.
+    /// </summary>
+    [Fact]
+    public void SubClassesByMainClass_IsExactlyThePersistedTaxonomy()
+    {
+        Assert.Equal(["ConsumerSpending", "NonConsumerSpending", "RegularSavings"], ExpenditureClassPolicy.SubClassesByMainClass.Keys.Order());
+        Assert.Equal(["Deposit", "Investment"], ExpenditureClassPolicy.SubClassesByMainClass["RegularSavings"]);
+        Assert.Equal(["PublicPension", "DebtRepayment", "Tax", "SocialInsurance", "InterHouseholdTransferExpenses", "NonProfitOrganizationTransfer"],
+            ExpenditureClassPolicy.SubClassesByMainClass["NonConsumerSpending"]);
+        Assert.Equal(["MealOrEatOutExpenses", "HousingOrSuppliesCost", "EducationExpenses", "MedicalExpenses", "TransportationCost", "CommunicationCost",
+            "LeisureOrCulture", "ClothingOrShoes", "PinMoney", "ProtectionTypeInsurance", "OtherExpenses", "UnknownExpenditure"],
+            ExpenditureClassPolicy.SubClassesByMainClass["ConsumerSpending"]);
+        Assert.Equal(["Deposit", "Investment", "PublicPension", "DebtRepayment"], ExpenditureClassPolicy.DepositAssetSubClasses);
+    }
+
+    /// <summary>The typed taxonomy lists each main class's sub-classes in display order.</summary>
+    [Fact]
+    public void Taxonomy_ListsTheSubClassesOfEachMainClass()
+    {
+        Assert.Equal([ExpenditureMainClass.RegularSavings, ExpenditureMainClass.NonConsumerSpending, ExpenditureMainClass.ConsumerSpending], ExpenditureClassPolicy.Taxonomy.Keys.Order());
+        Assert.Equal([ExpenditureSubClass.Deposit, ExpenditureSubClass.Investment], ExpenditureClassPolicy.Taxonomy[ExpenditureMainClass.RegularSavings]);
+        Assert.Equal(6, ExpenditureClassPolicy.Taxonomy[ExpenditureMainClass.NonConsumerSpending].Count);
+        Assert.Equal(12, ExpenditureClassPolicy.Taxonomy[ExpenditureMainClass.ConsumerSpending].Count);
+    }
 }

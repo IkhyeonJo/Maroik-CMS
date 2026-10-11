@@ -139,4 +139,27 @@ public class IncomeClassPolicyTests
     {
         Assert.Equal(IncomeClassPolicy.SubClassesByMainClass.Keys.Order(), IncomeClassPolicy.MainClasses.Order());
     }
+
+    // -- The taxonomy's persisted values -----------------------------------------
+
+    /// <summary>
+    /// The exact strings stored in Income.MainClass / SubClass and used as resx keys: generated from the
+    /// <see cref="IncomeMainClass"/> / <see cref="IncomeSubClass"/> enums, so renaming a member changes stored data and must fail here.
+    /// </summary>
+    [Fact]
+    public void SubClassesByMainClass_IsExactlyThePersistedTaxonomy()
+    {
+        Assert.Equal(["RegularIncome", "IrregularIncome"], IncomeClassPolicy.SubClassesByMainClass.Keys.Order().Reverse());
+        Assert.Equal(["LaborIncome", "BusinessIncome", "PensionIncome", "FinancialIncome", "RentalIncome", "OtherIncome"], IncomeClassPolicy.SubClassesByMainClass["RegularIncome"]);
+        Assert.Equal(["LaborIncome", "OtherIncome"], IncomeClassPolicy.SubClassesByMainClass["IrregularIncome"]);
+    }
+
+    /// <summary>The typed taxonomy lists each main class's sub-classes in display order.</summary>
+    [Fact]
+    public void Taxonomy_ListsTheSubClassesOfEachMainClass()
+    {
+        Assert.Equal([IncomeMainClass.RegularIncome, IncomeMainClass.IrregularIncome], IncomeClassPolicy.Taxonomy.Keys.Order());
+        Assert.Equal([IncomeSubClass.LaborIncome, IncomeSubClass.OtherIncome], IncomeClassPolicy.Taxonomy[IncomeMainClass.IrregularIncome]);
+        Assert.Equal(6, IncomeClassPolicy.Taxonomy[IncomeMainClass.RegularIncome].Count);
+    }
 }
