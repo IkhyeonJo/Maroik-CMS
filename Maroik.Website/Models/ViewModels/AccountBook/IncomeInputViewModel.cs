@@ -31,10 +31,14 @@ public class IncomeInputViewModel : IValidatableObject
     [Display(Name = "Content")]
     public string? Content { get; set; }
 
-    /// <summary>Amount of income received.</summary>
+    /// <summary>
+    /// Amount of income received, as the form posts it: the text the amount field shows, with a comma
+    /// between every three integer digits ("1,234,567.5"). The controller parses it with
+    /// <c>FinanceAmountPolicy.TryParseInput</c> and refuses any other shape.
+    /// </summary>
     [Required(ErrorMessage = "Please enter Amount")]
     [Display(Name = "Amount")]
-    public decimal Amount { get; set; }
+    public string? Amount { get; set; }
 
     /// <summary>
     /// The local date/time the income was received, as "yyyy-MM-dd HH:mm:ss" in the account's own

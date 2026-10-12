@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import { describeAmountLabel } from "@tests/_common/amountLabelSuite";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
+import { describeAmountInput } from "@tests/_common/amountInputSuite";
 import { loadSite, hidden, antiForgery, lastOf } from "@tests/_common/harness";
 
 // wwwroot/user/custom/Notice/FixedIncome/js/site.js
@@ -126,3 +127,8 @@ describe("Notice/FixedIncome — main class change", () => {
 });
 
 describeMissingServerConstants("user", "Notice", "FixedIncome", () => fixture());
+
+describeAmountInput({
+    feature: "Notice", page: "FixedIncome", fixture: () => fixture(), existsKey: "fixedIncome", rowKey: "Id", allowNegative: false,
+    record: { id: 1, mainClass: "Labor", subClass: "Salary", content: "c", amount: 1, depositMonth: 1, depositDay: 2, maturityDate: "2030-01-01", note: "", depositMyAssetProductName: "A", unpunctuality: true },
+});

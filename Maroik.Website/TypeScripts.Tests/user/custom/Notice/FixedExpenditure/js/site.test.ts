@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import { describeAmountLabel } from "@tests/_common/amountLabelSuite";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
+import { describeAmountInput } from "@tests/_common/amountInputSuite";
 import { loadSite, hidden, antiForgery, hiddenByStyle, fireNative, stubPlugin, present, lastOf, successOf } from "@tests/_common/harness";
 
 // wwwroot/user/custom/Notice/FixedExpenditure/js/site.js
@@ -167,3 +168,8 @@ describe("Notice/FixedExpenditure — class and deposit-month changes, and filli
 });
 
 describeMissingServerConstants("user", "Notice", "FixedExpenditure", () => fixture());
+
+describeAmountInput({
+    feature: "Notice", page: "FixedExpenditure", fixture: () => fixture(), existsKey: "fixedExpenditure", rowKey: "Id", allowNegative: false,
+    record: { id: 1, mainClass: "Living", subClass: "Rent", content: "c", amount: 1, depositMonth: 1, depositDay: 2, maturityDate: "2030-01-01", note: "", paymentMethod: "A", myDepositAsset: null, unpunctuality: false },
+});

@@ -15,7 +15,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, parseJson, conform, required, instanceOf, fieldValue, selectValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, parseJson, conform, required, instanceOf, fieldValue, formatAmountInput, bindAmountInput, selectValue, optionalFieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const amountLabelReply = check.object({ result: check.boolean, label: check.string });
@@ -73,6 +73,13 @@
     // serialized into the page by Income.cshtml. Mirrored here for form UX only; the server
     // re-validates every combination on save.
     const incomeSubClassMap = parseJson(optionalFieldValue($("#incomeSubClassMap")) || "{}", check.record(check.array(check.string)), "#incomeSubClassMap");
+    // Comma-grouped amount fields (a negative income is stored as its absolute value,
+    // so the field takes no minus).
+    // Authoritative in FinanceAmountPolicy.TryParseInput (server); mirrored here for form UX only — the
+    // text is posted as shown and the server parses and re-validates it.
+    bindAmountInput($createIncomeAmount, false);
+    bindAmountInput($editIncomeAmount, false);
+
     // Localized toast shown when the amount-label request itself fails (transport error).
     const failedToLoadAmountLabelMessage = fieldValue($("#localizerFailedToLoadAmountLabel"));
 
@@ -364,7 +371,7 @@
                     ApplyAllowedOptions($editIncomeSubClass, incomeSubClassMap[data.income.mainClass] || [], data.income.subClass);
 
                     $editIncomeContent.val(data.income.content);
-                    $editIncomeAmount.val(data.income.amount);
+                    $editIncomeAmount.val(formatAmountInput(String(data.income.amount), false));
                     // `created` is `YYYY-MM-DDTHH:mm:ss`; split into the date field
                     // and the hour / minute / second selects (`.trigger("change")` so any
                     // listener fires).

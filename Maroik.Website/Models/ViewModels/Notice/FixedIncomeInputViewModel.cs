@@ -29,10 +29,14 @@ public class FixedIncomeInputViewModel
     [Display(Name = "Content")]
     public string? Content { get; set; }
 
-    /// <summary>Expected fixed amount deposited each recurrence.</summary>
+    /// <summary>
+    /// Amount of each recurring income, as the form posts it: the text the amount field shows, with a comma
+    /// between every three integer digits ("1,234,567.5"). The controller parses it with
+    /// <c>FinanceAmountPolicy.TryParseInput</c> and refuses any other shape.
+    /// </summary>
     [Required(ErrorMessage = "Please enter Amount")]
     [Display(Name = "Amount")]
-    public decimal Amount { get; set; }
+    public string? Amount { get; set; }
 
     /// <summary>Month of the year (1–12) on which this income is scheduled to recur.</summary>
     [Required(ErrorMessage = "Please enter DepositMonth")]

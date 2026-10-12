@@ -44,6 +44,33 @@ public class AccountBookFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixtur
     }
 
     /// <summary>
+    /// The amount field shows a comma between every three integer digits as it is typed; the comma-grouped text
+    /// is posted as shown and stored as the number it represents.
+    /// </summary>
+    [Fact]
+    public async Task Asset_Create_ShowsTheTypedAmountCommaGrouped_AndStoresTheNumber()
+    {
+        var (page, account) = await NewSignedInPageAsync();
+        string name = $"Grouped-{Guid.NewGuid():N}"[..15];
+
+        await GotoAsync(page, "/AccountBook/Asset");
+        await page.Locator("button[data-target='#createAssetDialogModal']").ClickAsync();
+        await page.Locator("#createAssetProductName").FillAsync(name);
+        await page.Locator("#createAssetAmount").FillAsync("");
+        await page.Locator("#createAssetAmount").PressSequentiallyAsync("1234567.5");
+        await Assertions.Expect(page.Locator("#createAssetAmount")).ToHaveValueAsync("1,234,567.5");
+        await page.Locator("#createAssetMonetaryUnit").FillAsync("KRW");
+        await page.Locator("#formCreateAsset input[type='submit']").ClickAsync();
+
+        await Assertions.Expect(SuccessToast(page)).ToBeVisibleAsync();
+
+        decimal amount = await Db.ScalarAsync<decimal>(
+            """SELECT "Amount" FROM "Asset" WHERE "AccountEmail" = @email AND "ProductName" = @name""",
+            ("email", account.Email), ("name", name));
+        Assert.Equal(1234567.5m, amount);
+    }
+
+    /// <summary>
     /// Regression test: an over-long product name used to reach the database and blow up as an
     /// unhandled 500. It is now refused up front with an error message, and nothing is stored.
     /// </summary>

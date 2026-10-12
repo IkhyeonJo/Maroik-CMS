@@ -117,7 +117,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
     public async Task CreateIncome_AdminSession_IsForbidden()
     {
         var session = await AuthenticatedSessionHelper.LoginAsync(factory, _client, "accountbook-incexp-admin@test.com", "AdminPassword1!", Role.Admin, TestContext.Current.CancellationToken);
-        using var request = session.BuildJsonPostRequest("/AccountBook/CreateIncome", new { Id = 0, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "x", Amount = 1, DepositMyAssetProductName = "a", Note = "" });
+        using var request = session.BuildJsonPostRequest("/AccountBook/CreateIncome", new { Id = 0, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "x", Amount = "1", DepositMyAssetProductName = "a", Note = "" });
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
 
@@ -129,7 +129,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
     public async Task CreateIncome_MissingMainClass_FailsModelStateCleanly()
     {
         var session = await LoginAsync();
-        var payload = new { Id = 0, MainClass = (string?)null, SubClass = "LaborIncome", Content = "x", Amount = 1, DepositMyAssetProductName = "a", Note = "" };
+        var payload = new { Id = 0, MainClass = (string?)null, SubClass = "LaborIncome", Content = "x", Amount = "1", DepositMyAssetProductName = "a", Note = "" };
         using var request = session.BuildJsonPostRequest("/AccountBook/CreateIncome", payload);
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -154,7 +154,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var payload = new
         {
             Id = 0, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "Bonus",
-            Amount = 300, DepositMyAssetProductName = asset, Note = "",
+            Amount = "300", DepositMyAssetProductName = asset, Note = "",
             Created = "2026-01-15 10:30:00"
         };
         using var request = session.BuildJsonPostRequest("/AccountBook/CreateIncome", payload);
@@ -177,7 +177,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         using var request = session.BuildJsonPostRequest("/AccountBook/UpdateIncome", new
         {
             Id = id, MainClass = "RegularIncome", SubClass = "BusinessIncome", Content = "Updated",
-            Amount = 1200, DepositMyAssetProductName = AssetProductName, Note = "updated",
+            Amount = "1200", DepositMyAssetProductName = AssetProductName, Note = "updated",
             Created = "2026-01-15 10:30:00"
         });
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -262,7 +262,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
     public async Task CreateExpenditure_MissingPaymentMethod_FailsModelStateCleanly()
     {
         var session = await LoginAsync();
-        var payload = new { Id = 0, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "x", Amount = 1, PaymentMethod = (string?)null, MyDepositAsset = "a", Note = "" };
+        var payload = new { Id = 0, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "x", Amount = "1", PaymentMethod = (string?)null, MyDepositAsset = "a", Note = "" };
         using var request = session.BuildJsonPostRequest("/AccountBook/CreateExpenditure", payload);
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -287,7 +287,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var payload = new
         {
             Id = 0, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Dinner",
-            Amount = 40, PaymentMethod = asset, MyDepositAsset = "N/A", Note = "",
+            Amount = "40", PaymentMethod = asset, MyDepositAsset = "N/A", Note = "",
             Created = "2026-01-15 10:30:00"
         };
         using var request = session.BuildJsonPostRequest("/AccountBook/CreateExpenditure", payload);
@@ -310,7 +310,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         using var request = session.BuildJsonPostRequest("/AccountBook/UpdateExpenditure", new
         {
             Id = id, MainClass = "ConsumerSpending", SubClass = "TransportationCost", Content = "Updated",
-            Amount = 60, PaymentMethod = AssetProductName, MyDepositAsset = "N/A", Note = "updated",
+            Amount = "60", PaymentMethod = AssetProductName, MyDepositAsset = "N/A", Note = "updated",
             Created = "2026-01-15 10:30:00"
         });
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -370,7 +370,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         using (var create = session.BuildJsonPostRequest("/AccountBook/CreateExpenditure", new
         {
             Id = 0, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Gum",
-            Amount = 0.005m, PaymentMethod = asset, MyDepositAsset = "N/A", Note = "", Created = "2026-01-15 10:30:00"
+            Amount = "0.005", PaymentMethod = asset, MyDepositAsset = "N/A", Note = "", Created = "2026-01-15 10:30:00"
         }))
             Assert.Contains("\"result\":true", await (await _client.SendAsync(create, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
 
@@ -402,7 +402,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         using var request = session.BuildJsonPostRequest("/AccountBook/CreateExpenditure", new
         {
             Id = 0, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Gum",
-            Amount = 0.00005m, PaymentMethod = asset, MyDepositAsset = "N/A", Note = "", Created = "2026-01-15 10:30:00"
+            Amount = "0.00005", PaymentMethod = asset, MyDepositAsset = "N/A", Note = "", Created = "2026-01-15 10:30:00"
         });
         string json = await (await _client.SendAsync(request, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 

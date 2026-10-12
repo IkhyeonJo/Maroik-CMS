@@ -60,7 +60,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         MainClass = "RegularIncome",
         SubClass = "LaborIncome",
         Content = content,
-        Amount = 3000000,
+        Amount = "3000000",
         DepositMonth = 6,
         DepositDay = 25,
         MaturityDate = "2030-12-31",
@@ -98,7 +98,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         var payload = new
         {
             Id = 0, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "Salary",
-            Amount = 100, DepositMonth = 13, DepositDay = 1, MaturityDate = "2030-12-31",
+            Amount = "100", DepositMonth = 13, DepositDay = 1, MaturityDate = "2030-12-31",
             Note = "", DepositMyAssetProductName = AssetProductName, Unpunctuality = false
         };
         using var request = session.BuildJsonPostRequest("/Notice/CreateFixedIncome", payload);
@@ -117,7 +117,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         var payload = new
         {
             Id = 0, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "Salary",
-            Amount = 100, DepositMonth = 6, DepositDay = 1, MaturityDate = "2030-12-31",
+            Amount = "100", DepositMonth = 6, DepositDay = 1, MaturityDate = "2030-12-31",
             Note = "", DepositMyAssetProductName = "no-such-asset", Unpunctuality = false
         };
         using var request = session.BuildJsonPostRequest("/Notice/CreateFixedIncome", payload);
@@ -183,7 +183,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         var updatePayload = new
         {
             created.Id, MainClass = "RegularIncome", SubClass = "BusinessIncome", Content = "Updated",
-            Amount = 3500000, DepositMonth = 7, DepositDay = 1, MaturityDate = "2031-01-01",
+            Amount = "3500000", DepositMonth = 7, DepositDay = 1, MaturityDate = "2031-01-01",
             Note = "updated", DepositMyAssetProductName = AssetProductName, Unpunctuality = true
         };
         using var updateRequest = session.BuildJsonPostRequest("/Notice/UpdateFixedIncome", updatePayload);

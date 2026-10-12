@@ -21,10 +21,14 @@ public class AssetInputViewModel
     [Display(Name = "Item")]
     public string? Item { get; set; }
 
-    /// <summary>Current balance or market value of the asset.</summary>
+    /// <summary>
+    /// Current balance or market value of the asset, as the form posts it: the text the amount field shows,
+    /// with a comma between every three integer digits ("1,234,567.5"). The controller parses it with
+    /// <c>FinanceAmountPolicy.TryParseInput</c> and refuses any other shape.
+    /// </summary>
     [Required(ErrorMessage = "Please enter Amount")]
     [Display(Name = "Amount")]
-    public decimal Amount { get; set; }
+    public string? Amount { get; set; }
 
     /// <summary>Currency code for the amount (e.g. "KRW", "USD").</summary>
     [Required(ErrorMessage = "Please enter MonetaryUnit")]

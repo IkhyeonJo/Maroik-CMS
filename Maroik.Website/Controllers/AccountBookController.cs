@@ -1,6 +1,7 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Account;
+using Maroik.Core.Domain.Finance;
 using Maroik.Core.Domain.Time;
 using Maroik.Website.Attributes;
 using Maroik.Website.Contracts;
@@ -42,7 +43,7 @@ public class AccountBookController(
     [RequiredHttpPostAccess(Role = Role.User)]
     public async Task<IActionResult> CreateAsset([FromBody] AssetInputViewModel assetInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || !FinanceAmountPolicy.TryParseInput(assetInputViewModel.Amount, out decimal amount))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         string email = HttpContext.GetLoggedInAccount().Email!;
@@ -51,7 +52,7 @@ public class AccountBookController(
         {
             ProductName = assetInputViewModel.ProductName,
             Item = assetInputViewModel.Item,
-            Amount = assetInputViewModel.Amount,
+            Amount = amount,
             MonetaryUnit = assetInputViewModel.MonetaryUnit,
             Note = assetInputViewModel.Note ?? "",
             Deleted = false
@@ -139,7 +140,7 @@ public class AccountBookController(
     public async Task<IActionResult> UpdateAsset([FromBody] AssetInputViewModel assetInputViewModel, CancellationToken ct)
     {
         _ = ModelState.Remove(nameof(assetInputViewModel.MonetaryUnit));
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || !FinanceAmountPolicy.TryParseInput(assetInputViewModel.Amount, out decimal amount))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         string email = HttpContext.GetLoggedInAccount().Email!;
@@ -148,7 +149,7 @@ public class AccountBookController(
         {
             ProductName = assetInputViewModel.ProductName,
             Item = assetInputViewModel.Item,
-            Amount = assetInputViewModel.Amount,
+            Amount = amount,
             MonetaryUnit = assetInputViewModel.MonetaryUnit,
             Note = assetInputViewModel.Note,
             Deleted = assetInputViewModel.Deleted
@@ -224,7 +225,7 @@ public class AccountBookController(
     [RequiredHttpPostAccess(Role = Role.User)]
     public async Task<IActionResult> CreateIncome([FromBody] IncomeInputViewModel incomeInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || !FinanceAmountPolicy.TryParseInput(incomeInputViewModel.Amount, out decimal amount))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         AccountResponse account = HttpContext.GetLoggedInAccount();
@@ -234,7 +235,7 @@ public class AccountBookController(
             MainClass = incomeInputViewModel.MainClass,
             SubClass = incomeInputViewModel.SubClass,
             Content = incomeInputViewModel.Content ?? "",
-            Amount = incomeInputViewModel.Amount,
+            Amount = amount,
             DepositMyAssetProductName = incomeInputViewModel.DepositMyAssetProductName,
             Created = incomeInputViewModel.ToCreatedUtc(account.TimeZoneIanaId ?? "UTC"),
             Note = incomeInputViewModel.Note ?? ""
@@ -351,7 +352,7 @@ public class AccountBookController(
     [RequiredHttpPostAccess(Role = Role.User)]
     public async Task<IActionResult> UpdateIncome([FromBody] IncomeInputViewModel incomeInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || !FinanceAmountPolicy.TryParseInput(incomeInputViewModel.Amount, out decimal amount))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         AccountResponse account = HttpContext.GetLoggedInAccount();
@@ -362,7 +363,7 @@ public class AccountBookController(
             MainClass = incomeInputViewModel.MainClass,
             SubClass = incomeInputViewModel.SubClass,
             Content = incomeInputViewModel.Content,
-            Amount = incomeInputViewModel.Amount,
+            Amount = amount,
             DepositMyAssetProductName = incomeInputViewModel.DepositMyAssetProductName,
             Created = incomeInputViewModel.ToCreatedUtc(account.TimeZoneIanaId ?? "UTC"),
             Note = incomeInputViewModel.Note
@@ -440,7 +441,7 @@ public class AccountBookController(
     public async Task<IActionResult> CreateExpenditure(
         [FromBody] ExpenditureInputViewModel expenditureInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || !FinanceAmountPolicy.TryParseInput(expenditureInputViewModel.Amount, out decimal amount))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         AccountResponse account = HttpContext.GetLoggedInAccount();
@@ -450,7 +451,7 @@ public class AccountBookController(
             MainClass = expenditureInputViewModel.MainClass,
             SubClass = expenditureInputViewModel.SubClass,
             Content = expenditureInputViewModel.Content ?? "",
-            Amount = expenditureInputViewModel.Amount,
+            Amount = amount,
             PaymentMethod = expenditureInputViewModel.PaymentMethod,
             MyDepositAsset = expenditureInputViewModel.MyDepositAsset,
             Created = expenditureInputViewModel.ToCreatedUtc(account.TimeZoneIanaId ?? "UTC"),
@@ -569,7 +570,7 @@ public class AccountBookController(
     public async Task<IActionResult> UpdateExpenditure(
         [FromBody] ExpenditureInputViewModel expenditureInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || !FinanceAmountPolicy.TryParseInput(expenditureInputViewModel.Amount, out decimal amount))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         AccountResponse account = HttpContext.GetLoggedInAccount();
@@ -580,7 +581,7 @@ public class AccountBookController(
             MainClass = expenditureInputViewModel.MainClass,
             SubClass = expenditureInputViewModel.SubClass,
             Content = expenditureInputViewModel.Content ?? "",
-            Amount = expenditureInputViewModel.Amount,
+            Amount = amount,
             PaymentMethod = expenditureInputViewModel.PaymentMethod,
             MyDepositAsset = expenditureInputViewModel.MyDepositAsset,
             Created = expenditureInputViewModel.ToCreatedUtc(account.TimeZoneIanaId ?? "UTC"),

@@ -238,6 +238,13 @@ names, nulls kept, nullability from the database (e.g. `DeleteComment` answers `
 message; `Category.Action` may be null); its type is inferred from the check, so there is no separate interface
 to drift. Every localized text a script reads is rendered by its view (`viewContract.test.ts`).
 
+The user `_Layout` script also puts `formatAmountInput` / `bindAmountInput` on `window` for the finance amount
+fields (AccountBook Asset / Income / Expenditure and Notice FixedIncome / FixedExpenditure,
+`type="text" inputmode="decimal"`): a comma appears
+between every three integer digits as the user types, and the edit forms show a stored amount the same way. It
+is display only — the text is posted as shown ("1,234,567.5") and `FinanceAmountPolicy.TryParseInput` parses
+and validates it on the server (tested by `TypeScripts.Tests/_common/amountInputSuite.ts`).
+
 Where the typings themselves are wrong, `global.d.ts` corrects them instead of a cast: `DatepickerSetupOptions`
 (a `beforeShow` may return nothing), `JQueryUI.Datepicker._clearDate`, `FormData.append` (stringifies non-Blob
 values), `val(null)`, `Array.isArray` / `Object.entries` (answer `unknown`, not `any`).

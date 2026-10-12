@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using ErrorOr;
 using Maroik.Core.Domain.Errors;
 
@@ -8,7 +10,7 @@ namespace Maroik.Core.Domain.Finance;
 /// <see cref="Expenditure"/>, <see cref="FixedIncome"/>, <see cref="FixedExpenditure"/>).
 /// Sibling to <see cref="FinanceTextPolicy"/>.
 /// </summary>
-public static class FinanceAmountPolicy
+public static partial class FinanceAmountPolicy
 {
     /// <summary>
     /// Returns a validation error when <paramref name="amount"/> is negative; otherwise
@@ -47,12 +49,6 @@ public static class FinanceAmountPolicy
     public const int MaxDecimalPlaces = 4;
 
     /// <summary>
-    /// The smallest amount step (one unit of the last stored decimal place), rendered as the amount
-    /// inputs' <c>step</c> so the browser lets a user type every value the server accepts.
-    /// </summary>
-    public const decimal SmallestAmountStep = 0.0001m;
-
-    /// <summary>
     /// Rejects an amount with more than <see cref="MaxDecimalPlaces"/> significant decimal places
     /// (trailing zeros do not count). The amount is never rounded silently: the database would round
     /// a transaction and the asset balance it moves separately, so the two would drift apart.
@@ -83,5 +79,50 @@ public static class FinanceAmountPolicy
     {
         var nonNegative = ValidateNonNegative(amount);
         return nonNegative.IsError ? nonNegative : ValidateBalance(amount);
+    }
+
+    /// <summary>
+    /// Most significant digits a <see cref="decimal"/> always holds exactly. Text with more is refused by
+    /// <see cref="TryParseInput"/> rather than rounded.
+    /// </summary>
+    private const int MaxExactSignificantDigits = 28;
+
+    /// <summary>
+    /// The text an amount field posts: an optional leading minus, the integer digits either plain
+    /// ("1234567") or with a comma between every group of three ("1,234,567"), and an optional decimal
+    /// part. A trailing decimal point with no digits after it ("1.") is accepted: it is what the field
+    /// holds while the user is about to type the decimals. ASCII digits only — <c>\d</c> would also
+    /// match other scripts' digits, which <see cref="decimal.Parse(string, NumberStyles, IFormatProvider)"/> refuses.
+    /// </summary>
+    [GeneratedRegex(@"^(?<sign>-)?(?<integer>[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.(?<fraction>[0-9]*))?\z")]
+    private static partial Regex AmountInputRegex();
+
+    /// <summary>
+    /// Parses the amount text a finance form (account book or fixed income / expenditure) posts (<c>"1,234,567.5"</c>, see
+    /// <see cref="AmountInputRegex"/>). Returns <see langword="false"/> (and 0) for text of any other
+    /// shape, and for text with more than <see cref="MaxExactSignificantDigits"/> significant digits,
+    /// which a <see cref="decimal"/> could only hold rounded. The range and the number of decimal places
+    /// are left to <see cref="ValidateBalance"/> / <see cref="ValidateAmount"/>, which report them with
+    /// their own messages.
+    /// </summary>
+    public static bool TryParseInput(string? input, out decimal amount)
+    {
+        amount = 0m;
+        if (input is null)
+            return false;
+
+        var match = AmountInputRegex().Match(input);
+        if (!match.Success)
+            return false;
+
+        string integer = match.Groups["integer"].Value.Replace(",", "", StringComparison.Ordinal);
+        string fraction = match.Groups["fraction"].Value.TrimEnd('0');
+        if ((integer.TrimStart('0') + fraction).Length > MaxExactSignificantDigits)
+            return false;
+
+        // At most 28 significant digits: always within decimal's range and held exactly.
+        amount = decimal.Parse(match.Groups["sign"].Value + integer + (fraction.Length > 0 ? "." + fraction : ""),
+            NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
+        return true;
     }
 }
