@@ -2,6 +2,7 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Settings;
 using Maroik.Core.Domain.Account;
+using Maroik.Core.Domain.Finance;
 using Maroik.Website.Attributes;
 using Maroik.Website.Contracts;
 using Maroik.Website.Extensions;
@@ -42,7 +43,8 @@ public class NoticeController(
     public async Task<IActionResult> CreateFixedIncome(
         [FromBody] FixedIncomeInputViewModel fixedIncomeInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid || !fixedIncomeInputViewModel.MaturityDate.TryParseMaturityDate(out DateTime maturityDate))
+        if (!ModelState.IsValid || !fixedIncomeInputViewModel.MaturityDate.TryParseMaturityDate(out DateTime maturityDate)
+            || !FinanceAmountPolicy.TryParseInput(fixedIncomeInputViewModel.Amount, out decimal amount))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         try
@@ -55,7 +57,7 @@ public class NoticeController(
                 MainClass = fixedIncomeInputViewModel.MainClass,
                 SubClass = fixedIncomeInputViewModel.SubClass,
                 Content = fixedIncomeInputViewModel.Content ?? "",
-                Amount = fixedIncomeInputViewModel.Amount,
+                Amount = amount,
                 DepositMyAssetProductName = fixedIncomeInputViewModel.DepositMyAssetProductName,
                 DepositMonth = fixedIncomeInputViewModel.DepositMonth,
                 DepositDay = fixedIncomeInputViewModel.DepositDay,
@@ -178,7 +180,8 @@ public class NoticeController(
     public async Task<IActionResult> UpdateFixedIncome(
         [FromBody] FixedIncomeInputViewModel fixedIncomeInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid || !fixedIncomeInputViewModel.MaturityDate.TryParseMaturityDate(out DateTime maturityDate))
+        if (!ModelState.IsValid || !fixedIncomeInputViewModel.MaturityDate.TryParseMaturityDate(out DateTime maturityDate)
+            || !FinanceAmountPolicy.TryParseInput(fixedIncomeInputViewModel.Amount, out decimal amount))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         try
@@ -191,7 +194,7 @@ public class NoticeController(
                 MainClass = fixedIncomeInputViewModel.MainClass,
                 SubClass = fixedIncomeInputViewModel.SubClass,
                 Content = fixedIncomeInputViewModel.Content ?? "",
-                Amount = fixedIncomeInputViewModel.Amount,
+                Amount = amount,
                 DepositMyAssetProductName = fixedIncomeInputViewModel.DepositMyAssetProductName,
                 DepositMonth = fixedIncomeInputViewModel.DepositMonth,
                 DepositDay = fixedIncomeInputViewModel.DepositDay,
@@ -265,7 +268,8 @@ public class NoticeController(
     public async Task<IActionResult> CreateFixedExpenditure(
         [FromBody] FixedExpenditureInputViewModel fixedExpenditureInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid || !fixedExpenditureInputViewModel.MaturityDate.TryParseMaturityDate(out DateTime maturityDate))
+        if (!ModelState.IsValid || !fixedExpenditureInputViewModel.MaturityDate.TryParseMaturityDate(out DateTime maturityDate)
+            || !FinanceAmountPolicy.TryParseInput(fixedExpenditureInputViewModel.Amount, out decimal amount))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         try
@@ -278,7 +282,7 @@ public class NoticeController(
                 MainClass = fixedExpenditureInputViewModel.MainClass,
                 SubClass = fixedExpenditureInputViewModel.SubClass,
                 Content = fixedExpenditureInputViewModel.Content ?? "",
-                Amount = fixedExpenditureInputViewModel.Amount,
+                Amount = amount,
                 PaymentMethod = fixedExpenditureInputViewModel.PaymentMethod,
                 MyDepositAsset = fixedExpenditureInputViewModel.MyDepositAsset,
                 DepositMonth = fixedExpenditureInputViewModel.DepositMonth,
@@ -403,7 +407,8 @@ public class NoticeController(
     public async Task<IActionResult> UpdateFixedExpenditure(
         [FromBody] FixedExpenditureInputViewModel fixedExpenditureInputViewModel, CancellationToken ct)
     {
-        if (!ModelState.IsValid || !fixedExpenditureInputViewModel.MaturityDate.TryParseMaturityDate(out DateTime maturityDate))
+        if (!ModelState.IsValid || !fixedExpenditureInputViewModel.MaturityDate.TryParseMaturityDate(out DateTime maturityDate)
+            || !FinanceAmountPolicy.TryParseInput(fixedExpenditureInputViewModel.Amount, out decimal amount))
             return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
         try
@@ -416,7 +421,7 @@ public class NoticeController(
                 MainClass = fixedExpenditureInputViewModel.MainClass,
                 SubClass = fixedExpenditureInputViewModel.SubClass,
                 Content = fixedExpenditureInputViewModel.Content ?? "",
-                Amount = fixedExpenditureInputViewModel.Amount,
+                Amount = amount,
                 PaymentMethod = fixedExpenditureInputViewModel.PaymentMethod,
                 MyDepositAsset = fixedExpenditureInputViewModel.MyDepositAsset,
                 DepositMonth = fixedExpenditureInputViewModel.DepositMonth,

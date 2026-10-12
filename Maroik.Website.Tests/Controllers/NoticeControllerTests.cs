@@ -76,7 +76,7 @@ public class NoticeControllerTests(MaroikWebApplicationFactory factory)
             MainClass = "RegularIncome",
             SubClass = "LaborIncome",
             Content = "Salary",
-            Amount = 1000,
+            Amount = "1000",
             DepositMonth = 1,
             DepositDay = 1,
             MaturityDate = "13/45/2026", // unparseable
@@ -112,7 +112,7 @@ public class NoticeControllerTests(MaroikWebApplicationFactory factory)
             MainClass = income ? "RegularIncome" : "ConsumerSpending",
             SubClass = income ? "LaborIncome" : "PinMoney",
             Content = "Salary",
-            Amount = 1000,
+            Amount = "1000",
             DepositMonth = 1,
             DepositDay = 1,
             MaturityDate = "13/45/2026", // not yyyy-MM-dd

@@ -302,4 +302,14 @@ interface Window {
 
     /** Moves a datepicker's earliest selectable date. */
     setMinDate(picker: DatepickerMinDateSetter, date: Date | null): void;
+
+    /**
+     * An amount as the finance amount fields (account book, fixed income / expenditure) show it: digits with a comma between every three integer
+     * digits and the decimal part as typed ("1,234,567.5"); anything else typed is dropped, and a leading minus
+     * is kept only when `allowNegative`. User role only (defined by the user `_Layout` script).
+     */
+    formatAmountInput(text: string, allowNegative: boolean): string;
+
+    /** Re-formats `$input` with {@link formatAmountInput} on every keystroke, keeping the caret by the same digits. User role only. */
+    bindAmountInput($input: JQuery, allowNegative: boolean): void;
 }

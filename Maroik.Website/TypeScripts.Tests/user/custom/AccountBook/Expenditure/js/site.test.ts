@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import { describeAmountLabel } from "@tests/_common/amountLabelSuite";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
+import { describeAmountInput } from "@tests/_common/amountInputSuite";
 import { loadSite, hidden, antiForgery, hiddenByStyle, fireNative, stubPlugin, present, lastOf, successOf } from "@tests/_common/harness";
 
 // wwwroot/user/custom/AccountBook/Expenditure/js/site.js
@@ -159,3 +160,8 @@ describe("AccountBook/Expenditure — date pickers and filling the edit form", (
 });
 
 describeMissingServerConstants("user", "AccountBook", "Expenditure", () => fixture());
+
+describeAmountInput({
+    feature: "AccountBook", page: "Expenditure", fixture: () => fixture(), existsKey: "expenditure", rowKey: "Id", allowNegative: false,
+    record: { id: 1, mainClass: "Living", subClass: "Food", content: "c", amount: 1, created: "2025-01-02T03:04:05", paymentMethod: "Card", myDepositAsset: null, note: "" },
+});

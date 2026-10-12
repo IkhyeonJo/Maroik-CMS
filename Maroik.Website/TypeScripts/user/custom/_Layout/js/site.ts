@@ -255,6 +255,45 @@
         picker.datepicker("option", "minDate", date);
     };
 
+    // --- Amount fields (account book, fixed income / expenditure) ----------------
+    // The finance create / edit forms show an amount with a comma between every three integer digits
+    // while it is typed. Display only: the text is posted as shown, and the server parses and re-validates it
+    // (authoritative in FinanceAmountPolicy.TryParseInput and the amount rules; mirrored here for form UX only).
+
+    window.formatAmountInput = function(text: string, allowNegative: boolean): string {
+        const negative = allowNegative && text.startsWith("-");
+        const kept = text.replace(/[^0-9.]/g, "");
+        const point = kept.indexOf(".");
+        const integerDigits = (point < 0 ? kept : kept.slice(0, point)).replace(/^0+(?=[0-9])/, "");
+        const fraction = point < 0 ? null : kept.slice(point + 1).replace(/\./g, "");
+        const integer = integerDigits === "" && fraction !== null ? "0" : integerDigits;
+        const grouped = integer.replace(/\B(?=([0-9]{3})+$)/g, ",");
+        return (negative ? "-" : "") + grouped + (fraction === null ? "" : "." + fraction);
+    };
+
+    /** How many digits and decimal points `text` holds (what the caret is kept next to while commas move). */
+    function countAmountCharacters(text: string): number {
+        return text.replace(/[^0-9.]/g, "").length;
+    }
+
+    window.bindAmountInput = function($input: JQuery, allowNegative: boolean): void {
+        $input.off("input.amount").on("input.amount", function() {
+            const field = window.instanceOf(this, HTMLInputElement, "the amount field");
+            const caret = field.selectionStart ?? field.value.length;
+            const afterCaret = countAmountCharacters(field.value.slice(caret));
+            const formatted = window.formatAmountInput(field.value, allowNegative);
+
+            // Put the caret back in front of the same number of digits it had after it, and before any
+            // comma there, so it stays right after the digit just typed.
+            let position = formatted.length;
+            while (position > 0 && countAmountCharacters(formatted.slice(position)) < afterCaret) position--;
+            while (position > 0 && formatted.charAt(position - 1) === ",") position--;
+
+            field.value = formatted;
+            field.setSelectionRange(position, position);
+        });
+    };
+
     // Global safety net: if any $.ajax call fails and nothing else handles it
     // (typically the session expired, so AuthorizationFilter redirected the call to
     // an HTML page that does not parse as the expected JSON),

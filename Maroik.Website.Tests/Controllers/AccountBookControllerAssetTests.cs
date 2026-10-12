@@ -53,7 +53,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
     {
         ProductName = productName,
         Item = "CashAsset",
-        Amount = 5000,
+        Amount = "5000",
         MonetaryUnit = "KRW",
         Note = "",
         Deleted = false
@@ -80,7 +80,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
     public async Task CreateAsset_MissingProductName_FailsModelState()
     {
         var session = await LoginAsUserAsync();
-        var payload = new { ProductName = (string?)null, Item = "CashAsset", Amount = 100m, MonetaryUnit = "KRW", Note = "", Deleted = false };
+        var payload = new { ProductName = (string?)null, Item = "CashAsset", Amount = "100", MonetaryUnit = "KRW", Note = "", Deleted = false };
         using var request = session.BuildJsonPostRequest("/AccountBook/CreateAsset", payload);
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -94,7 +94,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
     public async Task CreateAsset_UnrecognizedItem_ReturnsItemInvalidError()
     {
         var session = await LoginAsUserAsync();
-        var payload = new { ProductName = "BadItemAsset", Item = "NotARealItemType", Amount = 100m, MonetaryUnit = "KRW", Note = "", Deleted = false };
+        var payload = new { ProductName = "BadItemAsset", Item = "NotARealItemType", Amount = "100", MonetaryUnit = "KRW", Note = "", Deleted = false };
         using var request = session.BuildJsonPostRequest("/AccountBook/CreateAsset", payload);
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -173,7 +173,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
             ProductName = productName,
             OriginalProductName = productName,
             Item = "SavingsAsset",
-            Amount = 2000,
+            Amount = "2000",
             MonetaryUnit = "USD",
             Note = "updated",
             Deleted = false
@@ -234,7 +234,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
             ProductName = newName,
             OriginalProductName = oldName,
             Item = "CashAsset",
-            Amount = 1000,
+            Amount = "1000",
             MonetaryUnit = "KRW",
             Note = "",
             Deleted = false
@@ -262,7 +262,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
             ProductName = "irrelevant",
             OriginalProductName = "does-not-exist-asset",
             Item = "CashAsset",
-            Amount = 100,
+            Amount = "100",
             MonetaryUnit = "KRW",
             Note = "",
             Deleted = false

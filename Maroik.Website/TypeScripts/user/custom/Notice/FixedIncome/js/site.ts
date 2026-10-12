@@ -17,7 +17,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, parseJson, conform, instanceOf, fieldValue, selectValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, parseJson, conform, instanceOf, fieldValue, formatAmountInput, bindAmountInput, selectValue, optionalFieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const amountLabelReply = check.object({ result: check.boolean, label: check.string });
@@ -68,6 +68,13 @@
     const $btnConfirmDeleteFixedIncome = $("#btnConfirmDeleteFixedIncome");
     const $btnExportExcelFixedIncome = $("#btnExportExcelFixedIncome");
     const $btnDeleteFixedIncome = $("#btnDeleteFixedIncome");
+
+    // Comma-grouped amount fields (a negative fixed income is stored as its absolute value,
+    // so the field takes no minus).
+    // Authoritative in FinanceAmountPolicy.TryParseInput (server); mirrored here for form UX only — the
+    // text is posted as shown and the server parses and re-validates it.
+    bindAmountInput($createFixedIncomeAmount, false);
+    bindAmountInput($editFixedIncomeAmount, false);
 
     // Server-published rules (FixedIncome.cshtml). Authoritative in IncomeClassPolicy /
     // FixedSchedulePolicy; mirrored here for form UX only, the server re-validates on save.
@@ -456,7 +463,7 @@
                     ApplyAllowedOptions($editFixedIncomeSubClass, incomeSubClassMap[data.fixedIncome.mainClass] || [], data.fixedIncome.subClass);
 
                     $editFixedIncomeContent.val(data.fixedIncome.content);
-                    $editFixedIncomeAmount.val(data.fixedIncome.amount);
+                    $editFixedIncomeAmount.val(formatAmountInput(String(data.fixedIncome.amount), false));
 
                     $editFixedIncomeDepositMonth.val(data.fixedIncome.depositMonth.toString()).trigger("change");
 

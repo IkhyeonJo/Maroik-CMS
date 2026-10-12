@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
 import { describeAmountLabel } from "@tests/_common/amountLabelSuite";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
+import { describeAmountInput } from "@tests/_common/amountInputSuite";
 import { loadSite, hidden, antiForgery, stubPlugin, present } from "@tests/_common/harness";
 
 // wwwroot/user/custom/AccountBook/Income/js/site.js
@@ -159,3 +160,8 @@ describe("AccountBook/Income — date pickers", () => {
 });
 
 describeMissingServerConstants("user", "AccountBook", "Income", () => fixture());
+
+describeAmountInput({
+    feature: "AccountBook", page: "Income", fixture: () => fixture(), existsKey: "income", rowKey: "Id", allowNegative: false,
+    record: { id: 1, mainClass: "Labor", subClass: "Salary", content: "c", amount: 1, created: "2025-01-02T03:04:05", depositMyAssetProductName: "A", note: "" },
+});

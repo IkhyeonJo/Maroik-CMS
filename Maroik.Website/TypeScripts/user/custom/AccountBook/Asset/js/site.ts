@@ -21,7 +21,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, conform, instanceOf, fieldValue, attribute } = window;
+    const { check, replies, onReply, conform, instanceOf, fieldValue, formatAmountInput, bindAmountInput, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const assetReply = replies.read({
@@ -54,6 +54,12 @@
     const $btnConfirmDeleteAsset = $("#btnConfirmDeleteAsset");
     const $btnExportExcelAsset = $("#btnExportExcelAsset");
     const $btnDeleteAsset = $("#btnDeleteAsset");
+
+    // Comma-grouped amount fields (an asset balance may be negative).
+    // Authoritative in FinanceAmountPolicy.TryParseInput (server); mirrored here for form UX only — the
+    // text is posted as shown and the server parses and re-validates it.
+    bindAmountInput($createAssetAmount, true);
+    bindAmountInput($editAssetAmount, true);
 
     // Initialize the jQuery-UI tab widgets inside the two modals once the DOM is ready.
     $(function() {
@@ -206,7 +212,7 @@
                     $editAssetProductName.val(data.asset.productName);
                     // `.trigger("change")` so any listener on the Item select re-syncs.
                     $editAssetItem.val(data.asset.item).trigger("change");
-                    $editAssetAmount.val(data.asset.amount);
+                    $editAssetAmount.val(formatAmountInput(String(data.asset.amount), true));
                     $editAssetMonetaryUnit.val(data.asset.monetaryUnit);
                     $editAssetNote.val(data.asset.note);
                     $editAssetDeleted.prop("checked", data.asset.deleted);

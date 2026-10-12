@@ -21,7 +21,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, parseJson, conform, instanceOf, fieldValue, selectValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, parseJson, conform, instanceOf, fieldValue, formatAmountInput, bindAmountInput, selectValue, optionalFieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const amountLabelReply = check.object({ result: check.boolean, label: check.string });
@@ -76,6 +76,13 @@
     const $createFixedExpenditureAmount = $("#createFixedExpenditureAmount");
     const $createFixedExpenditureNote = $("#createFixedExpenditureNote");
     const $createFixedExpenditureMyDepositAsset = $("#createFixedExpenditureMyDepositAsset");
+
+    // Comma-grouped amount fields (a negative fixed expenditure is stored as its absolute value,
+    // so the field takes no minus).
+    // Authoritative in FinanceAmountPolicy.TryParseInput (server); mirrored here for form UX only — the
+    // text is posted as shown and the server parses and re-validates it.
+    bindAmountInput($createFixedExpenditureAmount, false);
+    bindAmountInput($editFixedExpenditureAmount, false);
 
     // Server-published rules (FixedExpenditure.cshtml). Authoritative in ExpenditureClassPolicy /
     // FixedSchedulePolicy; mirrored here for form UX only, the server re-validates on save.
@@ -494,7 +501,7 @@
                     ApplyAllowedOptions($editFixedExpenditureSubClass, expenditureSubClassMap[data.fixedExpenditure.mainClass] || [], data.fixedExpenditure.subClass);
 
                     $editFixedExpenditureContent.val(data.fixedExpenditure.content);
-                    $editFixedExpenditureAmount.val(data.fixedExpenditure.amount);
+                    $editFixedExpenditureAmount.val(formatAmountInput(String(data.fixedExpenditure.amount), false));
 
                     $editFixedExpenditureDepositMonth.val(data.fixedExpenditure.depositMonth.toString()).trigger("change");
 

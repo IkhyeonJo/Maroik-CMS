@@ -16,7 +16,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, parseJson, conform, required, instanceOf, fieldValue, selectValue, optionalFieldValue, attribute } = window;
+    const { check, replies, onReply, parseJson, conform, required, instanceOf, fieldValue, formatAmountInput, bindAmountInput, selectValue, optionalFieldValue, attribute } = window;
 
     // The replies this page reads, mirroring the controllers' Json(...) results (see window.replies).
     const amountLabelReply = check.object({ result: check.boolean, label: check.string });
@@ -76,6 +76,13 @@
     const $btnEditExpenditureGridRow = $("#btnEditExpenditureGridRow");
     const $labelCreateExpenditureAmount = $("#labelCreateExpenditureAmount");
     const $labelEditExpenditureAmount = $("#labelEditExpenditureAmount");
+
+    // Comma-grouped amount fields (a negative expenditure is stored as its absolute value,
+    // so the field takes no minus).
+    // Authoritative in FinanceAmountPolicy.TryParseInput (server); mirrored here for form UX only — the
+    // text is posted as shown and the server parses and re-validates it.
+    bindAmountInput($createExpenditureAmount, false);
+    bindAmountInput($editExpenditureAmount, false);
 
     // Server-published expenditure taxonomy (Expenditure.cshtml). Authoritative in
     // ExpenditureClassPolicy; mirrored here for form UX only, the server re-validates on save.
@@ -385,7 +392,7 @@
                     ToggleEditExpenditureMyDepositAsset(data.expenditure.subClass);
 
                     $editExpenditureContent.val(data.expenditure.content);
-                    $editExpenditureAmount.val(data.expenditure.amount);
+                    $editExpenditureAmount.val(formatAmountInput(String(data.expenditure.amount), false));
                     // Split the `created` ISO string into the date field and the
                     // hour / minute / second selects.
                     $editExpenditureDate.val(required(data.expenditure.created.split("T")[0], "part 0 of expenditure.created"));

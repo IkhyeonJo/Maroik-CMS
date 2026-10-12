@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { describeGridCrudScript } from "@tests/_common/gridCrudSuite";
+import { describeAmountInput } from "@tests/_common/amountInputSuite";
 import { loadSite, antiForgery, fireNative, present, lastOf } from "@tests/_common/harness";
 
 // wwwroot/user/custom/AccountBook/Asset/js/site.js — grid CRUD, no policy map.
@@ -60,4 +61,9 @@ describeGridCrudScript({
     area: "user", feature: "AccountBook", page: "Asset", entity: "Asset", controller: "AccountBook", existsKey: "asset", rowKey: "ProductName",
     fixture: () => fixture(),
     record: { productName: "suite", item: "FreeDepositAndWithdrawal", amount: 1, monetaryUnit: "KRW", note: "", deleted: false },
+});
+
+describeAmountInput({
+    feature: "AccountBook", page: "Asset", fixture: () => fixture(), existsKey: "asset", rowKey: "ProductName", allowNegative: true,
+    record: { productName: "row-1", item: "FreeDepositAndWithdrawal", amount: 1, monetaryUnit: "KRW", note: "", deleted: false },
 });

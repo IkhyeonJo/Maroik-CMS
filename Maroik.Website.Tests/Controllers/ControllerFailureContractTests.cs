@@ -201,34 +201,34 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
     /// <summary>A valid fixed-income JSON body with id <paramref name="id"/>.</summary>
     private static object FixedIncome(long id) => new
     {
-        Id = id, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "Salary", Amount = 100, DepositMonth = 6, DepositDay = 25,
+        Id = id, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "Salary", Amount = "100", DepositMonth = 6, DepositDay = 25,
         MaturityDate = "2030-12-31", Note = "", DepositMyAssetProductName = "Bank", Unpunctuality = false,
     };
 
     /// <summary>A valid fixed-expenditure JSON body with id <paramref name="id"/>.</summary>
     private static object FixedExpenditure(long id) => new
     {
-        Id = id, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Rent", Amount = 100, DepositMonth = 6, DepositDay = 1,
+        Id = id, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Rent", Amount = "100", DepositMonth = 6, DepositDay = 1,
         MaturityDate = "2030-12-31", Note = "", PaymentMethod = "Bank", MyDepositAsset = "N/A", Unpunctuality = false,
     };
 
     /// <summary>A valid asset JSON body.</summary>
     private static object Asset() => new
     {
-        ProductName = "Bank", Item = "FreeDepositAndWithdrawal", Amount = 100, MonetaryUnit = "KRW", Note = "", Deleted = false, OriginalProductName = "Bank",
+        ProductName = "Bank", Item = "FreeDepositAndWithdrawal", Amount = "100", MonetaryUnit = "KRW", Note = "", Deleted = false, OriginalProductName = "Bank",
     };
 
     /// <summary>A valid income JSON body with id <paramref name="id"/>.</summary>
     private static object Income(long id) => new
     {
-        Id = id, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "Salary", Amount = 100, Created = "2026-01-15 10:30:00",
+        Id = id, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "Salary", Amount = "100", Created = "2026-01-15 10:30:00",
         DepositMyAssetProductName = "Bank", Note = "",
     };
 
     /// <summary>A valid expenditure JSON body with id <paramref name="id"/>.</summary>
     private static object Expenditure(long id) => new
     {
-        Id = id, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Lunch", Amount = 100, Created = "2026-01-15 10:30:00",
+        Id = id, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Lunch", Amount = "100", Created = "2026-01-15 10:30:00",
         PaymentMethod = "Bank", MyDepositAsset = "", Note = "",
     };
 

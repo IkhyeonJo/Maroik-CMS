@@ -70,20 +70,23 @@ public class AccountBookControllerTests(MaroikWebApplicationFactory factory)
 
     // -- Amount inputs ------------------------------------------------------------
 
-    /// <summary>Every create/edit amount input allows four decimal places (the step the server accepts).</summary>
+    /// <summary>
+    /// The account-book and fixed income / expenditure amount inputs are text fields (a number input cannot show the
+    /// comma the page puts between every three digits) that bring up the decimal keypad on a phone.
+    /// </summary>
     [Theory]
     [InlineData("/AccountBook/Asset", "createAssetAmount", "editAssetAmount")]
     [InlineData("/AccountBook/Income", "createIncomeAmount", "editIncomeAmount")]
     [InlineData("/AccountBook/Expenditure", "createExpenditureAmount", "editExpenditureAmount")]
     [InlineData("/Notice/FixedIncome", "createFixedIncomeAmount", "editFixedIncomeAmount")]
     [InlineData("/Notice/FixedExpenditure", "createFixedExpenditureAmount", "editFixedExpenditureAmount")]
-    public async Task AmountInputs_AllowFourDecimalPlaces(string path, string createId, string editId)
+    public async Task AmountInputs_AreDecimalTextFields(string path, string createId, string editId)
     {
         var response = await GetAsUserAsync(path);
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         foreach (string id in new[] { createId, editId })
-            Assert.Matches($"<input[^>]*step=\"0.0001\"[^>]*id=\"{id}\"", html);
+            Assert.Matches($"<input[^>]*type=\"text\" inputmode=\"decimal\"[^>]*id=\"{id}\"", html);
     }
 }

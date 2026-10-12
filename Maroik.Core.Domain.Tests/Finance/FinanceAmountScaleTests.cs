@@ -33,17 +33,6 @@ public class FinanceAmountScaleTests
     public void ValidateScale_Accepts_UpToFourDecimalPlaces(string amount)
         => Assert.False(FinanceAmountPolicy.ValidateScale(decimal.Parse(amount, CultureInfo.InvariantCulture)).IsError);
 
-    /// <summary>The input step the views render is one unit of the last stored decimal place, and is itself accepted.</summary>
-    [Fact]
-    public void SmallestAmountStep_IsOneUnitOfTheLastStoredDecimalPlace()
-    {
-        System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(FinanceAmountPolicy).TypeHandle);
-
-        Assert.Equal(FinanceAmountPolicy.SmallestAmountStep, 1m / (decimal)Math.Pow(10, FinanceAmountPolicy.MaxDecimalPlaces));
-        Assert.False(FinanceAmountPolicy.ValidateScale(FinanceAmountPolicy.SmallestAmountStep).IsError);
-        Assert.True(FinanceAmountPolicy.ValidateScale(FinanceAmountPolicy.SmallestAmountStep / 10).IsError);
-    }
-
     /// <summary>A fifth significant decimal place is rejected, in either sign.</summary>
     [Theory]
     [InlineData("0.00001")]

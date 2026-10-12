@@ -58,7 +58,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         MainClass = "ConsumerSpending",
         SubClass = "MealOrEatOutExpenses",
         Content = content,
-        Amount = 100,
+        Amount = "100",
         DepositMonth = 6,
         DepositDay = 1,
         MaturityDate = "2030-12-31",
@@ -96,7 +96,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         var payload = new
         {
             Id = 0, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Rent",
-            Amount = 100, DepositMonth = 0, DepositDay = 1, MaturityDate = "2030-12-31",
+            Amount = "100", DepositMonth = 0, DepositDay = 1, MaturityDate = "2030-12-31",
             Note = "", PaymentMethod = AssetProductName, MyDepositAsset = "N/A", Unpunctuality = false
         };
         using var request = session.BuildJsonPostRequest("/Notice/CreateFixedExpenditure", payload);
@@ -115,7 +115,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         var payload = new
         {
             Id = 0, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Rent",
-            Amount = 100, DepositMonth = 4, DepositDay = 31, MaturityDate = "2030-12-31",
+            Amount = "100", DepositMonth = 4, DepositDay = 31, MaturityDate = "2030-12-31",
             Note = "", PaymentMethod = AssetProductName, MyDepositAsset = "N/A", Unpunctuality = false
         };
         using var request = session.BuildJsonPostRequest("/Notice/CreateFixedExpenditure", payload);
@@ -181,7 +181,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         var updatePayload = new
         {
             created.Id, MainClass = "ConsumerSpending", SubClass = "TransportationCost", Content = "Updated",
-            Amount = 150, DepositMonth = 7, DepositDay = 1, MaturityDate = "2031-01-01",
+            Amount = "150", DepositMonth = 7, DepositDay = 1, MaturityDate = "2031-01-01",
             Note = "updated", PaymentMethod = AssetProductName, MyDepositAsset = "N/A", Unpunctuality = false
         };
         using var updateRequest = session.BuildJsonPostRequest("/Notice/UpdateFixedExpenditure", updatePayload);
