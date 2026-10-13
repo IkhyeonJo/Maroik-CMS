@@ -44,9 +44,6 @@ just switch Node and re-run.
 
 Do this from the **`Maroik.Website/`** folder (the one containing `package.json`).
 
-> ⚠️ The repo root also has a `Maroik.WebSite/` with a capital **S** — a
-> different, unrelated folder. Make sure you are in **`Maroik.Website/`**.
-
 ```console
 $ npm ci
 ```

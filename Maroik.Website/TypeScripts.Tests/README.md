@@ -5,8 +5,7 @@
 This suite has **no `.csproj`**, is **not** its own npm package, and is not in
 `Maroik.sln`. Vitest, jsdom, jQuery and the `typescript` compiler are npm **devDependencies of
 `Maroik.Website/package.json`**, and every command below is
-run from **`Maroik.Website/`** (the folder with `package.json` — *not* the
-capital- **S** `Maroik.WebSite/` at the repo root). Nothing here runs without
+run from **`Maroik.Website/`** (the folder with `package.json`). Nothing here runs without
 Node.js on the machine.
 
 **Full install walkthrough — with expected output for each step — is in
@@ -83,7 +82,7 @@ reads the same from any depth. It's declared twice, keep them in sync:
 | `calendarSuite`      | Calendar/{UserIndex,AdminIndex}                                               | reminder validation, create/edit event, my calendars, popup, editors, downloads                                      |
 | `layoutSuite`        | the three `_Layout` scripts                                                   | culture switch, double-submit guard, session-expiry recovery                                                         |
 | `profileSuite`       | Management/Profile (user + admin)                                             | avatar upload rules, time zone, password                                                                             |
-| `missingConfigSuite` | every script that reads server-published constants                            | still initialises when a constant is absent (and no swallowed ready-callback exception)                              |
+| `missingConfigSuite` | every script that reads server-published constants                            | still initializes when a constant is absent (and no swallowed ready-callback exception)                              |
 
 ---
 
