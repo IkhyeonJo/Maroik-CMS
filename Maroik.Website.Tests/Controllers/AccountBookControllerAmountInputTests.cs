@@ -32,9 +32,14 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     private static string UniqueName([System.Runtime.CompilerServices.CallerMemberName] string testName = "") =>
         $"{testName}-{Guid.NewGuid():N}";
 
-    /// <summary>Inserts an asset of <see cref="Email"/> with a balance of 1000.</summary>
-    private void SeedAsset(string productName)
+    /// <summary>
+    /// Inserts an asset of <see cref="Email"/> with a balance of 1000. The account is seeded first (the
+    /// login helper inserts it when missing): <c>Asset_fk_0</c> needs it, and a test that seeds an asset
+    /// before its first post may be the first in the class to run.
+    /// </summary>
+    private async Task SeedAssetAsync(string productName)
     {
+        await LoginAsync();
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         db.Assets.Add(new Asset
@@ -42,7 +47,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
             ProductName = productName, AccountEmail = Email, Item = "CashAsset", Amount = 1000, MonetaryUnit = "KRW",
             Deleted = false, Created = DateTime.UtcNow, Updated = DateTime.UtcNow
         });
-        db.SaveChanges();
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     /// <summary>Runs <paramref name="query"/> against a fresh <see cref="ApplicationDbContext"/>.</summary>
@@ -122,7 +127,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     public async Task UpdateAsset_WithACommaGroupedNegativeAmount_StoresTheNumber()
     {
         string name = UniqueName();
-        SeedAsset(name);
+        await SeedAssetAsync(name);
 
         string json = await PostAsync("/AccountBook/UpdateAsset", AssetPayload(name, "-2,000", name));
 
@@ -136,7 +141,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     public async Task UpdateAsset_WithAMalformedAmount_IsRefused_AndLeavesTheBalance(string amount)
     {
         string name = UniqueName();
-        SeedAsset(name);
+        await SeedAssetAsync(name);
 
         string json = await PostAsync("/AccountBook/UpdateAsset", AssetPayload(name, amount, name));
 
@@ -151,7 +156,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     public async Task CreateIncome_WithACommaGroupedAmount_StoresTheNumber()
     {
         string asset = UniqueName();
-        SeedAsset(asset);
+        await SeedAssetAsync(asset);
 
         string json = await PostAsync("/AccountBook/CreateIncome", IncomePayload(asset, "12,345.25"));
 
@@ -166,7 +171,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     public async Task CreateIncome_WithAMalformedAmount_IsRefused_AndStoresNothing(string amount)
     {
         string asset = UniqueName();
-        SeedAsset(asset);
+        await SeedAssetAsync(asset);
 
         string json = await PostAsync("/AccountBook/CreateIncome", IncomePayload(asset, amount));
 
@@ -180,7 +185,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     public async Task UpdateIncome_WithACommaGroupedAmount_StoresTheNumber()
     {
         string asset = UniqueName();
-        SeedAsset(asset);
+        await SeedAssetAsync(asset);
         Assert.Contains("\"result\":true", await PostAsync("/AccountBook/CreateIncome", IncomePayload(asset, "100")));
         long id = Query(db => db.Incomes.Single(i => i.AccountEmail == Email && i.DepositMyAssetProductName == asset).Id);
 
@@ -196,7 +201,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     public async Task UpdateIncome_WithAMalformedAmount_IsRefused(string amount)
     {
         string asset = UniqueName();
-        SeedAsset(asset);
+        await SeedAssetAsync(asset);
         Assert.Contains("\"result\":true", await PostAsync("/AccountBook/CreateIncome", IncomePayload(asset, "100")));
         long id = Query(db => db.Incomes.Single(i => i.AccountEmail == Email && i.DepositMyAssetProductName == asset).Id);
 
@@ -213,7 +218,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     public async Task CreateExpenditure_WithACommaGroupedAmount_StoresTheNumber()
     {
         string asset = UniqueName();
-        SeedAsset(asset);
+        await SeedAssetAsync(asset);
 
         string json = await PostAsync("/AccountBook/CreateExpenditure", ExpenditurePayload(asset, "1,200.5"));
 
@@ -228,7 +233,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     public async Task CreateExpenditure_WithAMalformedAmount_IsRefused_AndStoresNothing(string amount)
     {
         string asset = UniqueName();
-        SeedAsset(asset);
+        await SeedAssetAsync(asset);
 
         string json = await PostAsync("/AccountBook/CreateExpenditure", ExpenditurePayload(asset, amount));
 
@@ -242,7 +247,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     public async Task UpdateExpenditure_WithACommaGroupedAmount_StoresTheNumber()
     {
         string asset = UniqueName();
-        SeedAsset(asset);
+        await SeedAssetAsync(asset);
         Assert.Contains("\"result\":true", await PostAsync("/AccountBook/CreateExpenditure", ExpenditurePayload(asset, "100")));
         long id = Query(db => db.Expenditures.Single(e => e.AccountEmail == Email && e.PaymentMethod == asset).Id);
 
@@ -258,7 +263,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     public async Task UpdateExpenditure_WithAMalformedAmount_IsRefused(string amount)
     {
         string asset = UniqueName();
-        SeedAsset(asset);
+        await SeedAssetAsync(asset);
         Assert.Contains("\"result\":true", await PostAsync("/AccountBook/CreateExpenditure", ExpenditurePayload(asset, "100")));
         long id = Query(db => db.Expenditures.Single(e => e.AccountEmail == Email && e.PaymentMethod == asset).Id);
 

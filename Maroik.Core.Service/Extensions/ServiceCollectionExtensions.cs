@@ -18,7 +18,7 @@ public static class ServiceCollectionExtensions
         /// </summary>
         public void AddApplicationServices()
         {
-            // The one clock every use case reads (once per use case) and hands to the domain.
+            // Registers the system clock as a singleton for constructor injection into application services.
             services.TryAddSingleton(TimeProvider.System);
             services.AddScoped<IPasswordService, PasswordService>();
             services.AddScoped<IAccountService, AccountService>();
