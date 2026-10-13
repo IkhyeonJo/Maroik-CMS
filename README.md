@@ -233,7 +233,8 @@ The goal is that a test fails whenever the behaviour it describes breaks — not
   elements each of the site's own CSS rules targets on the real pages, after the AdminLTE / Bootstrap / FullCalendar
   stylesheets they override, so a rule that is removed, outranked or no longer loaded fails a test.
 - **Quality gates.** Line coverage >= 80 %, branch coverage >= 65 %, zero build warnings, and on-demand mutation
-  testing with Stryker.NET (Domain 92 %, Service 96 % — the survivors left are equivalent mutants).
+  testing with Stryker.NET (Domain 96 %, Service 96 %, measured 2026-10-13 — the survivors left are equivalent mutants
+  or ones the MTP runner miscounts inside static field initializers).
 
 ### Test projects
 Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all; CI runs each with coverage (`.github/workflows/build-and-test.yml`, gate: line >= 80 %, branch >= 65 %).
