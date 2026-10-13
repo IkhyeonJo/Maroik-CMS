@@ -46,15 +46,13 @@ try
     #region ServerSettings
 
     // Strongly-typed binding of the whole "ServerSetting" section, plus the handful of values that
-    // live in sibling sections (Clamav, FileStorage) or a nested subSection (SmtpOptions) the flat
+    // live in a sibling section (FileStorage) or a nested subSection (SmtpOptions) the flat
     // model can't reach directly. Replaces a handWritten Convert.ToX(section["..."]) wall in which
     // a missing numeric silently became 0 (e.g. SessionExpireMinutes = 0 -> sessions expire at once).
     static void BindServerSetting(IConfiguration configuration, ServerSetting target)
     {
         configuration.GetSection("ServerSetting").Bind(target);
         configuration.GetSection("ServerSetting:SmtpOptions").Bind(target);
-        target.ClamavHost = configuration["Clamav:Host"];
-        target.ClamavPort = configuration.GetValue<int>("Clamav:Port");
         target.FileStorageBaseUrl = configuration["FileStorage:BaseUrl"];
     }
 

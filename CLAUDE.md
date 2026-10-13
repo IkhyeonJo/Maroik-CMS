@@ -112,8 +112,8 @@ Data access and transactions
 - Every service write spells out its own `BeginAsync` / `CommitAsync` / `RollbackAsync` (and the service tests
   assert them). Do not fold them into a decorator, filter or "unit of work per request" helper.
 - Several rows are locked in one statement, `... ORDER BY <column> FOR UPDATE` without `LIMIT` (e.g. the asset
-  balance lock). This is a proven fix for a lost-update bug; do not report it as a deadlock-ordering risk.
-  (`LIMIT` combined with `ORDER BY ... FOR UPDATE` would be a different, documented caveat.)
+  balance lock). This is the pattern that fixed a lost-update bug; do not report it as a deadlock-ordering
+  risk. (`LIMIT` combined with `ORDER BY ... FOR UPDATE` would be a different, documented caveat.)
 - Posts and comments are owned by `Nickname`, not by email: a nickname is unique and never changes after
   registration (only an unconfirmed account's can, via `ReplaceUnconfirmedRegistration`), and accounts are
   only soft-deleted.
@@ -128,13 +128,13 @@ Finance
   (`Math.Abs`).
 - The dashboard's first year (`StartYear`) is found from the account's earliest income / expenditure by loading
   them all.
-- `FixedSchedulePolicy.IsNoticed`'s behaviour around the year end and 29 February is kept as it is.
+- `FixedSchedulePolicy.IsNoticed`'s behaviour around the year end and 29 February is accepted as it is.
 - Amounts are shown with every decimal place the `numeric(20,4)` columns store: the finance grids use
   `AmountDisplay.GridFormat` (`#,0.####`, trailing zeros dropped) and the dashboard tooltips read
   `FinanceAmountPolicy.MaxDecimalPlaces` from `#amountMaxDecimalPlaces`. The currency is a free-text label, so there is
   no per-currency number of decimals (USD 12.50 shows as "12.5").
 - The edit forms receive amounts as JSON numbers, so an amount beyond ~15 significant digits (≥ ~9×10¹⁵) can
-  change on a re-save. Not a defect to raise.
+  change on a re-save. Accepted; not a defect to raise.
 
 Files and content
 - Maroik.FileStorage is only ever reachable on the internal network; its `[AllowAnonymous]` endpoints
@@ -150,11 +150,11 @@ Files and content
 - Replacing or clearing an attachment (post, private note, calendar event) only rewrites its database
   record; the old file stays in Maroik.FileStorage, as does a file uploaded by a write whose transaction
   later rolls back. There is no delete API on purpose — do not add one or a cleanup job.
-- `HtmlContentSanitizerService` starts from the Ganss defaults plus `class` and narrows only three things: URL
-  schemes to http/https, no `data-*` attributes, and no `position` / `top` / `left` / `right` / `bottom` /
-  `z-index` / `opacity` in inline styles (so a post cannot overlay the page). The rest of the default breadth —
-  the `name` attribute, form elements (`form`, `input`, `button`, `select`, `textarea`) — is kept on purpose. Do
-  not raise it again.
+- `HtmlContentSanitizerService` starts from the original allow-list (Ganss defaults plus `class`) and narrows only
+  three things: URL schemes to http/https, no `data-*` attributes, and no `position` / `top` / `left` / `right` /
+  `bottom` / `z-index` / `opacity` in inline styles (so a post cannot overlay the page). The rest of that
+  breadth — the `name` attribute, form elements (`form`, `input`, `button`, `select`, `textarea`) — is kept on
+  purpose. Do not raise it again.
 - An administrator cannot clear someone else's post lock from the UI (the edit page is owner-only); only a direct
   POST to the edit endpoint can.
 - `BoardOutputViewModel.BoardAttachedFilePath` (Forum and Management) is populated by the controllers but
@@ -205,6 +205,9 @@ Error handling
 
 - **Read "Intended design" above before starting any review**, and check every candidate finding against it
   before reporting.
+- **Intended design and the tests decide.** A behaviour listed above, or pinned by a test, is intended — leave it and do
+  not raise it. Anything else is judged on its own merits; when it is unclear whether a behaviour is deliberate, look for
+  the reason first (`git log -S` / `git blame`, the rationale comments) and ask before calling it a bug.
 - Items listed under "Intended design" above stay closed; re-raise one only if its premise changes (for example
   `Maroik.FileStorage` becomes reachable from outside the internal network).
 

@@ -168,7 +168,7 @@ public class ImageValidatorServiceTests
         new Drawables().FillColor(MagickColors.Blue).Rectangle(width / 2.0, 0, width, height).Draw(image);
         image.SetProfile(exif);
         // ImageMagick writes the Orientation tag from this property, not from the profile's own value.
-        image.Orientation = (OrientationType)(exif.GetValue(ExifTag.Orientation)?.Value ?? 1);
+        image.Orientation = (ImageMagick.Orientation)(exif.GetValue(ExifTag.Orientation)?.Value ?? 1);
         image.Format = format;
         return image.ToByteArray();
     }
@@ -219,13 +219,13 @@ public class ImageValidatorServiceTests
         // 40x20, left half red / right half blue, to be shown rotated 90° clockwise.
         byte[] original = EncodeWithExif(MagickFormat.Jpeg, 40, 20, GpsExif(orientation: 6));
         using (var before = Decode(original))
-            Assert.Equal(OrientationType.RightTop, before.Orientation); // the fixture really is tagged sideways
+            Assert.Equal(ImageMagick.Orientation.RightTop, before.Orientation); // the fixture really is tagged sideways
 
         using var after = Decode(_sut.StripMetadata(original).Bytes);
 
         Assert.Equal(20u, after.Width);
         Assert.Equal(40u, after.Height);
-        Assert.Equal(OrientationType.Undefined, after.Orientation);
+        Assert.Equal(ImageMagick.Orientation.Undefined, after.Orientation);
         // Rotated clockwise, the original left (red) half is now the top half and the right (blue) half the bottom.
         using var pixels = after.GetPixels();
         IMagickColor<byte> top = pixels.GetPixel(10, 5).ToColor()!;

@@ -36,9 +36,8 @@ try
     // for why it shares its name with Maroik.Website's ServerSetting).
     builder.Services.Configure<FileStorageSetting>(builder.Configuration.GetSection("ServerSetting"));
 
-    // ClamAV daemon address lives in its own "Clamav" section (mirrors Maroik.Website's
-    // Program.cs binding of the same section into ServerSetting.ClamavHost/ClamavPort), so bind
-    // it separately here rather than nesting it under "ServerSetting".
+    // ClamAV daemon address lives in its own "Clamav" section, so bind it separately here rather
+    // than nesting it under "ServerSetting".
     builder.Services.Configure<FileStorageSetting>(cfg =>
     {
         var clamavSection = builder.Configuration.GetSection("Clamav");

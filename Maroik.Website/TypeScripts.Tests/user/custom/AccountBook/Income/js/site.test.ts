@@ -163,5 +163,5 @@ describeMissingServerConstants("user", "AccountBook", "Income", () => fixture())
 
 describeAmountInput({
     feature: "AccountBook", page: "Income", fixture: () => fixture(), existsKey: "income", rowKey: "Id", allowNegative: false,
-    record: { id: 1, mainClass: "Labor", subClass: "Salary", content: "c", amount: 1, created: "2025-01-02T03:04:05", depositMyAssetProductName: "A", note: "" },
+    record: { id: 1, mainClass: "Labor", subClass: "Salary", content: "c", amount: 1, created: "2025-01-02T09:30:00", depositMyAssetProductName: "A", note: "" },
 });

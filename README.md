@@ -154,7 +154,6 @@ generic error instead of failing half-way through a handler.
 
 ### Backend
 - ASP.NET Core MVC 10.0
-  - Hot Reload
   - Improved performance
   - Enhanced routing
   - Better dependency injection
