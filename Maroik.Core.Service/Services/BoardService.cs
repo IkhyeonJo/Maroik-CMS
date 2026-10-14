@@ -15,7 +15,7 @@ namespace Maroik.Core.Service.Services;
 /// Zip attachments are checked against <c>AttachmentUploadPolicy</c> and stored/retrieved via the
 /// file-storage microservice (<see cref="IFileClient"/>, which virus-scans them with ClamAV).
 /// Summernote inline images go through <see cref="IAttachmentContentService"/>: image-validated,
-/// stored in the file-storage service, and referenced from the HTML by their RSA-encrypted storage
+/// stored in the file-storage service, and referenced from the HTML by their protected (Data Protection) storage
 /// path in <c>alt</c> (embedded as base64 only when the post is rendered). Post/comment write
 /// operations use <see cref="IUnitOfWork"/> transactions to keep post and attachment records in sync.
 /// </summary>

@@ -197,7 +197,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         Assert.Equal("image/png", file.GetProperty("contentType").GetString());
         string token = doc.RootElement.GetProperty("filePath").GetString()!;
         Assert.NotEmpty(token);
-        Assert.DoesNotContain("upload/", token); // the client only ever sees an opaque RSA token
+        Assert.DoesNotContain("upload/", token); // the client only ever sees an opaque Data Protection token
     }
 
     /// <summary>

@@ -17,13 +17,11 @@ namespace Maroik.Website.Tests.Controllers;
 /// (<c>ManagementController</c>'s TimeZoneIanaId/Password dead-code fixes), so they were worth
 /// closing rather than leaving as smoke-only.
 ///
-/// Two things had to be fixed in <see cref="MaroikWebApplicationFactory"/> before any of this
-/// was even testable: the RSA key settings were empty strings (every one of these flows
-/// encrypts/decrypts a token, so all four would throw "RSA private/public key is not
-/// configured"), and there was no substitute for the RabbitMQ-backed <c>IEmailPublisher</c>
-/// (Register/ForgotPassword both publish a confirmation/reset email). Both are now real: a
-/// freshly generated RSA keypair, and <see cref="FakeEmailPublisher"/> recording what would have
-/// been sent.
+/// Every one of these flows protects/unprotects a token with the host's real Data Protection key
+/// ring (<see cref="IDataProtectionService"/>), and Register/ForgotPassword publish a
+/// confirmation/reset email, which <see cref="FakeEmailPublisher"/> (in
+/// <see cref="MaroikWebApplicationFactory"/>) records instead of the RabbitMQ-backed
+/// <c>IEmailPublisher</c>.
 /// </summary>
 [Collection("Website Integration")]
 public class AccountControllerRegistrationTests(MaroikWebApplicationFactory factory)
@@ -316,11 +314,11 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
     // -- ConfirmEmail -----------------------------------------------------------------
 
-    /// <summary>Encrypts <paramref name="rawToken"/> with the host's RSA service, as the mailed link carries it.</summary>
+    /// <summary>Encrypts <paramref name="rawToken"/> with the host's Data Protection service, as the mailed link carries it.</summary>
     private string EncryptToken(string rawToken)
     {
         using var scope = factory.Services.CreateScope();
-        return scope.ServiceProvider.GetRequiredService<IRsaService>().Encrypt(rawToken);
+        return scope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
     }
 
     /// <summary>The stored <c>EmailConfirmed</c> flag of <paramref name="email"/>.</summary>
@@ -485,8 +483,8 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         await SeedAccountAsync(email, emailConfirmed: true, resetPasswordToken: rawToken);
 
         using var scope = factory.Services.CreateScope();
-        var rsa = scope.ServiceProvider.GetRequiredService<IRsaService>();
-        string encryptedToken = rsa.Encrypt(rawToken);
+        var protector = scope.ServiceProvider.GetRequiredService<IDataProtectionService>();
+        string encryptedToken = protector.Protect(rawToken);
 
         var response = await _client.GetAsync($"/Account/ResetPassword?resetPasswordToken={Uri.EscapeDataString(encryptedToken)}", TestContext.Current.CancellationToken);
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
@@ -506,8 +504,8 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         await SeedAccountAsync(email, emailConfirmed: true, resetPasswordToken: rawToken);
 
         using var scope = factory.Services.CreateScope();
-        var rsa = scope.ServiceProvider.GetRequiredService<IRsaService>();
-        string encryptedToken = rsa.Encrypt(rawToken);
+        var protector = scope.ServiceProvider.GetRequiredService<IDataProtectionService>();
+        string encryptedToken = protector.Protect(rawToken);
 
         var response = await PostFormAsync("/Account/ResetPassword", new Dictionary<string, string>
         {
@@ -601,8 +599,8 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     public async Task ResetPassword_Post_UnknownToken_ReturnsFailToReset()
     {
         using var scope = factory.Services.CreateScope();
-        var rsa = scope.ServiceProvider.GetRequiredService<IRsaService>();
-        string encryptedToken = rsa.Encrypt(GuidToken.Generate(DateTime.UtcNow)); // well-formed but not stored on any account
+        var protector = scope.ServiceProvider.GetRequiredService<IDataProtectionService>();
+        string encryptedToken = protector.Protect(GuidToken.Generate(DateTime.UtcNow)); // well-formed but not stored on any account
 
         var response = await PostFormAsync("/Account/ResetPassword", new Dictionary<string, string>
         {
@@ -629,8 +627,8 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         await SeedAccountAsync(email, emailConfirmed: true, resetPasswordToken: rawToken);
 
         using var scope = factory.Services.CreateScope();
-        var rsa = scope.ServiceProvider.GetRequiredService<IRsaService>();
-        string encryptedToken = rsa.Encrypt(rawToken);
+        var protector = scope.ServiceProvider.GetRequiredService<IDataProtectionService>();
+        string encryptedToken = protector.Protect(rawToken);
 
         var response = await PostFormAsync("/Account/ResetPassword", new Dictionary<string, string>
         {
@@ -791,7 +789,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         string rawToken = GuidToken.Generate(DateTime.UtcNow);
         await SeedAccountAsync(email, emailConfirmed: true, resetPasswordToken: rawToken);
         using var scope = factory.Services.CreateScope();
-        string encryptedToken = scope.ServiceProvider.GetRequiredService<IRsaService>().Encrypt(rawToken);
+        string encryptedToken = scope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
 
         var response = await PostFormAsync("/Account/ResetPassword", new Dictionary<string, string>
         {

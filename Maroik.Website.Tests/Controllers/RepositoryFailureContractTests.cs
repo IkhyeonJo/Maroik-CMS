@@ -96,7 +96,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         await SeedAccountAsync(email, registrationToken: rawToken, emailConfirmed: false);
         await using var host = HostWithFailing<IAccountRepository>(nameof(IAccountRepository.UpdateEmailConfirmationAsync));
         var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false });
-        string encrypted = host.Services.CreateScope().ServiceProvider.GetRequiredService<IRsaService>().Encrypt(rawToken);
+        string encrypted = host.Services.CreateScope().ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
 
         var (cookie, token) = await AntiForgeryAsync(client, $"/Account/ConfirmEmail?registrationToken={Uri.EscapeDataString(encrypted)}");
 
@@ -125,7 +125,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         await SeedAccountAsync(email, resetPasswordToken: rawToken);
         await using var host = HostWithFailing<IAccountRepository>(nameof(IAccountRepository.FindByEmailForUpdateAsync));
         var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false });
-        string encrypted = host.Services.CreateScope().ServiceProvider.GetRequiredService<IRsaService>().Encrypt(rawToken);
+        string encrypted = host.Services.CreateScope().ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
         var (cookie, token) = await AntiForgeryAsync(client, "/Account/ResetPassword");
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "/Account/ResetPassword");

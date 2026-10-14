@@ -11,7 +11,7 @@ namespace Maroik.Core.Service.Tests.Services;
 
 /// <summary>
 /// Unit tests for <see cref="AttachmentContentService"/>.
-/// All external dependencies (file client, RSA, image validation, HTML sanitizing/parsing)
+/// All external dependencies (file client, data protection, image validation, HTML sanitizing/parsing)
 /// are replaced with Moq mocks. Covers attachment validation, Summernote image upload,
 /// file download, and HTML display/persist transforms.
 /// </summary>
@@ -19,8 +19,8 @@ public class AttachmentContentServiceTests
 {
     /// <summary>Mock <c>IFileClient</c> injected into the system under test.</summary>
     private readonly Mock<IFileClient> _fileClient = new();
-    /// <summary>Mock <c>IRsaService</c> injected into the system under test.</summary>
-    private readonly Mock<IRsaService> _rsa = new();
+    /// <summary>Mock <c>IDataProtectionService</c> injected into the system under test.</summary>
+    private readonly Mock<IDataProtectionService> _dataProtection = new();
     /// <summary>Mock <c>IImageValidatorService</c> injected into the system under test.</summary>
     private readonly Mock<IImageValidatorService> _imageValidator = ImageValidatorMock.Create();
     /// <summary>Mock <c>IHtmlContentSanitizerService</c> injected into the system under test.</summary>
@@ -39,7 +39,7 @@ public class AttachmentContentServiceTests
     /// <summary>The service under test over the mocked dependencies.</summary>
     private AttachmentContentService CreateSut() => new(
         _fileClient.Object,
-        _rsa.Object,
+        _dataProtection.Object,
         _imageValidator.Object,
         _htmlSanitizer.Object,
         _htmlParser.Object,
@@ -93,7 +93,7 @@ public class AttachmentContentServiceTests
     {
         var settings = Options.Create(new ServerSetting { MaxAttachedFileSizeBytes = 5 * 1024 * 1024, FileStorageBaseUrl = "http://filestorage.local" });
         var sut = new AttachmentContentService(
-            _fileClient.Object, _rsa.Object, _imageValidator.Object, _htmlSanitizer.Object, _htmlParser.Object,
+            _fileClient.Object, _dataProtection.Object, _imageValidator.Object, _htmlSanitizer.Object, _htmlParser.Object,
             settings, _logger);
         var file = new AttachedFileDto { FileName = "archive.zip", Size = 10 * 1024 * 1024 };
 
@@ -312,7 +312,7 @@ public class AttachmentContentServiceTests
         var logger = new Microsoft.Extensions.Logging.Testing.FakeLogger<AttachmentContentService>();
         var failure = new HttpRequestException("404");
         _fileClient.Setup(f => f.OpenReadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(failure);
-        var sut = new AttachmentContentService(_fileClient.Object, _rsa.Object, _imageValidator.Object, _htmlSanitizer.Object,
+        var sut = new AttachmentContentService(_fileClient.Object, _dataProtection.Object, _imageValidator.Object, _htmlSanitizer.Object,
             _htmlParser.Object, _settings, logger);
 
         Assert.Null(await sut.OpenFileAsync("upload/a.zip", TestContext.Current.CancellationToken));
@@ -342,7 +342,7 @@ public class AttachmentContentServiceTests
         byte[] fileData = [5, 6, 7];
         _fileClient.Setup(f => f.DownloadAsync("upload/img.png", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(fileData);
-        _rsa.Setup(r => r.Encrypt("upload/img.png")).Returns("encrypted-path");
+        _dataProtection.Setup(r => r.Protect("upload/img.png")).Returns("encrypted-path");
 
         (string html, bool hasImages) = await CreateSut().PrepareHtmlForDisplayAsync("<html/>", TestContext.Current.CancellationToken);
 
@@ -396,7 +396,7 @@ public class AttachmentContentServiceTests
         _htmlParser.Setup(p => p.TransformImageAttributes("<clean/>", It.IsAny<Func<string, HtmlImgPatch?>>()))
             .Callback<string, Func<string, HtmlImgPatch?>>((_, factory) => capturedFactory = factory)
             .Returns("<final/>");
-        _rsa.Setup(r => r.Decrypt("encrypted-alt")).Returns("decrypted-alt");
+        _dataProtection.Setup(r => r.Unprotect("encrypted-alt")).Returns("decrypted-alt");
 
         string result = CreateSut().SanitizeAndDecryptContent("<raw/>");
 
@@ -421,7 +421,7 @@ public class AttachmentContentServiceTests
         _htmlParser.Setup(p => p.TransformImageAttributes("<clean/>", It.IsAny<Func<string, HtmlImgPatch?>>()))
             .Callback<string, Func<string, HtmlImgPatch?>>((_, factory) => capturedFactory = factory)
             .Returns("<final/>");
-        _rsa.Setup(r => r.Decrypt("upload/Forum/whatever.png")).Throws<FormatException>();
+        _dataProtection.Setup(r => r.Unprotect("upload/Forum/whatever.png")).Throws<FormatException>();
 
         CreateSut().SanitizeAndDecryptContent("<raw/>");
 
@@ -476,7 +476,7 @@ public class AttachmentContentServiceTests
             .Callback<string, Func<string, CancellationToken, Task<HtmlImgPatch?>>, CancellationToken>((_, factory, _) => capturedFactory = factory)
             .ReturnsAsync(("<html/>", true));
         _fileClient.Setup(f => f.DownloadAsync(path, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([1, 2, 3]);
-        _rsa.Setup(r => r.Encrypt(path)).Returns("enc");
+        _dataProtection.Setup(r => r.Protect(path)).Returns("enc");
 
         await CreateSut().PrepareHtmlForDisplayAsync("<html/>", TestContext.Current.CancellationToken);
         HtmlImgPatch? patch = await capturedFactory!(path, TestContext.Current.CancellationToken);
@@ -563,7 +563,7 @@ public class AttachmentContentServiceTests
             .Callback<string, Func<string, HtmlImgPatch?>>((_, factory) => capturedFactory = factory)
             .Returns("<final/>");
         var thrown = new FormatException("not base64");
-        _rsa.Setup(r => r.Decrypt("forged")).Throws(thrown);
+        _dataProtection.Setup(r => r.Unprotect("forged")).Throws(thrown);
 
         CreateSut().SanitizeAndDecryptContent("<raw/>");
         capturedFactory!("forged");

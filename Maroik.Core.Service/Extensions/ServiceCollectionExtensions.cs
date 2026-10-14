@@ -37,7 +37,7 @@ public static class ServiceCollectionExtensions
             services.AddScoped<ICalendarService, CalendarService>();
             services.AddScoped<IAttachmentContentService, AttachmentContentService>();
 
-            services.AddSingleton<IRsaService, RsaService>();
+            services.AddSingleton<IDataProtectionService, DataProtectionService>();
             services.AddSingleton<IImageValidatorService, ImageValidatorService>();
             services.AddSingleton<IHtmlContentSanitizerService, HtmlContentSanitizerService>();
             services.AddSingleton<IHtmlParserService, HtmlParserService>();

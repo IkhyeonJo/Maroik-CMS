@@ -31,11 +31,6 @@ public sealed class PlaywrightWebApplicationFactory : WebApplicationFactory<Prog
     /// <summary>Configuration values layered over the website's own settings.</summary>
     private readonly Dictionary<string, string?> _configOverrides;
 
-    /// <summary>
-    /// A throwaway RSA key pair for this run, so the inline-image path (which round-trips each image's
-    /// storage path through <c>RsaService</c>) works; generated per run, never committed.
-    /// </summary>
-    private static readonly System.Security.Cryptography.RSA _rsaKeyPair = System.Security.Cryptography.RSA.Create(2048);
     /// <summary>The real Kestrel host the browser talks to; set when the host is created.</summary>
     private IHost? _realHost;
 
@@ -63,8 +58,6 @@ public sealed class PlaywrightWebApplicationFactory : WebApplicationFactory<Prog
             ["ServerSetting:SessionExpireMinutes"] = "60",
             ["ServerSetting:MaxLoginAttempt"] = "5",
             ["ServerSetting:NoticeMaturityDateDay"] = "7",
-            ["ServerSetting:RsaPrivateKey"] = Convert.ToBase64String(_rsaKeyPair.ExportRSAPrivateKey()),
-            ["ServerSetting:RsaPublicKey"] = Convert.ToBase64String(_rsaKeyPair.ExportSubjectPublicKeyInfo()),
             ["ServerSetting:FileStorageBaseUrl"] = "http://localhost:5001",
             ["ServerSetting:SmtpOptions:smtpUserName"] = "test",
             ["ServerSetting:SmtpOptions:smtpPassword"] = "test",
