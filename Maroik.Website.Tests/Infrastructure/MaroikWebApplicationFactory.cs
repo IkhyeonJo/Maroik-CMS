@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
@@ -40,17 +39,6 @@ namespace Maroik.Website.Tests.Infrastructure;
 /// </summary>
 public class MaroikWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    /// <summary>
-    /// A real, freshly-generated RSA keypair (not the empty strings production leaves out of
-    /// source control) so <c>RsaService</c>'s <c>Encrypt</c>/<c>Decrypt</c> — used for
-    /// registration/password-reset tokens and, separately, file-storage paths (see project
-    /// memory: paths are RSA-encrypted with a server-only key) — work for real. Without this,
-    /// every flow that round-trips a token (Register's confirmation email, ConfirmEmail,
-    /// ForgotPassword, ResetPassword) would throw "RSA private/public key is not configured"
-    /// the moment it tried to encrypt or decrypt a token.
-    /// </summary>
-    private static readonly RSA _rsaKeyPair = RSA.Create(2048);
-
     /// <summary>Throwaway PostgreSQL 17 container initialized from the production <c>Init.sql</c>.</summary>
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17")
         // Schema comes from the real init script (not EF's EnsureCreated, which
@@ -113,8 +101,6 @@ public class MaroikWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 ["ServerSetting:SessionExpireMinutes"] = "60",
                 ["ServerSetting:MaxLoginAttempt"] = "5",
                 ["ServerSetting:NoticeMaturityDateDay"] = "7",
-                ["ServerSetting:RsaPrivateKey"] = Convert.ToBase64String(_rsaKeyPair.ExportRSAPrivateKey()),
-                ["ServerSetting:RsaPublicKey"] = Convert.ToBase64String(_rsaKeyPair.ExportSubjectPublicKeyInfo()),
                 ["ServerSetting:FileStorageBaseUrl"] = "http://localhost:5001",
 
                 // SMTP — not used in route tests

@@ -32,7 +32,7 @@ public class ServiceCollectionExtensionsTests
         { typeof(IBoardService), typeof(BoardService), ServiceLifetime.Scoped },
         { typeof(ICalendarService), typeof(CalendarService), ServiceLifetime.Scoped },
         { typeof(IAttachmentContentService), typeof(AttachmentContentService), ServiceLifetime.Scoped },
-        { typeof(IRsaService), typeof(RsaService), ServiceLifetime.Singleton },
+        { typeof(IDataProtectionService), typeof(DataProtectionService), ServiceLifetime.Singleton },
         { typeof(IImageValidatorService), typeof(ImageValidatorService), ServiceLifetime.Singleton },
         { typeof(IHtmlContentSanitizerService), typeof(HtmlContentSanitizerService), ServiceLifetime.Singleton },
         { typeof(IHtmlParserService), typeof(HtmlParserService), ServiceLifetime.Singleton },

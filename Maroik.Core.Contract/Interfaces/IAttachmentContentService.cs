@@ -31,12 +31,12 @@ public interface IAttachmentContentService
     /// <summary>
     /// Downloads each inline image of <paramref name="html"/> (whose <c>alt</c> holds its plain storage
     /// path) and embeds it as base64 in <c>data-file</c>/<c>data-contenttype</c> for display, replacing
-    /// the path in <c>alt</c> with its RSA-encrypted form. An image that cannot be downloaded is removed.
+    /// the path in <c>alt</c> with its protected (Data Protection) form. An image that cannot be downloaded is removed.
     /// </summary>
     Task<(string Html, bool HasImages)> PrepareHtmlForDisplayAsync(string html, CancellationToken ct = default);
 
     /// <summary>
-    /// Sanitizes <paramref name="html"/> and decrypts the RSA-encrypted storage path in each
+    /// Sanitizes <paramref name="html"/> and unprotects the protected storage path in each
     /// inline image's <c>alt</c> attribute, ready to persist. An image whose <c>alt</c> does not decrypt
     /// (one the editor never produced) is removed; an image with an empty <c>alt</c> is left as-is.
     /// </summary>

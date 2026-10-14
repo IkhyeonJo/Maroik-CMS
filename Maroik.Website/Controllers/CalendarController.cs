@@ -23,7 +23,7 @@ public class CalendarController(
     IHtmlLocalizer<CalendarController> localizer,
     ILogger<CalendarController> logger,
     ICalendarService calendarService,
-    IRsaService rsa,
+    IDataProtectionService dataProtection,
     IOptions<ServerSetting> serverSettings,
     TimeProvider timeProvider) : Controller
 {
@@ -111,7 +111,7 @@ public class CalendarController(
     #region Summernote Image File Upload
     /// <summary>
     /// Validates and stores a Summernote inline image for a calendar event description, returning its bytes
-    /// (base64) and content type for the editor preview plus its RSA-encrypted storage path (kept in the image's <c>alt</c>).
+    /// (base64) and content type for the editor preview plus its protected (Data Protection) storage path (kept in the image's <c>alt</c>).
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -168,7 +168,7 @@ public class CalendarController(
                 fileContents = Convert.ToBase64String(uploadResult.FileBytes!),
                 contentType = uploadResult.ContentType!
             },
-            filePath = rsa.Encrypt(uploadResult.FilePath!)
+            filePath = dataProtection.Protect(uploadResult.FilePath!)
         });
     }
     #endregion

@@ -15,7 +15,7 @@ namespace Maroik.Core.Service.Services;
 /// </summary>
 public class AttachmentContentService(
     IFileClient fileClient,
-    IRsaService rsa,
+    IDataProtectionService dataProtection,
     IImageValidatorService imageValidator,
     IHtmlContentSanitizerService htmlSanitizer,
     IHtmlParserService htmlParser,
@@ -109,7 +109,7 @@ public class AttachmentContentService(
             {
                 byte[] fileData = await fileClient.DownloadAsync(alt, settings.Value.FileStorageBaseUrl ?? "", token);
                 return new HtmlImgPatch(
-                    NewAlt: rsa.Encrypt(alt),
+                    NewAlt: dataProtection.Protect(alt),
                     DataFile: Convert.ToBase64String(fileData),
                     DataContentType: GetImageContentType(alt));
             }
@@ -139,7 +139,7 @@ public class AttachmentContentService(
 
             string? decrypted = TryDecryptImageAlt(alt);
 
-            // A genuine Summernote image always carries the server-issued RSA-OAEP token in alt (set
+            // A genuine Summernote image always carries the server-issued Data Protection token in alt (set
             // by UploadSummernoteImageAsync and re-applied by PrepareHtmlForDisplayAsync on every
             // edit round-trip). An alt that does not decrypt is a reference the editor never produced
             // — e.g. a hand-crafted plaintext storage path posted straight to the write endpoint.
@@ -152,9 +152,9 @@ public class AttachmentContentService(
     }
 
     /// <summary>
-    /// An <c>&lt;img&gt;</c>'s <c>alt</c> is normally the RSA-OAEP token this service round-trips
+    /// An <c>&lt;img&gt;</c>'s <c>alt</c> is normally the Data Protection token this service round-trips
     /// back to the real storage path. Returns the decrypted path, or <see langword="null"/> when
-    /// <paramref name="alt"/> is empty or not a valid token (<see cref="IRsaService.Decrypt"/> throws —
+    /// <paramref name="alt"/> is empty or not a valid token (<see cref="IDataProtectionService.Unprotect"/> throws —
     /// a CryptographicException for a malformed or undecryptable value; the failure is logged at
     /// Warning) — the guarded-decrypt shape the account-token flows already use, so a forged post
     /// can't turn the save into an unhandled 500.
@@ -164,7 +164,7 @@ public class AttachmentContentService(
         if (string.IsNullOrEmpty(alt)) return null;
         try
         {
-            return rsa.Decrypt(alt);
+            return dataProtection.Unprotect(alt);
         }
         catch (Exception ex)
         {

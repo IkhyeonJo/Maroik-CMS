@@ -5,7 +5,7 @@ namespace Maroik.Core.Contract.Interfaces;
 /// Deliberately kept separate from <see cref="IAccountService"/>: consumers of this interface
 /// (e.g. Maroik.Worker, reacting to an SMTP failure reported by <c>IMailClient</c>) only need
 /// to update the account's status, not the full login/registration/password-reset surface,
-/// so this interface carries no dependency on password hashing, RSA token encryption, or
+/// so this interface carries no dependency on password hashing, token protection, or
 /// mail composition.
 /// </summary>
 public interface IAccountMailStatusService

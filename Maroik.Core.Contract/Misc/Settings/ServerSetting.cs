@@ -45,11 +45,6 @@ public class ServerSetting
     /// </summary>
     public int NoticeMaturityDateDay { get; set; }
 
-    /// <summary>Base64-encoded DER (PKCS#1) RSA private key used to decrypt mailed tokens and stored image paths.</summary>
-    public string? RsaPrivateKey { get; set; }
-
-    /// <summary>Base64-encoded DER (X.509 SubjectPublicKeyInfo) RSA public key used to encrypt mailed tokens and stored image paths.</summary>
-    public string? RsaPublicKey { get; set; }
 
     /// <summary>Base URL of the Maroik.FileStorage microservice used for file upload/download.</summary>
     public string? FileStorageBaseUrl { get; set; }

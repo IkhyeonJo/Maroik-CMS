@@ -31,7 +31,7 @@ public class AttachmentContentServiceLoggingTests
     {
         _fileClient.Setup(f => f.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(_failure);
         _fileClient.Setup(f => f.OpenReadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(_failure);
-        return new AttachmentContentService(_fileClient.Object, Mock.Of<IRsaService>(), Mock.Of<IImageValidatorService>(),
+        return new AttachmentContentService(_fileClient.Object, Mock.Of<IDataProtectionService>(), Mock.Of<IImageValidatorService>(),
             Mock.Of<IHtmlContentSanitizerService>(), _htmlParser.Object,
             Options.Create(new ServerSetting { FileStorageBaseUrl = "http://filestorage.local" }), _logger);
     }
@@ -77,7 +77,7 @@ public class AttachmentContentServiceLoggingTests
 
     /// <summary>The service under test for an editor-image upload, over <paramref name="imageValidator"/>.</summary>
     private AttachmentContentService CreateUploadSut(Mock<IImageValidatorService> imageValidator) =>
-        new(_fileClient.Object, Mock.Of<IRsaService>(), imageValidator.Object,
+        new(_fileClient.Object, Mock.Of<IDataProtectionService>(), imageValidator.Object,
             Mock.Of<IHtmlContentSanitizerService>(), _htmlParser.Object,
             Options.Create(new ServerSetting { FileStorageBaseUrl = "http://filestorage.local" }), _logger);
 

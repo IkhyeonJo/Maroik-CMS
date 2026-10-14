@@ -25,7 +25,7 @@ public class ForumController(
     ILogger<ForumController> logger,
     IBoardService boardService,
     IAccountService accountService,
-    IRsaService rsa,
+    IDataProtectionService dataProtection,
     IOptions<ServerSetting> serverSettings) : Controller
 {
     /// <summary>Shared extension-to-MIME-type lookup for attachment downloads (safe for concurrent reads).</summary>
@@ -134,7 +134,7 @@ public class ForumController(
     #region Summernote Image File Upload
     /// <summary>
     /// Validates and stores a Summernote inline image, returning its bytes (base64) and content type for
-    /// the editor preview plus its RSA-encrypted storage path, which the editor keeps in the image's <c>alt</c>.
+    /// the editor preview plus its protected (Data Protection) storage path, which the editor keeps in the image's <c>alt</c>.
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -188,7 +188,7 @@ public class ForumController(
                 fileContents = Convert.ToBase64String(uploadResult.FileBytes!),
                 contentType = uploadResult.ContentType!
             },
-            filePath = rsa.Encrypt(uploadResult.FilePath!)
+            filePath = dataProtection.Protect(uploadResult.FilePath!)
         });
     }
     #endregion

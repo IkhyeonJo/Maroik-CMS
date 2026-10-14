@@ -67,7 +67,7 @@ public class ResetPasswordSignInLoggingTests(MaroikWebApplicationFactory factory
                 Updated = DateTime.UtcNow
             });
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-            encryptedToken = scope.ServiceProvider.GetRequiredService<IRsaService>().Encrypt(rawToken);
+            encryptedToken = scope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
         }
         using HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions
         {

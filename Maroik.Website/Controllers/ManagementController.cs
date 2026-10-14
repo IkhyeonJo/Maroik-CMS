@@ -32,7 +32,7 @@ namespace Maroik.Website.Controllers;
 /// <param name="managementAccountService">Admin account-management use cases.</param>
 /// <param name="menuService">Admin navigation-menu use cases.</param>
 /// <param name="boardService">Private-note (PrivateNote board) use cases.</param>
-/// <param name="rsa">Encrypts the storage path returned for an uploaded Summernote image.</param>
+/// <param name="dataProtection">Encrypts the storage path returned for an uploaded Summernote image.</param>
 /// <param name="serverSettings">Server settings (upload size cap).</param>
 /// <param name="sessionService">Reads / refreshes / clears the signed-in account stored in the session.</param>
 /// <param name="excelExportService">Builds the account / menu Excel exports.</param>
@@ -46,7 +46,7 @@ public class ManagementController(
     IManagementAccountService managementAccountService,
     IMenuService menuService,
     IBoardService boardService,
-    IRsaService rsa,
+    IDataProtectionService dataProtection,
     IOptions<ServerSetting> serverSettings,
     ISessionService sessionService,
     IExcelExportService excelExportService,
@@ -919,7 +919,7 @@ public class ManagementController(
     #region Summernote Image File Upload
     /// <summary>
     /// Validates and stores a Summernote inline image for a private note, returning its bytes (base64) and
-    /// content type for the editor preview plus its RSA-encrypted storage path (kept in the image's <c>alt</c>).
+    /// content type for the editor preview plus its protected (Data Protection) storage path (kept in the image's <c>alt</c>).
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -973,7 +973,7 @@ public class ManagementController(
                 fileContents = Convert.ToBase64String(uploadResult.FileBytes!),
                 contentType = uploadResult.ContentType!
             },
-            filePath = rsa.Encrypt(uploadResult.FilePath!)
+            filePath = dataProtection.Protect(uploadResult.FilePath!)
         });
     }
     #endregion
