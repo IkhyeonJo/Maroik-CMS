@@ -54,8 +54,8 @@ public abstract class GenericRepository<TDomain, TEntity>(ApplicationDbContext c
     /// <summary>
     /// Compiled getters for <typeparamref name="TEntity"/>'s primary-key properties, built once per
     /// closed generic type and reused for every <see cref="UpdateEntityAsync"/> /
-    /// <see cref="DeleteWhereAsync"/> / <see cref="MergeWithPendingChanges"/> call. This replaces a per-call
-    /// reflection walk; the key-property list still comes from the EF model (itself cached by EF Core),
+    /// <see cref="DeleteWhereAsync"/> / <see cref="MergeWithPendingChanges"/> call, so no reflection runs
+    /// per call; the key-property list comes from the EF model (itself cached by EF Core),
     /// only the value extraction is compiled. Assigned via <c>??=</c> — a benign race just rebuilds an
     /// identical delegate array.
     /// </summary>

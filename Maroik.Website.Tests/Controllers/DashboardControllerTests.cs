@@ -4,9 +4,8 @@ using Maroik.Website.Tests.Infrastructure;
 namespace Maroik.Website.Tests.Controllers;
 
 /// <summary>
-/// Integration tests for <c>DashboardController</c>. The anonymous/admin/user dashboard index
-/// pages and the culture/monetary-unit update actions were previously covered only by an
-/// anonymous-route smoke test.
+/// Integration tests for <c>DashboardController</c>: the anonymous/admin/user dashboard index
+/// pages and the culture/monetary-unit update actions.
 /// </summary>
 [Collection("Website Integration")]
 public class DashboardControllerTests

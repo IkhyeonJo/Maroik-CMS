@@ -463,7 +463,7 @@ public class CalendarService(
             {
                 // Upsert: a CalendarShared row may not exist yet for a calendar being shared for the
                 // first time (EnsureCalendarSharedAsync is not guaranteed to have run). UpdateEntityAsync
-                // throws when the row is missing, which previously failed the whole request.
+                // throws when the row is missing, which would fail the whole request.
                 HashSet<long> existingShareIds = [.. (await calendarSharedRepository.GetAllAsync(ct)).Select(s => s.Id)];
 
                 foreach (CalendarSharedRequest req in calendarSharedRequests)

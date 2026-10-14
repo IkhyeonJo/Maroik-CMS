@@ -77,7 +77,7 @@ public sealed class PlaywrightWebApplicationFactory : WebApplicationFactory<Prog
         };
 
         // Program.cs (top-level statements) reads and *validates* several ServerSetting values
-        // eagerly — before `builder.Build()` — e.g. `SessionExpireMinutes <= 0` now throws. A
+        // eagerly — before `builder.Build()` — e.g. `SessionExpireMinutes <= 0` throws. A
         // WebApplicationFactory only merges its `ConfigureAppConfiguration` overrides at Build
         // time, so those eager reads would still see nothing and the host would never start.
         // Publish the overrides as process environment variables too: `AddEnvironmentVariables()`

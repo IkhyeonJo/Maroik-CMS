@@ -46,7 +46,7 @@ public class IncomeSubClassOptionsExtensionsTests
         Assert.Equal(1, CountOccurrences(html, "value=\"RentalIncome\""));
     }
 
-    /// <summary>The first rendered subclass (matching the create-form's previously-hardcoded default) is marked selected.</summary>
+    /// <summary>The first rendered subclass (the create form's default) is marked selected.</summary>
     [Fact]
     public void IncomeSubClassOptions_MarksFirstSubClass_AsSelected()
     {

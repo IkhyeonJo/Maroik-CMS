@@ -10,8 +10,8 @@ namespace Maroik.Website.Tests.Controllers;
 /// <summary>
 /// Integration tests for the PrivateNote action group of <c>ManagementController</c> —
 /// <c>WritePrivateNoteBoard</c>/<c>EditPrivateNoteBoard</c>/<c>DeleteBoard</c>/
-/// <c>DeleteComment</c>/<c>IsBoardExists</c>/<c>WritePrivateNoteComment</c> — previously entirely
-/// uncovered. Mirrors <c>ForumControllerBoardTests</c>/<c>ForumControllerWriteEditTests</c>, with
+/// <c>DeleteComment</c>/<c>IsBoardExists</c>/<c>WritePrivateNoteComment</c>.
+/// Mirrors <c>ForumControllerBoardTests</c>/<c>ForumControllerWriteEditTests</c>, with
 /// one behavioral difference worth calling out: unlike Forum's <c>IsBoardExists</c> (any
 /// logged-in user may check any non-deleted board), PrivateNote's <c>IsBoardExists</c> only
 /// returns <c>true</c> when the caller is the board's own writer — a private note isn't visible

@@ -17,7 +17,7 @@ public static class FixedSchedulePolicy
     /// future that <see cref="IsExpired"/> can never treat a live schedule as past it, and that
     /// <see cref="IsAcceptableMaturityDate"/> always accepts it — "never expires" needs no
     /// special case. The create / edit forms serialize <see cref="NoMaturityDateIso"/> so the
-    /// client no longer hard-codes the same date.
+    /// client does not hard-code the same date.
     /// </summary>
     public static readonly DateTime NoMaturityDate = new(9999, 12, 31);
 
@@ -87,7 +87,7 @@ public static class FixedSchedulePolicy
     /// <para>
     /// Single source of truth for the month→day rule: <see cref="IsValidDepositDate"/> is derived
     /// from it, and the presentation layer serializes <see cref="MaxDepositDayByMonth"/> into the
-    /// create/edit forms so the client no longer hard-codes the same month groups.
+    /// create/edit forms so the client does not hard-code the same month groups.
     /// </para>
     /// </summary>
     public static int MaxDepositDay(int depositMonth) => depositMonth switch

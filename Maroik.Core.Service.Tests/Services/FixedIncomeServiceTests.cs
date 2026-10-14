@@ -20,8 +20,8 @@ public class FixedIncomeServiceTests
     /// <summary>Mock <c>IAssetBalanceStore</c> injected into the system under test.</summary>
     private readonly Mock<IAssetBalanceStore> _assetBalance = new();
 
-    /// <summary>Bridges the id-lookup and no-lock asset read the service now uses to the list-/lock-based
-    /// setups these tests already declare.</summary>
+    /// <summary>Answers the service's id lookup and no-lock asset read from the list-/lock-based
+    /// setups these tests declare.</summary>
     public FixedIncomeServiceTests()
     {
         _fixedIncomeRepo.Setup(r => r.FindByEmailAndIdAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))

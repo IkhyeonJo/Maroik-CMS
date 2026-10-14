@@ -6,8 +6,7 @@ namespace Maroik.Website.Tests.Extensions;
 /// <summary>
 /// Unit tests for <see cref="MenuNavigationMatcher"/> — the single source of truth for
 /// resolving which navigation Category/SubCategory matches the current controller/action.
-/// This logic used to be triplicated (Admin/User/Anonymous) across <c>AuthorizationFilter</c>,
-/// <c>_MainLeftSideBar.cshtml</c>, and <c>_BodyPageHeader.cshtml</c>.
+/// Shared by <c>AuthorizationFilter</c>, <c>_MainLeftSideBar.cshtml</c>, and <c>_BodyPageHeader.cshtml</c>.
 /// </summary>
 public class MenuNavigationMatcherTests
 {

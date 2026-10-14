@@ -8,7 +8,7 @@ namespace Maroik.Core.Service.Tests.Extensions;
 
 /// <summary>
 /// Unit tests for <see cref="UnitOfWorkExtensions"/> — the shared "roll back the current
-/// transaction and return a failure" helper previously copy-pasted as a private method into
+/// transaction and return a failure" helper shared by
 /// <c>IncomeService</c>, <c>ExpenditureService</c>, and <c>CalendarService</c>.
 /// </summary>
 public class UnitOfWorkExtensionsTests

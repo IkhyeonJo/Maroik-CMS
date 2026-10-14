@@ -5,7 +5,7 @@ namespace Maroik.Website.Extensions;
 
 /// <summary>
 /// Resolves which navigation Category/SubCategory matches the current controller/action.
-/// Single source of truth for the matching algorithm previously duplicated across
+/// Single source of truth for the matching algorithm shared by
 /// <c>AuthorizationFilter</c>, <c>_MainLeftSideBar.cshtml</c> and <c>_BodyPageHeader.cshtml</c>.
 /// </summary>
 public static class MenuNavigationMatcher
@@ -14,9 +14,10 @@ public static class MenuNavigationMatcher
     {
         /// <summary>
         /// Finds the first Category (and, for multi-level categories, the matching SubCategory)
-        /// whose Controller/Action matches the current route. Mirrors the same two-part predicate
-        /// (single categories have a direct Action; multi-level categories match via their children)
-        /// that <c>AuthorizationFilter</c> used to gate access, so allow/deny outcomes are unchanged.
+        /// whose Controller/Action matches the current route. Uses one two-part predicate
+        /// (single categories have a direct Action; multi-level categories match via their children),
+        /// the same one <c>AuthorizationFilter</c> gates access with, so the highlighted menu item and
+        /// the access check always agree.
         /// </summary>
         public ActiveMenuMatch ResolveActiveMenuItem(
             IEnumerable<SubCategoryResponse> subCategories, string controllerName, string actionName)

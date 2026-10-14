@@ -184,7 +184,7 @@ public class BoardService(
             // rewrites every column from this snapshot, so without the lock a concurrent
             // IncrementViewAsync (or an admin Noticed/Locked toggle) committing between this read
             // and the commit would be silently overwritten — the same full-row-overwrite race the
-            // Account column-scoped writes were introduced to fix.
+            // Account column-scoped writes exist to prevent.
             Board? board = await boardRepository.FindActiveByIdForUpdateAsync(request.Id, ct);
 
             // A caller always states the type it expects to edit (see WriteCommentAsync's

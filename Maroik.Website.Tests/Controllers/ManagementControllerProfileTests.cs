@@ -9,8 +9,7 @@ namespace Maroik.Website.Tests.Controllers;
 
 /// <summary>
 /// Integration tests for the Profile action group of <c>ManagementController</c> —
-/// <c>UpdateProfileTimeZone</c>/<c>UpdateProfilePassword</c>/<c>UpdateProfileAvatar</c> —
-/// previously entirely uncovered.
+/// <c>UpdateProfileTimeZone</c>/<c>UpdateProfilePassword</c>/<c>UpdateProfileAvatar</c>.
 ///
 /// <c>UpdateProfileAvatar</c>'s success path is not covered here: it calls
 /// <c>ProfileService.UploadAndUpdateAvatarAsync</c>, which stores the image through the

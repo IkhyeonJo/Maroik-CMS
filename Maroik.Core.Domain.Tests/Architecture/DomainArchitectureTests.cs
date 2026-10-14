@@ -181,11 +181,10 @@ public class DomainArchitectureTests
     /// <c>Failure</c>, never the raw <c>ErrorOr.Error</c> factories directly. <c>DomainError</c> is
     /// what attaches the English composite-format template + args to <c>Error.Metadata</c> so an outer
     /// layer can translate the message via resx instead of falling back to an already-baked,
-    /// untranslatable sentence (see <c>Maroik.Core.Domain.Errors.DomainError</c>'s doc comment). This was
-    /// previously true for only 6 of 104 Domain call sites — the rest called <c>Error.Validation</c>/
-    /// <c>Conflict</c>/<c>Failure</c> directly, and for <see cref="Maroik.Core.Domain.ValueObjects.Money"/>'s
-    /// currency-mismatch errors that bug was live: a genuinely runtime currency code was baked straight
-    /// into <c>Error.Description</c> with no template, so the resx localizer could never match it.
+    /// untranslatable sentence (see <c>Maroik.Core.Domain.Errors.DomainError</c>'s doc comment). A raw
+    /// factory call bakes the sentence into <c>Error.Description</c> with no template; when the message
+    /// carries a runtime value (e.g. the currency code in <see cref="Maroik.Core.Domain.ValueObjects.Money"/>'s
+    /// currency-mismatch errors) no resx key can ever match it.
     /// </summary>
     [Fact]
     public void Domain_ErrorMessages_MustGoThrough_DomainError()

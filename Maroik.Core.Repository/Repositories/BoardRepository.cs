@@ -113,7 +113,7 @@ public class BoardRepository(ApplicationDbContext context)
                 }
                 default:
                     // Logged in but neither Admin nor User (Role only ever has these two values for an
-                    // active session — unreachable in practice). Matches the original code: no case fires,
+                    // active session — unreachable in practice). No case fires,
                     // so the list is left as the unfiltered, unsearched base query.
                     return baseQuery.OrderByDescending(x => x.Id);
             }

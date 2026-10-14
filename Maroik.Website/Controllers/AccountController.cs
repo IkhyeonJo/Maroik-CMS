@@ -96,7 +96,7 @@ public class AccountController(
     public IActionResult Register()
     {
         // Pre-select the time zone implied by the request culture (e.g. ko-KR -> Asia/Seoul);
-        // the rule lives in CulturePolicy so the client no longer does it.
+        // the rule lives in CulturePolicy, not in the client.
         var culture = HttpContext.Features
             .Get<Microsoft.AspNetCore.Localization.IRequestCultureFeature>()?
             .RequestCulture.Culture.Name;

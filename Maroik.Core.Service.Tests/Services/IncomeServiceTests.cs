@@ -47,8 +47,8 @@ public class IncomeServiceTests
         _unitOfWork.Setup(u => u.RollbackAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.DisposeAsync()).Returns(ValueTask.CompletedTask);
 
-        // UpdateAsync/DeleteAsync now fetch a single record by id; bridge it to the list-based
-        // setups the tests already declare via GetByAccountEmailAsync. UpdateAsync/DeleteAsync use
+        // UpdateAsync/DeleteAsync fetch a single record by id; answer that lookup from the list-based
+        // setups the tests declare via GetByAccountEmailAsync. UpdateAsync/DeleteAsync use
         // the FOR UPDATE variant — the row lock itself is covered by the repository tests, so here
         // it resolves identically.
         Func<string, long, CancellationToken, Task<Income?>> findById = async (e, id, c) =>
@@ -58,8 +58,8 @@ public class IncomeServiceTests
         _incomeRepo.Setup(r => r.FindByEmailAndIdForUpdateAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(findById);
 
-        // GetAssetsOrdinalAsync now fetches every asset in one batched call instead of looping
-        // GetAssetAsync per name; bridge it to the per-name setups the tests below already declare.
+        // GetAssetsOrdinalAsync fetches every asset in one batched call; answer it from the per-name
+        // GetAssetAsync setups the tests below declare.
         _assetBalance.Setup(r => r.GetAssetsAsync(It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
             .Returns(async (string email, IReadOnlyCollection<string> names, CancellationToken ct) =>
             {
@@ -353,8 +353,8 @@ public class IncomeServiceTests
         _assetBalance.Setup(r => r.SaveAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
-        // Previous asset "Zebra" sorts after the new asset "Apple"; the old code locked them in
-        // previous-then-new role order (Zebra, Apple) instead of ordinal order.
+        // Previous asset "Zebra" sorts after the new asset "Apple"; locking them in
+        // previous-then-new role order (Zebra, Apple) would break the ordinal lock order.
         var request = ValidRequest("Apple");
         request.Id = 1;
         ServiceResult result = await sut.UpdateAsync(email, request, TestContext.Current.CancellationToken);

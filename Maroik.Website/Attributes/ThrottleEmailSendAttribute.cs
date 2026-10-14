@@ -94,7 +94,7 @@ public sealed class ThrottleEmailSendAttribute : Attribute, IAsyncActionFilter
                 }
 
                 // Claim the cooldown window immediately, before the action (and its possibly-slow
-                // mail send) runs — not after, as this used to do. Deferring the write let every
+                // mail send) runs, not after. Deferring the write would let every
                 // request in a concurrent burst for the same address pass the GetAsync check above
                 // before any of them reached the write, defeating the cooldown entirely for the
                 // whole action+mail-send duration. This still leaves a check-then-act gap between

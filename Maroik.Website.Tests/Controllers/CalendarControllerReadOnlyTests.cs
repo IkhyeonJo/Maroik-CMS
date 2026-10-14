@@ -9,7 +9,7 @@ namespace Maroik.Website.Tests.Controllers;
 /// the role-gating/empty-result paths of <c>GetCalendarShareds</c>/<c>GetBrowseCalendarsOfInterest</c>.
 /// The corresponding success-path/write coverage for CalendarEvent lives in
 /// <c>CalendarControllerEventTests</c>, and for OtherCalendar/CalendarShared in
-/// <c>CalendarControllerSharingTests</c> — both now run against real PostgreSQL via
+/// <c>CalendarControllerSharingTests</c> — both run against real PostgreSQL via
 /// <see cref="MaroikWebApplicationFactory"/>'s Testcontainers setup, so the <c>IUnitOfWork</c>
 /// transactions those actions wrap (unusable under EF Core InMemory) are exercised for real.
 /// </summary>
