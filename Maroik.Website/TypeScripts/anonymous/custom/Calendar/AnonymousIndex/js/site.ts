@@ -107,8 +107,7 @@
     const maxDaysBeforeEvent = parseInt(optionalFieldValue($("#maxDaysBeforeEvent")) ?? "", 10);
     const maxWeeksBeforeEvent = parseInt(optionalFieldValue($("#maxWeeksBeforeEvent")) ?? "", 10);
     // "Notify at HH:MM" options for all-day reminders and the default selection, both published
-    // by the server (CalendarViewModelMapper / CalendarReminderPolicy). Was regenerated inline
-    // as Array.from({length:96}) in several places.
+    // by the server (CalendarViewModelMapper / CalendarReminderPolicy).
     const reminderTimeIntervals = parseJson(optionalFieldValue($("#reminderTimeIntervals")) || "[]", check.array(check.string), "#reminderTimeIntervals");
 
     /** base64 -> Blob, for turning the server-embedded inline-image payloads into object URLs. */

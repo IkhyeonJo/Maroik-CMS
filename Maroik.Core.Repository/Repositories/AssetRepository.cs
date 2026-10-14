@@ -127,9 +127,8 @@ public class AssetRepository(ApplicationDbContext context)
         // AsNoTracking to bypass identity-resolution snap-back to a pre-lock tracked instance).
         // ORDER BY "ProductName" locks every matched row in the same order a caller that already
         // sorts its requested names (see AssetBalanceOrdinalLockExtensions) would have locked them
-        // one at a time, so batching here doesn't change the deadlock-avoidance guarantee -- the
-        // same ORDER BY + FOR UPDATE technique was introduced in production for exactly this reason,
-        // to fix a lost-update bug.
+        // one at a time, so batching here doesn't change the deadlock-avoidance guarantee -- and the
+        // ORDER BY + FOR UPDATE lock is what keeps concurrent balance writes from losing an update.
         var entities = await Set.FromSqlInterpolated(
             $"""
              SELECT *

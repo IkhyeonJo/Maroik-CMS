@@ -349,9 +349,8 @@ try
         context.Response.Headers.Append("Permissions-Policy",
             "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()");
         // default-src 'self' closes the fallback for the directives not named explicitly
-        // (font-src, media-src, worker-src, manifest-src, frame-src, …), which were previously
-        // unrestricted. The deprecated report-uri (which pointed at the site root — no collector
-        // exists to receive the POSTed reports) is dropped.
+        // (font-src, media-src, worker-src, manifest-src, frame-src, …), which would otherwise be
+        // unrestricted. There is no report-uri: no collector exists to receive the POSTed reports.
         context.Response.Headers.Append("Content-Security-Policy",
             "default-src 'self'; img-src 'self' blob:; connect-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"); // [https://csper.io/blog/no-more-unsafe-inline] [https://csp-evaluator.withgoogle.com/?csp=https://www.maroik.com]
 

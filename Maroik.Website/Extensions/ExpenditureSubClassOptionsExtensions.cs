@@ -14,10 +14,10 @@ namespace Maroik.Website.Extensions;
 /// subclasses start visible/selected; the page's own <c>ChangeCreate*MainClass</c>/
 /// <c>ChangeEdit*MainClass</c> (site.ts) reveal the rest when the user picks a different main class.
 /// Shared by the create/edit forms in both <c>Views/AccountBook/Expenditure.cshtml</c> and
-/// <c>Views/Notice/FixedExpenditure.cshtml</c>, which otherwise repeated this identical
+/// <c>Views/Notice/FixedExpenditure.cshtml</c>, which would otherwise repeat this identical
 /// default-computation + rendering loop four times. Takes the calling view's own
 /// <c>localizer</c> (rather than resolving one itself) so each page's subclass labels
-/// keep resolving from that page's own resource file, exactly as before this was extracted.
+/// resolve from that page's own resource file.
 /// </summary>
 public static class ExpenditureSubClassOptionsExtensions
 {

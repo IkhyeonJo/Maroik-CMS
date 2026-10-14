@@ -110,8 +110,7 @@ public static class DashboardViewModelMapper
     /// Assigns every "Year" and "YearMonth" income-breakdown view-model property from
     /// <paramref name="yearBreakdown"/> / <paramref name="yearMonthBreakdown"/> respectively.
     /// One call sets both variants of a given main-class/subClass pair via tuple deconstruction, so
-    /// the amount/percentage pairs for the two periods can no longer drift out of sync the way two
-    /// near-identical if/else blocks could.
+    /// the amount/percentage pairs for the two periods cannot drift out of sync.
     /// </summary>
     private static void AssignIncomeBreakdown(
         UserIndexOutputViewModel vm,

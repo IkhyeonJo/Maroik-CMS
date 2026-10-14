@@ -100,8 +100,7 @@
     const maxDaysBeforeEvent = parseInt(optionalFieldValue($("#maxDaysBeforeEvent")) ?? "", 10);
     const maxWeeksBeforeEvent = parseInt(optionalFieldValue($("#maxWeeksBeforeEvent")) ?? "", 10);
     // "Notify at HH:MM" options for all-day reminders and the default selection, both published
-    // by the server (CalendarViewModelMapper / CalendarReminderPolicy). Was regenerated inline
-    // as Array.from({length:96}) in several places.
+    // by the server (CalendarViewModelMapper / CalendarReminderPolicy).
     const reminderTimeIntervals = parseJson(optionalFieldValue($("#reminderTimeIntervals")) || "[]", check.array(check.string), "#reminderTimeIntervals");
     const defaultBeforeAt = fieldValue($("#defaultReminderTimeOfDay")); // required: no safe client-side default
     const $createCalendarEventDescription = $("#createCalendarEventDescription");
@@ -2801,9 +2800,8 @@
 
                     // Runs on every exit path below (both ajax calls' success-but-failed-result,
                     // both ajax calls' transport error, and the innermost call's actual success) so
-                    // the dialog reliably closes and the toast reliably shows exactly once, instead
-                    // of only on the single synchronous fall-through `async: false` used to
-                    // guarantee before these calls were made asynchronous.
+                    // the dialog reliably closes and the toast reliably shows exactly once: the calls are
+                    // asynchronous, so there is no single fall-through point to do it at.
                     // Captured from the narrowed reply: the hoisted function below does not see `data.result`.
                     const savedMessage = data.message;
 

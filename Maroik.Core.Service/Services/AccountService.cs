@@ -380,11 +380,11 @@ public class AccountService(
         try
         {
             // Re-read under FOR UPDATE before regenerating/persisting the token: serializes against
-            // a concurrent ConfirmEmailAsync/RegisterAsync write to the same row (both now take the
+            // a concurrent ConfirmEmailAsync/RegisterAsync write to the same row (both take the
             // same lock before writing) so this cannot resurrect a token a concurrent confirm just
             // consumed, or vice versa. The lock is held only long enough to persist the
             // (possibly-regenerated) token — released at Commit below, before the network mail send
-            // that follows, so a slow/degraded broker can no longer hold this row's lock (and this
+            // that follows, so a slow/degraded broker cannot hold this row's lock (and this
             // request's DB connection) open for the duration of the publish.
             Account? found = await accountRepository.FindByEmailForUpdateAsync(email, ct);
             if (found == null)
@@ -475,7 +475,7 @@ public class AccountService(
         try
         {
             // Re-read under FOR UPDATE, serializing against a concurrent ResendConfirmationEmailAsync
-            // / RegisterAsync write to the same row (both now take the same lock before writing) so
+            // / RegisterAsync write to the same row (both take the same lock before writing) so
             // this confirm cannot act on a registration-token snapshot a concurrent resend has
             // already superseded, or vice versa.
             Account? locked = await accountRepository.FindByEmailForUpdateAsync(account.Email.Value, ct);

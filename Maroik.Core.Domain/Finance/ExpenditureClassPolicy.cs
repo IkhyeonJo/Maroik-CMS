@@ -10,7 +10,7 @@ namespace Maroik.Core.Domain.Finance;
 /// <para>
 /// <see cref="Taxonomy"/> and <see cref="DepositAssetSubClasses"/> (typed by the <see cref="ExpenditureMainClass"/> / <see cref="ExpenditureSubClass"/> enums)
 /// is the single source of truth; the string views and <see cref="Validate"/> are derived from it, and the presentation
-/// layer serializes them into the create/edit forms so the client no longer hard-codes the same lists.
+/// layer serializes them into the create/edit forms so the client does not hard-code the same lists.
 /// </para>
 /// </summary>
 public static class ExpenditureClassPolicy

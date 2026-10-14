@@ -21,8 +21,8 @@ public class MailClient(ILogger<MailClient> logger) : IMailClient
 
     /// <summary>
     /// Joins the configured public base URL to an app-relative path, tolerating a
-    /// <c>DomainName</c> configured either with or without a trailing "/". Previously the callers
-    /// assumed a trailing slash and a value like "https://maroik.com" (no slash) produced the
+    /// <c>DomainName</c> configured either with or without a trailing "/". Without it, a value like
+    /// "https://maroik.com" (no slash) would produce the
     /// broken link "https://maroik.comAccount/ConfirmEmail".
     /// </summary>
     private static string BuildUrl(string domainName, string relativePath) =>

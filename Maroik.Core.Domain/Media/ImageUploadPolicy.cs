@@ -3,7 +3,7 @@ namespace Maroik.Core.Domain.Media;
 /// <summary>
 /// The single source of truth for which image uploads the app accepts (avatars and
 /// rich-text/summernote inline images). Controllers validate against it; the profile/editor
-/// views serialize <see cref="AllowedContentTypes"/> so the client no longer hard-codes
+/// views serialize <see cref="AllowedContentTypes"/> so the client does not hard-code
 /// "image/jpeg or image/png".
 /// </summary>
 public static class ImageUploadPolicy

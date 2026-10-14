@@ -8,8 +8,7 @@ namespace Maroik.Core.Contract.Dtos;
 /// <param name="Type">Board type to list (e.g. "FreeForum", "PrivateNote").</param>
 /// <param name="OwnerNickname">
 /// When set, only posts written by this nickname are considered at all (PrivateNote: each user only
-/// ever sees their own posts). Applied before search, and — matching the current
-/// ManagementController behavior this replaces — when set, Title/Writer search apply no further
+/// ever sees their own posts). Applied before search, and when set, Title/Writer search apply no further
 /// Locked-visibility split, since every candidate row already belongs to the caller.
 /// </param>
 /// <param name="SearchType">"Title", "Writer", or null/empty for no search.</param>

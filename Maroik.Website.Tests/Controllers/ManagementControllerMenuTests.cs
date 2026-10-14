@@ -9,14 +9,10 @@ namespace Maroik.Website.Tests.Controllers;
 
 /// <summary>
 /// Integration tests for the Menu (Category/SubCategory) CRUD action group of
-/// <c>ManagementController</c> — previously entirely uncovered beyond a GET smoke test in
-/// <c>ManagementControllerTests.cs</c>. Along the way this uncovered a real bug in
-/// <c>MenuService.UpdateCategoryAsync</c>/<c>UpdateSubCategoryAsync</c>: both built the updated
-/// entity via <c>Reconstitute</c> and called the repository's generic <c>UpdateEntityAsync</c>
-/// directly, which silently no-ops (returns without throwing) when the given ID doesn't match
-/// any row — so updating a nonexistent category/sub-category used to report
-/// "successfully updated" while changing nothing. Fixed by checking existence first, matching
-/// the fetch-then-act pattern already used elsewhere (e.g. <c>AccountService.UpdateAccountAsync</c>).
+/// <c>ManagementController</c>. Updating a nonexistent category/sub-category must report a failure,
+/// never "successfully updated" while changing nothing: <c>MenuService.UpdateCategoryAsync</c>/
+/// <c>UpdateSubCategoryAsync</c> check that the row exists first (the fetch-then-act pattern
+/// <c>AccountService.UpdateAccountAsync</c> also uses).
 /// </summary>
 [Collection("Website Integration")]
 public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)

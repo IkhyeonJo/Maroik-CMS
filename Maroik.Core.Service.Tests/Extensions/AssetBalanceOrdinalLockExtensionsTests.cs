@@ -136,9 +136,9 @@ public class AssetBalanceOrdinalLockExtensionsTests
     // -- ApplyAssetBalanceAdjustmentsAsync(Dictionary<string, Asset>, ...) — applies to given assets --
 
     /// <summary>
-    /// The pre-fetched-dictionary overload never calls GetAssetsAsync — this is the fix for the
-    /// double-fetch ExpenditureService/IncomeService's Update/Delete used to make (once for their
-    /// own pre-write validation, once again inside this method).
+    /// The pre-fetched-dictionary overload never calls GetAssetsAsync, so
+    /// ExpenditureService/IncomeService's Update/Delete, which already fetched the assets for their
+    /// own pre-write validation, do not fetch them a second time.
     /// </summary>
     [Fact]
     public async Task ApplyAssetBalanceAdjustmentsAsync_WithDictionary_NeverFetches()

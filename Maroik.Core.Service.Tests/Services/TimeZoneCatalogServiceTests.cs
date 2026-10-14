@@ -3,8 +3,8 @@ using Maroik.Core.Service.Services;
 namespace Maroik.Core.Service.Tests.Services;
 
 /// <summary>
-/// Unit tests for <see cref="TimeZoneCatalogService"/> — the server-side replacement
-/// for the Windows-to-IANA time zone enumeration previously duplicated across ~11 Razor views.
+/// Unit tests for <see cref="TimeZoneCatalogService"/> — the server-side
+/// Windows-to-IANA time zone enumeration the Razor views render their time-zone pickers from.
 /// </summary>
 public class TimeZoneCatalogServiceTests
 {

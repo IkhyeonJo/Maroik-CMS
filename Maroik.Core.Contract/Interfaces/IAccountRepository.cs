@@ -51,7 +51,7 @@ public interface IAccountRepository : IGenericRepository<Account>
     // two unrelated writers (a profile edit, a mail-status write from the worker, the dashboard's
     // default-unit self-correction) racing on the same account silently clobber each other's field.
     // These issue a single UPDATE touching only the columns the caller actually changed, so writes
-    // to different fields no longer collide. Each returns the affected row count (0 = no such
+    // to different fields do not collide. Each returns the affected row count (0 = no such
     // account). The caller still runs the domain method first so the entity stays authoritative for
     // the computed values (SecurityStamp, Updated, …).
     // ---------------------------------------------------------------------------------------------
