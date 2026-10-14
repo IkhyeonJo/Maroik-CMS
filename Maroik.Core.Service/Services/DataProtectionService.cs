@@ -6,10 +6,9 @@ namespace Maroik.Core.Service.Services;
 /// <summary>
 /// Singleton implementation of <see cref="IDataProtectionService"/> over the host's ASP.NET Core Data Protection
 /// key ring — the same one the session and antiforgery cookies use (persisted to Valkey, or to the file fallback;
-/// see <c>Program.cs</c>). It replaced the earlier RSA service: both ends of every round trip are this server, so
-/// a public key bought nothing, while the key ring gives authenticated symmetric encryption (AES-256-CBC +
-/// HMAC-SHA256 by default) with key generation, rotation and storage handled by the framework — there is no key
-/// for the application to configure.
+/// see <c>Program.cs</c>). Both ends of every round trip are this server, and the key ring gives authenticated
+/// symmetric encryption (AES-256-CBC + HMAC-SHA256 by default) with key generation, rotation and storage handled
+/// by the framework — there is no key for the application to configure.
 /// <para>
 /// The protector is created under its own purpose string, so a payload the same key ring protected for another
 /// purpose (a session or antiforgery cookie) is rejected here, and a value from this service is useless there.
