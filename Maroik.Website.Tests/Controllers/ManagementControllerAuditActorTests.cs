@@ -107,7 +107,7 @@ public class ManagementControllerAuditActorTests(MaroikWebApplicationFactory fac
             using var request = admin.BuildJsonPostRequest(url, payload);
             var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
             string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-            Assert.True(json.Contains("\"result\":true"), $"{url}: {(int)response.StatusCode} {json}");
+            Assert.True(json.Contains("\"result\":true", StringComparison.Ordinal), $"{url}: {(int)response.StatusCode} {json}");
         }
 
         accounts.Verify(s => s.CreateAccountAsync(It.IsAny<AdminCreateAccountRequest>(), AdminEmail, It.IsAny<CancellationToken>()), Times.Once);

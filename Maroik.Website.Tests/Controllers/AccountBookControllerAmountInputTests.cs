@@ -70,8 +70,8 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     /// <summary>Asserts <paramref name="json"/> is the "Input is invalid" refusal.</summary>
     private static void AssertInputIsInvalid(string json)
     {
-        Assert.Contains("\"result\":false", json);
-        Assert.Contains("Input is invalid", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains("Input is invalid", json, StringComparison.Ordinal);
     }
 
     /// <summary>An asset payload with <paramref name="amount"/> as its posted amount text.</summary>
@@ -105,7 +105,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
 
         string json = await PostAsync("/AccountBook/CreateAsset", AssetPayload(name, "1,234,567.5"));
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.Equal(1234567.5m, Query(db => db.Assets.Single(a => a.AccountEmail == Email && a.ProductName == name).Amount));
     }
 
@@ -131,7 +131,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
 
         string json = await PostAsync("/AccountBook/UpdateAsset", AssetPayload(name, "-2,000", name));
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.Equal(-2000m, Query(db => db.Assets.Single(a => a.AccountEmail == Email && a.ProductName == name).Amount));
     }
 
@@ -160,7 +160,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
 
         string json = await PostAsync("/AccountBook/CreateIncome", IncomePayload(asset, "12,345.25"));
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.Equal(12345.25m, Query(db => db.Incomes.Single(i => i.AccountEmail == Email && i.DepositMyAssetProductName == asset).Amount));
         Assert.Equal(13345.25m, Query(db => db.Assets.Single(a => a.AccountEmail == Email && a.ProductName == asset).Amount));
     }
@@ -186,12 +186,12 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     {
         string asset = UniqueName();
         await SeedAssetAsync(asset);
-        Assert.Contains("\"result\":true", await PostAsync("/AccountBook/CreateIncome", IncomePayload(asset, "100")));
+        Assert.Contains("\"result\":true", await PostAsync("/AccountBook/CreateIncome", IncomePayload(asset, "100")), StringComparison.Ordinal);
         long id = Query(db => db.Incomes.Single(i => i.AccountEmail == Email && i.DepositMyAssetProductName == asset).Id);
 
         string json = await PostAsync("/AccountBook/UpdateIncome", IncomePayload(asset, "1,500", id));
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.Equal(1500m, Query(db => db.Incomes.Single(i => i.Id == id).Amount));
     }
 
@@ -202,7 +202,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     {
         string asset = UniqueName();
         await SeedAssetAsync(asset);
-        Assert.Contains("\"result\":true", await PostAsync("/AccountBook/CreateIncome", IncomePayload(asset, "100")));
+        Assert.Contains("\"result\":true", await PostAsync("/AccountBook/CreateIncome", IncomePayload(asset, "100")), StringComparison.Ordinal);
         long id = Query(db => db.Incomes.Single(i => i.AccountEmail == Email && i.DepositMyAssetProductName == asset).Id);
 
         string json = await PostAsync("/AccountBook/UpdateIncome", IncomePayload(asset, amount, id));
@@ -222,7 +222,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
 
         string json = await PostAsync("/AccountBook/CreateExpenditure", ExpenditurePayload(asset, "1,200.5"));
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.Equal(1200.5m, Query(db => db.Expenditures.Single(e => e.AccountEmail == Email && e.PaymentMethod == asset).Amount));
         Assert.Equal(-200.5m, Query(db => db.Assets.Single(a => a.AccountEmail == Email && a.ProductName == asset).Amount));
     }
@@ -248,12 +248,12 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     {
         string asset = UniqueName();
         await SeedAssetAsync(asset);
-        Assert.Contains("\"result\":true", await PostAsync("/AccountBook/CreateExpenditure", ExpenditurePayload(asset, "100")));
+        Assert.Contains("\"result\":true", await PostAsync("/AccountBook/CreateExpenditure", ExpenditurePayload(asset, "100")), StringComparison.Ordinal);
         long id = Query(db => db.Expenditures.Single(e => e.AccountEmail == Email && e.PaymentMethod == asset).Id);
 
         string json = await PostAsync("/AccountBook/UpdateExpenditure", ExpenditurePayload(asset, "2,500", id));
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.Equal(2500m, Query(db => db.Expenditures.Single(e => e.Id == id).Amount));
     }
 
@@ -264,7 +264,7 @@ public class AccountBookControllerAmountInputTests(MaroikWebApplicationFactory f
     {
         string asset = UniqueName();
         await SeedAssetAsync(asset);
-        Assert.Contains("\"result\":true", await PostAsync("/AccountBook/CreateExpenditure", ExpenditurePayload(asset, "100")));
+        Assert.Contains("\"result\":true", await PostAsync("/AccountBook/CreateExpenditure", ExpenditurePayload(asset, "100")), StringComparison.Ordinal);
         long id = Query(db => db.Expenditures.Single(e => e.AccountEmail == Email && e.PaymentMethod == asset).Id);
 
         string json = await PostAsync("/AccountBook/UpdateExpenditure", ExpenditurePayload(asset, amount, id));

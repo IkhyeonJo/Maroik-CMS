@@ -106,7 +106,7 @@ public class MailClient(ILogger<MailClient> logger) : IMailClient
     {
         try
         {
-            var message = new MimeMessage();
+            using var message = new MimeMessage();
             message.From.Add(new MailboxAddress(settings.FromFullName ?? "", settings.FromEmail ?? ""));
             message.To.Add(new MailboxAddress("", toEmail));
             message.Subject = subject;

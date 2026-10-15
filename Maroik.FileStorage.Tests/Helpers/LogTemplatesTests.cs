@@ -19,12 +19,12 @@ public class LogTemplatesTests
 
         string rendered = Render(LogTemplates.Console, "File upload refused: {FilePath}", forged);
 
-        Assert.EndsWith(Environment.NewLine, rendered);
+        Assert.EndsWith(Environment.NewLine, rendered, StringComparison.Ordinal);
         string line = rendered[..^Environment.NewLine.Length];
         Assert.DoesNotContain('\n', line);
         Assert.DoesNotContain('\r', line);
         Assert.DoesNotContain('\u001b', line);
-        Assert.Contains(@"upload/a.png\n[00:00:00 INF] Maroik: File uploaded: upload/b.png\r", line);
+        Assert.Contains(@"upload/a.png\n[00:00:00 INF] Maroik: File uploaded: upload/b.png\r", line, StringComparison.Ordinal);
     }
 
     /// <summary>Renders one Warning event whose <c>FilePath</c> is <paramref name="value"/> through <paramref name="outputTemplate"/>.</summary>
@@ -33,7 +33,7 @@ public class LogTemplatesTests
         var logEvent = new LogEvent(DateTimeOffset.UnixEpoch, LogEventLevel.Warning, null,
             new MessageTemplateParser().Parse(messageTemplate),
             [new LogEventProperty("FilePath", new ScalarValue(value)), new LogEventProperty("SourceContext", new ScalarValue("Test"))]);
-        var writer = new StringWriter();
+        using var writer = new StringWriter();
         new MessageTemplateTextFormatter(outputTemplate).Format(logEvent, writer);
         return writer.ToString();
     }

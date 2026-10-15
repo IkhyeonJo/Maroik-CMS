@@ -66,7 +66,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
     {
         Email = email,
         Password = "NewAccountPw1!",
-        Nickname = "Newcomer_" + email.Replace("@", "_").Replace(".", "_"),
+        Nickname = "Newcomer_" + email.Replace("@", "_", StringComparison.Ordinal).Replace(".", "_", StringComparison.Ordinal),
         AvatarImagePath = "",
         Role = Role.User,
         TimeZoneIanaId = "UTC",
@@ -141,7 +141,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         var json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("Password must be at least 8 characters", json);
+        Assert.Contains("Password must be at least 8 characters", json, StringComparison.Ordinal);
     }
 
     /// <summary>Create account missing time zone returns specific error.</summary>
@@ -171,7 +171,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         var json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("Time-zone ID cannot be empty", json); // TimeZoneId.Create (Core) message, not a controller-local string
+        Assert.Contains("Time-zone ID cannot be empty", json, StringComparison.Ordinal); // TimeZoneId.Create (Core) message, not a controller-local string
     }
 
     // -- CreateAccount: success path ---------------------------------------------
@@ -191,7 +191,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -230,7 +230,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(secondRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("This account has already been created.", json);
+        Assert.Contains("This account has already been created.", json, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -304,7 +304,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -322,7 +322,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.DoesNotContain("hashedPassword", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("registrationToken", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("resetPasswordToken", json, StringComparison.OrdinalIgnoreCase);
@@ -338,7 +338,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("Fail to find the account by given email address", json);
+        Assert.Contains("Fail to find the account by given email address", json, StringComparison.Ordinal);
     }
 
     // -- UpdateAccount ------------------------------------------------------------
@@ -366,7 +366,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(updateRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -399,7 +399,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(updateRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -436,7 +436,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
                 Deleted = on
             });
             var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
-            Assert.Contains("\"result\":true", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            Assert.Contains("\"result\":true", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
         }
 
         Maroik.Core.PostgreSQL.Models.Account Read()
@@ -485,7 +485,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(updateRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -514,7 +514,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(updateRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("Email address is wrong", json);
+        Assert.Contains("Email address is wrong", json, StringComparison.Ordinal);
     }
 
     // -- DeleteAccount ------------------------------------------------------------
@@ -531,7 +531,7 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var deleteResponse = await _client.SendAsync(deleteRequest, TestContext.Current.CancellationToken);
         string deleteJson = await deleteResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", deleteJson);
+        Assert.Contains("\"result\":true", deleteJson, StringComparison.Ordinal);
 
         // DeleteAccount is a soft delete (Deleted flag flipped), not a row removal — FindByEmailAsync
         // does not filter on Deleted, so verify the flag directly rather than via IsAccountExists.
@@ -551,14 +551,15 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(deleteRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("Fail to find the account by given email address", json);
+        Assert.Contains("Fail to find the account by given email address", json, StringComparison.Ordinal);
     }
 
     // -- Admin safeguards (AdminSafeguardPolicy) ---------------------------------------
 
-    /// <summary>Sends <paramref name="request"/> (optionally as a <paramref name="culture"/> browser) and returns its <c>error</c>, asserting a refusal.</summary>
-    private async Task<string> ErrorOf(HttpRequestMessage request, string? culture = null)
+    /// <summary>Builds and sends a request (optionally as a <paramref name="culture"/> browser), disposes it, and returns its <c>error</c>, asserting a refusal.</summary>
+    private async Task<string> ErrorOf(Func<HttpRequestMessage> buildRequest, string? culture = null)
     {
+        using var request = buildRequest();
         if (culture != null) request.Headers.AcceptLanguage.ParseAdd(culture);
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
@@ -594,9 +595,9 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var session = await LoginAsAdminAsync(self);
 
         Assert.Equal("You cannot delete your own account.",
-            await ErrorOf(session.BuildJsonPostRequest("/Management/DeleteAccount", new { Email = self })));
+            await ErrorOf(() => session.BuildJsonPostRequest("/Management/DeleteAccount", new { Email = self })));
         Assert.Equal("자기 계정은 삭제할 수 없습니다.",
-            await ErrorOf(session.BuildJsonPostRequest("/Management/DeleteAccount", new { Email = self }), "ko-KR"));
+            await ErrorOf(() => session.BuildJsonPostRequest("/Management/DeleteAccount", new { Email = self }), "ko-KR"));
         Assert.False(StoredAccount(self).Deleted);
     }
 
@@ -608,9 +609,9 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var session = await LoginAsAdminAsync(self);
 
         Assert.Equal("You cannot lock your own account.",
-            await ErrorOf(session.BuildJsonPostRequest("/Management/UpdateAccount", AdminEdit(self, b => b["Locked"] = true))));
+            await ErrorOf(() => session.BuildJsonPostRequest("/Management/UpdateAccount", AdminEdit(self, b => b["Locked"] = true))));
         Assert.Equal("자기 계정은 잠글 수 없습니다.",
-            await ErrorOf(session.BuildJsonPostRequest("/Management/UpdateAccount", AdminEdit(self, b => b["Locked"] = true)), "ko-KR"));
+            await ErrorOf(() => session.BuildJsonPostRequest("/Management/UpdateAccount", AdminEdit(self, b => b["Locked"] = true)), "ko-KR"));
         Assert.False(StoredAccount(self).Locked);
     }
 
@@ -622,9 +623,9 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         var session = await LoginAsAdminAsync(self);
 
         Assert.Equal("You cannot remove the Admin role from your own account.",
-            await ErrorOf(session.BuildJsonPostRequest("/Management/UpdateAccount", AdminEdit(self, b => b["Role"] = Role.User))));
+            await ErrorOf(() => session.BuildJsonPostRequest("/Management/UpdateAccount", AdminEdit(self, b => b["Role"] = Role.User))));
         Assert.Equal("자기 계정의 Admin 권한은 해제할 수 없습니다.",
-            await ErrorOf(session.BuildJsonPostRequest("/Management/UpdateAccount", AdminEdit(self, b => b["Role"] = Role.User)), "ko-KR"));
+            await ErrorOf(() => session.BuildJsonPostRequest("/Management/UpdateAccount", AdminEdit(self, b => b["Role"] = Role.User)), "ko-KR"));
         Assert.Equal(Role.Admin, StoredAccount(self).Role);
     }
 

@@ -67,17 +67,22 @@ public class FileClient(IHttpClientFactory httpClientFactory, ILogger<FileClient
 
         logger.LogInformation("Requesting file download: {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
 
-        // Not disposed: a client from IHttpClientFactory does not own its pooled handler, and the
-        // streaming caller still reads the response body after this method returns.
-        HttpClient httpClient = httpClientFactory.CreateClient();
+        // Disposed when this method returns. A client from IHttpClientFactory does not own its pooled
+        // handler, and disposing it does not end a response it already returned: the streaming
+        // caller (OpenReadAsync) still reads the body afterwards, and disposing that response is
+        // what releases the connection.
+        using HttpClient httpClient = httpClientFactory.CreateClient();
         using MultipartFormDataContent content = [];
 
         // Pass the server-side file path to the storage service. Separators are normalized to
         // "/": the storage service runs on Linux and treats "\" as a literal filename
         // character, so a path built on Windows must not be forwarded with backslashes.
-        content.Add(new StringContent(filePath.Replace('\\', '/')), "filePath");
+        // Each part is disposed with `content` too; its own `using` keeps it disposed if Add throws.
+        using StringContent pathPart = new(filePath.Replace('\\', '/'));
+        content.Add(pathPart, "filePath");
         // So Maroik.FileStorage's failure logs for this call can be traced back to this request.
-        content.Add(new StringContent(correlationId), "correlationId");
+        using StringContent correlationPart = new(correlationId);
+        content.Add(correlationPart, "correlationId");
 
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{fileStorageBaseUrl}/api/File/download");
         request.Content = content;
@@ -141,12 +146,12 @@ public class FileClient(IHttpClientFactory httpClientFactory, ILogger<FileClient
             var correlationId = Activity.Current?.Id ?? "";
             logger.LogInformation("Requesting file upload: {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
 
-            // Not disposed, as in SendDownloadRequestAsync: a client from IHttpClientFactory does not own its pooled handler.
-            HttpClient httpClient = httpClientFactory.CreateClient();
+            // Disposed, as in SendDownloadRequestAsync; the factory's pooled handler is not disposed with it.
+            using HttpClient httpClient = httpClientFactory.CreateClient();
             using MultipartFormDataContent content = [];
 
             // Wrap raw bytes with the correct MIME type
-            ByteArrayContent fileContent = new(fileData);
+            using ByteArrayContent fileContent = new(fileData);
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
 
             // Attach the file bytes under the "file" field name
@@ -155,9 +160,11 @@ public class FileClient(IHttpClientFactory httpClientFactory, ILogger<FileClient
             // Tell the storage service where to save the file (directory path only), separators
             // normalized to "/" — on Linux the service would otherwise create a single directory
             // literally named "upload\Area\...".
-            content.Add(new StringContent((Path.GetDirectoryName(filePath) ?? "").Replace('\\', '/')), "filePath");
+            using StringContent pathPart = new((Path.GetDirectoryName(filePath) ?? "").Replace('\\', '/'));
+            content.Add(pathPart, "filePath");
             // So Maroik.FileStorage's failure logs for this call can be traced back to this request.
-            content.Add(new StringContent(correlationId), "correlationId");
+            using StringContent correlationPart = new(correlationId);
+            content.Add(correlationPart, "correlationId");
 
             using HttpResponseMessage response = await httpClient.PostAsync($"{fileStorageBaseUrl}/api/File/upload", content, ct);
 

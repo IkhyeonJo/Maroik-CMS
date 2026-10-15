@@ -155,9 +155,7 @@ public sealed class CalendarSharedRepositoryTests(DatabaseFixture database) : Re
         return;
 
         // One contender: locks both rows (ids in the order given), waits so the other contender overlaps, then updates and commits.
- #pragma warning disable IDE0062
-        async Task LockAndUpdateAsync(ApplicationDbContext context, long[] ids, bool user, bool anonymous)
- #pragma warning restore IDE0062
+        static async Task LockAndUpdateAsync(ApplicationDbContext context, long[] ids, bool user, bool anonymous)
         {
             var repo = new CalendarSharedRepository(context);
             await using var tx = await context.Database.BeginTransactionAsync(TestContext.Current.CancellationToken);

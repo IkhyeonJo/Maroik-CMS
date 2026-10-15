@@ -14,7 +14,7 @@ public static class DateTimeExtensions
         /// Returns the original value unchanged if the time-zone ID is invalid or the conversion fails.
         /// </summary>
         /// <param name="timeZoneIanaId">A valid IANA time-zone ID (e.g. "Asia/Seoul", "America/New_York").</param>
-        /// <returns>The converted local date/time, or <paramref name="value"/> on error.</returns>
+        /// <returns>The converted local date/time, or this value unchanged on error.</returns>
         public DateTime ConvertTimeByTimeZoneIanaId(string timeZoneIanaId)
         {
             try

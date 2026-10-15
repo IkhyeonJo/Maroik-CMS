@@ -200,7 +200,7 @@ public class FixedExpenditureServiceTests
         ServiceResult result = await sut.CreateAsync("user@example.com", SavingsRequest(), TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
-        Assert.Contains("MonetaryUnit", result.ErrorKey);
+        Assert.Contains("MonetaryUnit", result.ErrorKey, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that <c>CreateAsync</c> returns success for consumer spending with valid asset.</summary>

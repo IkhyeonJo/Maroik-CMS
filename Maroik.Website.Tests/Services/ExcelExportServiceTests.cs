@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Maroik.Core.Contract.Dtos;
@@ -72,17 +72,17 @@ public class ExcelExportServiceTests
         const decimal amount = 1234.5678m;
 
         AssertNumberCell(amount, ReadTypedRows(_sut.CreateAssetExcel(
-            [new() { ProductName = "Cash", Item = "x", Amount = amount, Note = "" }], _identity, "UTC"))[1][2]);
+            [new() { ProductName = "Cash", Item = "x", Amount = amount, Note = "" }], _identity, "UTC"))[1][3]);
         AssertNumberCell(amount, ReadTypedRows(_sut.CreateIncomeExcel(
-            [new() { Content = "salary", Amount = amount }], [], _identity, "UTC"))[1][3]);
+            [new() { Content = "salary", Amount = amount }], [], _identity, "UTC"))[1][4]);
         AssertNumberCell(amount, ReadTypedRows(_sut.CreateExpenditureExcel(
-            [new() { Content = "lunch", Amount = amount }], [], _identity, "UTC"))[1][3]);
+            [new() { Content = "lunch", Amount = amount }], [], _identity, "UTC"))[1][4]);
         AssertNumberCell(amount, ReadTypedRows(_sut.CreateFixedIncomeExcel(
             [new() { Content = "salary", Amount = amount, MaturityDate = new DateTime(2030, 12, 31), DepositMonth = 1, DepositDay = 1 }],
-            [], _identity, "UTC", 7))[1][3]);
+            [], _identity, "UTC", 7))[1][4]);
         AssertNumberCell(amount, ReadTypedRows(_sut.CreateFixedExpenditureExcel(
             [new() { Content = "rent", Amount = amount, MaturityDate = new DateTime(2030, 12, 31), DepositMonth = 1, DepositDay = 1 }],
-            [], _identity, "UTC", 7))[1][3]);
+            [], _identity, "UTC", 7))[1][4]);
     }
 
     /// <summary>A negative amount and a whole amount are numbers too, written without a thousands separator.</summary>
@@ -94,10 +94,10 @@ public class ExcelExportServiceTests
         decimal value = decimal.Parse(amount, CultureInfo.InvariantCulture);
 
         var cell = ReadTypedRows(_sut.CreateAssetExcel(
-            [new() { ProductName = "Cash", Item = "x", Amount = value, Note = "" }], _identity, "UTC"))[1][2];
+            [new() { ProductName = "Cash", Item = "x", Amount = value, Note = "" }], _identity, "UTC"))[1][3];
 
         AssertNumberCell(value, cell);
-        Assert.DoesNotContain(",", cell.Text);
+        Assert.DoesNotContain(",", cell.Text, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -116,7 +116,7 @@ public class ExcelExportServiceTests
         decimal value = decimal.Parse(amount, CultureInfo.InvariantCulture);
 
         var cell = ReadTypedRows(_sut.CreateAssetExcel(
-            [new() { ProductName = "Cash", Item = "x", Amount = value, Note = "" }], _identity, "UTC"))[1][2];
+            [new() { ProductName = "Cash", Item = "x", Amount = value, Note = "" }], _identity, "UTC"))[1][3];
 
         if (asNumber)
         {
@@ -136,7 +136,7 @@ public class ExcelExportServiceTests
         var row = ReadTypedRows(_sut.CreateAssetExcel(
             [new() { ProductName = "Cash", Item = "x", Amount = 1m, Note = "n", Created = _stamp, Updated = _stamp }], _identity, "UTC"))[1];
 
-        Assert.All(row.Where((_, i) => i != 2), cell => Assert.Equal(CellValues.String, cell.Type));
+        Assert.All(row.Where((_, i) => i != 3), cell => Assert.Equal(CellValues.String, cell.Type));
     }
 
     /// <summary>Every export writes Created/Updated as "yyyy-MM-dd HH:mm:ss" in the viewer's time zone.</summary>
@@ -180,8 +180,24 @@ public class ExcelExportServiceTests
         var rows = ReadRows(stream);
 
         Assert.Equal(
-            ["L:ProductName", "L:Item", "L:Amount", "L:MonetaryUnit", "L:Created", "L:Updated", "L:Note", "L:Deleted"],
+            ["L:ProductName", "L:Item", "L:MonetaryUnit", "L:Amount", "L:Created", "L:Updated", "L:Note", "L:Deleted"],
             rows[0]);
+    }
+
+    /// <summary>Every finance export puts the monetary unit column right before the amount column, as the grids do.</summary>
+    [Fact]
+    public void EveryFinanceExport_PutsTheMonetaryUnitRightBeforeTheAmount()
+    {
+        List<string>[] headers =
+        [
+            ReadRows(_sut.CreateAssetExcel([], _localize, "UTC"))[0],
+            ReadRows(_sut.CreateIncomeExcel([], [], _localize, "UTC"))[0],
+            ReadRows(_sut.CreateExpenditureExcel([], [], _localize, "UTC"))[0],
+            ReadRows(_sut.CreateFixedIncomeExcel([], [], _localize, "UTC", 7))[0],
+            ReadRows(_sut.CreateFixedExpenditureExcel([], [], _localize, "UTC", 7))[0]
+        ];
+
+        Assert.All(headers, header => Assert.Equal(header.IndexOf("L:MonetaryUnit") + 1, header.IndexOf("L:Amount")));
     }
 
     /// <summary>Create asset excel orders rows by product name ascending.</summary>
@@ -210,8 +226,8 @@ public class ExcelExportServiceTests
 
         Assert.Equal("Cash", row[0]);
         Assert.Equal("L:Deposit", row[1]);
-        Assert.Equal("1000", row[2]);
-        Assert.Equal("KRW", row[3]);
+        Assert.Equal("KRW", row[2]);
+        Assert.Equal("1000", row[3]);
     }
 
     /// <summary>Create asset excel converts created and updated to the given time zone.</summary>
@@ -266,7 +282,7 @@ public class ExcelExportServiceTests
 
         var row = ReadRows(_sut.CreateIncomeExcel(items, assets, _identity, "UTC"))[1];
 
-        Assert.Equal("KRW", row[4]);
+        Assert.Equal("KRW", row[3]);
         Assert.Equal("Bank", row[5]);
     }
 
@@ -278,7 +294,7 @@ public class ExcelExportServiceTests
 
         var row = ReadRows(_sut.CreateIncomeExcel(items, [], _identity, "UTC"))[1];
 
-        Assert.Equal("", row[4]);
+        Assert.Equal("", row[3]);
     }
 
     /// <summary>Create income excel orders by created then updated descending.</summary>
@@ -305,7 +321,7 @@ public class ExcelExportServiceTests
 
         var row = ReadRows(_sut.CreateIncomeExcel(items, [], _identity, "UTC"))[1];
 
-        Assert.Equal("500.5", row[3]);
+        Assert.Equal("500.5", row[4]);
     }
 
     // ── CreateExpenditureExcel ────────────────────────────────────────────────
@@ -333,7 +349,7 @@ public class ExcelExportServiceTests
 
         var row = ReadRows(_sut.CreateExpenditureExcel(items, assets, _identity, "UTC"))[1];
 
-        Assert.Equal("USD", row[4]);
+        Assert.Equal("USD", row[3]);
         Assert.Equal("CreditCard", row[5]);
         Assert.Equal("Bank", row[7]);
     }
@@ -394,7 +410,7 @@ public class ExcelExportServiceTests
 
         var row = ReadRows(_sut.CreateFixedIncomeExcel(items, assets, _identity, "UTC", 7))[1];
 
-        Assert.Equal("KRW", row[4]);
+        Assert.Equal("KRW", row[3]);
     }
 
     /// <summary>
@@ -450,7 +466,7 @@ public class ExcelExportServiceTests
 
         var row = ReadRows(_sut.CreateFixedIncomeExcel(items, [], _identity, "UTC", 7))[1];
 
-        Assert.Equal(expected, row[3]);
+        Assert.Equal(expected, row[4]);
     }
 
     /// <summary>Create fixed income excel renders maturity date and deposit month day.</summary>
@@ -513,8 +529,8 @@ public class ExcelExportServiceTests
 
         var row = ReadRows(_sut.CreateFixedExpenditureExcel(items, assets, _identity, "UTC", 7))[1];
 
-        Assert.Equal("250", row[3]);
-        Assert.Equal("USD", row[4]);
+        Assert.Equal("USD", row[3]);
+        Assert.Equal("250", row[4]);
     }
 
     /// <summary>Create fixed expenditure excel expired rows are ordered before active rows.</summary>

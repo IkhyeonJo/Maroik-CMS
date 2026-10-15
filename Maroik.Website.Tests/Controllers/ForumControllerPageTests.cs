@@ -103,7 +103,7 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         string adminHtml = await BodyAsync(await GetAsync(Detail(id), admin));
         string otherHtml = await BodyAsync(await GetAsync(Detail(id), other));
 
-        Assert.Contains("font-weight:bold; color:green;", ownerHtml);   // the administrator's name stands out
+        Assert.Contains("font-weight:bold; color:green;", ownerHtml, StringComparison.Ordinal);   // the administrator's name stands out
         Assert.Equal(1, DeletableComments(ownerHtml));                  // only the owner's own comment
         Assert.Equal(2, DeletableComments(adminHtml));                  // an admin may delete both
         Assert.Equal(0, DeletableComments(otherHtml));                  // a bystander gets none
@@ -126,9 +126,9 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         string html = await BodyAsync(response);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("PublicTitle-1", html);
-        Assert.Contains("PublicBody-1", html);
-        Assert.Contains("CommentText-1", html);
+        Assert.Contains("PublicTitle-1", html, StringComparison.Ordinal);
+        Assert.Contains("PublicBody-1", html, StringComparison.Ordinal);
+        Assert.Contains("CommentText-1", html, StringComparison.Ordinal);
         Assert.Equal(1, ViewCount(id));
     }
 
@@ -151,7 +151,7 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         var adminResponse = await GetAsync(Detail(id), admin);
         Assert.Equal(System.Net.HttpStatusCode.OK, authorResponse.StatusCode);
         Assert.Equal(System.Net.HttpStatusCode.OK, adminResponse.StatusCode);
-        Assert.Contains("LockedBody-2", await BodyAsync(authorResponse));
+        Assert.Contains("LockedBody-2", await BodyAsync(authorResponse), StringComparison.Ordinal);
     }
 
     /// <summary>A soft-deleted post cannot be opened by anyone; the visitor is sent back to the list.</summary>
@@ -163,7 +163,7 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         var response = await GetAsync(Detail(id));
 
         Assert.Equal(System.Net.HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Contains("FreeForum", response.Headers.Location!.ToString());
+        Assert.Contains("FreeForum", response.Headers.Location!.ToString(), StringComparison.Ordinal);
     }
 
     /// <summary>The attachment's name is shown on the detail page even when the stored file itself cannot be fetched.</summary>
@@ -181,7 +181,7 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         var response = await GetAsync(Detail(id));
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("quarterly-report-4", await BodyAsync(response));
+        Assert.Contains("quarterly-report-4", await BodyAsync(response), StringComparison.Ordinal);
     }
 
     // -- Edit ---------------------------------------------------------------------------------------
@@ -198,7 +198,7 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         var authorResponse = await GetAsync(Edit(id), author);
         Assert.Equal(System.Net.HttpStatusCode.OK, authorResponse.StatusCode);
         string html = await BodyAsync(authorResponse);
-        Assert.Contains("EditTitle-5", html);
+        Assert.Contains("EditTitle-5", html, StringComparison.Ordinal);
 
         foreach (var session in new[] { null, other, admin })
         {
@@ -244,10 +244,10 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         string anonymousHtml = await BodyAsync(await GetAsync(url));
         string writerHtml = await BodyAsync(await GetAsync(url, writer));
 
-        Assert.Contains("OpenPost-8", anonymousHtml);
-        Assert.DoesNotContain("LockedPost-8", anonymousHtml);
-        Assert.Contains("OpenPost-8", writerHtml);
-        Assert.Contains("LockedPost-8", writerHtml);
+        Assert.Contains("OpenPost-8", anonymousHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("LockedPost-8", anonymousHtml, StringComparison.Ordinal);
+        Assert.Contains("OpenPost-8", writerHtml, StringComparison.Ordinal);
+        Assert.Contains("LockedPost-8", writerHtml, StringComparison.Ordinal);
     }
 
     /// <summary>Five posts per page, newest first: the sixth-newest post appears only on page 2, and page 0 behaves like page 1.</summary>
@@ -264,13 +264,13 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         string page2 = await BodyAsync(await GetAsync(url + "&page=2"));
         string page0 = await BodyAsync(await GetAsync(url + "&page=0"));
 
-        Assert.Contains("PagedPost-9-7", page1);
-        Assert.Contains("PagedPost-9-3", page1);
-        Assert.DoesNotContain("PagedPost-9-2", page1);
-        Assert.Contains("PagedPost-9-2", page2);
-        Assert.Contains("PagedPost-9-1", page2);
-        Assert.DoesNotContain("PagedPost-9-7", page2);
-        Assert.Contains("PagedPost-9-7", page0);
+        Assert.Contains("PagedPost-9-7", page1, StringComparison.Ordinal);
+        Assert.Contains("PagedPost-9-3", page1, StringComparison.Ordinal);
+        Assert.DoesNotContain("PagedPost-9-2", page1, StringComparison.Ordinal);
+        Assert.Contains("PagedPost-9-2", page2, StringComparison.Ordinal);
+        Assert.Contains("PagedPost-9-1", page2, StringComparison.Ordinal);
+        Assert.DoesNotContain("PagedPost-9-7", page2, StringComparison.Ordinal);
+        Assert.Contains("PagedPost-9-7", page0, StringComparison.Ordinal);
     }
 
     /// <summary>A title search narrows the list to matching posts (the search text is a literal, not a wildcard).</summary>
@@ -282,8 +282,8 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
 
         string html = await BodyAsync(await GetAsync("/Forum/FreeForum?searchType=Title&searchText=Zebra-Match-10"));
 
-        Assert.Contains("Zebra-Match-10", html);
-        Assert.DoesNotContain("Other-Title-10", html);
+        Assert.Contains("Zebra-Match-10", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Other-Title-10", html, StringComparison.Ordinal);
     }
 
     /// <summary>A pinned (noticed) post appears on every page of the list, and its comment count is shown.</summary>
@@ -296,6 +296,6 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
 
         string html = await BodyAsync(await GetAsync("/Forum/FreeForum?searchType=Writer&searchText=nobody-matches-11"));
 
-        Assert.Contains("PinnedTitle-11", html);
+        Assert.Contains("PinnedTitle-11", html, StringComparison.Ordinal);
     }
 }

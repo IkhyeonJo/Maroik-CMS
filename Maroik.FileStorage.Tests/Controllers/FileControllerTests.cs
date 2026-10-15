@@ -1,8 +1,8 @@
 using System.Net;
-using System.Net.Http.Headers;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Enums;
 using Maroik.FileStorage.Contracts;
+using Maroik.FileStorage.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -96,10 +96,7 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
     public async Task Upload_ReturnsBadRequest_WhenNoFileIsProvided()
     {
         var client = FactoryWithCleanScan().CreateClient();
-        using var content = new MultipartFormDataContent
-        {
-            { new StringContent("/tmp/uploads"), "filePath" }
-        };
+        using var content = MultipartForm.Of(("filePath", "/tmp/uploads"));
         // Intentionally omit the "file" part
 
         var response = await client.PostAsync("/api/File/upload", content, TestContext.Current.CancellationToken);
@@ -113,10 +110,8 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
     {
         var client = FactoryWithCleanScan().CreateClient();
         using var content = new MultipartFormDataContent();
-        var emptyFile = new ByteArrayContent([]);
-        emptyFile.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
-        content.Add(emptyFile, "file", "empty.jpg");
-        content.Add(new StringContent("/tmp/uploads"), "filePath");
+        MultipartForm.AddFile(content, "file", "empty.jpg", [], "image/jpeg");
+        MultipartForm.AddText(content, "filePath", "/tmp/uploads");
 
         var response = await client.PostAsync("/api/File/upload", content, TestContext.Current.CancellationToken);
 
@@ -133,10 +128,8 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
     {
         var client = FactoryWithCleanScan().CreateClient();
         using var content = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent([0x01, 0x02, 0x03]);
-        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/octet-stream");
-        content.Add(fileContent, "file", fileName);
-        content.Add(new StringContent("/tmp/uploads"), "filePath");
+        MultipartForm.AddFile(content, "file", fileName, [0x01, 0x02, 0x03], "application/octet-stream");
+        MultipartForm.AddText(content, "filePath", "/tmp/uploads");
 
         var response = await client.PostAsync("/api/File/upload", content, TestContext.Current.CancellationToken);
 
@@ -150,10 +143,8 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         var client = FactoryWithCleanScan().CreateClient();
         using var content = new MultipartFormDataContent();
         var largeBytes = new byte[11 * 1024 * 1024]; // 11 MB
-        var fileContent = new ByteArrayContent(largeBytes);
-        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
-        content.Add(fileContent, "file", "large.jpg");
-        content.Add(new StringContent("/tmp/uploads"), "filePath");
+        MultipartForm.AddFile(content, "file", "large.jpg", largeBytes, "image/jpeg");
+        MultipartForm.AddText(content, "filePath", "/tmp/uploads");
 
         var response = await client.PostAsync("/api/File/upload", content, TestContext.Current.CancellationToken);
 
@@ -169,10 +160,8 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         var client = FactoryWithCleanScan().CreateClient();
         using var content = new MultipartFormDataContent();
         // JPEG requires 0xFF 0xD8 as first two bytes
-        var fileContent = new ByteArrayContent([0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
-        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
-        content.Add(fileContent, "file", "fake.jpg");
-        content.Add(new StringContent("/tmp/uploads"), "filePath");
+        MultipartForm.AddFile(content, "file", "fake.jpg", [0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06], "image/jpeg");
+        MultipartForm.AddText(content, "filePath", "/tmp/uploads");
 
         var response = await client.PostAsync("/api/File/upload", content, TestContext.Current.CancellationToken);
 
@@ -185,10 +174,8 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
     {
         var client = FactoryWithCleanScan().CreateClient();
         using var content = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG bytes, not JPEG
-        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
-        content.Add(fileContent, "file", "wrong.jpeg");
-        content.Add(new StringContent("/tmp/uploads"), "filePath");
+        MultipartForm.AddFile(content, "file", "wrong.jpeg", [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], "image/jpeg"); // PNG bytes, not JPEG
+        MultipartForm.AddText(content, "filePath", "/tmp/uploads");
 
         var response = await client.PostAsync("/api/File/upload", content, TestContext.Current.CancellationToken);
 
@@ -202,10 +189,8 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         var client = FactoryWithCleanScan().CreateClient();
         using var content = new MultipartFormDataContent();
         // PNG requires: 89 50 4E 47 0D 0A 1A 0A — use wrong bytes
-        var fileContent = new ByteArrayContent([0x89, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
-        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/png");
-        content.Add(fileContent, "file", "fake.png");
-        content.Add(new StringContent("/tmp/uploads"), "filePath");
+        MultipartForm.AddFile(content, "file", "fake.png", [0x89, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], "image/png");
+        MultipartForm.AddText(content, "filePath", "/tmp/uploads");
 
         var response = await client.PostAsync("/api/File/upload", content, TestContext.Current.CancellationToken);
 
@@ -219,10 +204,8 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         var client = FactoryWithCleanScan().CreateClient();
         using var content = new MultipartFormDataContent();
         // ZIP requires: 50 4B 03 04 — use wrong bytes
-        var fileContent = new ByteArrayContent([0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08]);
-        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/zip");
-        content.Add(fileContent, "file", "fake.zip");
-        content.Add(new StringContent("/tmp/uploads"), "filePath");
+        MultipartForm.AddFile(content, "file", "fake.zip", [0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08], "application/zip");
+        MultipartForm.AddText(content, "filePath", "/tmp/uploads");
 
         var response = await client.PostAsync("/api/File/upload", content, TestContext.Current.CancellationToken);
 
@@ -238,10 +221,8 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         var client = FactoryWithVirusDetected().CreateClient();
         using var content = new MultipartFormDataContent();
         // Valid JPEG magic bytes so it passes the magic-byte check and reaches the scan
-        var fileContent = new ByteArrayContent([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00]);
-        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
-        content.Add(fileContent, "file", "infected.jpg");
-        content.Add(new StringContent(UniqueTempTarget()), "filePath");
+        MultipartForm.AddFile(content, "file", "infected.jpg", [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00], "image/jpeg");
+        MultipartForm.AddText(content, "filePath", UniqueTempTarget());
 
         var response = await client.PostAsync("/api/File/upload", content, TestContext.Current.CancellationToken);
 
@@ -249,7 +230,7 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         // The refusal must come from the scan itself (not from an earlier path / extension check).
-        Assert.Contains("infected", body);
+        Assert.Contains("infected", body, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -261,17 +242,15 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
     {
         var client = FactoryWithClamavUnavailable().CreateClient();
         using var content = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00]);
-        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
-        content.Add(fileContent, "file", "unscanned.jpg");
-        content.Add(new StringContent(UniqueTempTarget()), "filePath");
+        MultipartForm.AddFile(content, "file", "unscanned.jpg", [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00], "image/jpeg");
+        MultipartForm.AddText(content, "filePath", UniqueTempTarget());
 
         var response = await client.PostAsync("/api/File/upload", content, TestContext.Current.CancellationToken);
         string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("could not be scanned", body);
-        Assert.DoesNotContain("infected", body);
+        Assert.Contains("could not be scanned", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("infected", body, StringComparison.Ordinal);
     }
 
     // -- Upload: encrypted ZIP ------------------------------------------------
@@ -323,10 +302,8 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
 
         var client = FactoryWithCleanScan().CreateClient();
         using var content = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent(encryptedZipBytes);
-        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/zip");
-        content.Add(fileContent, "file", "encrypted.zip");
-        content.Add(new StringContent("/tmp/uploads"), "filePath");
+        MultipartForm.AddFile(content, "file", "encrypted.zip", encryptedZipBytes, "application/zip");
+        MultipartForm.AddText(content, "filePath", "/tmp/uploads");
 
         var response = await client.PostAsync("/api/File/upload", content, TestContext.Current.CancellationToken);
 
@@ -351,11 +328,9 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         }));
         var client = factory.CreateClient();
         using var content = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent([0xFF, 0xD8, 0xFF, 0xE0]);
-        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
-        content.Add(fileContent, "file", "test.jpg");
-        content.Add(new StringContent("/tmp/uploads"), "filePath");
-        content.Add(new StringContent("test-correlation-123"), "correlationId");
+        MultipartForm.AddFile(content, "file", "test.jpg", [0xFF, 0xD8, 0xFF, 0xE0], "image/jpeg");
+        MultipartForm.AddText(content, "filePath", "/tmp/uploads");
+        MultipartForm.AddText(content, "correlationId", "test-correlation-123");
 
         var response = await client.PostAsync("/api/File/upload", content, TestContext.Current.CancellationToken);
 
@@ -369,10 +344,7 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
     public async Task Download_ReturnsNotFound_WhenFileDoesNotExist()
     {
         var client = baseFactory.CreateClient();
-        using var content = new MultipartFormDataContent
-        {
-            { new StringContent("/nonexistent/path/does_not_exist_xyz.jpg"), "filePath" }
-        };
+        using var content = MultipartForm.Of(("filePath", "/nonexistent/path/does_not_exist_xyz.jpg"));
 
         var response = await client.PostAsync("/api/File/download", content, TestContext.Current.CancellationToken);
 
@@ -391,10 +363,7 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         try
         {
             var client = FactoryWithTempStorageRoot().CreateClient();
-            using var content = new MultipartFormDataContent
-            {
-                { new StringContent(tempPath), "filePath" }
-            };
+            using var content = MultipartForm.Of(("filePath", tempPath));
 
             var response = await client.PostAsync("/api/File/download", content, TestContext.Current.CancellationToken);
 
@@ -441,6 +410,54 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         }
     }
 
+    /// <summary>A logger that throws when the controller logs the successful download.</summary>
+    private sealed class ThrowOnDownloadedLogger : Microsoft.Extensions.Logging.ILogger<Maroik.FileStorage.Controllers.FileController>
+    {
+        /// <inheritdoc />
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        /// <inheritdoc />
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+
+        /// <summary>Throws for the "File downloaded" entry; every other entry is dropped.</summary>
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (formatter(state, exception).StartsWith("File downloaded", StringComparison.Ordinal))
+                throw new InvalidOperationException("log sink failed");
+        }
+    }
+
+    /// <summary>
+    /// When the download fails after the file was opened (here the success log throws), the answer is the
+    /// generic "Invalid file" and the opened file is closed again, not left open until the finalizer runs.
+    /// On Linux .NET backs <see cref="FileShare"/> with an advisory lock, so a file still held open for
+    /// reading refuses an exclusive open.
+    /// </summary>
+    [Fact]
+    public void Download_ClosesTheFile_WhenItFailsAfterOpeningIt()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"maroik_test_{Guid.NewGuid()}.zip");
+        File.WriteAllBytes(tempPath, [1, 2, 3, 4]);
+        try
+        {
+            var controller = new Maroik.FileStorage.Controllers.FileController(
+                Mock.Of<IFileValidationService>(),
+                Microsoft.Extensions.Options.Options.Create(new Maroik.FileStorage.Settings.FileStorageSetting { StorageRootPath = Path.GetTempPath() }),
+                new ThrowOnDownloadedLogger());
+
+            var result = controller.Download(tempPath);
+
+            var badRequest = Assert.IsType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>(result);
+            Assert.Equal("Invalid file", badRequest.Value);
+            using var exclusive = new FileStream(tempPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            Assert.Equal(4, exclusive.Length);
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
     /// <summary>Verifies that <c>Download</c> returns correct content type for png.</summary>
     [Fact]
     public async Task Download_ReturnsCorrectContentType_ForPng()
@@ -452,10 +469,7 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         try
         {
             var client = FactoryWithTempStorageRoot().CreateClient();
-            using var content = new MultipartFormDataContent
-            {
-                { new StringContent(tempPath), "filePath" }
-            };
+            using var content = MultipartForm.Of(("filePath", tempPath));
 
             var response = await client.PostAsync("/api/File/download", content, TestContext.Current.CancellationToken);
 
@@ -492,11 +506,9 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
             });
             var client = factory.CreateClient();
             using var upload = new MultipartFormDataContent();
-            var fileContent = new ByteArrayContent(png);
-            fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/png");
-            upload.Add(fileContent, "file", "stored.png");
-            upload.Add(new StringContent(targetDir), "filePath");
-            upload.Add(new StringContent("corr-1"), "correlationId");
+            MultipartForm.AddFile(upload, "file", "stored.png", png, "image/png");
+            MultipartForm.AddText(upload, "filePath", targetDir);
+            MultipartForm.AddText(upload, "correlationId", "corr-1");
 
             var uploaded = await client.PostAsync("/api/File/upload", upload, TestContext.Current.CancellationToken);
 
@@ -505,10 +517,7 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
             string stored = Path.Combine(targetDir, "stored.png");
             Assert.Equal(png, await File.ReadAllBytesAsync(stored, TestContext.Current.CancellationToken));
 
-            using var download = new MultipartFormDataContent
-            {
-                { new StringContent(stored), "filePath" }
-            };
+            using var download = MultipartForm.Of(("filePath", stored));
             var downloaded = await client.PostAsync("/api/File/download", download, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, downloaded.StatusCode);
             Assert.Equal(png, await downloaded.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
@@ -528,10 +537,7 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         try
         {
             var client = FactoryWithTempStorageRoot().CreateClient();
-            using var content = new MultipartFormDataContent
-            {
-                { new StringContent(tempPath), "filePath" }
-            };
+            using var content = MultipartForm.Of(("filePath", tempPath));
 
             var response = await client.PostAsync("/api/File/download", content, TestContext.Current.CancellationToken);
 
@@ -556,10 +562,7 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         {
             if (CanRead(tempPath)) return; // running as root: file permissions do not apply, so the read cannot be made to fail
             var client = FactoryWithTempStorageRoot().CreateClient();
-            using var content = new MultipartFormDataContent
-            {
-                { new StringContent(tempPath), "filePath" }
-            };
+            using var content = MultipartForm.Of(("filePath", tempPath));
 
             var response = await client.PostAsync("/api/File/download", content, TestContext.Current.CancellationToken);
 

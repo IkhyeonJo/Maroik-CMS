@@ -410,9 +410,7 @@ public sealed class IncomeRepositoryTests(DatabaseFixture database) : Repository
         Assert.Equal(["at-from", "inside"], result.Select(i => i.Content).Order());
         return;
 
- #pragma warning disable IDE0062
-        OrmIncome At(string email, string content, DateTime created)
- #pragma warning restore IDE0062
+        static OrmIncome At(string email, string content, DateTime created)
         {
             OrmIncome income = MakeIncome(email, "Bank", content);
             income.Created = created;

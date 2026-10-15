@@ -1,3 +1,4 @@
+using System.Globalization;
 using Maroik.Core.Client.Clients;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Settings;
@@ -39,7 +40,7 @@ internal static class WorkerHost
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
             .Enrich.FromLogContext()
-            .WriteTo.Console(outputTemplate: ConsoleOutputTemplate));
+            .WriteTo.Console(outputTemplate: ConsoleOutputTemplate, formatProvider: CultureInfo.InvariantCulture));
 
         #region ServerSettings (SMTP only — reuses the shared ServerSetting shape)
 
@@ -50,7 +51,7 @@ internal static class WorkerHost
             cfg.SmtpUserName = smtp["smtpUserName"];
             cfg.SmtpPassword = smtp["smtpPassword"];
             cfg.SmtpHost = smtp["smtpHost"];
-            cfg.SmtpPort = Convert.ToInt32(smtp["smtpPort"]);
+            cfg.SmtpPort = Convert.ToInt32(smtp["smtpPort"], CultureInfo.InvariantCulture);
             cfg.SmtpSsl = Convert.ToBoolean(smtp["smtpSsl"]);
             cfg.FromEmail = smtp["fromEmail"];
             cfg.FromFullName = smtp["fromFullName"];

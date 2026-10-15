@@ -146,7 +146,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
     public async Task Start_DeclaresTheDurableTopology()
     {
         await broker.ResetQueuesAsync(Ct);
-        var worker = CreateWorker(new ScriptedHandler((_, _) => Task.CompletedTask));
+        using var worker = CreateWorker(new ScriptedHandler((_, _) => Task.CompletedTask));
         await worker.StartAsync(Ct);
         try
         {
@@ -180,7 +180,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
     {
         await broker.ResetQueuesAsync(Ct);
         var handler = new ScriptedHandler((_, _) => Task.CompletedTask);
-        var worker = CreateWorker(handler);
+        using var worker = CreateWorker(handler);
         await worker.StartAsync(Ct);
         try
         {
@@ -204,7 +204,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
     {
         await broker.ResetQueuesAsync(Ct);
         var handler = new ScriptedHandler((_, n) => n == 1 ? throw new InvalidOperationException("smtp blip") : Task.CompletedTask);
-        var worker = CreateWorker(handler);
+        using var worker = CreateWorker(handler);
         await worker.StartAsync(Ct);
         try
         {
@@ -230,7 +230,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
     {
         await broker.ResetQueuesAsync(Ct);
         var handler = new ScriptedHandler((_, n) => n == 1 ? throw new InvalidOperationException("smtp down") : Task.CompletedTask);
-        var worker = CreateWorker(handler, [TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2)]);
+        using var worker = CreateWorker(handler, [TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2)]);
         await worker.StartAsync(Ct);
         try
         {
@@ -256,7 +256,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
     {
         await broker.ResetQueuesAsync(Ct);
         var handler = new ScriptedHandler((_, _) => throw new InvalidOperationException("always fails"));
-        var worker = CreateWorker(handler);
+        using var worker = CreateWorker(handler);
         await worker.StartAsync(Ct);
         try
         {
@@ -279,7 +279,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
     {
         await broker.ResetQueuesAsync(Ct);
         var handler = new ScriptedHandler((_, _) => Task.CompletedTask);
-        var worker = CreateWorker(handler);
+        using var worker = CreateWorker(handler);
         await worker.StartAsync(Ct);
         try
         {
@@ -302,7 +302,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
     {
         await broker.ResetQueuesAsync(Ct);
         var handler = new ScriptedHandler((_, _) => throw new InvalidOperationException("still failing"));
-        var worker = CreateWorker(handler);
+        using var worker = CreateWorker(handler);
         await worker.StartAsync(Ct);
         try
         {
@@ -323,7 +323,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         await broker.ResetQueuesAsync(Ct);
         var release = new TaskCompletionSource();
         var handler = new ScriptedHandler((_, _) => release.Task);
-        var worker = CreateWorker(handler);
+        using var worker = CreateWorker(handler);
         await worker.StartAsync(Ct);
         await PublishAsync(_message);
         await WaitAsync(() => handler.Calls == 1);
@@ -351,7 +351,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         await broker.ResetQueuesAsync(Ct);
         var release = new TaskCompletionSource();
         var handler = new ScriptedHandler((_, _) => release.Task); // ignores the cancellation token on purpose
-        var worker = CreateWorker(handler);
+        using var worker = CreateWorker(handler);
         worker.DrainTimeout = TimeSpan.FromMilliseconds(300);
         worker.CancelUnwindTimeout = TimeSpan.FromMilliseconds(300);
         await worker.StartAsync(Ct);
@@ -376,7 +376,7 @@ public class EmailConsumerWorkerBrokerTests(WorkerBrokerFixture broker) : IClass
         await broker.ResetQueuesAsync(Ct);
         for (int i = 0; i < 3; i++) await PublishAsync(_message with { Subject = $"#{i}" });
         var handler = new ScriptedHandler((_, _) => Task.CompletedTask);
-        var worker = CreateWorker(handler);
+        using var worker = CreateWorker(handler);
         await worker.StartAsync(Ct);
         try
         {

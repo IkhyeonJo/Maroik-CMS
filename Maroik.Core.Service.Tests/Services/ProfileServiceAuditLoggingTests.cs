@@ -57,7 +57,7 @@ public class ProfileServiceAuditLoggingTests
     {
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(),
             r => r.Level == level && r.Message.Contains(containing, StringComparison.Ordinal));
-        Assert.Contains(Email, record.Message);
+        Assert.Contains(Email, record.Message, StringComparison.Ordinal);
         return record;
     }
 
@@ -90,7 +90,7 @@ public class ProfileServiceAuditLoggingTests
             It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<long>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
-        Assert.Contains("Account.PasswordEmpty", Only(LogLevel.Error, "Password change failed").Message);
+        Assert.Contains("Account.PasswordEmpty", Only(LogLevel.Error, "Password change failed").Message, StringComparison.Ordinal);
         Assert.DoesNotContain(_logger.Collector.GetSnapshot(), r => r.Message.Contains("Password changed", StringComparison.Ordinal));
     }
 
@@ -103,9 +103,9 @@ public class ProfileServiceAuditLoggingTests
         await CreateSut().UpdatePasswordAsync(Email, "oldpass", "NewPass1!", TestContext.Current.CancellationToken);
 
         FakeLogRecord record = Only(LogLevel.Information, "Password changed");
-        Assert.DoesNotContain("NewPass1!", record.Message);
-        Assert.DoesNotContain("oldpass", record.Message);
-        Assert.DoesNotContain("$2a$13$newhash", record.Message);
+        Assert.DoesNotContain("NewPass1!", record.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("oldpass", record.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("$2a$13$newhash", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -143,7 +143,7 @@ public class ProfileServiceAuditLoggingTests
         await CreateSut().UpdatePasswordAsync(Email, "oldpass", "NewPass1!", TestContext.Current.CancellationToken);
 
         FakeLogRecord record = Only(LogLevel.Warning, "Password change refused: wrong current password");
-        Assert.DoesNotContain("oldpass", record.Message);
+        Assert.DoesNotContain("oldpass", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Arranges the image validator verdicts and, when <paramref name="uploaded"/> is given, the upload result.</summary>
@@ -185,7 +185,7 @@ public class ProfileServiceAuditLoggingTests
         await CreateSut().UploadAndUpdateAvatarAsync(Email, [1, 2, 3], ".exe", TestContext.Current.CancellationToken);
 
         FakeLogRecord record = Only(LogLevel.Warning, "Avatar upload refused: extension not allowed");
-        Assert.Contains(".exe", record.Message);
+        Assert.Contains(".exe", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that an avatar the virus scanner flags is refused with a Warning.</summary>
@@ -238,7 +238,8 @@ public class ProfileServiceAuditLoggingTests
     [Fact]
     public async Task DownloadAvatar_LogsAWarningWithTheCorrelationId_WhenStorageFails()
     {
-        using var activity = new System.Diagnostics.Activity("request").Start();
+        using var activity = new System.Diagnostics.Activity("request");
+        activity.Start();
         var failure = new HttpRequestException("404");
         _fileClient.Setup(f => f.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(failure);
 
@@ -247,7 +248,7 @@ public class ProfileServiceAuditLoggingTests
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot());
         Assert.Equal(LogLevel.Warning, record.Level);
         Assert.Same(failure, record.Exception);
-        Assert.Contains("me.png", record.Message);
-        Assert.Contains($"CorrelationId={activity.Id}", record.Message);
+        Assert.Contains("me.png", record.Message, StringComparison.Ordinal);
+        Assert.Contains($"CorrelationId={activity.Id}", record.Message, StringComparison.Ordinal);
     }
 }

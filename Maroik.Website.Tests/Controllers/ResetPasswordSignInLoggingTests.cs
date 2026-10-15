@@ -1,5 +1,4 @@
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Helpers;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Website.Controllers;
@@ -55,7 +54,7 @@ public class ResetPasswordSignInLoggingTests(MaroikWebApplicationFactory factory
             db.Accounts.Add(new Maroik.Core.PostgreSQL.Models.Account
             {
                 Email = email,
-                HashedPassword = scope.ServiceProvider.GetRequiredService<IPasswordService>().HashPassword("OldPassword1!"),
+                HashedPassword = TestPasswords.Hash("OldPassword1!"),
                 Nickname = "ResetSignIn_" + Guid.NewGuid().ToString("N")[..12],
                 AvatarImagePath = "/upload/Management/Profile/default-avatar.jpg",
                 Role = Role.User,
@@ -74,11 +73,7 @@ public class ResetPasswordSignInLoggingTests(MaroikWebApplicationFactory factory
             BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false
         });
         var anonymous = await AuthenticatedSessionHelper.AnonymousAsync(client, TestContext.Current.CancellationToken);
-        var form = new MultipartFormDataContent
-        {
-            { new StringContent(encryptedToken), "ResetPasswordToken" },
-            { new StringContent("BrandNewPassword1!"), "Password" }
-        };
+        var form = MultipartForm.Of(("ResetPasswordToken", encryptedToken), ("Password", "BrandNewPassword1!"));
         using var request = anonymous.BuildFormPostRequest("/Account/ResetPassword", form);
 
         var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -89,9 +84,9 @@ public class ResetPasswordSignInLoggingTests(MaroikWebApplicationFactory factory
         Assert.Equal(LogLevel.Information, record.Level);
         Assert.All(_logger.Collector.GetSnapshot(), r =>
         {
-            Assert.DoesNotContain("BrandNewPassword1!", r.Message);
-            Assert.DoesNotContain(rawToken, r.Message);
-            Assert.DoesNotContain(encryptedToken, r.Message);
+            Assert.DoesNotContain("BrandNewPassword1!", r.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain(rawToken, r.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain(encryptedToken, r.Message, StringComparison.Ordinal);
         });
     }
 }

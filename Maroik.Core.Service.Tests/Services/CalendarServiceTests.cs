@@ -1346,7 +1346,7 @@ public class CalendarServiceTests
 
         Assert.Equal("Calendar.Unexpected", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -1544,7 +1544,7 @@ public class CalendarServiceTests
 
         Assert.Equal("CalendarEvent.CreateFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -1578,7 +1578,7 @@ public class CalendarServiceTests
 
         Assert.Equal("CalendarEvent.UpdateFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

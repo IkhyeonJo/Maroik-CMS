@@ -19,9 +19,9 @@ public class JsonSerializationTests
     {
         string json = JsonSerialization.ToClientJson(new Sample("Event", 3));
 
-        Assert.Contains("\"Title\"", json);
-        Assert.Contains("\"Count\"", json);
-        Assert.DoesNotContain("\"title\"", json);
+        Assert.Contains("\"Title\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"Count\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"title\"", json, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -33,8 +33,8 @@ public class JsonSerializationTests
     {
         string json = JsonSerialization.ToClientJson(new Sample("생일 파티", 1));
 
-        Assert.Contains("생일 파티", json);
-        Assert.DoesNotContain("\\u", json);
+        Assert.Contains("생일 파티", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\\u", json, StringComparison.Ordinal);
     }
 
     /// <summary>Characters that would otherwise need escaping under the default encoder (e.g. '+') are also left as-is.</summary>
@@ -43,7 +43,7 @@ public class JsonSerializationTests
     {
         string json = JsonSerialization.ToClientJson(new Sample("A+B", 1));
 
-        Assert.Contains("A+B", json);
+        Assert.Contains("A+B", json, StringComparison.Ordinal);
     }
 
     /// <summary>A null value serializes to the JSON literal "null", not an empty string.</summary>
@@ -61,7 +61,7 @@ public class JsonSerializationTests
     {
         string json = JsonSerialization.ToClientJson(new Sample("Event", 3));
 
-        Assert.DoesNotContain("\n", json);
-        Assert.DoesNotContain("  ", json);
+        Assert.DoesNotContain("\n", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("  ", json, StringComparison.Ordinal);
     }
 }

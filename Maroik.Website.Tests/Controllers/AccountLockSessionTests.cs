@@ -41,11 +41,7 @@ public class AccountLockSessionTests(MaroikWebApplicationFactory factory)
     private async Task<HttpResponseMessage> PostLoginAsync(string email, string password)
     {
         var anonymous = await AuthenticatedSessionHelper.AnonymousAsync(_client, TestContext.Current.CancellationToken);
-        var form = new MultipartFormDataContent
-        {
-            { new StringContent(email), "Email" },
-            { new StringContent(password), "Password" }
-        };
+        var form = MultipartForm.Of(("Email", email), ("Password", password));
         using var request = anonymous.BuildFormPostRequest("/Account/Login", form);
         return await _client.SendAsync(request, TestContext.Current.CancellationToken);
     }
@@ -95,7 +91,7 @@ public class AccountLockSessionTests(MaroikWebApplicationFactory factory)
             Deleted = false
         });
         Assert.Contains("\"result\":true", await (await _client.SendAsync(lockRequest, TestContext.Current.CancellationToken))
-            .Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            .Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
 
         var response = await OpenIncomePageAsync(owner);
 

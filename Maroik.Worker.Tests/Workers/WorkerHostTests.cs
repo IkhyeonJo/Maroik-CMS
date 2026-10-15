@@ -122,8 +122,8 @@ public class WorkerHostTests(WorkerBrokerFixture broker) : IClassFixture<WorkerB
 
             await WaitUntilAsync(() => relay.ReceivedMessage != null);
 
-            Assert.Contains("Host wiring subject", relay.ReceivedMessage);
-            Assert.Contains("<p>hello from the queue</p>", relay.ReceivedMessage);
+            Assert.Contains("Host wiring subject", relay.ReceivedMessage, StringComparison.Ordinal);
+            Assert.Contains("<p>hello from the queue</p>", relay.ReceivedMessage, StringComparison.Ordinal);
             Assert.Equal(("mailer", "s3cret"), relay.Credentials);
             Assert.Contains(relay.Commands, c => c.Contains("noreply@maroik.test", StringComparison.OrdinalIgnoreCase));
             Assert.Contains(relay.Commands, c => c.StartsWith("RCPT", StringComparison.OrdinalIgnoreCase) && c.Contains("to@example.com", StringComparison.OrdinalIgnoreCase));
@@ -238,7 +238,7 @@ public class WorkerHostTests(WorkerBrokerFixture broker) : IClassFixture<WorkerB
         string output = await stdout + await stderr;
 
         Assert.True(process.ExitCode == 0, output);
-        Assert.DoesNotContain("Email consumer started", output);
+        Assert.DoesNotContain("Email consumer started", output, StringComparison.Ordinal);
         await using IConnection check = await broker.CreateFactory().CreateConnectionAsync(Ct);
         await using IChannel checkChannel = await check.CreateChannelAsync(cancellationToken: Ct);
         Assert.Equal(0u, (await checkChannel.QueueDeclarePassiveAsync(QueueNames.EmailDeadLetter, Ct)).MessageCount);

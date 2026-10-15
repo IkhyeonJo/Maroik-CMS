@@ -86,7 +86,7 @@ public class AccountServiceAuditLoggingTests
     {
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(),
             r => r.Level == level && r.Message.Contains(containing, StringComparison.Ordinal));
-        Assert.Contains(Email, record.Message);
+        Assert.Contains(Email, record.Message, StringComparison.Ordinal);
         return record;
     }
 
@@ -95,7 +95,7 @@ public class AccountServiceAuditLoggingTests
     {
         foreach (FakeLogRecord record in _logger.Collector.GetSnapshot())
         foreach (string secret in secrets)
-            Assert.DoesNotContain(secret, record.Message + record.Exception);
+            Assert.DoesNotContain(secret, record.Message + record.Exception, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that a successful login logs one Information entry and never the typed password.</summary>
@@ -119,7 +119,7 @@ public class AccountServiceAuditLoggingTests
         await CreateSut().LoginAsync(Email, TypedPassword, TestContext.Current.CancellationToken);
 
         FakeLogRecord record = Only(LogLevel.Warning, "Login failed");
-        Assert.Contains("2", record.Message); // the counter after this failure
+        Assert.Contains("2", record.Message, StringComparison.Ordinal); // the counter after this failure
         AssertNoSecretLogged(TypedPassword);
     }
 
@@ -132,7 +132,7 @@ public class AccountServiceAuditLoggingTests
         await CreateSut().LoginAsync(Email, TypedPassword, TestContext.Current.CancellationToken);
 
         FakeLogRecord record = Only(LogLevel.Warning, "locked after");
-        Assert.Contains("3", record.Message);
+        Assert.Contains("3", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that a login for an unknown email logs a Warning and never the typed password.</summary>

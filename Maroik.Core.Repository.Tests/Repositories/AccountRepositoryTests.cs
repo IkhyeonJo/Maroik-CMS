@@ -287,6 +287,23 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
         Assert.False(await Sut.NicknameExistsIgnoreCaseAsync(nickname, TestContext.Current.CancellationToken));
     }
 
+    /// <summary>
+    /// Verifies that <c>NicknameExistsIgnoreCaseAsync</c> matches the nickname literally: the LIKE wildcards <c>_</c> and
+    /// <c>%</c> (and the escape character <c>\</c>) in the queried nickname match only themselves.
+    /// </summary>
+    [Theory]
+    [InlineData("a1b", "a_b")]
+    [InlineData("ab-cd", "ab%")]
+    [InlineData("ab_cd", "ab\\_cd")]
+    public async Task NicknameExistsIgnoreCaseAsync_MatchesWildcardCharactersLiterally(string existingSuffix, string queriedSuffix)
+    {
+        string prefix = Unique("Wild");
+        await SeedAsync(NewAccount(nickname: prefix + existingSuffix));
+
+        Assert.False(await Sut.NicknameExistsIgnoreCaseAsync(prefix + queriedSuffix, TestContext.Current.CancellationToken));
+        Assert.True(await Sut.NicknameExistsIgnoreCaseAsync((prefix + existingSuffix).ToUpperInvariant(), TestContext.Current.CancellationToken));
+    }
+
     // -- CreateAsync --------------------------------------------------------------
 
     /// <summary>Verifies that <c>CreateAsync</c> persists a new account row that is then retrievable.</summary>

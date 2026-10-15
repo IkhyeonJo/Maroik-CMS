@@ -79,7 +79,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         db.Accounts.Add(new Maroik.Core.PostgreSQL.Models.Account
         {
-            Email = email, HashedPassword = scope.ServiceProvider.GetRequiredService<IPasswordService>().HashPassword("OldPassword1!"),
+            Email = email, HashedPassword = TestPasswords.Hash("OldPassword1!"),
             Nickname = "Fail_" + Guid.NewGuid().ToString("N")[..10], AvatarImagePath = "/upload/Management/Profile/default-avatar.jpg",
             Role = Role.User, TimeZoneIanaId = "UTC", Locked = false, LoginAttempt = 0, EmailConfirmed = emailConfirmed, AgreedServiceTerms = true,
             RegistrationToken = registrationToken, ResetPasswordToken = resetPasswordToken, Deleted = false, Created = DateTime.UtcNow, Updated = DateTime.UtcNow,
@@ -96,7 +96,8 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         await SeedAccountAsync(email, registrationToken: rawToken, emailConfirmed: false);
         await using var host = HostWithFailing<IAccountRepository>(nameof(IAccountRepository.UpdateEmailConfirmationAsync));
         var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false });
-        string encrypted = host.Services.CreateScope().ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
+        using var protectionScope = host.Services.CreateScope();
+        string encrypted = protectionScope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
 
         var (cookie, token) = await AntiForgeryAsync(client, $"/Account/ConfirmEmail?registrationToken={Uri.EscapeDataString(encrypted)}");
 
@@ -110,8 +111,8 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("Error occurred while processing about confirm email account status", html);
-        Assert.DoesNotContain(DatabaseSecret, html);
+        Assert.Contains("Error occurred while processing about confirm email account status", html, StringComparison.Ordinal);
+        Assert.DoesNotContain(DatabaseSecret, html, StringComparison.Ordinal);
         using var scope = factory.Services.CreateScope();
         Assert.False(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Accounts.Single(a => a.Email == email).EmailConfirmed);
     }
@@ -125,7 +126,8 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         await SeedAccountAsync(email, resetPasswordToken: rawToken);
         await using var host = HostWithFailing<IAccountRepository>(nameof(IAccountRepository.FindByEmailForUpdateAsync));
         var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false });
-        string encrypted = host.Services.CreateScope().ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
+        using var protectionScope = host.Services.CreateScope();
+        string encrypted = protectionScope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
         var (cookie, token) = await AntiForgeryAsync(client, "/Account/ResetPassword");
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "/Account/ResetPassword");
@@ -138,9 +140,9 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("resetPasswordForm", html);
-        Assert.DoesNotContain("The authentication token is invalid.", html);
-        Assert.DoesNotContain(DatabaseSecret, html);
+        Assert.Contains("resetPasswordForm", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("The authentication token is invalid.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain(DatabaseSecret, html, StringComparison.Ordinal);
         using var scope = factory.Services.CreateScope();
         Assert.Equal(rawToken, scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Accounts.Single(a => a.Email == email).ResetPasswordToken);
     }
@@ -170,7 +172,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         Assert.False(JsonDocument.Parse(json).RootElement.GetProperty("result").GetBoolean());
-        Assert.Contains("A temporary error occurred. Please try again later.", json);
-        Assert.DoesNotContain(DatabaseSecret, json);
+        Assert.Contains("A temporary error occurred. Please try again later.", json, StringComparison.Ordinal);
+        Assert.DoesNotContain(DatabaseSecret, json, StringComparison.Ordinal);
     }
 }

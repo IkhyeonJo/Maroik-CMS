@@ -28,7 +28,7 @@ public class PasswordServiceTests
         string hash = _sut.HashPassword("MySecurePassword123!");
 
         Assert.NotNull(hash);
-        Assert.StartsWith("$2", hash); // BCrypt hashes start with $2a$ or $2b$
+        Assert.StartsWith("$2", hash, StringComparison.Ordinal); // BCrypt hashes start with $2a$ or $2b$
     }
 
     /// <summary>Verifies that <c>HashPassword</c> produces different hash each call when due to random salt.</summary>
@@ -137,10 +137,10 @@ public class PasswordServiceTests
         Assert.False(result);
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot());
         Assert.Equal(LogLevel.Warning, record.Level);
-        Assert.Contains("malformed", record.Message);
+        Assert.Contains("malformed", record.Message, StringComparison.Ordinal);
         Assert.NotNull(record.Exception);
-        Assert.DoesNotContain(malformedHash, record.Message);
-        Assert.DoesNotContain("Whatever1!", record.Message);
+        Assert.DoesNotContain(malformedHash, record.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Whatever1!", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>An ordinary wrong password is not an event by itself here (the caller logs the login failure).</summary>

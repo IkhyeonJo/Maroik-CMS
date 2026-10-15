@@ -99,7 +99,7 @@ public class ResourceCompletenessTests
 
     /// <summary>The distinct literal localizer keys in the file at <paramref name="path"/>, unescaped.</summary>
     private static IEnumerable<string> LiteralKeys(string path) =>
-        _literalKey.Matches(File.ReadAllText(path)).Select(m => m.Groups[1].Value.Replace("\\\"", "\"").Replace(@"\\", "\\")).Distinct();
+        _literalKey.Matches(File.ReadAllText(path)).Select(m => m.Groups[1].Value.Replace("\\\"", "\"", StringComparison.Ordinal).Replace(@"\\", "\\", StringComparison.Ordinal)).Distinct();
 
     /// <summary>The literal keys in <paramref name="sourceFiles"/> absent from their resx pair (located by <paramref name="resxStemFor"/>), as readable failure lines.</summary>
     private static List<string> MissingKeys(IEnumerable<string> sourceFiles, Func<string, string> resxStemFor)

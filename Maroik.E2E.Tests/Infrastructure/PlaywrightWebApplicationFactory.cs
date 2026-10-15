@@ -84,7 +84,7 @@ public sealed class PlaywrightWebApplicationFactory : WebApplicationFactory<Prog
         // in `WebApplication.CreateBuilder` picks them up immediately, so the pre-Build reads
         // resolve. Cleared again in Dispose so nothing leaks past this factory's lifetime.
         foreach (var (key, value) in _configOverrides)
-            Environment.SetEnvironmentVariable(key.Replace(":", "__"), value);
+            Environment.SetEnvironmentVariable(key.Replace(":", "__", StringComparison.Ordinal), value);
     }
 
     // -- WebApplicationFactory overrides --------------------------------------
@@ -159,7 +159,7 @@ public sealed class PlaywrightWebApplicationFactory : WebApplicationFactory<Prog
         if (disposing)
         {
             foreach (var key in _configOverrides.Keys)
-                Environment.SetEnvironmentVariable(key.Replace(":", "__"), null);
+                Environment.SetEnvironmentVariable(key.Replace(":", "__", StringComparison.Ordinal), null);
         }
 
         _realHost?.Dispose();

@@ -81,7 +81,7 @@ public abstract class E2ETestBase(E2ESharedFixture fixture)
                 });
                 return;
             }
-            catch (PlaywrightException ex) when (attempt < maxAttempts && ex.Message.Contains("net::ERR_NETWORK_CHANGED"))
+            catch (PlaywrightException ex) when (attempt < maxAttempts && ex.Message.Contains("net::ERR_NETWORK_CHANGED", StringComparison.Ordinal))
             {
                 await Task.Delay(500 * attempt);
             }

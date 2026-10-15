@@ -56,8 +56,8 @@ public class ManagementAccountServiceAuditLoggingTests
     {
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(),
             r => r.Level == level && r.Message.Contains(containing, StringComparison.Ordinal));
-        Assert.Contains(Email, record.Message);
-        Assert.Contains($"by admin {Actor}", record.Message);
+        Assert.Contains(Email, record.Message, StringComparison.Ordinal);
+        Assert.Contains($"by admin {Actor}", record.Message, StringComparison.Ordinal);
         return record;
     }
 
@@ -66,7 +66,7 @@ public class ManagementAccountServiceAuditLoggingTests
     {
         foreach (FakeLogRecord record in _logger.Collector.GetSnapshot())
         foreach (string secret in secrets)
-            Assert.DoesNotContain(secret, record.Message + record.Exception);
+            Assert.DoesNotContain(secret, record.Message + record.Exception, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that an admin-created account is logged at Information with its role.</summary>
@@ -83,7 +83,7 @@ public class ManagementAccountServiceAuditLoggingTests
         }, Actor, TestContext.Current.CancellationToken);
 
         FakeLogRecord record = Only(LogLevel.Information, "Admin created account");
-        Assert.Contains(Role.Admin, record.Message);
+        Assert.Contains(Role.Admin, record.Message, StringComparison.Ordinal);
         AssertNoSecretLogged("Plain1234!", "$2a$13$hashedvalue");
     }
 
@@ -101,9 +101,9 @@ public class ManagementAccountServiceAuditLoggingTests
             "NewPass1!", Actor, TestContext.Current.CancellationToken);
 
         FakeLogRecord record = Only(LogLevel.Information, "Admin updated account");
-        Assert.Contains("role User -> Admin", record.Message);
-        Assert.Contains("locked False -> True", record.Message);
-        Assert.Contains("password reset True", record.Message);
+        Assert.Contains("role User -> Admin", record.Message, StringComparison.Ordinal);
+        Assert.Contains("locked False -> True", record.Message, StringComparison.Ordinal);
+        Assert.Contains("password reset True", record.Message, StringComparison.Ordinal);
         AssertNoSecretLogged("NewPass1!", "$2a$13$newhash");
     }
 
@@ -119,7 +119,7 @@ public class ManagementAccountServiceAuditLoggingTests
             new AdminUpdateAccountRequest { Email = Email, Locked = false, Deleted = true, EmailConfirmed = true, AgreedServiceTerms = true },
             null, Actor, TestContext.Current.CancellationToken);
         FakeLogRecord deleted = Only(LogLevel.Information, "deleted False -> True");
-        Assert.Contains("locked True -> False", deleted.Message);
+        Assert.Contains("locked True -> False", deleted.Message, StringComparison.Ordinal);
 
         _logger.Collector.Clear();
         await CreateSut().UpdateAccountAsync(
@@ -138,7 +138,7 @@ public class ManagementAccountServiceAuditLoggingTests
         await CreateSut().UpdateAccountAsync(
             new AdminUpdateAccountRequest { Email = Email, Role = Role.User, EmailConfirmed = true, AgreedServiceTerms = true }, null, Actor, TestContext.Current.CancellationToken);
 
-        Assert.Contains("password reset False", Only(LogLevel.Information, "Admin updated account").Message);
+        Assert.Contains("password reset False", Only(LogLevel.Information, "Admin updated account").Message, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -159,7 +159,7 @@ public class ManagementAccountServiceAuditLoggingTests
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
         _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
-        Assert.Contains("Account.PasswordEmpty", Only(LogLevel.Error, "Admin password reset failed").Message);
+        Assert.Contains("Account.PasswordEmpty", Only(LogLevel.Error, "Admin password reset failed").Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that an admin update of a missing account logs a Warning.</summary>

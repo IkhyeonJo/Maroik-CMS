@@ -43,6 +43,6 @@ public class CalendarControllerTests(MaroikWebApplicationFactory factory)
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 }

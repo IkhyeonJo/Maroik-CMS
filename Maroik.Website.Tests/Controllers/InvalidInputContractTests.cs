@@ -19,7 +19,7 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
     private const string Invalid = "Input is invalid";
 
     /// <summary>A form with a single irrelevant empty field, so every required field is missing.</summary>
-    private static MultipartFormDataContent EmptyForm() => new() { { new StringContent(""), "x" } };
+    private static MultipartFormDataContent EmptyForm() => MultipartForm.Of(("x", ""));
 
     /// <summary>Each row: the role that may call the endpoint, the endpoint, whether it takes a form, the body to send, and the expected message.</summary>
     private static readonly (string Role, string Url, bool Form, object? Body, string Message)[] _endpoints =
@@ -69,18 +69,21 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
         List<string> problems = [];
         foreach (var (role, url, form, body, message) in _endpoints)
         {
-            using var request = form
-                ? sessions[role].BuildFormPostRequest(url, EmptyForm())
-                : sessions[role].BuildJsonPostRequest(url, body ?? new { });
-            var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+            HttpResponseMessage response;
+            using (var request = EmptyRequest(sessions[role], url, form, body))
+                response = await client.SendAsync(request, TestContext.Current.CancellationToken);
             string text = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
             if (response.StatusCode != HttpStatusCode.OK) { problems.Add($"{url}: HTTP {(int)response.StatusCode} {text[..Math.Min(text.Length, 100)]}"); continue; }
             using JsonDocument doc = JsonDocument.Parse(text);
-            if (doc.RootElement.GetProperty("result").GetBoolean() || !text.Contains(message)) problems.Add($"{url}: {text[..Math.Min(text.Length, 140)]}");
+            if (doc.RootElement.GetProperty("result").GetBoolean() || !text.Contains(message, StringComparison.Ordinal)) problems.Add($"{url}: {text[..Math.Min(text.Length, 140)]}");
         }
 
         Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
     }
+
+    /// <summary>A POST to <paramref name="url"/> carrying <see cref="EmptyForm"/> (form endpoints) or <paramref name="body"/> (JSON endpoints, an empty object when null).</summary>
+    private static HttpRequestMessage EmptyRequest(AuthenticatedSession session, string url, bool form, object? body) =>
+        form ? session.BuildFormPostRequest(url, EmptyForm()) : session.BuildJsonPostRequest(url, body ?? new { });
 
     /// <summary>The id of the category named <paramref name="name"/>.</summary>
     private long CategoryIdByName(string name)
@@ -113,9 +116,9 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
         string name = $"Refused-{Guid.NewGuid():N}";
 
         string created = await Post("/Management/CreateCategory", Category(name));
-        Assert.Contains("\"result\":true", created);
+        Assert.Contains("\"result\":true", created, StringComparison.Ordinal);
         long categoryId = CategoryIdByName(name);
-        Assert.Contains("\"result\":true", await Post("/Management/CreateSubCategory", SubCategory(name + "-sub", categoryId)));
+        Assert.Contains("\"result\":true", await Post("/Management/CreateSubCategory", SubCategory(name + "-sub", categoryId)), StringComparison.Ordinal);
 
         string createTooLong = await Post("/Management/CreateCategory", Category(new string('n', 5000)));
         string createSubOfMissing = await Post("/Management/CreateSubCategory", SubCategory(name, 987654321));
@@ -143,7 +146,7 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
     public async Task AdminExportExcel_ReturnsAnXlsxWorkbook_NamedAfterTheRequestedFile(string url)
     {
         var client = factory.CreateTestClient();
-        var admin = await AuthenticatedSessionHelper.LoginAsync(factory, client, $"invalid-input-export{url.Replace("/", "-").ToLowerInvariant()}@test.com", "AdminPassword1!", Role.Admin, TestContext.Current.CancellationToken);
+        var admin = await AuthenticatedSessionHelper.LoginAsync(factory, client, $"invalid-input-export{url.Replace("/", "-", StringComparison.Ordinal).ToLowerInvariant()}@test.com", "AdminPassword1!", Role.Admin, TestContext.Current.CancellationToken);
         using var request = admin.BuildJsonPostRequest($"{url}?fileName=admin report");
 
         var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -152,8 +155,8 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", response.Content.Headers.ContentType?.MediaType);
         string? fileName = response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"');
-        Assert.StartsWith("admin report-", fileName);
-        Assert.EndsWith(".xlsx", fileName);
+        Assert.StartsWith("admin report-", fileName, StringComparison.Ordinal);
+        Assert.EndsWith(".xlsx", fileName, StringComparison.Ordinal);
         Assert.True(bytes.Length > 4 && bytes[0] == 'P' && bytes[1] == 'K', "an .xlsx file is a zip container starting with 'PK'");
     }
 
@@ -169,8 +172,8 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
         string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("\"result\":false", body);
-        Assert.False(response.Headers.TryGetValues("Set-Cookie", out var cookies) && cookies.Any(c => c.Contains(".AspNetCore.Culture")));
+        Assert.Contains("\"result\":false", body, StringComparison.Ordinal);
+        Assert.False(response.Headers.TryGetValues("Set-Cookie", out var cookies) && cookies.Any(c => c.Contains(".AspNetCore.Culture", StringComparison.Ordinal)));
     }
 
     /// <summary>A time-zone change without a time zone sends the user back to the profile page and changes nothing.</summary>
@@ -179,12 +182,12 @@ public class InvalidInputContractTests(MaroikWebApplicationFactory factory)
     {
         var client = factory.CreateTestClient();
         var user = await AuthenticatedSessionHelper.LoginAsync(factory, client, "invalid-input-tz@test.com", "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
-        using var request = user.BuildFormPostRequest("/Management/UpdateProfileTimeZone", new MultipartFormDataContent { { new StringContent("x"), "Unrelated" } });
+        using var request = user.BuildFormPostRequest("/Management/UpdateProfileTimeZone", MultipartForm.Of(("Unrelated", "x")));
 
         var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.EndsWith("/Management/Profile", response.Headers.Location?.ToString());
+        Assert.EndsWith("/Management/Profile", response.Headers.Location?.ToString(), StringComparison.Ordinal);
     }
 
     /// <summary>

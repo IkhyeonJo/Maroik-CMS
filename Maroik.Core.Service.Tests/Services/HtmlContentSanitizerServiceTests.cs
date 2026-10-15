@@ -38,7 +38,7 @@ public class HtmlContentSanitizerServiceTests
     {
         string result = _sut.Sanitize("<div class=\"highlight\">text</div>");
 
-        Assert.Contains("class=\"highlight\"", result);
+        Assert.Contains("class=\"highlight\"", result, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that plain safe text content passes through unchanged.</summary>
@@ -47,7 +47,7 @@ public class HtmlContentSanitizerServiceTests
     {
         string result = _sut.Sanitize("<p>plain paragraph</p>");
 
-        Assert.Contains("plain paragraph", result);
+        Assert.Contains("plain paragraph", result, StringComparison.Ordinal);
     }
 
     /// <summary>An overlay a user could post: a full-screen, invisible link stacked above the page.</summary>
@@ -80,7 +80,7 @@ public class HtmlContentSanitizerServiceTests
     {
         string result = _sut.Sanitize(OverlayLink);
 
-        Assert.Contains("href=\"https://example.com\"", result);
+        Assert.Contains("href=\"https://example.com\"", result, StringComparison.Ordinal);
         Assert.Matches(StyleDeclaration("width"), result);
         Assert.Matches(StyleDeclaration("height"), result);
     }
@@ -114,7 +114,7 @@ public class HtmlContentSanitizerServiceTests
         string result = _sut.Sanitize("<div data-toggle=\"modal\" data-target=\"#x\">text</div>");
 
         Assert.DoesNotContain("data-", result, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("text", result);
+        Assert.Contains("text", result, StringComparison.Ordinal);
     }
 
     /// <summary>Links and images keep plain http and https addresses.</summary>
@@ -124,7 +124,7 @@ public class HtmlContentSanitizerServiceTests
     [InlineData("<img src=\"http://example.com/a.png\">", "src=\"http://example.com/a.png\"")]
     public void Sanitize_KeepsHttpAndHttpsUrls(string html, string expected)
     {
-        Assert.Contains(expected, _sut.Sanitize(html));
+        Assert.Contains(expected, _sut.Sanitize(html), StringComparison.Ordinal);
     }
 
     /// <summary>Any other URL scheme is dropped from links and images.</summary>

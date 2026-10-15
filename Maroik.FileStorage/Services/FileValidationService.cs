@@ -70,11 +70,9 @@ public class FileValidationService(IClamavClient clamavClient, IOptions<FileStor
         if (File.Exists(safePath))
             return (false, "A file already exists at the target path.");
 
-        // safePath is built from Path.GetFileName(file.FileName) combined into safeDir above,
-        // so it cannot escape the target directory; suppress the path-traversal false positive.
-#pragma warning disable SCS0018
+        // safePath is built from Path.GetFileName(file.FileName) combined into safeDir above, and its extension
+        // was checked against the allow-list, so it cannot escape the target directory.
         await using var stream = new FileStream(safePath, FileMode.CreateNew);
-#pragma warning restore SCS0018
         memStream.Position = 0;
         await memStream.CopyToAsync(stream);
         await stream.FlushAsync();

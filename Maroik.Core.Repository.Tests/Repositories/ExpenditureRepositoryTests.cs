@@ -474,9 +474,7 @@ public sealed class ExpenditureRepositoryTests(DatabaseFixture database) : Repos
         Assert.Equal(["at-from", "inside"], result.Select(e => e.Content).Order());
         return;
 
- #pragma warning disable IDE0062
-        OrmExpenditure At(string email, string content, DateTime created)
- #pragma warning restore IDE0062
+        static OrmExpenditure At(string email, string content, DateTime created)
         {
             OrmExpenditure expenditure = MakeExpenditure(email, content);
             expenditure.Created = created;

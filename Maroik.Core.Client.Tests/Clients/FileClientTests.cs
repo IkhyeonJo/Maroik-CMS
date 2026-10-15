@@ -14,14 +14,47 @@ namespace Maroik.Core.Client.Tests.Clients;
 /// </summary>
 public class FileClientTests
 {
-    /// <summary><see cref="IHttpClientFactory"/> whose clients go through a test-supplied handler.</summary>
+    /// <summary>An <see cref="HttpClient"/> that records whether it was disposed.</summary>
+    private sealed class TrackingHttpClient : HttpClient
+    {
+        /// <summary>A client over its own default handler, which it disposes with itself.</summary>
+        public TrackingHttpClient() { }
+
+        /// <summary>A client over a borrowed <paramref name="handler"/>, which disposing the client leaves usable.</summary>
+        public TrackingHttpClient(HttpMessageHandler handler) : base(handler, disposeHandler: false) { }
+
+        /// <summary>True once <see cref="Dispose(bool)"/> ran.</summary>
+        public bool Disposed { get; private set; }
+
+        /// <inheritdoc />
+        protected override void Dispose(bool disposing)
+        {
+            Disposed = true;
+            base.Dispose(disposing);
+        }
+    }
+
+    /// <summary>
+    /// <see cref="IHttpClientFactory"/> whose clients go through a test-supplied handler. Like the real factory, a
+    /// client does not own that handler (disposing the client leaves the handler usable); a default handler, made
+    /// when no handler is set, belongs to its client. Every client it hands out is kept so a test can check that the
+    /// caller disposed it.
+    /// </summary>
     private sealed class FakeHttpClientFactory : IHttpClientFactory
     {
-        /// <summary>The handler the created <see cref="HttpClient"/> should use, or null for a default client.</summary>
+        /// <summary>The handler the created <see cref="HttpClient"/> should use, or null for a default handler.</summary>
         public HttpMessageHandler? InnerHandler { get; set; }
 
-        /// <summary>Creates an <see cref="HttpClient"/> wrapping <see cref="InnerHandler"/> when one is set.</summary>
-        public HttpClient CreateClient(string name) => InnerHandler is null ? new HttpClient() : new HttpClient(InnerHandler);
+        /// <summary>Every client created so far.</summary>
+        public List<TrackingHttpClient> Created { get; } = [];
+
+        /// <summary>Creates an <see cref="HttpClient"/> wrapping <see cref="InnerHandler"/> (or a default handler).</summary>
+        public HttpClient CreateClient(string name)
+        {
+            var client = InnerHandler is null ? new TrackingHttpClient() : new TrackingHttpClient(InnerHandler);
+            Created.Add(client);
+            return client;
+        }
     }
 
     /// <summary>
@@ -43,12 +76,33 @@ public class FileClientTests
         }
     }
 
+    /// <summary>
+    /// A response with <paramref name="status"/> and the content <paramref name="createContent"/> makes, adjusted by
+    /// <paramref name="configure"/>. The response owns its content, and is disposed (content included) if building it throws.
+    /// </summary>
+    private static HttpResponseMessage Respond(HttpStatusCode status, Func<HttpContent> createContent, Action<HttpContent>? configure = null)
+    {
+        HttpResponseMessage? response = new(status);
+        try
+        {
+            response.Content = createContent();
+            configure?.Invoke(response.Content);
+            HttpResponseMessage built = response;
+            response = null;
+            return built;
+        }
+        finally
+        {
+            response?.Dispose();
+        }
+    }
+
     /// <summary>Returns a fixed status + plain-text body, like Maroik.FileStorage's <c>BadRequest(error)</c>.</summary>
     private sealed class RefusingHandler(HttpStatusCode status, string body) : HttpMessageHandler
     {
         /// <inheritdoc />
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            => Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body) });
+            => Task.FromResult(Respond(status, () => new StringContent(body)));
     }
 
     /// <summary>A refusal whose body cannot be decoded (a charset .NET does not know) — reading the reason throws.</summary>
@@ -57,10 +111,11 @@ public class FileClientTests
         /// <inheritdoc />
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            var content = new StringContent("refused");
-            content.Headers.Remove("Content-Type");
-            content.Headers.TryAddWithoutValidation("Content-Type", "text/plain; charset=not-a-real-charset");
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = content });
+            return Task.FromResult(Respond(HttpStatusCode.BadRequest, () => new StringContent("refused"), content =>
+            {
+                content.Headers.Remove("Content-Type");
+                content.Headers.TryAddWithoutValidation("Content-Type", "text/plain; charset=not-a-real-charset");
+            }));
         }
     }
 
@@ -135,8 +190,8 @@ public class FileClientTests
 
         Assert.False(result);
         var (_, message) = Assert.Single(logger.Entries, e => e.Level == LogLevel.Warning);
-        Assert.Contains("400", message);
-        Assert.Contains("could not be scanned", message);
+        Assert.Contains("400", message, StringComparison.Ordinal);
+        Assert.Contains("could not be scanned", message, StringComparison.Ordinal);
     }
 
     /// <summary>A refusal whose body cannot be decoded does not turn into an exception: the upload just fails, with an empty reason logged.</summary>
@@ -150,9 +205,9 @@ public class FileClientTests
         bool result = await sut.UploadAsync([0x89, 0x50, 0x4E, 0x47], "image/png", "test.png", "http://filestorage.local", TestContext.Current.CancellationToken);
 
         Assert.False(result);
-        Assert.Single(logger.Entries, e => e.Level == LogLevel.Warning && e.Message.Contains("400"));
+        Assert.Single(logger.Entries, e => e.Level == LogLevel.Warning && e.Message.Contains("400", StringComparison.Ordinal));
         // The unreadable body itself leaves a trace too (diagnostic level: the refusal is already warned about).
-        Assert.Single(logger.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("could not be read"));
+        Assert.Single(logger.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("could not be read", StringComparison.Ordinal));
     }
 
     /// <summary>An over-long refusal body is truncated in the log.</summary>
@@ -217,29 +272,31 @@ public class FileClientTests
     [Fact]
     public async Task UploadAsync_IncludesCorrelationId_WhenActivityIsCurrent()
     {
-        using var activity = new Activity("test-request").Start();
-        var capturing = new CapturingHandler();
+        using var activity = new Activity("test-request");
+        activity.Start();
+        using var capturing = new CapturingHandler();
         _httpClientFactory.InnerHandler = capturing;
         byte[] data = [0x89, 0x50, 0x4E, 0x47];
 
         await CreateSut().UploadAsync(data, "image/png", "test.png", "http://filestorage.local", TestContext.Current.CancellationToken);
 
-        Assert.Contains("name=correlationId", capturing.LastRequestBody);
-        Assert.Contains(activity.Id!, capturing.LastRequestBody);
+        Assert.Contains("name=correlationId", capturing.LastRequestBody, StringComparison.Ordinal);
+        Assert.Contains(activity.Id!, capturing.LastRequestBody, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that <c>DownloadAsync</c> includes the ambient Activity id as a form field.</summary>
     [Fact]
     public async Task DownloadAsync_IncludesCorrelationId_WhenActivityIsCurrent()
     {
-        using var activity = new Activity("test-request").Start();
-        var capturing = new CapturingHandler();
+        using var activity = new Activity("test-request");
+        activity.Start();
+        using var capturing = new CapturingHandler();
         _httpClientFactory.InnerHandler = capturing;
 
         await CreateSut().DownloadAsync("some/path.png", "http://filestorage.local", TestContext.Current.CancellationToken);
 
-        Assert.Contains("name=correlationId", capturing.LastRequestBody);
-        Assert.Contains(activity.Id!, capturing.LastRequestBody);
+        Assert.Contains("name=correlationId", capturing.LastRequestBody, StringComparison.Ordinal);
+        Assert.Contains(activity.Id!, capturing.LastRequestBody, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that <c>DownloadAsync</c> sends an empty correlation id when there is no ambient Activity.</summary>
@@ -247,12 +304,12 @@ public class FileClientTests
     public async Task DownloadAsync_SendsEmptyCorrelationId_WhenNoActivityIsCurrent()
     {
         Activity.Current = null;
-        var capturing = new CapturingHandler();
+        using var capturing = new CapturingHandler();
         _httpClientFactory.InnerHandler = capturing;
 
         await CreateSut().DownloadAsync("some/path.png", "http://filestorage.local", TestContext.Current.CancellationToken);
 
-        Assert.Contains("name=correlationId", capturing.LastRequestBody);
+        Assert.Contains("name=correlationId", capturing.LastRequestBody, StringComparison.Ordinal);
     }
 
     // -- DownloadAsync: failures are logged once, by the caller ---------------------
@@ -272,10 +329,10 @@ public class FileClientTests
         var thrown = await Assert.ThrowsAsync<HttpRequestException>(
             () => sut.DownloadAsync("upload/a.png", "http://filestorage.local", TestContext.Current.CancellationToken));
 
-        Assert.Contains("upload/a.png", thrown.Message);
+        Assert.Contains("upload/a.png", thrown.Message, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.NotFound, thrown.StatusCode);
         Assert.DoesNotContain(logger.Entries, e => e.Level >= LogLevel.Warning);
-        Assert.Single(logger.Entries, e => e.Level == LogLevel.Information && e.Message.Contains("upload/a.png"));
+        Assert.Single(logger.Entries, e => e.Level == LogLevel.Information && e.Message.Contains("upload/a.png", StringComparison.Ordinal));
     }
 
     // -- OpenReadAsync ----------------------------------------------------------
@@ -290,7 +347,7 @@ public class FileClientTests
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             LastRequestBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
+            return Respond(HttpStatusCode.OK, () => new ByteArrayContent(bytes));
         }
     }
 
@@ -298,8 +355,9 @@ public class FileClientTests
     [Fact]
     public async Task OpenReadAsync_ReturnsTheFileAsAStream()
     {
-        using var activity = new Activity("test-request").Start();
-        var handler = new BytesHandler([1, 2, 3, 4]);
+        using var activity = new Activity("test-request");
+        activity.Start();
+        using var handler = new BytesHandler([1, 2, 3, 4]);
         _httpClientFactory.InnerHandler = handler;
 
         await using Stream stream = await CreateSut().OpenReadAsync(@"upload\Forum\a.zip", "http://filestorage.local", TestContext.Current.CancellationToken);
@@ -307,8 +365,37 @@ public class FileClientTests
         await stream.CopyToAsync(copy, TestContext.Current.CancellationToken);
 
         Assert.Equal([1, 2, 3, 4], copy.ToArray());
-        Assert.Contains("upload/Forum/a.zip", handler.LastRequestBody);
-        Assert.Contains(activity.Id!, handler.LastRequestBody);
+        Assert.Contains("upload/Forum/a.zip", handler.LastRequestBody, StringComparison.Ordinal);
+        Assert.Contains(activity.Id!, handler.LastRequestBody, StringComparison.Ordinal);
+    }
+
+    // -- HttpClient lifetime -------------------------------------------------------
+
+    /// <summary>
+    /// Every call disposes the <see cref="HttpClient"/> it took from the factory (the factory's pooled handler is
+    /// not disposed with it) — including <c>OpenReadAsync</c>, whose body is still read after the call returns, and
+    /// a refused request.
+    /// </summary>
+    [Fact]
+    public async Task EveryCall_DisposesTheHttpClientItCreated()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        _httpClientFactory.InnerHandler = new BytesHandler([1, 2, 3]);
+        var sut = CreateSut();
+
+        Assert.Equal(FileUploadResult.Stored, await sut.UploadWithResultAsync([1], "application/zip", "upload/Forum/a.zip", "http://filestorage.local", ct));
+        Assert.Equal([1, 2, 3], await sut.DownloadAsync("upload/Forum/a.zip", "http://filestorage.local", ct));
+        await using (Stream stream = await sut.OpenReadAsync("upload/Forum/a.zip", "http://filestorage.local", ct))
+        {
+            using var copy = new MemoryStream();
+            await stream.CopyToAsync(copy, ct);
+            Assert.Equal([1, 2, 3], copy.ToArray());
+        }
+        _httpClientFactory.InnerHandler = new RefusingHandler(HttpStatusCode.NotFound, "File not found");
+        await Assert.ThrowsAsync<HttpRequestException>(() => sut.DownloadAsync("upload/Forum/a.zip", "http://filestorage.local", ct));
+
+        Assert.Equal(4, _httpClientFactory.Created.Count);
+        Assert.All(_httpClientFactory.Created, client => Assert.True(client.Disposed));
     }
 
     /// <summary><c>OpenReadAsync</c> throws for a non-success answer from the storage service.</summary>
@@ -327,7 +414,7 @@ public class FileClientTests
     [InlineData("../../etc/passwd")]
     public async Task OpenReadAsync_ThrowsArgumentException_ForUnsafePath(string unsafePath)
     {
-        var handler = new BytesHandler([1]);
+        using var handler = new BytesHandler([1]);
         _httpClientFactory.InnerHandler = handler;
 
         await Assert.ThrowsAsync<ArgumentException>(

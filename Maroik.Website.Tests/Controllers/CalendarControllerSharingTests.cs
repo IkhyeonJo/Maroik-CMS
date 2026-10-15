@@ -91,7 +91,7 @@ public class CalendarControllerSharingTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(updateRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -135,7 +135,7 @@ public class CalendarControllerSharingTests(MaroikWebApplicationFactory factory)
         var response = await subscriberClient.SendAsync(subscribeRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -160,7 +160,7 @@ public class CalendarControllerSharingTests(MaroikWebApplicationFactory factory)
         var response = await subscriberClient.SendAsync(subscribeRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

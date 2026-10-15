@@ -25,7 +25,7 @@ public static class DbExceptionExtensions
     extension(Exception e)
     {
         /// <summary>
-        /// Returns <see langword="true"/> when <paramref name="e"/> — or anything in its
+        /// Returns <see langword="true"/> when this exception — or anything in its
         /// <see cref="Exception.InnerException"/> chain — is a PostgreSQL unique-constraint violation
         /// (SQLSTATE <c>23505</c>).
         /// <para>
@@ -58,7 +58,7 @@ public static class DbExceptionExtensions
         }
 
         /// <summary>
-        /// Returns <see langword="true"/> when <paramref name="e"/> — or anything in its
+        /// Returns <see langword="true"/> when this exception — or anything in its
         /// <see cref="Exception.InnerException"/> chain — is a PostgreSQL unique-constraint violation
         /// (SQLSTATE <c>23505</c>) specifically on the constraint named <paramref name="constraintName"/>.
         /// <para>
@@ -95,7 +95,7 @@ public static class DbExceptionExtensions
         }
 
         /// <summary>
-        /// Returns <see langword="true"/> when <paramref name="e"/> is a unique violation on
+        /// Returns <see langword="true"/> when this exception is a unique violation on
         /// <c>Account.Nickname</c>: either the exact-match constraint <c>Account_Nickname_unique</c> or
         /// the case-insensitive <c>Account_unique_index_0</c> index (so "bob" racing "Bob" is
         /// reported as a nickname conflict, not blamed on the email).

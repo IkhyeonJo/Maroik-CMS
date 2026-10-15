@@ -18,12 +18,12 @@ public class WorkerHostLogTemplateTests
 
         string rendered = Render(WorkerHost.ConsoleOutputTemplate, "Email send failed for {To}", forged);
 
-        Assert.EndsWith(Environment.NewLine, rendered);
+        Assert.EndsWith(Environment.NewLine, rendered, StringComparison.Ordinal);
         string line = rendered[..^Environment.NewLine.Length];
         Assert.DoesNotContain('\n', line);
         Assert.DoesNotContain('\r', line);
         Assert.DoesNotContain('\u001b', line);
-        Assert.Contains(@"a@b.com\n[00:00:00 INF] [x] Maroik: Email sent to admin@maroik.com\r", line);
+        Assert.Contains(@"a@b.com\n[00:00:00 INF] [x] Maroik: Email sent to admin@maroik.com\r", line, StringComparison.Ordinal);
     }
 
     /// <summary>Renders one Warning event whose <c>To</c> is <paramref name="value"/> (with a fixed <c>CorrelationId</c>) through <paramref name="outputTemplate"/>.</summary>
@@ -36,7 +36,7 @@ public class WorkerHostLogTemplateTests
                 new LogEventProperty("SourceContext", new ScalarValue("Test")),
                 new LogEventProperty("CorrelationId", new ScalarValue("c-1"))
             ]);
-        var writer = new StringWriter();
+        using var writer = new StringWriter();
         new MessageTemplateTextFormatter(outputTemplate).Format(logEvent, writer);
         return writer.ToString();
     }

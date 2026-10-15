@@ -50,7 +50,7 @@ public class ServiceResultTests
 
         Assert.False(result.Success);
         Assert.Equal(expected, result.ErrorType);
-        Assert.StartsWith("X.", result.ErrorCode);
+        Assert.StartsWith("X.", result.ErrorCode, StringComparison.Ordinal);
         Assert.NotEqual("", result.ErrorKey);
     }
 

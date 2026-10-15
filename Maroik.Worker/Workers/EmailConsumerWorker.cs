@@ -423,6 +423,16 @@ public sealed class EmailConsumerWorker(
             await Channel.DisposeAsync();
         if (_connection != null)
             await _connection.DisposeAsync();
+    }
+
+    /// <summary>
+    /// Disposes the send cancellation source. Not done in <see cref="StopAsync"/>: the host disposes every
+    /// hosted service, including one that never reached StopAsync (a failed start), and a handler still
+    /// reading its token after the stop must not hit a disposed source.
+    /// </summary>
+    public override void Dispose()
+    {
         _sendCts.Dispose();
+        base.Dispose();
     }
 }

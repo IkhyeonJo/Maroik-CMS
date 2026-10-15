@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using Maroik.Core.Contract.Interfaces;
@@ -124,8 +125,8 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             if (response.StatusCode != System.Net.HttpStatusCode.OK) { failures.Add($"{url}: HTTP {(int)response.StatusCode}"); continue; }
             using JsonDocument doc = JsonDocument.Parse(json);
             if (doc.RootElement.GetProperty("result").GetBoolean()) failures.Add($"{url}: reported success");
-            if (!json.Contains(Temporary)) failures.Add($"{url}: not the generic message ({json})");
-            if (json.Contains(Secret)) failures.Add($"{url}: leaked the exception text");
+            if (!json.Contains(Temporary, StringComparison.Ordinal)) failures.Add($"{url}: not the generic message ({json})");
+            if (json.Contains(Secret, StringComparison.Ordinal)) failures.Add($"{url}: leaked the exception text");
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
@@ -182,7 +183,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             using JsonDocument doc = JsonDocument.Parse(json);
             if (doc.RootElement.GetProperty("result").GetBoolean()) failures.Add($"{url}: reported success");
             if (doc.RootElement.GetProperty("label").GetString() != "Amount") failures.Add($"{url}: label is not the plain 'Amount' ({json})");
-            if (json.Contains(Secret)) failures.Add($"{url}: leaked the exception text");
+            if (json.Contains(Secret, StringComparison.Ordinal)) failures.Add($"{url}: leaked the exception text");
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
@@ -194,7 +195,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
     private static MultipartFormDataContent Form(params (string Name, string Value)[] fields)
     {
         var form = new MultipartFormDataContent();
-        foreach (var (name, value) in fields) form.Add(new StringContent(value), name);
+        foreach (var (name, value) in fields) MultipartForm.AddText(form, name, value);
         return form;
     }
 
@@ -234,7 +235,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
 
     /// <summary>A valid timed-event form with id <paramref name="id"/> in calendar 1.</summary>
     private static MultipartFormDataContent EventForm(long id) => Form(
-        ("Id", id.ToString()), ("CalendarId", "1"), ("Title", "Lunch"), ("AllDay", "false"), ("StartDate", "2024-05-01 10:00"),
+        ("Id", id.ToString(CultureInfo.InvariantCulture)), ("CalendarId", "1"), ("Title", "Lunch"), ("AllDay", "false"), ("StartDate", "2024-05-01 10:00"),
         ("EndDate", "2024-05-01 11:00"), ("StartDateTimeZoneIanaId", "UTC"), ("EndDateTimeZoneIanaId", "UTC"),
         ("Status", "Busy"), ("SerializedCalendarReminders", "[]"));
 
@@ -296,8 +297,8 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             if (response.StatusCode != System.Net.HttpStatusCode.OK) { failures.Add($"{url}: HTTP {(int)response.StatusCode} {json[..Math.Min(json.Length, 80)]}"); continue; }
             using JsonDocument doc = JsonDocument.Parse(json);
             if (doc.RootElement.GetProperty("result").GetBoolean()) failures.Add($"{url}: reported success");
-            if (json.Contains(Secret)) failures.Add($"{url}: leaked the exception text");
-            if (!json.Contains(Temporary)) failures.Add($"{url}: unexpected message ({json})");
+            if (json.Contains(Secret, StringComparison.Ordinal)) failures.Add($"{url}: leaked the exception text");
+            if (!json.Contains(Temporary, StringComparison.Ordinal)) failures.Add($"{url}: unexpected message ({json})");
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
@@ -330,7 +331,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             var errors = logger.Collector.GetSnapshot().Where(r => r.Level == LogLevel.Error).ToList();
             if (errors.Count != 1) { failures.Add($"{url}: {errors.Count} Error entries"); continue; }
             if (errors[0].Exception?.Message != Secret) failures.Add($"{url}: the exception is not attached");
-            if (!errors[0].Message.Contains(email)) failures.Add($"{url}: the owner is not named ({errors[0].Message})");
+            if (!errors[0].Message.Contains(email, StringComparison.Ordinal)) failures.Add($"{url}: the owner is not named ({errors[0].Message})");
         }
 
         Assert.Equal(9, BodyEndpoints.Count(e => e.Url.StartsWith("/AccountBook/", StringComparison.Ordinal)));
@@ -379,7 +380,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             var errors = logger.Collector.GetSnapshot().Where(r => r.Level == LogLevel.Error).ToList();
             if (errors.Count != 1) { failures.Add($"{url}: {errors.Count} Error entries"); continue; }
             if (errors[0].Exception?.Message != Secret) failures.Add($"{url}: the exception is not attached");
-            if (!errors[0].Message.Contains(email)) failures.Add($"{url}: the account is not named ({errors[0].Message})");
+            if (!errors[0].Message.Contains(email, StringComparison.Ordinal)) failures.Add($"{url}: the account is not named ({errors[0].Message})");
         }
 
         Assert.Equal(8, requests.Count);
@@ -416,8 +417,8 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
             using JsonDocument doc = JsonDocument.Parse(json);
             Assert.False(doc.RootElement.GetProperty("result").GetBoolean(), json);
-            Assert.DoesNotContain(Secret, json);
-            Assert.Contains(expectedMessage, json);
+            Assert.DoesNotContain(Secret, json, StringComparison.Ordinal);
+            Assert.Contains(expectedMessage, json, StringComparison.Ordinal);
         }
     }
 
@@ -463,7 +464,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Contains("/Management/Profile", response.Headers.Location!.ToString());
+        Assert.Contains("/Management/Profile", response.Headers.Location!.ToString(), StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -522,8 +523,8 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             if (response.StatusCode != System.Net.HttpStatusCode.OK) { failures.Add($"{url}: HTTP {(int)response.StatusCode}"); continue; }
             using JsonDocument doc = JsonDocument.Parse(json);
             if (doc.RootElement.GetProperty("result").GetBoolean()) failures.Add($"{url}: reported success");
-            if (!json.Contains(Temporary)) failures.Add($"{url}: unexpected message ({json})");
-            if (json.Contains(Secret)) failures.Add($"{url}: leaked the exception text");
+            if (!json.Contains(Temporary, StringComparison.Ordinal)) failures.Add($"{url}: unexpected message ({json})");
+            if (json.Contains(Secret, StringComparison.Ordinal)) failures.Add($"{url}: leaked the exception text");
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
@@ -533,9 +534,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
     private static MultipartFormDataContent PngForm(string field)
     {
         var form = new MultipartFormDataContent();
-        var part = new ByteArrayContent([1, 2, 3, 4]);
-        part.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
-        form.Add(part, field, "picture.png");
+        MultipartForm.AddFile(form, field, "picture.png", [1, 2, 3, 4], "image/png");
         return form;
     }
 
@@ -581,13 +580,13 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             using JsonDocument doc = JsonDocument.Parse(json);
             if (doc.RootElement.GetProperty("result").GetBoolean()) failures.Add($"{url}: reported success");
             if (doc.RootElement.GetProperty("errorMessage").GetString() != Temporary) failures.Add($"{url}: unexpected message ({json})");
-            if (json.Contains(Secret)) failures.Add($"{url}: leaked the exception text");
+            if (json.Contains(Secret, StringComparison.Ordinal)) failures.Add($"{url}: leaked the exception text");
 
             var errors = forumLogger.Collector.GetSnapshot().Concat(managementLogger.Collector.GetSnapshot()).Concat(calendarLogger.Collector.GetSnapshot())
                 .Where(r => r.Level == LogLevel.Error).ToList();
             if (errors.Count != 1) { failures.Add($"{url}: {errors.Count} Error entries"); continue; }
             if (errors[0].Exception?.Message != Secret) failures.Add($"{url}: the exception is not attached");
-            if (!errors[0].Message.Contains(email)) failures.Add($"{url}: the uploader is not named ({errors[0].Message})");
+            if (!errors[0].Message.Contains(email, StringComparison.Ordinal)) failures.Add($"{url}: the uploader is not named ({errors[0].Message})");
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using Maroik.FileStorage.Tests.Infrastructure;
 
 namespace Maroik.FileStorage.Tests;
 
@@ -35,7 +36,7 @@ public class ProgramProcessTests
     /// <summary>A loopback port that was free a moment ago.</summary>
     private static int FreePort()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
@@ -57,10 +58,7 @@ public class ProgramProcessTests
                 if (process.HasExited) break;
                 try
                 {
-                    using var form = new MultipartFormDataContent
-                    {
-                        { new StringContent("upload/none.png"), "filePath" }
-                    };
+                    using var form = MultipartForm.Of(("filePath", "upload/none.png"));
                     response = await _http.PostAsync($"http://127.0.0.1:{port}/api/File/download", form, TestContext.Current.CancellationToken);
                 }
                 catch (HttpRequestException) { /* not listening yet */ }
@@ -83,7 +81,7 @@ public class ProgramProcessTests
     [Fact]
     public async Task TheExecutable_ExitsWithAFailure_WhenItsPortIsTaken()
     {
-        var blocker = new TcpListener(IPAddress.Loopback, 0);
+        using var blocker = new TcpListener(IPAddress.Loopback, 0);
         blocker.Start();
         try
         {
@@ -93,7 +91,7 @@ public class ProgramProcessTests
             await process.WaitForExitAsync(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
             Assert.NotEqual(0, process.ExitCode);
-            Assert.Contains("Maroik.FileStorage terminated unexpectedly", output);
+            Assert.Contains("Maroik.FileStorage terminated unexpectedly", output, StringComparison.Ordinal);
         }
         finally
         {

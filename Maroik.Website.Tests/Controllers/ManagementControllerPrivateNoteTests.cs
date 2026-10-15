@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
@@ -34,9 +35,9 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
     private static MultipartFormDataContent BoardForm(string? title, string content = "Body", bool noticed = false)
     {
         var form = new MultipartFormDataContent();
-        if (title != null) form.Add(new StringContent(title), "Title");
-        form.Add(new StringContent(content), "Content");
-        form.Add(new StringContent(noticed.ToString()), "Noticed");
+        if (title != null) MultipartForm.AddText(form, "Title", title);
+        MultipartForm.AddText(form, "Content", content);
+        MultipartForm.AddText(form, "Noticed", noticed.ToString());
         return form;
     }
 
@@ -80,14 +81,14 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var created = db.Boards.Single(b => b.Title == title);
         Assert.Equal(PrivateNoteType, created.Type);
         Assert.Equal(session.Nickname, created.Writer);
-        Assert.Contains("My private thoughts", created.Content);
+        Assert.Contains("My private thoughts", created.Content, StringComparison.Ordinal);
     }
 
     /// <summary>Write private note board missing title returns input invalid.</summary>
@@ -100,7 +101,7 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- IsBoardExists: owner-only visibility ----------------------------------------
@@ -116,7 +117,7 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>Is board exists others board returns failure result.</summary>
@@ -131,7 +132,7 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Unlike Forum's IsBoardExists, a PrivateNote is only visible to its own writer.
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -167,18 +168,18 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
 
         string updatedTitle = UniqueTitle();
         var form = BoardForm(updatedTitle, content: "Edited");
-        form.Add(new StringContent(boardId.ToString()), "Id");
+        MultipartForm.AddText(form, "Id", boardId.ToString(CultureInfo.InvariantCulture));
         using var request = session.BuildFormPostRequest("/Management/EditPrivateNoteBoard", form);
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var updated = db.Boards.Single(b => b.Id == boardId);
         Assert.Equal(updatedTitle, updated.Title);
-        Assert.Contains("Edited", updated.Content);
+        Assert.Contains("Edited", updated.Content, StringComparison.Ordinal);
     }
 
     /// <summary>Edit private note board by non owner returns failure result.</summary>
@@ -189,13 +190,13 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
         long boardId = SeedBoard(writer: "SomeoneElse");
 
         var form = BoardForm(UniqueTitle());
-        form.Add(new StringContent(boardId.ToString()), "Id");
+        MultipartForm.AddText(form, "Id", boardId.ToString(CultureInfo.InvariantCulture));
         using var request = session.BuildFormPostRequest("/Management/EditPrivateNoteBoard", form);
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- DeleteBoard ----------------------------------------------------------------
@@ -211,7 +212,7 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -229,7 +230,7 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -249,7 +250,7 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
             new { BoardId = boardId, Content = "A comment", DetailCurrentPage = 1 });
         var writeResponse = await _client.SendAsync(writeRequest, TestContext.Current.CancellationToken);
         string writeJson = await writeResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("\"result\":true", writeJson);
+        Assert.Contains("\"result\":true", writeJson, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -259,7 +260,7 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
         var deleteResponse = await _client.SendAsync(deleteRequest, TestContext.Current.CancellationToken);
         string deleteJson = await deleteResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", deleteJson);
+        Assert.Contains("\"result\":true", deleteJson, StringComparison.Ordinal);
     }
 
     /// <summary>Write private note comment empty content returns failure result.</summary>
@@ -274,7 +275,7 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
     // -- PrivateNote detail page ------------------------------------------------------
 
@@ -315,7 +316,7 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains(commentText, html);
+        Assert.Contains(commentText, html, StringComparison.Ordinal);
     }
 
     /// <summary>A private note is invisible to anyone but its author, so another user's detail request redirects away.</summary>

@@ -573,7 +573,7 @@ public class IncomeServiceTests
 
         Assert.Equal("Income.Unexpected", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -633,7 +633,7 @@ public class IncomeServiceTests
 
         Assert.Equal("Income.Unexpected", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -663,7 +663,7 @@ public class IncomeServiceTests
 
         Assert.Equal("Income.Unexpected", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -676,7 +676,7 @@ public class IncomeServiceTests
         Assert.Equal(LogLevel.Error, record.Level);
         Assert.Same(thrown, record.Exception);
         Assert.StartsWith(prefix, record.Message, StringComparison.Ordinal);
-        Assert.Contains(Email, record.Message);
+        Assert.Contains(Email, record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>A stored income is returned mapped, looked up under the caller's account.</summary>

@@ -270,7 +270,7 @@ public class ManagementAccountServiceTests
         Assert.False(result.Success);
         Assert.Equal(ServiceErrorType.Conflict, result.ErrorType);
         Assert.Equal("Account.NicknameAlreadyExists", result.ErrorCode);
-        Assert.Contains("Nickname", result.ErrorKey);
+        Assert.Contains("Nickname", result.ErrorKey, StringComparison.Ordinal);
         Assert.Contains("TakenNick", result.ErrorArgs);
     }
 
@@ -324,7 +324,7 @@ public class ManagementAccountServiceTests
         Assert.False(result.Success);
         Assert.Equal(ServiceErrorType.Conflict, result.ErrorType);
         Assert.Equal("Account.AlreadyExists", result.ErrorCode);
-        Assert.DoesNotContain("Nickname", result.ErrorKey);
+        Assert.DoesNotContain("Nickname", result.ErrorKey, StringComparison.Ordinal);
     }
 
     // -- UpdateAccountAsync ---------------------------------------------------
@@ -638,7 +638,7 @@ public class ManagementAccountServiceTests
 
         Assert.Equal("ManagementAccount.CreateFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
     }
 
     // -- UpdateAccountAsync: validation and failures ----------------------------------
@@ -677,7 +677,7 @@ public class ManagementAccountServiceTests
 
         Assert.Equal("ManagementAccount.UpdateFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -692,7 +692,7 @@ public class ManagementAccountServiceTests
 
         Assert.Equal("ManagementAccount.DeleteFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

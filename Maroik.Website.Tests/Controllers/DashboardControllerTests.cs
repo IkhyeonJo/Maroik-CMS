@@ -57,7 +57,7 @@ public class DashboardControllerTests
         // Razor's encoder writes non-ASCII text as character references, so compare the decoded markup.
         string html = System.Net.WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
 
-        Assert.Contains($"<input id=\"_LocalizerTemporaryError\" type=\"hidden\" value=\"{text}\" />", html);
+        Assert.Contains($"<input id=\"_LocalizerTemporaryError\" type=\"hidden\" value=\"{text}\" />", html, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that <c>DefaultRoute</c> get when returns200.</summary>
@@ -81,7 +81,7 @@ public class DashboardControllerTests
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Contains("UserIndex", response.Headers.Location!.ToString());
+        Assert.Contains("UserIndex", response.Headers.Location!.ToString(), StringComparison.Ordinal);
     }
 
     /// <summary>Anonymous index logged in admin redirects to admin index.</summary>
@@ -95,7 +95,7 @@ public class DashboardControllerTests
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Contains("AdminIndex", response.Headers.Location!.ToString());
+        Assert.Contains("AdminIndex", response.Headers.Location!.ToString(), StringComparison.Ordinal);
     }
 
     // -- AdminIndex -------------------------------------------------------------
@@ -144,7 +144,7 @@ public class DashboardControllerTests
 
         string html = await (await _client.SendAsync(request, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("<input id=\"amountMaxDecimalPlaces\" name=\"amountMaxDecimalPlaces\" type=\"hidden\" value=\"4\" />", html);
+        Assert.Contains("<input id=\"amountMaxDecimalPlaces\" name=\"amountMaxDecimalPlaces\" type=\"hidden\" value=\"4\" />", html, StringComparison.Ordinal);
     }
 
     // -- UserUpdateDefaultMonetary --------------------------------------------------
@@ -159,7 +159,7 @@ public class DashboardControllerTests
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>User update default monetary anonymous session is forbidden.</summary>
@@ -208,7 +208,7 @@ public class DashboardControllerTests
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
-        Assert.True(response.Headers.TryGetValues("Set-Cookie", out var cookies) && cookies.Any(c => c.Contains(".AspNetCore.Culture")));
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
+        Assert.True(response.Headers.TryGetValues("Set-Cookie", out var cookies) && cookies.Any(c => c.Contains(".AspNetCore.Culture", StringComparison.Ordinal)));
     }
 }

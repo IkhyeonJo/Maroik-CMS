@@ -98,14 +98,15 @@ public class IncomeClassPolicyTests
 
     // -- SubClassesByMainClass (serialized into the create/edit forms) --------
 
+    /// <summary>The two income main classes the taxonomy must publish.</summary>
+    private static readonly string[] _knownMainClasses = ["RegularIncome", "IrregularIncome"];
+
     /// <summary>The published taxonomy has exactly the two known main classes.</summary>
     [Fact]
     public void SubClassesByMainClass_HasTheKnownMainClasses()
     {
         Assert.Equal(
- #pragma warning disable CA1861
-            new[] { "RegularIncome", "IrregularIncome" }.OrderBy(x => x),
- #pragma warning restore CA1861
+            _knownMainClasses.OrderBy(x => x),
             IncomeClassPolicy.SubClassesByMainClass.Keys.OrderBy(x => x));
     }
 

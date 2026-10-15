@@ -95,7 +95,7 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
 
         string html = await BodyAsync(await GetAsync(Detail(id), owner));
 
-        Assert.Contains("font-weight:bold;", html);
+        Assert.Contains("font-weight:bold;", html, StringComparison.Ordinal);
         int deletable = System.Text.RegularExpressions.Regex
             .Matches(html, "aPrivateNoteDeleteComment\" href=\"#\" data-commentId=\"(\\d+)\"").Select(m => m.Groups[1].Value).Distinct().Count();
         Assert.Equal(1, deletable);
@@ -117,12 +117,12 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
         string ownerHtml = await BodyAsync(await GetAsync("/Management/PrivateNote", owner));
         string adminHtml = await BodyAsync(await GetAsync("/Management/PrivateNote", admin));
 
-        Assert.Contains("OwnerNote-1", ownerHtml);
-        Assert.DoesNotContain("OtherNote-1", ownerHtml);
-        Assert.DoesNotContain("AdminNote-1", ownerHtml);
-        Assert.Contains("AdminNote-1", adminHtml);
-        Assert.DoesNotContain("OwnerNote-1", adminHtml);
-        Assert.DoesNotContain("OtherNote-1", adminHtml);
+        Assert.Contains("OwnerNote-1", ownerHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("OtherNote-1", ownerHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("AdminNote-1", ownerHtml, StringComparison.Ordinal);
+        Assert.Contains("AdminNote-1", adminHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("OwnerNote-1", adminHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("OtherNote-1", adminHtml, StringComparison.Ordinal);
     }
 
     /// <summary>A private-note title search is literal (a term with an underscore or percent matches only itself) and scoped to the owner.</summary>
@@ -135,8 +135,8 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
 
         string html = await BodyAsync(await GetAsync("/Management/PrivateNote?searchType=Title&searchText=Budget_50%25-2", owner));
 
-        Assert.Contains("Budget_50%-2", html);
-        Assert.DoesNotContain("BudgetX50Y-2", html);
+        Assert.Contains("Budget_50%-2", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("BudgetX50Y-2", html, StringComparison.Ordinal);
     }
 
     // -- PrivateNote: detail --------------------------------------------------------------------------
@@ -153,9 +153,9 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
         string html = await BodyAsync(response);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("SecretTitle-3", html);
-        Assert.Contains("SecretBody-3", html);
-        Assert.Contains("CommentText-3", html);
+        Assert.Contains("SecretTitle-3", html, StringComparison.Ordinal);
+        Assert.Contains("SecretBody-3", html, StringComparison.Ordinal);
+        Assert.Contains("CommentText-3", html, StringComparison.Ordinal);
         Assert.Equal(1, ViewCount(id));
     }
 
@@ -201,7 +201,7 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
 
         var ownerResponse = await GetAsync(Edit(id), owner);
         Assert.Equal(System.Net.HttpStatusCode.OK, ownerResponse.StatusCode);
-        Assert.Contains("EditTitle-6", await BodyAsync(ownerResponse));
+        Assert.Contains("EditTitle-6", await BodyAsync(ownerResponse), StringComparison.Ordinal);
 
         foreach (var session in new[] { other, admin })
             Assert.Equal(System.Net.HttpStatusCode.Redirect, (await GetAsync(Edit(id), session)).StatusCode);
@@ -234,10 +234,10 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
         string other = await BodyAsync(await GetAsync("/Management/Account?wholeSearch=mgmt-page-other8", admin, ajax: true));
 
         Assert.Equal(System.Net.HttpStatusCode.OK, page.StatusCode);
-        Assert.Contains("mgmt-page-findme8@test.com", findMe);
-        Assert.DoesNotContain("mgmt-page-other8@test.com", findMe);
-        Assert.Contains("mgmt-page-other8@test.com", other);
-        Assert.DoesNotContain("mgmt-page-findme8@test.com", other);
+        Assert.Contains("mgmt-page-findme8@test.com", findMe, StringComparison.Ordinal);
+        Assert.DoesNotContain("mgmt-page-other8@test.com", findMe, StringComparison.Ordinal);
+        Assert.Contains("mgmt-page-other8@test.com", other, StringComparison.Ordinal);
+        Assert.DoesNotContain("mgmt-page-findme8@test.com", other, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -262,10 +262,10 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
 
         string body = await BodyAsync(await GetAsync("/Management/Account?wholeSearch=mgmt-page-secret10", admin, ajax: true));
 
-        Assert.Contains("mgmt-page-secret10@test.com", body);
-        Assert.DoesNotContain("hash-secret10-value", body);
-        Assert.DoesNotContain("reg-secret10-value", body);
-        Assert.DoesNotContain("reset-secret10-value", body);
+        Assert.Contains("mgmt-page-secret10@test.com", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("hash-secret10-value", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("reg-secret10-value", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("reset-secret10-value", body, StringComparison.Ordinal);
     }
 
     /// <summary>Several matching accounts are listed ordered by e-mail address.</summary>
@@ -298,10 +298,10 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
         string drive = await BodyAsync(await GetAsync("/Management/Menu?wholeSearch=DriveAdmin", admin, ajax: true));
 
         Assert.Equal(System.Net.HttpStatusCode.OK, page.StatusCode);
-        Assert.Contains("AccountBook", accountBook);
-        Assert.DoesNotContain("DriveAdmin", accountBook);
-        Assert.Contains("DriveAdmin", drive);
-        Assert.DoesNotContain("AccountBook", drive);
+        Assert.Contains("AccountBook", accountBook, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriveAdmin", accountBook, StringComparison.Ordinal);
+        Assert.Contains("DriveAdmin", drive, StringComparison.Ordinal);
+        Assert.DoesNotContain("AccountBook", drive, StringComparison.Ordinal);
     }
 
     /// <summary>Listing the whole menu (no search) puts categories and sub-categories in one list, newest id first — a category and a sub-category may share an id, and the sort then falls back to the parent id.</summary>
@@ -312,7 +312,7 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
 
         string body = await BodyAsync(await GetAsync("/Management/Menu", admin, ajax: true));
 
-        Assert.Contains("mvc-grid", body); // the (paged) grid renders the merged, id-ordered list
+        Assert.Contains("mvc-grid", body, StringComparison.Ordinal); // the (paged) grid renders the merged, id-ordered list
     }
 
     /// <summary>The menu grid's search also finds sub-categories (by their own name), and lists them with no controller.</summary>
@@ -331,8 +331,8 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
 
         string body = await BodyAsync(await GetAsync($"/Management/Menu?wholeSearch={name}", admin, ajax: true));
 
-        Assert.Contains(name, body);
-        Assert.Contains("SubAction", body);
+        Assert.Contains(name, body, StringComparison.Ordinal);
+        Assert.Contains("SubAction", body, StringComparison.Ordinal);
     }
 
     /// <summary>A page number below 1 (0, negative) is treated as the first page rather than failing.</summary>
@@ -349,7 +349,7 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
         var response = await GetAsync($"/Management/PrivateNote?method=list&page={page}", session);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains(title, await BodyAsync(response));
+        Assert.Contains(title, await BodyAsync(response), StringComparison.Ordinal);
     }
 
     // -- UploadImageFile: pre-upload validation -------------------------------------------------------------
@@ -357,7 +357,8 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
     /// <summary>Uploads an editor image to <c>/Management/UploadImageFile</c>, asserts 200, and returns the response body.</summary>
     private async Task<string> UploadAsync(AuthenticatedSession session, string fileName, byte[] bytes)
     {
-        var form = new MultipartFormDataContent { { new ByteArrayContent(bytes), "summernoteImageFile", fileName } };
+        var form = new MultipartFormDataContent();
+        MultipartForm.AddFile(form, "summernoteImageFile", fileName, bytes);
         using var request = session.BuildFormPostRequest("/Management/UploadImageFile", form);
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
@@ -372,8 +373,8 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
 
         string json = await UploadAsync(session, "empty.png", []);
 
-        Assert.Contains("\"result\":false", json);
-        Assert.Contains("File Size must be smaller than", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains("File Size must be smaller than", json, StringComparison.Ordinal);
     }
 
     /// <summary>Only .jpg/.jpeg/.png are accepted; anything else is refused before any decoding or storage.</summary>
@@ -387,8 +388,8 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
 
         string json = await UploadAsync(session, fileName, [1, 2, 3]);
 
-        Assert.Contains("\"result\":false", json);
-        Assert.Contains("Only .jpg or jpeg or .png file allowed.", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains("Only .jpg or jpeg or .png file allowed.", json, StringComparison.Ordinal);
     }
 
     /// <summary>Bytes that merely claim to be a PNG are refused by content validation and nothing is stored.</summary>
@@ -399,7 +400,7 @@ public class ManagementControllerPageTests(MaroikWebApplicationFactory factory)
 
         string json = await UploadAsync(session, "fake.png", [.. "this is not an image"u8]);
 
-        Assert.Contains("\"result\":false", json);
-        Assert.DoesNotContain("filePath", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("filePath", json, StringComparison.Ordinal);
     }
 }

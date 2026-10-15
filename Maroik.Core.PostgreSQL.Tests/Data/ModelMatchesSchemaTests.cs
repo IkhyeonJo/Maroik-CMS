@@ -46,7 +46,7 @@ public abstract class ModelMatchesSchemaTests(SchemaDatabaseFixture database)
     private static string BaseType(string relationalType)
     {
         string type = relationalType.ToLowerInvariant();
-        int paren = type.IndexOf('(');
+        int paren = type.IndexOf('(', StringComparison.Ordinal);
         if (paren >= 0) type = type[..paren].TrimEnd();
         return type switch
         {
@@ -123,8 +123,11 @@ public abstract class ModelMatchesSchemaTests(SchemaDatabaseFixture database)
         await using var reader = await command.ExecuteReaderAsync(Ct);
         Dictionary<(string, string), (int?, int?)> schema = [];
         while (await reader.ReadAsync(Ct))
-            schema[(reader.GetString(0), reader.GetString(1))] =
-                (reader.IsDBNull(2) ? null : reader.GetInt32(2), reader.IsDBNull(3) ? null : reader.GetInt32(3));
+        {
+            int? precision = await reader.IsDBNullAsync(2, Ct) ? null : reader.GetInt32(2);
+            int? scale = await reader.IsDBNullAsync(3, Ct) ? null : reader.GetInt32(3);
+            schema[(reader.GetString(0), reader.GetString(1))] = (precision, scale);
+        }
 
         Dictionary<(string, string), (int?, int?)> model = [];
         foreach (IEntityType entity in db.Model.GetEntityTypes())

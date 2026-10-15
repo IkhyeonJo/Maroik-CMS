@@ -32,7 +32,7 @@ public class HttpContextAccountExtensionsTests
         var context = new DefaultHttpContext();
 
         var ex = Assert.Throws<InvalidOperationException>(() => context.GetLoggedInAccount());
-        Assert.Contains("ViewBagPopulatorFilter", ex.Message);
+        Assert.Contains("ViewBagPopulatorFilter", ex.Message, StringComparison.Ordinal);
     }
 
     /// <summary>A value of another type under the key is not an account: it throws rather than mis-casting.</summary>

@@ -52,7 +52,8 @@ public class FinanceMainClassOptionsTests(MaroikWebApplicationFactory factory)
 
         var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        var page = new HtmlParser().ParseDocument(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        using var page = await new HtmlParser().ParseDocumentAsync(html, TestContext.Current.CancellationToken);
 
         var select = Assert.IsType<IHtmlSelectElement>(page.GetElementById(selectId), exactMatch: false);
         IReadOnlyList<string> expected = income ? IncomeClassPolicy.MainClasses : ExpenditureClassPolicy.MainClasses;

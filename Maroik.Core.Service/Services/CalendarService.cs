@@ -684,7 +684,7 @@ public class CalendarService(
     /// </summary>
     private static string BuildEventFilePath(string roleIndex, long eventId, string fileName)
     {
-        string guid = Guid.NewGuid().ToString().ToUpper();
+        string guid = Guid.NewGuid().ToString().ToUpperInvariant();
         string ext = Path.GetExtension(fileName);
         // A storage key, not a local path: always "/"-separated, whatever OS this runs on.
         return $"upload/Calendar/{roleIndex}/calendarEventAttachedFiles/{eventId}/{guid}{ext}";

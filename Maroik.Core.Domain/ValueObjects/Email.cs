@@ -85,7 +85,7 @@ public sealed class Email : ValueObject
         if (hostParts[^1].Length < 2)
             return false;
 
-        if (address.User.Contains(' ') || address.User.Split('.').Any(p => p == ""))
+        if (address.User.Contains(' ', StringComparison.Ordinal) || address.User.Split('.').Any(p => p == ""))
             return false;
 
         normalized = address.Address.ToLowerInvariant();

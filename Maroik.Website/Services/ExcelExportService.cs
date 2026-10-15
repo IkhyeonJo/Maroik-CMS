@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -34,8 +34,8 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
         {
             localize(nameof(AssetOutputViewModel.ProductName)),
             localize(nameof(AssetOutputViewModel.Item)),
-            localize(nameof(AssetOutputViewModel.Amount)),
             localize(nameof(AssetOutputViewModel.MonetaryUnit)),
+            localize(nameof(AssetOutputViewModel.Amount)),
             localize(nameof(AssetOutputViewModel.Created)),
             localize(nameof(AssetOutputViewModel.Updated)),
             localize(nameof(AssetOutputViewModel.Note)),
@@ -46,8 +46,8 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
         [
             item.ProductName ?? "",
             localize(item.Item ?? ""),
-            XlsxCell.Number(item.Amount),
             item.MonetaryUnit ?? "",
+            XlsxCell.Number(item.Amount),
             Timestamp(item.Created.ConvertTimeByTimeZoneIanaId(timeZoneIanaId)),
             Timestamp(item.Updated.ConvertTimeByTimeZoneIanaId(timeZoneIanaId)),
             item.Note ?? "",
@@ -74,8 +74,8 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
             localize(nameof(IncomeOutputViewModel.MainClass)),
             localize(nameof(IncomeOutputViewModel.SubClass)),
             localize(nameof(IncomeOutputViewModel.Content)),
-            localize(nameof(IncomeOutputViewModel.Amount)),
             localize(nameof(IncomeOutputViewModel.MonetaryUnit)),
+            localize(nameof(IncomeOutputViewModel.Amount)),
             localize(nameof(IncomeOutputViewModel.DepositMyAssetProductName)),
             localize(nameof(IncomeOutputViewModel.Created)),
             localize(nameof(IncomeOutputViewModel.Updated)),
@@ -87,8 +87,8 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
             localize(item.MainClass ?? ""),
             localize(item.SubClass ?? ""),
             item.Content ?? "",
-            XlsxCell.Number(item.Amount),
             currencyByProduct.GetValueOrDefault(item.DepositMyAssetProductName ?? "", ""),
+            XlsxCell.Number(item.Amount),
             item.DepositMyAssetProductName ?? "",
             Timestamp(item.Created.ConvertTimeByTimeZoneIanaId(timeZoneIanaId)),
             Timestamp(item.Updated.ConvertTimeByTimeZoneIanaId(timeZoneIanaId)),
@@ -115,8 +115,8 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
             localize(nameof(ExpenditureOutputViewModel.MainClass)),
             localize(nameof(ExpenditureOutputViewModel.SubClass)),
             localize(nameof(ExpenditureOutputViewModel.Content)),
-            localize(nameof(ExpenditureOutputViewModel.Amount)),
             localize(nameof(ExpenditureOutputViewModel.MonetaryUnit)),
+            localize(nameof(ExpenditureOutputViewModel.Amount)),
             localize(nameof(ExpenditureOutputViewModel.PaymentMethod)),
             localize(nameof(ExpenditureOutputViewModel.Note)),
             localize(nameof(ExpenditureOutputViewModel.MyDepositAsset)),
@@ -129,8 +129,8 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
             localize(item.MainClass ?? ""),
             localize(item.SubClass ?? ""),
             item.Content ?? "",
-            XlsxCell.Number(item.Amount),
             currencyByProduct.GetValueOrDefault(item.PaymentMethod ?? "", ""),
+            XlsxCell.Number(item.Amount),
             item.PaymentMethod ?? "",
             item.Note ?? "",
             item.MyDepositAsset ?? "",
@@ -161,8 +161,8 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
             localize(nameof(FixedIncomeOutputViewModel.MainClass)),
             localize(nameof(FixedIncomeOutputViewModel.SubClass)),
             localize(nameof(FixedIncomeOutputViewModel.Content)),
-            localize(nameof(FixedIncomeOutputViewModel.Amount)),
             localize(nameof(FixedIncomeOutputViewModel.MonetaryUnit)),
+            localize(nameof(FixedIncomeOutputViewModel.Amount)),
             localize(nameof(FixedIncomeOutputViewModel.DepositMonth)),
             localize(nameof(FixedIncomeOutputViewModel.DepositDay)),
             localize(nameof(FixedIncomeOutputViewModel.MaturityDate)),
@@ -179,10 +179,10 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
             item.MainClass ?? "",
             item.SubClass ?? "",
             item.Content ?? "",
-            XlsxCell.Number(item.Amount),
             item.MonetaryUnit ?? "",
-            item.DepositMonth.ToString(),
-            item.DepositDay.ToString(),
+            XlsxCell.Number(item.Amount),
+            item.DepositMonth.ToString(CultureInfo.InvariantCulture),
+            item.DepositDay.ToString(CultureInfo.InvariantCulture),
             item.MaturityDate ?? "",
             item.Note ?? "",
             item.DepositMyAssetProductName ?? "",
@@ -215,8 +215,8 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
             localize(nameof(FixedExpenditureOutputViewModel.MainClass)),
             localize(nameof(FixedExpenditureOutputViewModel.SubClass)),
             localize(nameof(FixedExpenditureOutputViewModel.Content)),
-            localize(nameof(FixedExpenditureOutputViewModel.Amount)),
             localize(nameof(FixedExpenditureOutputViewModel.MonetaryUnit)),
+            localize(nameof(FixedExpenditureOutputViewModel.Amount)),
             localize(nameof(FixedExpenditureOutputViewModel.PaymentMethod)),
             localize(nameof(FixedExpenditureOutputViewModel.MyDepositAsset)),
             localize(nameof(FixedExpenditureOutputViewModel.DepositMonth)),
@@ -234,12 +234,12 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
             item.MainClass ?? "",
             item.SubClass ?? "",
             item.Content ?? "",
-            XlsxCell.Number(item.Amount),
             item.MonetaryUnit ?? "",
+            XlsxCell.Number(item.Amount),
             item.PaymentMethod ?? "",
             item.MyDepositAsset ?? "",
-            item.DepositMonth.ToString(),
-            item.DepositDay.ToString(),
+            item.DepositMonth.ToString(CultureInfo.InvariantCulture),
+            item.DepositDay.ToString(CultureInfo.InvariantCulture),
             item.MaturityDate ?? "",
             Timestamp(item.Created),
             Timestamp(item.Updated),
@@ -288,7 +288,7 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
             item.Role ?? "",
             item.TimeZoneIanaId ?? "",
             item.Locked.ToString(),
-            item.LoginAttempt.ToString(),
+            item.LoginAttempt.ToString(CultureInfo.InvariantCulture),
             item.EmailConfirmed.ToString(),
             item.AgreedServiceTerms.ToString(),
             Timestamp(item.Created),
@@ -309,15 +309,15 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
         var rows = categories
             .Select(c => (IEnumerable<XlsxCell>)
             [
-                c.Id.ToString(), "", c.Name ?? "", c.DisplayName ?? "",
-                c.IconPath ?? "", c.Controller ?? "", c.Action ?? "", c.Role ?? "", c.Order.ToString()
+                c.Id.ToString(CultureInfo.InvariantCulture), "", c.Name ?? "", c.DisplayName ?? "",
+                c.IconPath ?? "", c.Controller ?? "", c.Action ?? "", c.Role ?? "", c.Order.ToString(CultureInfo.InvariantCulture)
             ])
             .Concat(subCategories.Select(s => (IEnumerable<XlsxCell>)
             [
-                s.Id.ToString(), s.CategoryId.ToString(), s.Name ?? "", s.DisplayName ?? "",
-                s.IconPath ?? "", "", s.Action ?? "", s.Role ?? "", s.Order.ToString()
+                s.Id.ToString(CultureInfo.InvariantCulture), s.CategoryId.ToString(CultureInfo.InvariantCulture), s.Name ?? "", s.DisplayName ?? "",
+                s.IconPath ?? "", "", s.Action ?? "", s.Role ?? "", s.Order.ToString(CultureInfo.InvariantCulture)
             ]))
-            .OrderByDescending(r => long.Parse(r.First().Text));
+            .OrderByDescending(r => long.Parse(r.First().Text, CultureInfo.InvariantCulture));
 
         var headers = new[]
         {

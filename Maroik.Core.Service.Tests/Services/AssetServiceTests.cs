@@ -428,7 +428,7 @@ public class AssetServiceTests
 
         Assert.Equal("Asset.UpdateFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -445,7 +445,7 @@ public class AssetServiceTests
 
         Assert.Equal("Asset.DeleteFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -462,8 +462,8 @@ public class AssetServiceTests
         Assert.Equal(LogLevel.Error, record.Level);
         Assert.Same(thrown, record.Exception);
         Assert.StartsWith(prefix, record.Message, StringComparison.Ordinal);
-        Assert.Contains(assetName, record.Message);
-        Assert.Contains(Email, record.Message);
+        Assert.Contains(assetName, record.Message, StringComparison.Ordinal);
+        Assert.Contains(Email, record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Asserts <paramref name="result"/> is the "asset already exists" Conflict.</summary>

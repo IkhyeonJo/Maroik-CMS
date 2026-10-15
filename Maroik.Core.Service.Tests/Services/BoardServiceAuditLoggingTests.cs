@@ -63,7 +63,7 @@ public class BoardServiceAuditLoggingTests
     {
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(),
             r => r.Level == level && r.Message.Contains(containing, StringComparison.Ordinal));
-        Assert.DoesNotContain("SECRET", record.Message);
+        Assert.DoesNotContain("SECRET", record.Message, StringComparison.Ordinal);
         return record;
     }
 
@@ -76,7 +76,7 @@ public class BoardServiceAuditLoggingTests
         await CreateSut().DeleteBoardAsync(1, BoardTypes.FreeForum, "Admin", true, TestContext.Current.CancellationToken);
 
         FakeLogRecord record = Only(LogLevel.Information, "Board post 1 of Alice deleted by Admin");
-        Assert.Contains("admin: True", record.Message);
+        Assert.Contains("admin: True", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that a refused post deletion logs a Warning naming the requester and the post.</summary>

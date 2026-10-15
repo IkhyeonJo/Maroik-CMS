@@ -14,8 +14,21 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- .editorconfig code-style violations (IDExxxx) are enforced at build time too. -->
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- Needed for IDE0005 (unnecessary using) to run at build time, and checks the XML doc comments' references
+         (paramref / cref / param names). Missing doc comments themselves (CS1591) stay allowed by the NoWarn above. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <Version>1.0.0</Version>
   </PropertyGroup>
+  <!--
+    Banned APIs (BannedSymbols.txt) for every production project, Domain and Contract included: a build-time analyzer
+    only (PrivateAssets=all, nothing ships with the assembly), so it is declared here rather than in each .csproj, whose
+    PackageReference graph SolutionLayeringArchitectureTests checks for runtime dependencies. Test projects and
+    docker-compose.dcproj (no target framework) are left out.
+  -->
+  <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj' And !$(MSBuildProjectName.EndsWith('.Tests'))">
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
+  </ItemGroup>
 </Project>

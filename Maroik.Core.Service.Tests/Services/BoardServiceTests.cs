@@ -1130,7 +1130,7 @@ public class BoardServiceTests
 
         Assert.Equal("Board.EditFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -1171,7 +1171,7 @@ public class BoardServiceTests
 
         Assert.Equal("Board.DeleteFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -1216,7 +1216,7 @@ public class BoardServiceTests
 
         Assert.Equal("Board.WriteCommentFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -1267,7 +1267,7 @@ public class BoardServiceTests
 
         Assert.Equal("Board.DeleteCommentFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

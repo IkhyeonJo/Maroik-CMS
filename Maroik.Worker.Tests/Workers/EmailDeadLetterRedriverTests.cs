@@ -75,8 +75,8 @@ public class EmailDeadLetterRedriverTests(WorkerBrokerFixture broker) : IClassFi
             Assert.True(m.BasicProperties.Persistent);
         });
         FakeLogRecord log = Assert.Single(logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Information);
-        Assert.Contains("2", log.Message);
-        Assert.Contains(QueueNames.EmailDeadLetter, log.Message);
+        Assert.Contains("2", log.Message, StringComparison.Ordinal);
+        Assert.Contains(QueueNames.EmailDeadLetter, log.Message, StringComparison.Ordinal);
     }
 
     /// <summary>An empty dead-letter queue is a no-op that reports zero.</summary>

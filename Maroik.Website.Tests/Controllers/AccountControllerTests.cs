@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Website.Tests.Infrastructure;
@@ -55,11 +54,10 @@ public class AccountControllerTests(MaroikWebApplicationFactory factory)
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
             db.Accounts.Add(new Maroik.Core.PostgreSQL.Models.Account
             {
                 Email = email,
-                HashedPassword = passwordService.HashPassword(password),
+                HashedPassword = TestPasswords.Hash(password),
                 Nickname = "FixationTester",
                 AvatarImagePath = "/upload/Management/Profile/default-avatar.jpg",
                 Role = Role.User,
@@ -126,7 +124,7 @@ public class AccountControllerTests(MaroikWebApplicationFactory factory)
     /// <summary>Extracts the value of a specific cookie from a response's Set-Cookie headers, or null if absent.</summary>
     private static string? ExtractCookieValue(HttpResponseMessage response, string cookieName)
     {
-        return !response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders) ? null : (from header in setCookieHeaders select header.Split(';', 2)[0] into namePart let eq = namePart.IndexOf('=') where eq > 0 where namePart[..eq] == cookieName select namePart[(eq + 1)..]).FirstOrDefault();
+        return !response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders) ? null : (from header in setCookieHeaders select header.Split(';', 2)[0] into namePart let eq = namePart.IndexOf('=', StringComparison.Ordinal) where eq > 0 where namePart[..eq] == cookieName select namePart[(eq + 1)..]).FirstOrDefault();
     }
 
     /// <summary>Extracts the antiforgery hidden-input value from a rendered form's HTML.</summary>

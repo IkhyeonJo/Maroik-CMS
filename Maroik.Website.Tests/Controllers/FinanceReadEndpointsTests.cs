@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Core.PostgreSQL.Models;
@@ -121,7 +121,7 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
     [InlineData("/Notice/FixedExpenditure")]
     public async Task Page_LoggedInUser_Returns200_AndListsTheirActiveAssetsInThePicker(string url)
     {
-        string email = $"fin-read-page-{url.Replace("/", "-").ToLowerInvariant()}@test.com";
+        string email = $"fin-read-page-{url.Replace("/", "-", StringComparison.Ordinal).ToLowerInvariant()}@test.com";
         var session = await LoginAsync(email);
         SeedAsset(email, "PagePicker-Wallet");
 
@@ -130,7 +130,7 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         if (url != "/AccountBook/Asset")
-            Assert.Contains("PagePicker-Wallet", html);
+            Assert.Contains("PagePicker-Wallet", html, StringComparison.Ordinal);
     }
 
     // -- Grid partials -----------------------------------------------------------------------------------
@@ -147,10 +147,44 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
     [InlineData("/Notice/FixedExpenditure")]
     public async Task Grid_ShowsEveryStoredDecimalPlace_WithAThousandsSeparator(string url)
     {
-        string email = $"fin-read-grid-decimals-{url.Replace("/", "-").ToLowerInvariant()}@test.com";
+        string email = $"fin-read-grid-decimals-{url.Replace("/", "-", StringComparison.Ordinal).ToLowerInvariant()}@test.com";
         var session = await LoginAsync(email);
-        const decimal amount = 1234.5678m;
-        string asset = "Decimals-" + url.Split('/')[^1];
+        SeedGridRow(url, email, "Decimals-", 1234.5678m);
+
+        string grid = await (await GetAsync(url, session, ajax: true)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains("1,234.5678", grid, StringComparison.Ordinal);
+    }
+
+    /// <summary>Every finance grid lists the monetary unit column before the amount column ("USD | 1,234.5678").</summary>
+    [Theory]
+    [InlineData("/AccountBook/Asset")]
+    [InlineData("/AccountBook/Income")]
+    [InlineData("/AccountBook/Expenditure")]
+    [InlineData("/Notice/FixedIncome")]
+    [InlineData("/Notice/FixedExpenditure")]
+    public async Task Grid_ShowsTheMonetaryUnitBeforeTheAmount(string url)
+    {
+        string email = $"fin-read-grid-unit-first-{url.Replace("/", "-", StringComparison.Ordinal).ToLowerInvariant()}@test.com";
+        var session = await LoginAsync(email);
+        SeedGridRow(url, email, "UnitFirst-", 1234.5678m);
+
+        string grid = await (await GetAsync(url, session, ajax: true)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        string row = grid[grid.IndexOf("<tbody", StringComparison.Ordinal)..];
+
+        int unit = row.IndexOf(">USD<", StringComparison.Ordinal);
+        int amount = row.IndexOf(">1,234.5678<", StringComparison.Ordinal);
+        Assert.True(unit >= 0 && amount >= 0, "the row renders both the unit and the amount cell");
+        Assert.True(unit < amount, "the monetary unit cell comes before the amount cell");
+    }
+
+    /// <summary>
+    /// Seeds one row of <paramref name="amount"/> for the grid at <paramref name="url"/>, on a "USD" asset named
+    /// <paramref name="assetPrefix"/> plus the page name (the asset itself carries the amount on the asset page).
+    /// </summary>
+    private void SeedGridRow(string url, string email, string assetPrefix, decimal amount)
+    {
+        string asset = assetPrefix + url.Split('/')[^1];
         Seed(db => db.Assets.Add(new Asset
         {
             ProductName = asset, AccountEmail = email, Item = "FreeDepositAndWithdrawal", MonetaryUnit = "USD",
@@ -185,12 +219,7 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
                 }));
                 break;
         }
-
-        string grid = await (await GetAsync(url, session, ajax: true)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-
-        Assert.Contains("1,234.5678", grid);
     }
-
 
     /// <summary>The grid partial lists the caller's own rows only, and the whole-row search narrows it.</summary>
     [Fact]
@@ -208,11 +237,11 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
         string all = await (await GetAsync("/AccountBook/Income", session, ajax: true)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         string searched = await (await GetAsync("/AccountBook/Income?wholeSearch=MineAlpha-IG", session, ajax: true)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("MineAlpha-IG", all);
-        Assert.Contains("MineBeta-IG", all);
-        Assert.DoesNotContain("TheirsSecret-IG", all);
-        Assert.Contains("MineAlpha-IG", searched);
-        Assert.DoesNotContain("MineBeta-IG", searched);
+        Assert.Contains("MineAlpha-IG", all, StringComparison.Ordinal);
+        Assert.Contains("MineBeta-IG", all, StringComparison.Ordinal);
+        Assert.DoesNotContain("TheirsSecret-IG", all, StringComparison.Ordinal);
+        Assert.Contains("MineAlpha-IG", searched, StringComparison.Ordinal);
+        Assert.DoesNotContain("MineBeta-IG", searched, StringComparison.Ordinal);
     }
 
     /// <summary>The expenditure grid lists the caller's rows and honours the whole-row search.</summary>
@@ -228,10 +257,10 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
         string all = await (await GetAsync("/AccountBook/Expenditure", session, ajax: true)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         string searched = await (await GetAsync("/AccountBook/Expenditure?wholeSearch=DinnerBeta-EG", session, ajax: true)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("LunchAlpha-EG", all);
-        Assert.Contains("DinnerBeta-EG", all);
-        Assert.DoesNotContain("LunchAlpha-EG", searched);
-        Assert.Contains("DinnerBeta-EG", searched);
+        Assert.Contains("LunchAlpha-EG", all, StringComparison.Ordinal);
+        Assert.Contains("DinnerBeta-EG", all, StringComparison.Ordinal);
+        Assert.DoesNotContain("LunchAlpha-EG", searched, StringComparison.Ordinal);
+        Assert.Contains("DinnerBeta-EG", searched, StringComparison.Ordinal);
     }
 
     /// <summary>The asset grid lists the caller's assets and honors the whole-row search.</summary>
@@ -246,10 +275,10 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
         string all = await (await GetAsync("/AccountBook/Asset", session, ajax: true)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         string searched = await (await GetAsync("/AccountBook/Asset?wholeSearch=AssetGridBeta-AG", session, ajax: true)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("AssetGridAlpha-AG", all);
-        Assert.Contains("AssetGridBeta-AG", all);
-        Assert.DoesNotContain("AssetGridAlpha-AG", searched);
-        Assert.Contains("AssetGridBeta-AG", searched);
+        Assert.Contains("AssetGridAlpha-AG", all, StringComparison.Ordinal);
+        Assert.Contains("AssetGridBeta-AG", all, StringComparison.Ordinal);
+        Assert.DoesNotContain("AssetGridAlpha-AG", searched, StringComparison.Ordinal);
+        Assert.Contains("AssetGridBeta-AG", searched, StringComparison.Ordinal);
     }
 
     /// <summary>The fixed-income and fixed-expenditure grids list the caller's schedules and honour the whole-row search.</summary>
@@ -269,14 +298,14 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
         string expenditures = await (await GetAsync("/Notice/FixedExpenditure", session, ajax: true)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         string expendituresSearched = await (await GetAsync("/Notice/FixedExpenditure?wholeSearch=RentAlpha-FG", session, ajax: true)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("SalaryAlpha-FG", incomes);
-        Assert.Contains("PensionBeta-FG", incomes);
-        Assert.DoesNotContain("SalaryAlpha-FG", incomesSearched);
-        Assert.Contains("PensionBeta-FG", incomesSearched);
-        Assert.Contains("RentAlpha-FG", expenditures);
-        Assert.Contains("InsuranceBeta-FG", expenditures);
-        Assert.Contains("RentAlpha-FG", expendituresSearched);
-        Assert.DoesNotContain("InsuranceBeta-FG", expendituresSearched);
+        Assert.Contains("SalaryAlpha-FG", incomes, StringComparison.Ordinal);
+        Assert.Contains("PensionBeta-FG", incomes, StringComparison.Ordinal);
+        Assert.DoesNotContain("SalaryAlpha-FG", incomesSearched, StringComparison.Ordinal);
+        Assert.Contains("PensionBeta-FG", incomesSearched, StringComparison.Ordinal);
+        Assert.Contains("RentAlpha-FG", expenditures, StringComparison.Ordinal);
+        Assert.Contains("InsuranceBeta-FG", expenditures, StringComparison.Ordinal);
+        Assert.Contains("RentAlpha-FG", expendituresSearched, StringComparison.Ordinal);
+        Assert.DoesNotContain("InsuranceBeta-FG", expendituresSearched, StringComparison.Ordinal);
     }
 
     // -- Amount labels -----------------------------------------------------------------------------------
@@ -289,7 +318,7 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
     [InlineData("/Notice/GetFixedExpenditureAmountLabel")]
     public async Task AmountLabel_ShowsTheAssetsCurrency_AndFallsBackForAnUnknownProduct(string endpoint)
     {
-        string email = $"fin-read-label-{endpoint.Replace("/", "-").ToLowerInvariant()}@test.com";
+        string email = $"fin-read-label-{endpoint.Replace("/", "-", StringComparison.Ordinal).ToLowerInvariant()}@test.com";
         var session = await LoginAsync(email);
         SeedAsset(email, "LabelUsd", "USD");
 
@@ -297,9 +326,9 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
         using JsonDocument unknown = JsonDocument.Parse(await PostJsonAsync(session, $"{endpoint}?productName=NoSuchProduct"));
 
         Assert.True(known.RootElement.GetProperty("result").GetBoolean());
-        Assert.EndsWith("(USD)", known.RootElement.GetProperty("label").GetString());
+        Assert.EndsWith("(USD)", known.RootElement.GetProperty("label").GetString(), StringComparison.Ordinal);
         Assert.True(unknown.RootElement.GetProperty("result").GetBoolean());
-        Assert.DoesNotContain("(", unknown.RootElement.GetProperty("label").GetString());
+        Assert.DoesNotContain("(", unknown.RootElement.GetProperty("label").GetString(), StringComparison.Ordinal);
     }
 
     // -- Existence lookups ---------------------------------------------------------------------------------
@@ -324,13 +353,13 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
         string myIncomeJson = await PostJsonAsync(session, $"/AccountBook/IsIncomeExists?id={myIncome}");
         string theirIncomeJson = await PostJsonAsync(session, $"/AccountBook/IsIncomeExists?id={theirIncome}");
 
-        Assert.Contains("\"result\":true", mineJson);
-        Assert.Contains("MyFixedIncome-EX", mineJson);
-        Assert.Contains("\"result\":false", theirsJson);
-        Assert.DoesNotContain("TheirFixedIncome-EX", theirsJson);
-        Assert.Contains("\"result\":true", myIncomeJson);
-        Assert.Contains("\"result\":false", theirIncomeJson);
-        Assert.DoesNotContain("TheirIncome-EX", theirIncomeJson);
+        Assert.Contains("\"result\":true", mineJson, StringComparison.Ordinal);
+        Assert.Contains("MyFixedIncome-EX", mineJson, StringComparison.Ordinal);
+        Assert.Contains("\"result\":false", theirsJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("TheirFixedIncome-EX", theirsJson, StringComparison.Ordinal);
+        Assert.Contains("\"result\":true", myIncomeJson, StringComparison.Ordinal);
+        Assert.Contains("\"result\":false", theirIncomeJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("TheirIncome-EX", theirIncomeJson, StringComparison.Ordinal);
     }
 
     // -- Excel exports ----------------------------------------------------------------------------------------
@@ -344,7 +373,7 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
     [InlineData("/Notice/ExportExcelFixedExpenditure")]
     public async Task ExportExcel_ReturnsAnXlsxWorkbook_NamedAfterTheRequestedFile(string endpoint)
     {
-        string email = $"fin-read-export-{endpoint.Replace("/", "-").ToLowerInvariant()}@test.com";
+        string email = $"fin-read-export-{endpoint.Replace("/", "-", StringComparison.Ordinal).ToLowerInvariant()}@test.com";
         var session = await LoginAsync(email);
         SeedAsset(email, "Export-Bank");
         using var request = session.BuildJsonPostRequest($"{endpoint}?fileName=my report");
@@ -354,8 +383,8 @@ public class FinanceReadEndpointsTests(MaroikWebApplicationFactory factory)
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", response.Content.Headers.ContentType?.MediaType);
-        Assert.StartsWith("my report-", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"'));
-        Assert.EndsWith(".xlsx", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"'));
+        Assert.StartsWith("my report-", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"'), StringComparison.Ordinal);
+        Assert.EndsWith(".xlsx", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"'), StringComparison.Ordinal);
         Assert.True(bytes.Length > 4 && bytes[0] == 'P' && bytes[1] == 'K', "an .xlsx file is a zip container starting with 'PK'");
     }
 }

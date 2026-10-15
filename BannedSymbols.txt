@@ -1,0 +1,41 @@
+# Banned APIs for every production project (Microsoft.CodeAnalysis.BannedApiAnalyzers, rule RS0030 = build error).
+# Wired in Directory.Build.props for each project whose name does not end in ".Tests"; test projects may use these.
+# Format: <documentation-comment ID>;<what to use instead>. A method ID names one overload (no parameter list = the
+# parameterless one), so every overload is listed. RS0030 makes a use a build error (.editorconfig).
+
+# Time: production code reads the clock through the injected TimeProvider, so tests can pin it (InjectedClockTests).
+P:System.DateTime.Now;Use the injected TimeProvider (GetUtcNow / GetLocalNow).
+P:System.DateTime.UtcNow;Use the injected TimeProvider (GetUtcNow).
+P:System.DateTime.Today;Use the injected TimeProvider.
+P:System.DateTimeOffset.Now;Use the injected TimeProvider (GetLocalNow).
+P:System.DateTimeOffset.UtcNow;Use the injected TimeProvider (GetUtcNow).
+
+# Blocking on async work (thread-pool starvation, deadlocks under a synchronization context): await instead.
+M:System.Threading.Tasks.Task.Wait;Await the task.
+M:System.Threading.Tasks.Task.Wait(System.Int32);Await the task.
+M:System.Threading.Tasks.Task.Wait(System.TimeSpan);Await the task.
+M:System.Threading.Tasks.Task.Wait(System.Threading.CancellationToken);Await the task.
+M:System.Threading.Tasks.Task.Wait(System.Int32,System.Threading.CancellationToken);Await the task.
+M:System.Threading.Tasks.Task.Wait(System.TimeSpan,System.Threading.CancellationToken);Await the task.
+M:System.Threading.Tasks.Task.WaitAll(System.Threading.Tasks.Task[]);Await Task.WhenAll.
+M:System.Threading.Tasks.Task.WaitAll(System.Threading.Tasks.Task[],System.Int32);Await Task.WhenAll.
+M:System.Threading.Tasks.Task.WaitAll(System.Threading.Tasks.Task[],System.TimeSpan);Await Task.WhenAll.
+M:System.Threading.Tasks.Task.WaitAll(System.Threading.Tasks.Task[],System.Threading.CancellationToken);Await Task.WhenAll.
+M:System.Threading.Tasks.Task.WaitAll(System.Threading.Tasks.Task[],System.Int32,System.Threading.CancellationToken);Await Task.WhenAll.
+M:System.Threading.Tasks.Task.WaitAll(System.Collections.Generic.IEnumerable{System.Threading.Tasks.Task},System.Threading.CancellationToken);Await Task.WhenAll.
+M:System.Threading.Tasks.Task.WaitAll(System.ReadOnlySpan{System.Threading.Tasks.Task});Await Task.WhenAll.
+M:System.Threading.Tasks.Task.WaitAny(System.Threading.Tasks.Task[]);Await Task.WhenAny.
+M:System.Threading.Tasks.Task.WaitAny(System.Threading.Tasks.Task[],System.Int32);Await Task.WhenAny.
+M:System.Threading.Tasks.Task.WaitAny(System.Threading.Tasks.Task[],System.TimeSpan);Await Task.WhenAny.
+M:System.Threading.Tasks.Task.WaitAny(System.Threading.Tasks.Task[],System.Threading.CancellationToken);Await Task.WhenAny.
+M:System.Threading.Tasks.Task.WaitAny(System.Threading.Tasks.Task[],System.Int32,System.Threading.CancellationToken);Await Task.WhenAny.
+P:System.Threading.Tasks.Task`1.Result;Await the task.
+M:System.Runtime.CompilerServices.TaskAwaiter.GetResult;Await the task.
+M:System.Runtime.CompilerServices.TaskAwaiter`1.GetResult;Await the task.
+M:System.Runtime.CompilerServices.ValueTaskAwaiter.GetResult;Await the ValueTask.
+M:System.Runtime.CompilerServices.ValueTaskAwaiter`1.GetResult;Await the ValueTask.
+M:System.Threading.Thread.Sleep(System.Int32);Await Task.Delay (with the TimeProvider and a CancellationToken).
+M:System.Threading.Thread.Sleep(System.TimeSpan);Await Task.Delay (with the TimeProvider and a CancellationToken).
+
+# Output: production code logs through ILogger / Serilog (structured, level-filtered), never straight to the console.
+T:System.Console;Log through ILogger (or Serilog's Log in Program.cs).

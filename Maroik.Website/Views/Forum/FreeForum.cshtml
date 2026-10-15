@@ -458,7 +458,18 @@
 
 <div class="modal" id="loading">
     @* ReSharper disable Html.PathError *@
-    <img alt="" src="~/upload/Forum/FreeForum/ajax-loader.gif" />
+    @switch (loggedInAccount.Role)
+    {
+        case Role.Admin:
+            <img alt="" src="~/admin/dist/img/ajax-loader.gif" asp-append-version="true" />
+            break;
+        case Role.User:
+            <img alt="" src="~/user/dist/img/ajax-loader.gif" asp-append-version="true" />
+            break;
+        case Role.Anonymous:
+            <img alt="" src="~/anonymous/dist/img/ajax-loader.gif" asp-append-version="true" />
+            break;
+    }
     @* ReSharper restore Html.PathError *@
 </div>
 

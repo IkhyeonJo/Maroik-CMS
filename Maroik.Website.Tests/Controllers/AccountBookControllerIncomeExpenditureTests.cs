@@ -136,7 +136,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- CreateIncome: success path — verifies the Asset-balance side effect too -----
@@ -161,7 +161,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.Equal(before + 300, GetAssetBalance(asset));
     }
 
@@ -183,7 +183,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -205,7 +205,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -226,7 +226,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>Is income exists unknown id returns failure result.</summary>
@@ -239,7 +239,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>Get income amount label unknown product returns base label.</summary>
@@ -252,7 +252,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     // -- CreateExpenditure: role gating + ModelState validation --------------------
@@ -269,7 +269,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- CreateExpenditure: success path — verifies the Asset-balance side effect ----
@@ -294,7 +294,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.Equal(before - 40, GetAssetBalance(asset));
     }
 
@@ -316,7 +316,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -338,7 +338,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -364,7 +364,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             SeedAssetIfMissing(db, asset);
             db.Assets.Single(a => a.AccountEmail == Email && a.ProductName == asset).Amount = 100.00m;
-            db.SaveChanges();
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         using (var create = session.BuildJsonPostRequest("/AccountBook/CreateExpenditure", new
@@ -372,7 +372,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
             Id = 0, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "Gum",
             Amount = "0.005", PaymentMethod = asset, MyDepositAsset = "N/A", Note = "", Created = "2026-01-15 10:30:00"
         }))
-            Assert.Contains("\"result\":true", await (await _client.SendAsync(create, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            Assert.Contains("\"result\":true", await (await _client.SendAsync(create, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
 
         long id;
         using (var scope = factory.Services.CreateScope())
@@ -384,7 +384,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         Assert.Equal(99.995m, GetAssetBalance(asset));
 
         using (var delete = session.BuildJsonPostRequest("/AccountBook/DeleteExpenditure", new { Id = id }))
-            Assert.Contains("\"result\":true", await (await _client.SendAsync(delete, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            Assert.Contains("\"result\":true", await (await _client.SendAsync(delete, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
 
         Assert.Equal(100.00m, GetAssetBalance(asset));
     }
@@ -406,8 +406,8 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         });
         string json = await (await _client.SendAsync(request, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
-        Assert.Contains("Amount can have up to 4 decimal places.", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains("Amount can have up to 4 decimal places.", json, StringComparison.Ordinal);
         Assert.Equal(before, GetAssetBalance(asset));
     }
 
@@ -424,7 +424,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>Is expenditure exists unknown id returns failure result.</summary>
@@ -437,7 +437,7 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>Get expenditure amount label unknown product returns base label.</summary>
@@ -450,6 +450,6 @@ public class AccountBookControllerIncomeExpenditureTests(MaroikWebApplicationFac
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 }

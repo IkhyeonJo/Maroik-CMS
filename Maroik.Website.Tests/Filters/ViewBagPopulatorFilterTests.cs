@@ -219,7 +219,7 @@ public class ViewBagPopulatorFilterTests
         Assert.Equal(0, (int)controller.ViewBag.TotalNoticeCount);
         var warning = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
         Assert.Equal("db down", warning.Exception?.Message);
-        Assert.Contains("user@test.com", warning.Message);
+        Assert.Contains("user@test.com", warning.Message, StringComparison.Ordinal);
     }
 
     /// <summary>
