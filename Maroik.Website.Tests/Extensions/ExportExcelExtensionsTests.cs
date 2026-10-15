@@ -12,8 +12,8 @@ public class ExportExcelExtensionsTests
     {
         string fileName = "AccountBook".ToExcelFileName("UTC", DateTime.UtcNow);
 
-        Assert.StartsWith("AccountBook-", fileName);
-        Assert.EndsWith(".xlsx", fileName);
+        Assert.StartsWith("AccountBook-", fileName, StringComparison.Ordinal);
+        Assert.EndsWith(".xlsx", fileName, StringComparison.Ordinal);
     }
 
     /// <summary>To Excel file name matches timestamp pattern.</summary>
@@ -52,7 +52,7 @@ public class ExportExcelExtensionsTests
 
         string fileName = prefix.ToExcelFileName("UTC", DateTime.UtcNow);
 
-        Assert.StartsWith("BadName-", fileName);
+        Assert.StartsWith("BadName-", fileName, StringComparison.Ordinal);
         foreach (char c in invalidChars)
             Assert.DoesNotContain(c, fileName);
     }

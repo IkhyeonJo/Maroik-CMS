@@ -166,7 +166,7 @@ public class ClamavClientTests
     {
         const int chunkSize = 64 * 1024;
         byte[] data = new byte[(2 * chunkSize) + 1234];
-        new Random(42).NextBytes(data);
+        System.Security.Cryptography.RandomNumberGenerator.Fill(data);
 
         await using var server = FakeClamavServer.Start("stream: OK\n");
         using var stream = new MemoryStream(data);
@@ -220,9 +220,19 @@ public class ClamavClientTests
         /// <summary>Starts listening on a free loopback port and answers the first session with <paramref name="response"/>.</summary>
         public static FakeClamavServer Start(string response)
         {
-            var listener = new TcpListener(IPAddress.Loopback, 0);
-            listener.Start();
-            return new FakeClamavServer(listener, response);
+            // Handed over to the server once it is running; closed here if starting it fails.
+            TcpListener? listener = new(IPAddress.Loopback, 0);
+            try
+            {
+                listener.Start();
+                var server = new FakeClamavServer(listener, response);
+                listener = null;
+                return server;
+            }
+            finally
+            {
+                listener?.Dispose();
+            }
         }
 
         /// <summary>Accepts one client, records its command line and INSTREAM chunks, then writes <paramref name="response"/>.</summary>
@@ -283,7 +293,7 @@ public class ClamavClientTests
         /// <summary>Stops the listener and waits for the accept task to finish.</summary>
         public async ValueTask DisposeAsync()
         {
-            _listener.Stop();
+            _listener.Dispose();
             try { await _acceptTask; } catch { /* connection already handled or listener stopped mid-accept */ }
         }
     }

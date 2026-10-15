@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
@@ -28,9 +29,10 @@ public class ServiceFailureReasonContractTests(MaroikWebApplicationFactory facto
     private Task<AuthenticatedSession> LoginAsync(string email, string role = Role.User) =>
         AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", role, TestContext.Current.CancellationToken);
 
-    /// <summary>Sends <paramref name="request"/> (optionally as a <paramref name="culture"/> browser) and returns its <c>error</c>, asserting a 200 refusal.</summary>
-    private async Task<string> ErrorOf(HttpRequestMessage request, string? culture = null)
+    /// <summary>Builds and sends a request (optionally as a <paramref name="culture"/> browser), disposes it, and returns its <c>error</c>, asserting a 200 refusal.</summary>
+    private async Task<string> ErrorOf(Func<HttpRequestMessage> buildRequest, string? culture = null)
     {
+        using var request = buildRequest();
         if (culture != null) request.Headers.AcceptLanguage.ParseAdd(culture);
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
@@ -42,15 +44,13 @@ public class ServiceFailureReasonContractTests(MaroikWebApplicationFactory facto
     /// <summary>A write/edit-post form carrying an attachment named <paramref name="fileName"/>.</summary>
     private static MultipartFormDataContent BoardFormWithFile(string fileName, long id = 0)
     {
-        var form = new MultipartFormDataContent
-        {
-            { new StringContent(id.ToString()), "Id" },
-            { new StringContent($"title-{Guid.NewGuid():N}"[..30]), "Title" },
-            { new StringContent("Body"), "Content" },
-            { new StringContent("false"), "Locked" },
-            { new StringContent("false"), "Noticed" },
-            { new ByteArrayContent([1, 2, 3]), "UploadedFile", fileName }
-        };
+        var form = MultipartForm.Of(
+            ("Id", id.ToString(CultureInfo.InvariantCulture)),
+            ("Title", $"title-{Guid.NewGuid():N}"[..30]),
+            ("Content", "Body"),
+            ("Locked", "false"),
+            ("Noticed", "false"));
+        MultipartForm.AddFile(form, "UploadedFile", fileName, [1, 2, 3]);
         return form;
     }
 
@@ -79,9 +79,9 @@ public class ServiceFailureReasonContractTests(MaroikWebApplicationFactory facto
         var session = await LoginAsync("reason-forum-write@test.com");
 
         Assert.Equal("Only zip extension allowed.",
-            await ErrorOf(session.BuildFormPostRequest("/Forum/WriteFreeBoard", BoardFormWithFile("notes.txt"))));
+            await ErrorOf(() => session.BuildFormPostRequest("/Forum/WriteFreeBoard", BoardFormWithFile("notes.txt"))));
         Assert.Equal("zip 확장자만 가능합니다.",
-            await ErrorOf(session.BuildFormPostRequest("/Forum/WriteFreeBoard", BoardFormWithFile("notes.txt")), "ko-KR"));
+            await ErrorOf(() => session.BuildFormPostRequest("/Forum/WriteFreeBoard", BoardFormWithFile("notes.txt")), "ko-KR"));
     }
 
     /// <summary>Editing one's own post with a non-zip attachment is refused with the attachment rule.</summary>
@@ -92,7 +92,7 @@ public class ServiceFailureReasonContractTests(MaroikWebApplicationFactory facto
         long boardId = await SeedBoardAsync("FreeForum", session.Nickname);
 
         Assert.Equal("Only zip extension allowed.",
-            await ErrorOf(session.BuildFormPostRequest("/Forum/EditFreeBoard", BoardFormWithFile("report.pdf", boardId))));
+            await ErrorOf(() => session.BuildFormPostRequest("/Forum/EditFreeBoard", BoardFormWithFile("report.pdf", boardId))));
     }
 
     /// <summary>A comment on someone else's locked post is refused because the post is locked.</summary>
@@ -102,7 +102,7 @@ public class ServiceFailureReasonContractTests(MaroikWebApplicationFactory facto
         long boardId = await SeedBoardAsync("FreeForum", "ReasonLockedWriter", locked: true);
         var session = await LoginAsync("reason-forum-comment@test.com");
 
-        Assert.Equal("Cannot add a comment to a locked post.", await ErrorOf(session.BuildJsonPostRequest(
+        Assert.Equal("Cannot add a comment to a locked post.", await ErrorOf(() => session.BuildJsonPostRequest(
             "/Forum/WriteFreeComment", new { BoardId = boardId, Content = "hello", DetailCurrentPage = 1 })));
     }
 
@@ -115,7 +115,7 @@ public class ServiceFailureReasonContractTests(MaroikWebApplicationFactory facto
         var session = await LoginAsync("reason-note-write@test.com");
 
         Assert.Equal("Only zip extension allowed.",
-            await ErrorOf(session.BuildFormPostRequest("/Management/WritePrivateNoteBoard", BoardFormWithFile("setup.exe"))));
+            await ErrorOf(() => session.BuildFormPostRequest("/Management/WritePrivateNoteBoard", BoardFormWithFile("setup.exe"))));
     }
 
     /// <summary>Editing one's own private note with a non-zip attachment is refused with the attachment rule.</summary>
@@ -126,7 +126,7 @@ public class ServiceFailureReasonContractTests(MaroikWebApplicationFactory facto
         long boardId = await SeedBoardAsync("PrivateNote", session.Nickname);
 
         Assert.Equal("Only zip extension allowed.",
-            await ErrorOf(session.BuildFormPostRequest("/Management/EditPrivateNoteBoard", BoardFormWithFile("notes.txt", boardId))));
+            await ErrorOf(() => session.BuildFormPostRequest("/Management/EditPrivateNoteBoard", BoardFormWithFile("notes.txt", boardId))));
     }
 
     /// <summary>A comment on someone else's private note is refused for lack of permission.</summary>
@@ -136,7 +136,7 @@ public class ServiceFailureReasonContractTests(MaroikWebApplicationFactory facto
         long boardId = await SeedBoardAsync("PrivateNote", "ReasonNoteOwner");
         var session = await LoginAsync("reason-note-comment@test.com");
 
-        Assert.Equal("You do not have permission to write a comment.", await ErrorOf(session.BuildJsonPostRequest(
+        Assert.Equal("You do not have permission to write a comment.", await ErrorOf(() => session.BuildJsonPostRequest(
             "/Management/WritePrivateNoteComment", new { BoardId = boardId, Content = "hello", DetailCurrentPage = 1 })));
     }
 
@@ -179,12 +179,12 @@ public class ServiceFailureReasonContractTests(MaroikWebApplicationFactory facto
         var (categoryId, subCategoryId) = await SeedMenuAsync();
         const string expected = "Role must be Admin, User or Anonymous.";
 
-        Assert.Equal(expected, await ErrorOf(admin.BuildJsonPostRequest("/Management/CreateCategory", MenuBody("Superuser"))));
-        Assert.Equal(expected, await ErrorOf(admin.BuildJsonPostRequest("/Management/CreateSubCategory", MenuBody("Superuser", categoryId: categoryId))));
-        Assert.Equal(expected, await ErrorOf(admin.BuildJsonPostRequest("/Management/UpdateCategory", MenuBody("Superuser", id: categoryId))));
-        Assert.Equal(expected, await ErrorOf(admin.BuildJsonPostRequest("/Management/UpdateSubCategory", MenuBody("Superuser", id: subCategoryId, categoryId: categoryId))));
+        Assert.Equal(expected, await ErrorOf(() => admin.BuildJsonPostRequest("/Management/CreateCategory", MenuBody("Superuser"))));
+        Assert.Equal(expected, await ErrorOf(() => admin.BuildJsonPostRequest("/Management/CreateSubCategory", MenuBody("Superuser", categoryId: categoryId))));
+        Assert.Equal(expected, await ErrorOf(() => admin.BuildJsonPostRequest("/Management/UpdateCategory", MenuBody("Superuser", id: categoryId))));
+        Assert.Equal(expected, await ErrorOf(() => admin.BuildJsonPostRequest("/Management/UpdateSubCategory", MenuBody("Superuser", id: subCategoryId, categoryId: categoryId))));
         Assert.Equal("역할은 Admin, User, Anonymous 중 하나여야 합니다.",
-            await ErrorOf(admin.BuildJsonPostRequest("/Management/CreateCategory", MenuBody("Superuser")), "ko-KR"));
+            await ErrorOf(() => admin.BuildJsonPostRequest("/Management/CreateCategory", MenuBody("Superuser")), "ko-KR"));
     }
 
     /// <summary>A negative order is refused with the order rule (English and Korean).</summary>
@@ -194,9 +194,9 @@ public class ServiceFailureReasonContractTests(MaroikWebApplicationFactory facto
         var admin = await LoginAsync("reason-menu-admin@test.com", Role.Admin);
 
         Assert.Equal("Order cannot be negative.",
-            await ErrorOf(admin.BuildJsonPostRequest("/Management/CreateCategory", MenuBody(Role.User, order: -1))));
+            await ErrorOf(() => admin.BuildJsonPostRequest("/Management/CreateCategory", MenuBody(Role.User, order: -1))));
         Assert.Equal("순서는 음수일 수 없습니다.",
-            await ErrorOf(admin.BuildJsonPostRequest("/Management/CreateCategory", MenuBody(Role.User, order: -1)), "ko-KR"));
+            await ErrorOf(() => admin.BuildJsonPostRequest("/Management/CreateCategory", MenuBody(Role.User, order: -1)), "ko-KR"));
     }
 
     /// <summary>A menu field over the length limit is refused naming the field and the limit (English and Korean).</summary>
@@ -212,9 +212,9 @@ public class ServiceFailureReasonContractTests(MaroikWebApplicationFactory facto
         };
 
         Assert.Equal("'DisplayName' must be 255 characters or fewer.",
-            await ErrorOf(admin.BuildJsonPostRequest("/Management/UpdateCategory", body)));
+            await ErrorOf(() => admin.BuildJsonPostRequest("/Management/UpdateCategory", body)));
         Assert.Equal("'DisplayName'은(는) 255자 이하여야 합니다.",
-            await ErrorOf(admin.BuildJsonPostRequest("/Management/UpdateCategory", body), "ko-KR"));
+            await ErrorOf(() => admin.BuildJsonPostRequest("/Management/UpdateCategory", body), "ko-KR"));
     }
 
     /// <summary>

@@ -86,7 +86,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>Create asset with an unrecognized item category returns the domain's specific validation message.</summary>
@@ -100,7 +100,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("Asset category (item) is not a recognised value.", json);
+        Assert.Contains("Asset category (item) is not a recognised value.", json, StringComparison.Ordinal);
     }
 
     // -- CreateAsset / IsAssetExists: success path --------------------------------
@@ -114,13 +114,13 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
         using var createRequest = session.BuildJsonPostRequest("/AccountBook/CreateAsset", ValidAssetPayload(productName));
         var createResponse = await _client.SendAsync(createRequest, TestContext.Current.CancellationToken);
         string createJson = await createResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("\"result\":true", createJson);
+        Assert.Contains("\"result\":true", createJson, StringComparison.Ordinal);
 
         using var existsRequest = session.BuildJsonPostRequest($"/AccountBook/IsAssetExists?productName={productName}");
         var existsResponse = await _client.SendAsync(existsRequest, TestContext.Current.CancellationToken);
         string existsJson = await existsResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", existsJson);
+        Assert.Contains("\"result\":true", existsJson, StringComparison.Ordinal);
     }
 
     /// <summary>Create asset duplicate product name returns already exists error.</summary>
@@ -136,7 +136,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(secondRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("The asset already exists.", json);
+        Assert.Contains("The asset already exists.", json, StringComparison.Ordinal);
     }
 
     /// <summary>Is asset exists unknown product name returns failure result.</summary>
@@ -149,7 +149,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- UpdateAsset ---------------------------------------------------------------
@@ -181,7 +181,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -242,7 +242,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -270,7 +270,7 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("Fail to find the asset by given product name", json);
+        Assert.Contains("Fail to find the asset by given product name", json, StringComparison.Ordinal);
     }
 
     // -- DeleteAsset ---------------------------------------------------------------
@@ -287,6 +287,6 @@ public class AccountBookControllerAssetTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 }

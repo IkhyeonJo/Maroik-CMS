@@ -54,8 +54,8 @@ public partial class ServiceErrorKeyArchitectureTests
     {
         string serviceDir = ServiceSourceDirectory();
         var sources = Directory.EnumerateFiles(serviceDir, "*.cs", SearchOption.AllDirectories)
-            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") &&
-                        !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) &&
+                        !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .Order().ToList();
         Assert.NotEmpty(sources);
 

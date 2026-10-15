@@ -142,7 +142,7 @@ public class ImageValidatorServiceTests
 
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot());
         Assert.Equal(LogLevel.Warning, record.Level);
-        Assert.Contains("could not be decoded", record.Message);
+        Assert.Contains("could not be decoded", record.Message, StringComparison.Ordinal);
         Assert.NotNull(record.Exception);
     }
 

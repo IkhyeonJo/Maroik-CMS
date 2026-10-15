@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Account;
@@ -64,7 +65,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     /// <summary>The value of <paramref name="cookieName"/> from the response's <c>Set-Cookie</c> headers, or <see langword="null"/>.</summary>
     private static string? ExtractCookieValue(HttpResponseMessage response, string cookieName)
     {
-        return !response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders) ? null : (from header in setCookieHeaders select header.Split(';', 2)[0] into namePart let eq = namePart.IndexOf('=') where eq > 0 where namePart[..eq] == cookieName select namePart[(eq + 1)..]).FirstOrDefault();
+        return !response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders) ? null : (from header in setCookieHeaders select header.Split(';', 2)[0] into namePart let eq = namePart.IndexOf('=', StringComparison.Ordinal) where eq > 0 where namePart[..eq] == cookieName select namePart[(eq + 1)..]).FirstOrDefault();
     }
 
     /// <summary>The hidden <c>__RequestVerificationToken</c> value in <paramref name="html"/>; fails the test if there is none.</summary>
@@ -80,12 +81,11 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
         db.Accounts.Add(new Maroik.Core.PostgreSQL.Models.Account
         {
             Email = email,
-            HashedPassword = passwordService.HashPassword("OldPassword1!"),
-            Nickname = nickname ?? "RegTest_" + email.Replace("@", "_").Replace(".", "_"),
+            HashedPassword = TestPasswords.Hash("OldPassword1!"),
+            Nickname = nickname ?? "RegTest_" + email.Replace("@", "_", StringComparison.Ordinal).Replace(".", "_", StringComparison.Ordinal),
             AvatarImagePath = "/upload/Management/Profile/default-avatar.jpg",
             Role = Role.User,
             TimeZoneIanaId = "UTC",
@@ -226,7 +226,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         Assert.True(error.Success, "The registration error message was not rendered.");
 
         // What the browser shows is the HTML-decoded text; it must read exactly like the typed nickname.
-        Assert.StartsWith($"'{nickname}' ", System.Net.WebUtility.HtmlDecode(error.Groups[1].Value));
+        Assert.StartsWith($"'{nickname}' ", System.Net.WebUtility.HtmlDecode(error.Groups[1].Value), StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -256,7 +256,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         Match error = Regex.Match(html, "<span style=\"font-weight:bold; color: red; \">(.*?)</span>", RegexOptions.Singleline);
         Assert.True(error.Success, "The registration error message was not rendered.");
 
-        Assert.StartsWith($"'{typed}' ", System.Net.WebUtility.HtmlDecode(error.Groups[1].Value));
+        Assert.StartsWith($"'{typed}' ", System.Net.WebUtility.HtmlDecode(error.Groups[1].Value), StringComparison.Ordinal);
     }
 
     /// <summary>Register unconfirmed email resends confirmation on resubmission.</summary>
@@ -308,8 +308,8 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         });
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("mailto:admin@maroik.com", html);
-        Assert.DoesNotContain("mailto: ", html);
+        Assert.Contains("mailto:admin@maroik.com", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("mailto: ", html, StringComparison.Ordinal);
     }
 
     // -- ConfirmEmail -----------------------------------------------------------------
@@ -356,7 +356,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("id=\"confirmEmailForm\"", html);
+        Assert.Contains("id=\"confirmEmailForm\"", html, StringComparison.Ordinal);
         Assert.False(IsEmailConfirmed(email));
     }
 
@@ -389,7 +389,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("id=\"confirmEmailForm\"", html);
+        Assert.Contains("id=\"confirmEmailForm\"", html, StringComparison.Ordinal);
         Assert.False(IsEmailConfirmed(email));
     }
 
@@ -492,7 +492,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         // A valid token renders the new-password form (id="resetPasswordForm"); an invalid one
         // renders "The authentication token is invalid." instead — see ResetPassword.cshtml.
-        Assert.Contains("resetPasswordForm", html);
+        Assert.Contains("resetPasswordForm", html, StringComparison.Ordinal);
     }
 
     /// <summary>Reset password post valid token changes password and allows login with new password.</summary>
@@ -591,7 +591,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         Assert.Null(ExtractCookieValue(response, SessionCookieName));
-        Assert.Contains("Your account password has been successfully changed", html);
+        Assert.Contains("Your account password has been successfully changed", html, StringComparison.Ordinal);
     }
 
     /// <summary>Reset password post unknown token returns fail to reset.</summary>
@@ -610,7 +610,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("The authentication token is invalid.", html);
+        Assert.Contains("The authentication token is invalid.", html, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -638,9 +638,9 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("resetPasswordForm", html);
-        Assert.DoesNotContain("The authentication token is invalid.", html);
-        Assert.Contains("at most 72 bytes", html);
+        Assert.Contains("resetPasswordForm", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("The authentication token is invalid.", html, StringComparison.Ordinal);
+        Assert.Contains("at most 72 bytes", html, StringComparison.Ordinal);
 
         using var verifyScope = factory.Services.CreateScope();
         var db = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -712,7 +712,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode); // a successful login redirects
-        Assert.Contains("does not support Internet Explorer", html);
+        Assert.Contains("does not support Internet Explorer", html, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -729,7 +729,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         string email = UniqueEmail();
         await SeedAccountAsync(email, emailConfirmed: true);
 
-        var response = await PostLoginAsync(new Dictionary<string, string> { ["Email"] = string.Format(format, email.ToUpperInvariant()), ["Password"] = "OldPassword1!" });
+        var response = await PostLoginAsync(new Dictionary<string, string> { ["Email"] = string.Format(CultureInfo.InvariantCulture, format, email.ToUpperInvariant()), ["Password"] = "OldPassword1!" });
 
         Assert.Equal(System.Net.HttpStatusCode.Redirect, response.StatusCode); // a successful login redirects
     }
@@ -745,7 +745,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("loginForm", html);
+        Assert.Contains("loginForm", html, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -766,7 +766,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
         Assert.Equal(System.Net.HttpStatusCode.OK, first.StatusCode);
         Assert.Equal(System.Net.HttpStatusCode.OK, second.StatusCode); // not answered by the cool-down (which is 429)
-        Assert.Contains("registerForm", secondHtml);
+        Assert.Contains("registerForm", secondHtml, StringComparison.Ordinal);
         using var scope = factory.Services.CreateScope();
         Assert.DoesNotContain(scope.ServiceProvider.GetRequiredService<FakeEmailPublisher>().PublishedMessages, m => m.ToEmail == email);
         return;
@@ -798,8 +798,8 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("resetPasswordForm", html);
-        Assert.DoesNotContain("The authentication token is invalid.", html);
+        Assert.Contains("resetPasswordForm", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("The authentication token is invalid.", html, StringComparison.Ordinal);
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         Assert.Equal(rawToken, db.Accounts.Single(a => a.Email == email).ResetPasswordToken);
     }

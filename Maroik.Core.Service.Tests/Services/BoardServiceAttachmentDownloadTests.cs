@@ -74,8 +74,8 @@ public class BoardServiceAttachmentDownloadTests
         Assert.Null(file);
         _attachmentContent.Verify(a => a.OpenFileAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         FakeLogRecord denial = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
-        Assert.Contains("Attachment download refused", denial.Message);
-        Assert.Contains("7", denial.Message);
+        Assert.Contains("Attachment download refused", denial.Message, StringComparison.Ordinal);
+        Assert.Contains("7", denial.Message, StringComparison.Ordinal);
     }
 
     /// <summary>A private note's attachment is its owner's only: another account is refused.</summary>
@@ -150,7 +150,7 @@ public class BoardServiceAttachmentDownloadTests
         Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
         Assert.Equal("The post could not be found.", result.ErrorKey);
         FakeLogRecord denial = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
-        Assert.EndsWith("is missing or not visible to Anonymous", denial.Message);
+        Assert.EndsWith("is missing or not visible to Anonymous", denial.Message, StringComparison.Ordinal);
     }
 
     /// <summary>A refused download by a signed-in viewer logs that viewer's nickname.</summary>
@@ -163,6 +163,6 @@ public class BoardServiceAttachmentDownloadTests
         await CreateSut().OpenAttachedFileAsync(7, BoardTypes.PrivateNote, viewer, TestContext.Current.CancellationToken);
 
         FakeLogRecord denial = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
-        Assert.EndsWith("is missing or not visible to Bob", denial.Message);
+        Assert.EndsWith("is missing or not visible to Bob", denial.Message, StringComparison.Ordinal);
     }
 }

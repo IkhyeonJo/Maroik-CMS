@@ -275,10 +275,10 @@ public class AttachmentContentServiceTests
         var result = await CreateSut().UploadSummernoteImageAsync(file, "board", "post", "uploader@test.com", TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
-        Assert.EndsWith(".jpg", storedPath);
+        Assert.EndsWith(".jpg", storedPath, StringComparison.Ordinal);
         Assert.Equal("image/jpeg", storedType);
         Assert.Equal("image/jpeg", result.ContentType);
-        Assert.EndsWith(".jpg", result.FileName);
+        Assert.EndsWith(".jpg", result.FileName, StringComparison.Ordinal);
     }
 
     /// <summary>A refused editor image is never re-encoded: the decoder only sees bytes the validator accepted.</summary>
@@ -319,7 +319,7 @@ public class AttachmentContentServiceTests
 
         var record = Assert.Single(logger.Collector.GetSnapshot());
         Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Error, record.Level);
-        Assert.Contains("upload/a.zip", record.Message);
+        Assert.Contains("upload/a.zip", record.Message, StringComparison.Ordinal);
         Assert.Same(failure, record.Exception);
     }
 

@@ -78,6 +78,7 @@ end_of_line = crlf
 ###############################
 # C# Coding Conventions       #
 ###############################
+# noinspection EditorConfigKeyCorrectness
 [*.cs]
 # var preferences
 csharp_style_var_for_built_in_types = false:silent
@@ -146,10 +147,139 @@ csharp_style_expression_bodied_local_functions = false:silent
 # argument is a local, a field or a property read, so it only ever produced per-call suppressions.
 dotnet_diagnostic.CA1873.severity = none
 
+# ---- Memory safety: resource lifetime and buffers (build errors) ----
+# Each rule is set to `error` on its own, so it fails the build (and shows red in the IDE)
+# without turning on the whole `latest-all` analyzer set.
+# Dispose an IDisposable before its last reference goes out of scope.
+dotnet_diagnostic.CA2000.severity = error
+# A type that owns a disposable field must itself be IDisposable ...
+dotnet_diagnostic.CA1001.severity = error
+# ... and must dispose that field.
+dotnet_diagnostic.CA2213.severity = error
+# Dispose(bool) overrides call base.Dispose.
+dotnet_diagnostic.CA2215.severity = error
+# A type holding native resources declares a finalizer.
+dotnet_diagnostic.CA2216.severity = error
+# The IDisposable pattern is implemented correctly.
+dotnet_diagnostic.CA1063.severity = error
+# Dispose calls GC.SuppressFinalize correctly.
+dotnet_diagnostic.CA1816.severity = error
+# An IDisposable is not handed to a task that is not awaited (it may be disposed under it).
+dotnet_diagnostic.CA2025.severity = error
+# No stackalloc inside a loop (stack overflow).
+dotnet_diagnostic.CA2014.severity = error
+# A ValueTask is awaited exactly once and never after it completed.
+dotnet_diagnostic.CA2012.severity = error
+# No finalizer on a MemoryManager<T>.
+dotnet_diagnostic.CA2015.severity = error
+# Buffer.BlockCopy counts bytes, not elements.
+dotnet_diagnostic.CA2018.severity = error
+# No empty finalizers (they only delay collection).
+dotnet_diagnostic.CA1821.severity = error
+# No unconditional self-recursion (stack overflow).
+dotnet_diagnostic.CA2011.severity = error
+
+# ---- Logging templates (build errors) ----
+# The logging rules in CLAUDE.md, enforced by the compiler instead of review.
+# The message template is a constant (no interpolation / concatenation, so values stay structured and cannot forge lines).
+dotnet_diagnostic.CA2254.severity = error
+# The template's {Placeholders} match the arguments passed.
+dotnet_diagnostic.CA2017.severity = error
+# Placeholders are PascalCase ({Email}, {FilePath}).
+dotnet_diagnostic.CA1727.severity = error
+
+# ---- Banned APIs (build error) ----
+# Any use of an API listed in BannedSymbols.txt (production projects only; see Directory.Build.props).
+dotnet_diagnostic.RS0030.severity = error
+# BannedSymbols.txt lists no symbol twice.
+dotnet_diagnostic.RS0031.severity = error
+
+# ---- Security (build errors) ----
+# .NET's own security rules, alongside SecurityCodeScan (SCS*). Injection taint: SQL (CA2100 command text, CA3001),
+# XSS, information disclosure, command / XPath / XAML / DLL / LDAP / regex injection, open redirect; unsafe XML (DTD,
+# XmlReader settings); missing antiforgery (CA3147); insecure deserializers and JSON TypeNameHandling (CA23xx); weak
+# hashing / ciphers / keys, disabled certificate checks, insecure TLS and randomness (CA53xx).
+# CA3003 (file path injection) is not enabled: SCS0018 covers path traversal and, unlike CA3003, lets the project
+# declare its validator as a sanitizer (Maroik.FileStorage/SecurityCodeScan.config.yml).
+dotnet_diagnostic.CA2100.severity = error
+dotnet_diagnostic.CA3001.severity = error
+dotnet_diagnostic.CA3002.severity = error
+dotnet_diagnostic.CA3004.severity = error
+dotnet_diagnostic.CA3006.severity = error
+dotnet_diagnostic.CA3007.severity = error
+dotnet_diagnostic.CA3008.severity = error
+dotnet_diagnostic.CA3009.severity = error
+dotnet_diagnostic.CA3010.severity = error
+dotnet_diagnostic.CA3011.severity = error
+dotnet_diagnostic.CA3012.severity = error
+dotnet_diagnostic.CA3061.severity = error
+dotnet_diagnostic.CA3075.severity = error
+dotnet_diagnostic.CA3076.severity = error
+dotnet_diagnostic.CA3077.severity = error
+dotnet_diagnostic.CA3147.severity = error
+dotnet_diagnostic.CA2300.severity = error
+dotnet_diagnostic.CA2301.severity = error
+dotnet_diagnostic.CA2302.severity = error
+dotnet_diagnostic.CA2305.severity = error
+dotnet_diagnostic.CA2310.severity = error
+dotnet_diagnostic.CA2311.severity = error
+dotnet_diagnostic.CA2312.severity = error
+dotnet_diagnostic.CA2315.severity = error
+dotnet_diagnostic.CA2321.severity = error
+dotnet_diagnostic.CA2322.severity = error
+dotnet_diagnostic.CA2326.severity = error
+dotnet_diagnostic.CA2327.severity = error
+dotnet_diagnostic.CA2328.severity = error
+dotnet_diagnostic.CA2329.severity = error
+dotnet_diagnostic.CA2330.severity = error
+dotnet_diagnostic.CA5350.severity = error
+dotnet_diagnostic.CA5351.severity = error
+dotnet_diagnostic.CA5359.severity = error
+dotnet_diagnostic.CA5360.severity = error
+dotnet_diagnostic.CA5363.severity = error
+dotnet_diagnostic.CA5364.severity = error
+dotnet_diagnostic.CA5365.severity = error
+dotnet_diagnostic.CA5379.severity = error
+dotnet_diagnostic.CA5384.severity = error
+dotnet_diagnostic.CA5385.severity = error
+dotnet_diagnostic.CA5386.severity = error
+dotnet_diagnostic.CA5394.severity = error
+dotnet_diagnostic.CA5397.severity = error
+dotnet_diagnostic.CA5398.severity = error
+dotnet_diagnostic.CA5399.severity = error
+dotnet_diagnostic.CA5400.severity = error
+dotnet_diagnostic.CA5401.severity = error
+dotnet_diagnostic.CA5402.severity = error
+
+# ---- String comparison and culture (build errors) ----
+# Every string comparison and every number / date conversion says which rules it follows: StringComparison.Ordinal
+# for identifiers, paths and test assertions; CultureInfo.InvariantCulture for machine formats (parsing, storage keys,
+# logs, Excel cells); CultureInfo.CurrentCulture only for text shown to the user.
+dotnet_diagnostic.CA1304.severity = error
+dotnet_diagnostic.CA1305.severity = error
+dotnet_diagnostic.CA1307.severity = error
+dotnet_diagnostic.CA1309.severity = error
+dotnet_diagnostic.CA1310.severity = error
+dotnet_diagnostic.CA1311.severity = error
+
+# ---- Unnecessary usings (build error) ----
+# Runs at build time because Directory.Build.props sets GenerateDocumentationFile.
+dotnet_diagnostic.IDE0005.severity = error
+
+# ---- Async and cancellation (build errors) ----
+# A CancellationToken the method received is forwarded to the calls that accept one.
+dotnet_diagnostic.CA2016.severity = error
+# An async method calls the async version of an API when there is one (no sync-over-async blocking).
+dotnet_diagnostic.CA1849.severity = error
+
 # Test code builds its regexes inline ([GeneratedRegex] buys nothing for a one-shot assertion);
 # production code still gets SYSLIB1045.
+# noinspection EditorConfigKeyCorrectness
 [*.Tests/**.cs]
 dotnet_diagnostic.SYSLIB1045.severity = none
+# Test infrastructure creates and drops throwaway databases (CREATE DATABASE "test_<guid>" ... TEMPLATE ...): DDL takes
+# no parameters for identifiers, so that command text is necessarily built at run time. Production code still gets CA2100.
+dotnet_diagnostic.CA2100.severity = none
 
 ##############################################
 # TypeScript / JavaScript                    #

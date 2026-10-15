@@ -42,15 +42,16 @@ public class AttachmentContentServiceLoggingTests
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level >= LogLevel.Warning);
         Assert.Equal(LogLevel.Error, record.Level);
         Assert.Same(_failure, record.Exception);
-        Assert.Contains(path, record.Message);
-        Assert.Contains($"CorrelationId={activity.Id}", record.Message);
+        Assert.Contains(path, record.Message, StringComparison.Ordinal);
+        Assert.Contains($"CorrelationId={activity.Id}", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>A failed attachment open.</summary>
     [Fact]
     public async Task OpenFileAsync_LogsTheFailureOnce_WithPathAndCorrelationId()
     {
-        using var activity = new Activity("request").Start();
+        using var activity = new Activity("request");
+        activity.Start();
 
         Assert.Null(await CreateSut().OpenFileAsync("upload/a.zip", TestContext.Current.CancellationToken));
 
@@ -61,7 +62,8 @@ public class AttachmentContentServiceLoggingTests
     [Fact]
     public async Task PrepareHtmlForDisplayAsync_LogsAMissingImageOnce_WithPathAndCorrelationId()
     {
-        using var activity = new Activity("request").Start();
+        using var activity = new Activity("request");
+        activity.Start();
         Func<string, CancellationToken, Task<HtmlImgPatch?>>? factory = null;
         _htmlParser.Setup(p => p.TransformImageAttributesAsync(It.IsAny<string>(), It.IsAny<Func<string, CancellationToken, Task<HtmlImgPatch?>>>(), It.IsAny<CancellationToken>()))
             .Callback<string, Func<string, CancellationToken, Task<HtmlImgPatch?>>, CancellationToken>((_, f, _) => factory = f)
@@ -89,10 +91,10 @@ public class AttachmentContentServiceLoggingTests
     {
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level >= LogLevel.Warning);
         Assert.Equal(LogLevel.Warning, record.Level);
-        Assert.Contains("Editor image upload refused", record.Message);
-        Assert.Contains(reason, record.Message);
-        Assert.Contains("uploader@test.com", record.Message);
-        Assert.Contains("Forum/FreeForum", record.Message);
+        Assert.Contains("Editor image upload refused", record.Message, StringComparison.Ordinal);
+        Assert.Contains(reason, record.Message, StringComparison.Ordinal);
+        Assert.Contains("uploader@test.com", record.Message, StringComparison.Ordinal);
+        Assert.Contains("Forum/FreeForum", record.Message, StringComparison.Ordinal);
         _fileClient.Verify(f => f.UploadAsync(
             It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }

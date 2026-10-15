@@ -157,7 +157,7 @@ public class ForumFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture)
         var image = page.Locator("#detailBoardContent img");
         await Assertions.Expect(image).ToHaveAttributeAsync("src", new System.Text.RegularExpressions.Regex("^blob:"));
         await page.WaitForFunctionAsync("() => document.querySelector('#detailBoardContent img')?.naturalWidth === 1");
-        Assert.DoesNotContain(Convert.ToBase64String(attachment), await page.ContentAsync());
+        Assert.DoesNotContain(Convert.ToBase64String(attachment), await page.ContentAsync(), StringComparison.Ordinal);
 
         IDownload download = await page.RunAndWaitForDownloadAsync(() => page.Locator("#aDetailBoardAttachedFile").ClickAsync());
 

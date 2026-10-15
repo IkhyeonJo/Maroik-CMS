@@ -98,7 +98,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>Is board exists unknown id returns failure result.</summary>
@@ -111,7 +111,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>Is board exists deleted board returns failure result.</summary>
@@ -125,7 +125,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>Is board exists locked board non owner non admin returns failure result.</summary>
@@ -139,7 +139,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>Is board exists locked board owner returns success result.</summary>
@@ -153,7 +153,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>Is board exists locked board admin returns success result regardless of ownership.</summary>
@@ -167,7 +167,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -208,7 +208,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>Delete board non owner non admin is denied.</summary>
@@ -222,7 +222,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -240,7 +240,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>Delete board unknown id returns failure result.</summary>
@@ -253,7 +253,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- DeleteComment ----------------------------------------------------------------
@@ -270,7 +270,7 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>Delete comment non owner non admin is denied.</summary>
@@ -285,6 +285,6 @@ public class ForumControllerBoardTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 }

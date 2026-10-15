@@ -93,7 +93,7 @@ public class InjectedClockTests(MaroikWebApplicationFactory factory)
 
         string html = await GetAsync(client, url, session);
 
-        Assert.Contains($"id=\"{inputId}\" name=\"{inputId}\" value=\"2042-01-01\"", html);
+        Assert.Contains($"id=\"{inputId}\" name=\"{inputId}\" value=\"2042-01-01\"", html, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -117,7 +117,7 @@ public class InjectedClockTests(MaroikWebApplicationFactory factory)
             });
             db.SaveChanges();
             var maturity = new DateTime(2041, 12, 31);
-            if (url.EndsWith("FixedIncome"))
+            if (url.EndsWith("FixedIncome", StringComparison.Ordinal))
             {
                 var row = new FixedIncome
                 {
@@ -145,7 +145,7 @@ public class InjectedClockTests(MaroikWebApplicationFactory factory)
 
         string grid = await GetAsync(client, url, session, ajax: true);
 
-        Assert.Contains($"class=\"table-danger clsGridRow\" data-id=\"{id}\"", grid);
+        Assert.Contains($"class=\"table-danger clsGridRow\" data-id=\"{id}\"", grid, StringComparison.Ordinal);
     }
 
     /// <summary>Every Excel export is named with the clock's time in the viewer's time zone.</summary>
@@ -179,7 +179,7 @@ public class InjectedClockTests(MaroikWebApplicationFactory factory)
 
         string html = await GetAsync(client, "/AccountBook/Income", session);
 
-        Assert.Contains("Copyright &copy; 2021-2042 ", html);
+        Assert.Contains("Copyright &copy; 2021-2042 ", html, StringComparison.Ordinal);
     }
 
     /// <summary>The culture cookie expires 30 days after the clock's reading.</summary>
@@ -194,6 +194,6 @@ public class InjectedClockTests(MaroikWebApplicationFactory factory)
 
         Assert.True(response.Headers.TryGetValues("Set-Cookie", out var cookies));
         string culture = Assert.Single(cookies, c => c.StartsWith(".AspNetCore.Culture=", StringComparison.Ordinal));
-        Assert.Contains("expires=Thu, 30 Jan 2042 16:00:00 GMT", culture);
+        Assert.Contains("expires=Thu, 30 Jan 2042 16:00:00 GMT", culture, StringComparison.Ordinal);
     }
 }

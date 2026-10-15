@@ -1,3 +1,4 @@
+using System.Globalization;
 using Maroik.Core.Domain.Calendar;
 namespace Maroik.Core.Domain.Tests.Calendar;
 
@@ -98,7 +99,7 @@ public class CalendarReminderPolicyTests
 
         var parts = CalendarReminderPolicy.DefaultReminderTimeOfDay.Split(':');
         Assert.Equal(2, parts.Length);
-        int minute = int.Parse(parts[1]);
+        int minute = int.Parse(parts[1], CultureInfo.InvariantCulture);
         Assert.Equal(0, minute % CalendarReminderPolicy.ReminderTimeOfDayStepMinutes);
     }
 }

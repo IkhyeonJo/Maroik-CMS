@@ -133,8 +133,10 @@ public class AccountRepository(ApplicationDbContext context)
     /// <inheritdoc />
     public Task<bool> NicknameExistsIgnoreCaseAsync(string nickname, CancellationToken ct = default)
     {
-        string lowered = nickname.ToLowerInvariant();
-        return Set.AnyAsync(e => e.Nickname.ToLower() == lowered, ct);
+        // ILIKE is PostgreSQL's case-insensitive comparison (as lower() on both sides was): a .NET ToLower inside this
+        // expression tree would be translated to SQL anyway, so its culture never applied. The nickname is escaped so it
+        // matches literally, with no LIKE wildcards (pinned by NicknameExistsIgnoreCaseAsync_MatchesWildcardCharactersLiterally).
+        return Set.AnyAsync(e => EF.Functions.ILike(e.Nickname, EscapeLike(nickname), LikeEscapeCharacter), ct);
     }
 
     /// <inheritdoc />

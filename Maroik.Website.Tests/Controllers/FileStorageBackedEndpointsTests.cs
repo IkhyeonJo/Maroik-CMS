@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text.Json;
 using ImageMagick;
 using Maroik.Core.Contract.Interfaces;
@@ -48,7 +47,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         using var image = new MagickImage(bytes);
         Assert.Equal(MagickFormat.Jpeg, image.Format);
         Assert.Null(image.GetExifProfile());
-        Assert.DoesNotContain("SecretPhone", System.Text.Encoding.ASCII.GetString(bytes));
+        Assert.DoesNotContain("SecretPhone", System.Text.Encoding.ASCII.GetString(bytes), StringComparison.Ordinal);
     }
 
     /// <summary>A derived test host whose file client is <see cref="Files"/>, with its HTTP client.</summary>
@@ -82,10 +81,8 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
     private static MultipartFormDataContent FileForm(string field, string fileName, byte[] bytes, string contentType, params (string Name, string Value)[] fields)
     {
         var form = new MultipartFormDataContent();
-        var part = new ByteArrayContent(bytes);
-        part.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-        form.Add(part, field, fileName);
-        foreach (var (name, value) in fields) form.Add(new StringContent(value), name);
+        MultipartForm.AddFile(form, field, fileName, bytes, contentType);
+        foreach (var (name, value) in fields) MultipartForm.AddText(form, name, value);
         return form;
     }
 
@@ -114,8 +111,8 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
 
         Assert.True(doc.RootElement.GetProperty("result").GetBoolean());
         string stored = Assert.Single(host.Files.UploadedPaths);
-        Assert.StartsWith("upload/Management/Profile/Avatar/", stored);
-        Assert.EndsWith(".png", stored);
+        Assert.StartsWith("upload/Management/Profile/Avatar/", stored, StringComparison.Ordinal);
+        Assert.EndsWith(".png", stored, StringComparison.Ordinal);
         Assert.Equal("image/png", host.Files.ContentTypeOf(stored));
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -129,25 +126,26 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         using var baseHost = CreateHost();
         var session = await LoginAsync(baseHost, "storage-avatar-bad@test.com");
 
-        Assert.Equal("Please attach a file", await Send(new MultipartFormDataContent { { new StringContent("x"), "Nickname" } }, baseHost));
-        Assert.Equal("Please attach a file", await Send([], baseHost)); // no fields at all: the model is not even bound
-        Assert.Equal("Only .jpg or jpeg or .png file allowed", await Send(FileForm("ProfileAvatarFiles", "me.gif", _png, "image/gif"), baseHost));
-        Assert.Equal("Invalid image file", await Send(FileForm("ProfileAvatarFiles", "me.png", [.. "definitely not an image"u8], "image/png"), baseHost));
-        Assert.Equal("SVG format is not allowed", await Send(FileForm("ProfileAvatarFiles", "me.png", [.. "<svg xmlns=\"http://www.w3.org/2000/svg\"/>"u8], "image/png"), baseHost));
+        Assert.Equal("Please attach a file", await Send(() => MultipartForm.Of(("Nickname", "x")), baseHost));
+        Assert.Equal("Please attach a file", await Send(() => [], baseHost)); // no fields at all: the model is not even bound
+        Assert.Equal("Only .jpg or jpeg or .png file allowed", await Send(() => FileForm("ProfileAvatarFiles", "me.gif", _png, "image/gif"), baseHost));
+        Assert.Equal("Invalid image file", await Send(() => FileForm("ProfileAvatarFiles", "me.png", [.. "definitely not an image"u8], "image/png"), baseHost));
+        Assert.Equal("SVG format is not allowed", await Send(() => FileForm("ProfileAvatarFiles", "me.png", [.. "<svg xmlns=\"http://www.w3.org/2000/svg\"/>"u8], "image/png"), baseHost));
 
         baseHost.Files.Outcome = FileUploadResult.Infected;
-        Assert.Equal("File may be infected with a virus.", await Send(FileForm("ProfileAvatarFiles", "me.png", _png, "image/png"), baseHost));
+        Assert.Equal("File may be infected with a virus.", await Send(() => FileForm("ProfileAvatarFiles", "me.png", _png, "image/png"), baseHost));
         baseHost.Files.Outcome = FileUploadResult.ScanUnavailable;
-        Assert.Equal("The file could not be scanned for viruses. Please try again later.", await Send(FileForm("ProfileAvatarFiles", "me.png", _png, "image/png"), baseHost));
+        Assert.Equal("The file could not be scanned for viruses. Please try again later.", await Send(() => FileForm("ProfileAvatarFiles", "me.png", _png, "image/png"), baseHost));
         baseHost.Files.Outcome = FileUploadResult.Failed;
-        Assert.Equal("A temporary error occurred. Please try again later.", await Send(FileForm("ProfileAvatarFiles", "me.png", _png, "image/png"), baseHost));
+        Assert.Equal("A temporary error occurred. Please try again later.", await Send(() => FileForm("ProfileAvatarFiles", "me.png", _png, "image/png"), baseHost));
 
         Assert.Empty(baseHost.Files.UploadedPaths);
         return;
 
-        // Posts the avatar form, asserts the result is a failure, and returns its error message.
-        async Task<string> Send(MultipartFormDataContent form, Host host)
+        // Posts the avatar form built by buildForm, asserts the result is a failure, and returns its error message.
+        async Task<string> Send(Func<MultipartFormDataContent> buildForm, Host host)
         {
+            using var form = buildForm();
             using var request = session.BuildFormPostRequest("/Management/UpdateProfileAvatar", form);
             using JsonDocument doc = await PostAsync(host, request);
             Assert.False(doc.RootElement.GetProperty("result").GetBoolean());
@@ -187,7 +185,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
 
         Assert.True(doc.RootElement.GetProperty("result").GetBoolean());
         string stored = Assert.Single(host.Files.UploadedPaths);
-        Assert.StartsWith(expectedFolder, stored);
+        Assert.StartsWith(expectedFolder, stored, StringComparison.Ordinal);
         var file = doc.RootElement.GetProperty("file");
         // The editor gets the stored (re-encoded, metadata-free) image, which is still the same 1×1 PNG.
         byte[] returned = Convert.FromBase64String(file.GetProperty("fileContents").GetString()!);
@@ -197,7 +195,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         Assert.Equal("image/png", file.GetProperty("contentType").GetString());
         string token = doc.RootElement.GetProperty("filePath").GetString()!;
         Assert.NotEmpty(token);
-        Assert.DoesNotContain("upload/", token); // the client only ever sees an opaque Data Protection token
+        Assert.DoesNotContain("upload/", token, StringComparison.Ordinal); // the client only ever sees an opaque Data Protection token
     }
 
     /// <summary>
@@ -255,8 +253,8 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
 
         Assert.True(doc.RootElement.GetProperty("result").GetBoolean());
         string stored = Assert.Single(host.Files.UploadedPaths);
-        Assert.Contains("/boardAttachedFiles/", stored);
-        Assert.EndsWith(".zip", stored);
+        Assert.Contains("/boardAttachedFiles/", stored, StringComparison.Ordinal);
+        Assert.EndsWith(".zip", stored, StringComparison.Ordinal);
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         BoardAttachedFile row = await db.BoardAttachedFiles.AsNoTracking()
@@ -321,15 +319,15 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
 
         foreach (string method in new[] { "detail", "edit" })
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, string.Format(urlFormat, method, boardId));
+            using var request = new HttpRequestMessage(HttpMethod.Get, string.Format(System.Globalization.CultureInfo.InvariantCulture, urlFormat, method, boardId));
             request.Headers.Add("Cookie", session.CookieHeader);
             var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
             string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
             Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-            Assert.Contains("payload.zip", html);
-            Assert.Contains($"data-boardid=\"{boardId}\"", html);
-            Assert.DoesNotContain(Convert.ToBase64String(bytes), html);
+            Assert.Contains("payload.zip", html, StringComparison.Ordinal);
+            Assert.Contains($"data-boardid=\"{boardId}\"", html, StringComparison.Ordinal);
+            Assert.DoesNotContain(Convert.ToBase64String(bytes), html, StringComparison.Ordinal);
         }
         Assert.DoesNotContain(path, host.Files.FetchedPaths);
     }
@@ -363,7 +361,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
             boardId = board.Id;
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, string.Format(urlFormat, boardId));
+        using var request = new HttpRequestMessage(HttpMethod.Get, string.Format(System.Globalization.CultureInfo.InvariantCulture, urlFormat, boardId));
         request.Headers.Add("Cookie", session.CookieHeader);
         var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
@@ -395,7 +393,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         host.Files.Seed(path, bytes);
         long boardId = await SeedPostWithAttachmentAsync(type, session.Nickname, path, bytes.Length);
 
-        using var request = session.BuildFormPostRequest(url, new MultipartFormDataContent { { new StringContent(boardId.ToString()), "boardId" } });
+        using var request = session.BuildFormPostRequest(url, MultipartForm.Of(("boardId", boardId.ToString(System.Globalization.CultureInfo.InvariantCulture))));
         var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
@@ -414,7 +412,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         long boardId = await SeedPostWithAttachmentAsync("FreeForum", author.Nickname, path, 3);
         var anonymous = await AuthenticatedSessionHelper.AnonymousAsync(host.Client, TestContext.Current.CancellationToken);
 
-        using var request = anonymous.BuildFormPostRequest("/Forum/DownloadFreeBoardAttachedFile", new MultipartFormDataContent { { new StringContent(boardId.ToString()), "boardId" } });
+        using var request = anonymous.BuildFormPostRequest("/Forum/DownloadFreeBoardAttachedFile", MultipartForm.Of(("boardId", boardId.ToString(System.Globalization.CultureInfo.InvariantCulture))));
         var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
@@ -439,9 +437,9 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         long lockedId = await SeedPostWithAttachmentAsync("FreeForum", owner.Nickname, lockedPath, 1, locked: true);
         var anonymous = await AuthenticatedSessionHelper.AnonymousAsync(host.Client, TestContext.Current.CancellationToken);
 
-        using var noteRequest = stranger.BuildFormPostRequest("/Management/DownloadPrivateNoteAttachedFile", new MultipartFormDataContent { { new StringContent(noteId.ToString()), "boardId" } });
+        using var noteRequest = stranger.BuildFormPostRequest("/Management/DownloadPrivateNoteAttachedFile", MultipartForm.Of(("boardId", noteId.ToString(System.Globalization.CultureInfo.InvariantCulture))));
         using JsonDocument noteDoc = await PostAsync(host, noteRequest);
-        using var lockedRequest = anonymous.BuildFormPostRequest("/Forum/DownloadFreeBoardAttachedFile", new MultipartFormDataContent { { new StringContent(lockedId.ToString()), "boardId" } });
+        using var lockedRequest = anonymous.BuildFormPostRequest("/Forum/DownloadFreeBoardAttachedFile", MultipartForm.Of(("boardId", lockedId.ToString(System.Globalization.CultureInfo.InvariantCulture))));
         using JsonDocument lockedDoc = await PostAsync(host, lockedRequest);
 
         foreach (JsonDocument doc in new[] { noteDoc, lockedDoc })
@@ -461,7 +459,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         host.Files.ThrowOnDownload = true;
         long boardId = await SeedPostWithAttachmentAsync("FreeForum", session.Nickname, $"upload/FreeForum/attachments/{Guid.NewGuid():N}.zip", 10);
 
-        using var request = session.BuildFormPostRequest("/Forum/DownloadFreeBoardAttachedFile", new MultipartFormDataContent { { new StringContent(boardId.ToString()), "boardId" } });
+        using var request = session.BuildFormPostRequest("/Forum/DownloadFreeBoardAttachedFile", MultipartForm.Of(("boardId", boardId.ToString(System.Globalization.CultureInfo.InvariantCulture))));
         using JsonDocument doc = await PostAsync(host, request);
 
         Assert.False(doc.RootElement.GetProperty("result").GetBoolean());
@@ -500,7 +498,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
 
     /// <summary>A form posting <paramref name="calendarEventId"/> to the calendar-event download action.</summary>
     private static MultipartFormDataContent CalendarEventIdForm(long calendarEventId) =>
-        new() { { new StringContent(calendarEventId.ToString()), "calendarEventId" } };
+        MultipartForm.Of(("calendarEventId", calendarEventId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
     /// <summary>
     /// Asserts an event detail reply describes the attachment by name, extension and size only: neither the file's bytes nor its storage
@@ -517,9 +515,9 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         Assert.Equal(bytes.Length, file.GetProperty("size").GetInt64());
         Assert.False(file.TryGetProperty("path", out _));
         Assert.False(calendarEvent.TryGetProperty("calendarEventAttachedFileBase64Data", out _));
-        Assert.DoesNotContain(storagePath, body);
-        Assert.DoesNotContain(Path.GetFileNameWithoutExtension(storagePath), body);
-        Assert.DoesNotContain(Convert.ToBase64String(bytes), body);
+        Assert.DoesNotContain(storagePath, body, StringComparison.Ordinal);
+        Assert.DoesNotContain(Path.GetFileNameWithoutExtension(storagePath), body, StringComparison.Ordinal);
+        Assert.DoesNotContain(Convert.ToBase64String(bytes), body, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -537,7 +535,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         host.Files.Seed(path, bytes);
         long eventId = await SeedCalendarEventWithAttachmentAsync(email, path, bytes.Length);
 
-        using var request = session.BuildFormPostRequest("/Calendar/IsCalendarEventExists", new MultipartFormDataContent { { new StringContent(eventId.ToString()), "id" } });
+        using var request = session.BuildFormPostRequest("/Calendar/IsCalendarEventExists", MultipartForm.Of(("id", eventId.ToString(System.Globalization.CultureInfo.InvariantCulture))));
         var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
         string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
@@ -561,7 +559,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         long eventId = await SeedCalendarEventWithAttachmentAsync(email, path, bytes.Length, sharedWithAnonymous: true);
         var anonymous = await AuthenticatedSessionHelper.AnonymousAsync(host.Client, TestContext.Current.CancellationToken);
 
-        using var request = anonymous.BuildFormPostRequest("/Calendar/IsOtherCalendarEventExists", new MultipartFormDataContent { { new StringContent(eventId.ToString()), "id" } });
+        using var request = anonymous.BuildFormPostRequest("/Calendar/IsOtherCalendarEventExists", MultipartForm.Of(("id", eventId.ToString(System.Globalization.CultureInfo.InvariantCulture))));
         var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
         string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
@@ -661,17 +659,13 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         var form = new MultipartFormDataContent();
         foreach (var (name, value) in new[]
                  {
-                     ("Id", eventId.ToString()), ("CalendarId", calendarId.ToString()), ("Title", "Edited"), ("AllDay", "false"),
+                     ("Id", eventId.ToString(System.Globalization.CultureInfo.InvariantCulture)), ("CalendarId", calendarId.ToString(System.Globalization.CultureInfo.InvariantCulture)), ("Title", "Edited"), ("AllDay", "false"),
                      ("StartDate", "2024-05-01 10:00"), ("EndDate", "2024-05-01 11:00"), ("StartDateTimeZoneIanaId", "UTC"),
                      ("EndDateTimeZoneIanaId", "UTC"), ("Status", "Busy"), ("SerializedCalendarReminders", "[]"),
                  })
-            form.Add(new StringContent(value), name);
+            MultipartForm.AddText(form, name, value);
         if (file is { } f)
-        {
-            var part = new ByteArrayContent(f.Bytes);
-            part.Headers.ContentType = new MediaTypeHeaderValue("application/zip");
-            form.Add(part, "CalendarEventUploadedFile", f.Name);
-        }
+            MultipartForm.AddFile(form, "CalendarEventUploadedFile", f.Name, f.Bytes, "application/zip");
         return form;
     }
 
@@ -715,7 +709,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         Assert.Equal(rowId, row.Id);
         Assert.Equal("new", row.Name);
         Assert.Equal(bytes.Length, row.Size);
-        Assert.StartsWith($"upload/Calendar/UserIndex/calendarEventAttachedFiles/{eventId}/", row.Path);
+        Assert.StartsWith($"upload/Calendar/UserIndex/calendarEventAttachedFiles/{eventId}/", row.Path, StringComparison.Ordinal);
 
         using var download = session.BuildFormPostRequest("/Calendar/DownloadCalendarEventAttachedFile", CalendarEventIdForm(eventId));
         var response = await host.Client.SendAsync(download, TestContext.Current.CancellationToken);
@@ -747,7 +741,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         Assert.Equal("", row.Path);
         Assert.Equal(0, row.Size);
 
-        using var detailRequest = session.BuildFormPostRequest("/Calendar/IsCalendarEventExists", new MultipartFormDataContent { { new StringContent(eventId.ToString()), "id" } });
+        using var detailRequest = session.BuildFormPostRequest("/Calendar/IsCalendarEventExists", MultipartForm.Of(("id", eventId.ToString(System.Globalization.CultureInfo.InvariantCulture))));
         using JsonDocument detail = await PostAsync(host, detailRequest);
         Assert.Equal(JsonValueKind.Null, detail.RootElement.GetProperty("calendarEvent").GetProperty("calendarEventAttachedFile").ValueKind);
 
@@ -765,7 +759,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
     public async Task AnUpload_OverTheSizeLimit_IsRefusedWithTheSizeMessage(string url, string field)
     {
         using var host = CreateHost();
-        var session = await LoginAsync(host, $"storage-toobig-{url.Replace("/", "-").ToLowerInvariant()}@test.com");
+        var session = await LoginAsync(host, $"storage-toobig-{url.Replace("/", "-", StringComparison.Ordinal).ToLowerInvariant()}@test.com");
         long limit = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Core.Contract.Misc.Settings.ServerSetting>>().Value.MaxAttachedFileSizeBytes;
         var form = FileForm(field, "big.png", new byte[limit + 1], "image/png", ("Nickname", "x"));
 
@@ -773,7 +767,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         using JsonDocument doc = await PostAsync(host, request);
 
         Assert.False(doc.RootElement.GetProperty("result").GetBoolean());
-        Assert.Contains("File Size must be smaller than", Error(doc));
+        Assert.Contains("File Size must be smaller than", Error(doc), StringComparison.Ordinal);
         Assert.Empty(host.Files.UploadedPaths);
     }
 
@@ -784,10 +778,10 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         using var host = CreateHost();
         var session = await LoginAsync(host, "storage-nofile-note@test.com");
 
-        using var request = session.BuildFormPostRequest("/Management/UploadImageFile", new MultipartFormDataContent { { new StringContent("x"), "unrelated" } });
+        using var request = session.BuildFormPostRequest("/Management/UploadImageFile", MultipartForm.Of(("unrelated", "x")));
         using JsonDocument doc = await PostAsync(host, request);
 
         Assert.False(doc.RootElement.GetProperty("result").GetBoolean());
-        Assert.Contains("Please attach a file", Error(doc));
+        Assert.Contains("Please attach a file", Error(doc), StringComparison.Ordinal);
     }
 }

@@ -81,8 +81,8 @@ public class CalendarServiceAttachmentDownloadTests
         Assert.Null(file);
         _attachmentContent.Verify(a => a.OpenFileAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         FakeLogRecord denial = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
-        Assert.Contains("Attachment download refused", denial.Message);
-        Assert.Contains("7", denial.Message);
+        Assert.Contains("Attachment download refused", denial.Message, StringComparison.Ordinal);
+        Assert.Contains("7", denial.Message, StringComparison.Ordinal);
     }
 
     /// <summary>The owner of the event's calendar gets the opened stream, named after the stored file.</summary>
@@ -210,6 +210,6 @@ public class CalendarServiceAttachmentDownloadTests
         await CreateSut().OpenCalendarEventAttachedFileAsync(7, viewerEmail == null ? null : Viewer(viewerEmail), TestContext.Current.CancellationToken);
 
         FakeLogRecord denial = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
-        Assert.EndsWith($"is missing or not visible to {expected}", denial.Message);
+        Assert.EndsWith($"is missing or not visible to {expected}", denial.Message, StringComparison.Ordinal);
     }
 }

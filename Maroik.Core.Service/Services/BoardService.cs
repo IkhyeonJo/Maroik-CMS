@@ -530,7 +530,7 @@ public class BoardService(
     {
         // Map the board type to the correct storage area; default to "Forum" for unknown types.
         string area = _boardAreaMap.GetValueOrDefault(boardType, "Forum");
-        string guid = Guid.NewGuid().ToString().ToUpper();
+        string guid = Guid.NewGuid().ToString().ToUpperInvariant();
         string ext = Path.GetExtension(fileName);
         // A storage key, not a local path: always "/"-separated, whatever OS this runs on.
         return $"upload/{area}/{boardType}/boardAttachedFiles/{boardId}/{guid}{ext}";

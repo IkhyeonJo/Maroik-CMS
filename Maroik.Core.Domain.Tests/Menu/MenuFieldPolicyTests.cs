@@ -41,7 +41,7 @@ public class MenuFieldPolicyTests
 
         Assert.True(result.IsError);
         Assert.Equal("Menu.FieldTooLong", result.FirstError.Code);
-        Assert.Contains(field, result.FirstError.Description);
+        Assert.Contains(field, result.FirstError.Description, StringComparison.Ordinal);
     }
 
     /// <summary>Only Admin / User / Anonymous (exact case) are accepted as a role.</summary>
@@ -68,12 +68,13 @@ public class MenuFieldPolicyTests
         Assert.Equal("Menu.OrderNegative", result.FirstError.Code);
     }
 
+    /// <summary>The role values the database's CHECK constraint allows, in ordinal order.</summary>
+    private static readonly string[] _databaseRoles = ["Admin", "Anonymous", "User"];
+
     /// <summary>The role taxonomy holds exactly the three values the database allows.</summary>
     [Fact]
     public void Roles_AreTheThreeDatabaseValues()
- #pragma warning disable CA1861
-        => Assert.Equal(new[] { "Admin", "Anonymous", "User" }, MenuFieldPolicy.Roles.All.OrderBy(r => r).ToArray());
- #pragma warning restore CA1861
+        => Assert.Equal(_databaseRoles, MenuFieldPolicy.Roles.All.OrderBy(r => r).ToArray());
 
     // -- Category / SubCategory apply it -----------------------------------------
 

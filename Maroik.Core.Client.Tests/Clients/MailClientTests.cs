@@ -29,9 +29,9 @@ public class MailClientTests
         string body = _sut.GetMailConfirmationBody(
             "token123", "MyTitle", "Line0", "Line1", "https://example.com/");
 
-        Assert.Contains("MyTitle", body);
-        Assert.Contains("Line0", body);
-        Assert.Contains("Line1", body);
+        Assert.Contains("MyTitle", body, StringComparison.Ordinal);
+        Assert.Contains("Line0", body, StringComparison.Ordinal);
+        Assert.Contains("Line1", body, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that <c>GetMailConfirmationBody</c> contains confirm email url.</summary>
@@ -41,8 +41,8 @@ public class MailClientTests
         string body = _sut.GetMailConfirmationBody(
             "token123", "T", "C0", "C1", "https://example.com/");
 
-        Assert.Contains("Account/ConfirmEmail", body);
-        Assert.Contains("token123", body);
+        Assert.Contains("Account/ConfirmEmail", body, StringComparison.Ordinal);
+        Assert.Contains("token123", body, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that <c>GetMailConfirmationBody</c> url encodes special characters in token.</summary>
@@ -53,8 +53,8 @@ public class MailClientTests
         string body = _sut.GetMailConfirmationBody(
             "a+b/c=", "T", "C0", "C1", "https://example.com/");
 
-        Assert.Contains("%2B", body);   // '+' encoded
-        Assert.DoesNotContain("registrationToken=a+b", body);
+        Assert.Contains("%2B", body, StringComparison.Ordinal);   // '+' encoded
+        Assert.DoesNotContain("registrationToken=a+b", body, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that <c>GetMailConfirmationBody</c> returns HTML div.</summary>
@@ -64,8 +64,8 @@ public class MailClientTests
         string body = _sut.GetMailConfirmationBody(
             "tok", "T", "C0", "C1", "https://example.com/");
 
-        Assert.Contains("<div", body);
-        Assert.Contains("</div>", body);
+        Assert.Contains("<div", body, StringComparison.Ordinal);
+        Assert.Contains("</div>", body, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that <c>GetMailConfirmationBody</c> url contains domain name.</summary>
@@ -75,7 +75,7 @@ public class MailClientTests
         string body = _sut.GetMailConfirmationBody(
             "tok", "T", "C0", "C1", "https://mysite.io/");
 
-        Assert.Contains("https://mysite.io/Account/ConfirmEmail", body);
+        Assert.Contains("https://mysite.io/Account/ConfirmEmail", body, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -89,8 +89,8 @@ public class MailClientTests
     {
         string body = _sut.GetMailConfirmationBody("tok", "T", "C0", "C1", domainName);
 
-        Assert.Contains("https://mysite.io/Account/ConfirmEmail", body);
-        Assert.DoesNotContain("ioAccount/ConfirmEmail", body);
+        Assert.Contains("https://mysite.io/Account/ConfirmEmail", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("ioAccount/ConfirmEmail", body, StringComparison.Ordinal);
     }
 
     // -- GetMailResetPasswordBody ---------------------------------------------
@@ -102,9 +102,9 @@ public class MailClientTests
         string body = _sut.GetMailResetPasswordBody(
             "reset-tok", "ResetTitle", "Step0", "Step1", "https://example.com/");
 
-        Assert.Contains("ResetTitle", body);
-        Assert.Contains("Step0", body);
-        Assert.Contains("Step1", body);
+        Assert.Contains("ResetTitle", body, StringComparison.Ordinal);
+        Assert.Contains("Step0", body, StringComparison.Ordinal);
+        Assert.Contains("Step1", body, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that <c>GetMailResetPasswordBody</c> contains reset password url.</summary>
@@ -114,8 +114,8 @@ public class MailClientTests
         string body = _sut.GetMailResetPasswordBody(
             "reset-tok", "T", "C0", "C1", "https://example.com/");
 
-        Assert.Contains("Account/ResetPassword", body);
-        Assert.Contains("reset-tok", body);
+        Assert.Contains("Account/ResetPassword", body, StringComparison.Ordinal);
+        Assert.Contains("reset-tok", body, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that <c>GetMailResetPasswordBody</c> url encodes special characters.</summary>
@@ -125,8 +125,8 @@ public class MailClientTests
         string body = _sut.GetMailResetPasswordBody(
             "x+y=z", "T", "C0", "C1", "https://example.com/");
 
-        Assert.Contains("%2B", body);
-        Assert.Contains("%3D", body);
+        Assert.Contains("%2B", body, StringComparison.Ordinal);
+        Assert.Contains("%3D", body, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that <c>GetMailResetPasswordBody</c> returns HTML div.</summary>
@@ -136,8 +136,8 @@ public class MailClientTests
         string body = _sut.GetMailResetPasswordBody(
             "tok", "T", "C0", "C1", "https://example.com/");
 
-        Assert.Contains("<div", body);
-        Assert.Contains("</div>", body);
+        Assert.Contains("<div", body, StringComparison.Ordinal);
+        Assert.Contains("</div>", body, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -151,8 +151,8 @@ public class MailClientTests
     {
         string body = _sut.GetMailResetPasswordBody("tok", "T", "C0", "C1", domainName);
 
-        Assert.Contains("https://mysite.io/Account/ResetPassword", body);
-        Assert.DoesNotContain("ioAccount/ResetPassword", body);
+        Assert.Contains("https://mysite.io/Account/ResetPassword", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("ioAccount/ResetPassword", body, StringComparison.Ordinal);
     }
 
     // -- ShouldAcceptCertificate ------------------------------------------
@@ -275,10 +275,10 @@ public class MailClientTests
         Assert.Contains(smtp.Commands, c => c.StartsWith("MAIL FROM:<noreply@maroik.test>", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(smtp.Commands, c => c.StartsWith("RCPT TO:<bob@example.com>", StringComparison.OrdinalIgnoreCase));
         Assert.NotNull(smtp.ReceivedMessage);
-        Assert.Contains("Subject: Hello there", smtp.ReceivedMessage);
-        Assert.Contains("bob@example.com", smtp.ReceivedMessage);
-        Assert.Contains("Content-Type: text/html", smtp.ReceivedMessage);
-        Assert.Contains("<p>confirm me</p>", smtp.ReceivedMessage);
+        Assert.Contains("Subject: Hello there", smtp.ReceivedMessage, StringComparison.Ordinal);
+        Assert.Contains("bob@example.com", smtp.ReceivedMessage, StringComparison.Ordinal);
+        Assert.Contains("Content-Type: text/html", smtp.ReceivedMessage, StringComparison.Ordinal);
+        Assert.Contains("<p>confirm me</p>", smtp.ReceivedMessage, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -291,7 +291,7 @@ public class MailClientTests
     [Fact]
     public async Task SendMailAsync_StillReportsSuccess_WhenClosingTheConnectionFailsAfterTheServerAcceptedTheMessage()
     {
-        await using var smtp = new FakeSmtpServer { DropConnectionOnQuit = true };
+        await using var smtp = new FakeSmtpServer(dropConnectionOnQuit: true);
 
         ServiceResult result = await _sut.SendMailAsync(
             "bob@example.com", "Hello", "<p>hi</p>", SettingsFor(smtp.Port), TestContext.Current.CancellationToken);
@@ -304,15 +304,15 @@ public class MailClientTests
     [Fact]
     public async Task SendMailAsync_ReturnsAGenericFailure_WhenTheServerRejectsTheCredentials()
     {
-        await using var smtp = new FakeSmtpServer { RejectAuthentication = true };
+        await using var smtp = new FakeSmtpServer(rejectAuthentication: true);
 
         ServiceResult result = await _sut.SendMailAsync(
             "bob@example.com", "Hello", "<p>hi</p>", SettingsFor(smtp.Port, "wrong"), TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Equal("Mail.SendFailed", result.ErrorCode);
-        Assert.DoesNotContain("127.0.0.1", result.ErrorKey);
-        Assert.DoesNotContain("535", result.ErrorKey);
+        Assert.DoesNotContain("127.0.0.1", result.ErrorKey, StringComparison.Ordinal);
+        Assert.DoesNotContain("535", result.ErrorKey, StringComparison.Ordinal);
         Assert.Null(smtp.ReceivedMessage);
     }
 
@@ -340,7 +340,7 @@ public class MailClientTests
             "not an address\r\nBcc: victim@example.com", "Hello", "<p>hi</p>", SettingsFor(smtp.Port), TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
-        Assert.DoesNotContain(smtp.Commands, c => c.Contains("victim@example.com"));
+        Assert.DoesNotContain(smtp.Commands, c => c.Contains("victim@example.com", StringComparison.Ordinal));
     }
 
     // -- HTML-encoding of everything interpolated into the mail body -----------------------
@@ -355,11 +355,11 @@ public class MailClientTests
             ? _sut.GetMailConfirmationBody("tok", "<script>alert(1)</script>", "a <b>bold</b> line", "x & y", "https://example.com/")
             : _sut.GetMailResetPasswordBody("tok", "<script>alert(1)</script>", "a <b>bold</b> line", "x & y", "https://example.com/");
 
-        Assert.DoesNotContain("<script>", body);
-        Assert.DoesNotContain("<b>", body);
-        Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", body);
-        Assert.Contains("a &lt;b&gt;bold&lt;/b&gt; line", body);
-        Assert.Contains("x &amp; y", body);
+        Assert.DoesNotContain("<script>", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("<b>", body, StringComparison.Ordinal);
+        Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", body, StringComparison.Ordinal);
+        Assert.Contains("a &lt;b&gt;bold&lt;/b&gt; line", body, StringComparison.Ordinal);
+        Assert.Contains("x &amp; y", body, StringComparison.Ordinal);
     }
 
     /// <summary>A domain name that contains a quote cannot break out of the link's href attribute.</summary>
@@ -373,8 +373,8 @@ public class MailClientTests
             ? _sut.GetMailConfirmationBody("tok", "T", "C0", "C1", hostile)
             : _sut.GetMailResetPasswordBody("tok", "T", "C0", "C1", hostile);
 
-        Assert.DoesNotContain("' onmouseover='", body);
-        Assert.Contains("&#39; onmouseover=&#39;", body);
+        Assert.DoesNotContain("' onmouseover='", body, StringComparison.Ordinal);
+        Assert.Contains("&#39; onmouseover=&#39;", body, StringComparison.Ordinal);
     }
 
     // -- SmtpSsl off: opportunistic STARTTLS with a relaxed (chain-only) certificate check ---------------
@@ -399,7 +399,7 @@ public class MailClientTests
     public async Task SendMailAsync_AcceptsASelfSignedRelayCertificate_WhenSmtpSslIsOff_AndUpgradesToTls()
     {
         using X509Certificate2 cert = SelfSigned(n => n.AddIpAddress(IPAddress.Loopback));
-        await using var smtp = new FakeSmtpServer { Certificate = cert };
+        await using var smtp = new FakeSmtpServer(certificate: cert);
 
         ServiceResult result = await _sut.SendMailAsync(
             "bob@example.com", "Hello", "<p>hi</p>", SettingsFor(smtp.Port), TestContext.Current.CancellationToken);
@@ -417,7 +417,7 @@ public class MailClientTests
     public async Task SendMailAsync_RejectsACertificateForAnotherHost_EvenWhenSmtpSslIsOff()
     {
         using X509Certificate2 cert = SelfSigned(n => n.AddDnsName("mail.other-host.example"));
-        await using var smtp = new FakeSmtpServer { Certificate = cert };
+        await using var smtp = new FakeSmtpServer(certificate: cert);
 
         ServiceResult result = await _sut.SendMailAsync(
             "bob@example.com", "Hello", "<p>hi</p>", SettingsFor(smtp.Port), TestContext.Current.CancellationToken);
@@ -470,7 +470,7 @@ public class MailClientTests
         Assert.True(result.Success);
         Assert.NotNull(smtp.ReceivedMessage); // the mail really was accepted
         var warning = Assert.Single(logger.Entries, e => e.Level == Microsoft.Extensions.Logging.LogLevel.Warning);
-        Assert.Contains("bob@example.com", warning.Message);
+        Assert.Contains("bob@example.com", warning.Message, StringComparison.Ordinal);
         Assert.IsType<IOException>(warning.Exception);
         Assert.DoesNotContain(logger.Entries, e => e.Level >= Microsoft.Extensions.Logging.LogLevel.Error);
     }

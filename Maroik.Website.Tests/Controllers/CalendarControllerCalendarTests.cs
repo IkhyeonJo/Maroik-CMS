@@ -56,13 +56,13 @@ public class CalendarControllerCalendarTests(MaroikWebApplicationFactory factory
         using var createRequest = session.BuildJsonPostRequest("/Calendar/CreateCalendar", ValidCalendarPayload("Work"));
         var createResponse = await _client.SendAsync(createRequest, TestContext.Current.CancellationToken);
         string createJson = await createResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("\"result\":true", createJson);
+        Assert.Contains("\"result\":true", createJson, StringComparison.Ordinal);
 
         using var getRequest = session.BuildJsonPostRequest("/Calendar/GetCalendars");
         var getResponse = await _client.SendAsync(getRequest, TestContext.Current.CancellationToken);
         string getJson = await getResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("Work", getJson);
+        Assert.Contains("Work", getJson, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ public class CalendarControllerCalendarTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(secondRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("The calendar already exists.", json);
+        Assert.Contains("The calendar already exists.", json, StringComparison.Ordinal);
     }
 
     /// <summary>Is calendar exists unknown id returns failure result.</summary>
@@ -111,7 +111,7 @@ public class CalendarControllerCalendarTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- UpdateCalendar -------------------------------------------------------------
@@ -136,7 +136,7 @@ public class CalendarControllerCalendarTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(updateRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>Update calendar unknown id returns failure result.</summary>
@@ -156,7 +156,7 @@ public class CalendarControllerCalendarTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- DeleteCalendar ---------------------------------------------------------------
@@ -175,7 +175,7 @@ public class CalendarControllerCalendarTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(deleteRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>Delete calendar unknown id returns failure result.</summary>
@@ -189,7 +189,7 @@ public class CalendarControllerCalendarTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using System.Globalization;
 using ErrorOr;
 
 namespace Maroik.Core.Domain.Errors;
@@ -39,7 +40,7 @@ public static class DomainError
     /// <paramref name="args"/> already substituted in.
     /// </summary>
     public static Error Validation(string code, string messageTemplate, params object[] args) =>
-        Error.Validation(code, string.Format(messageTemplate, args), Metadata(messageTemplate, args));
+        Error.Validation(code, string.Format(CultureInfo.InvariantCulture, messageTemplate, args), Metadata(messageTemplate, args));
 
     /// <summary>
     /// Creates a <see cref="ErrorType.Conflict"/> error from a composite-format
@@ -48,7 +49,7 @@ public static class DomainError
     /// deleted/confirmed/locked, ...) rather than invalid input.
     /// </summary>
     public static Error Conflict(string code, string messageTemplate, params object[] args) =>
-        Error.Conflict(code, string.Format(messageTemplate, args), Metadata(messageTemplate, args));
+        Error.Conflict(code, string.Format(CultureInfo.InvariantCulture, messageTemplate, args), Metadata(messageTemplate, args));
 
     /// <summary>
     /// Creates a <see cref="ErrorType.Failure"/> error from a composite-format
@@ -57,7 +58,7 @@ public static class DomainError
     /// (e.g. an operation that requires state only an earlier step can set up).
     /// </summary>
     public static Error Failure(string code, string messageTemplate, params object[] args) =>
-        Error.Failure(code, string.Format(messageTemplate, args), Metadata(messageTemplate, args));
+        Error.Failure(code, string.Format(CultureInfo.InvariantCulture, messageTemplate, args), Metadata(messageTemplate, args));
 
     /// <summary>Builds the <see cref="Error.Metadata"/> dictionary carrying the unformatted template and its arguments.</summary>
     private static Dictionary<string, object> Metadata(string messageTemplate, object[] args) => new()

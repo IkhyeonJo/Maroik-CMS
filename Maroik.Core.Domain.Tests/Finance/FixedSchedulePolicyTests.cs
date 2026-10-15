@@ -1,3 +1,4 @@
+using System.Globalization;
 using Maroik.Core.Domain.Finance;
 namespace Maroik.Core.Domain.Tests.Finance;
 
@@ -333,7 +334,7 @@ public class FixedSchedulePolicyTests
     public void NoMaturityDateIso_IsTheIsoFormOfNoMaturityDate()
     {
         Assert.Equal("9999-12-31", FixedSchedulePolicy.NoMaturityDateIso);
-        Assert.Equal(FixedSchedulePolicy.NoMaturityDate.Date, DateTime.Parse(FixedSchedulePolicy.NoMaturityDateIso).Date);
+        Assert.Equal(FixedSchedulePolicy.NoMaturityDate.Date, DateTime.Parse(FixedSchedulePolicy.NoMaturityDateIso, CultureInfo.InvariantCulture).Date);
     }
 
     // -- GetRowStatus -------------------------------------------------------------

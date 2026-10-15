@@ -88,7 +88,7 @@ public class NoticeControllerTests(MaroikWebApplicationFactory factory)
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -125,7 +125,7 @@ public class NoticeControllerTests(MaroikWebApplicationFactory factory)
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("\"result\":false", json);
-        Assert.Contains("\"error\":\"Input is invalid\"", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains("\"error\":\"Input is invalid\"", json, StringComparison.Ordinal);
     }
 }

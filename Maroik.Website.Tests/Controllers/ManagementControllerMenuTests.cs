@@ -84,7 +84,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         using var createRequest = admin.BuildJsonPostRequest("/Management/CreateCategory", ValidCategoryPayload(name));
         var createResponse = await _client.SendAsync(createRequest, TestContext.Current.CancellationToken);
         string createJson = await createResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("\"result\":true", createJson);
+        Assert.Contains("\"result\":true", createJson, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -94,7 +94,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         var existsResponse = await _client.SendAsync(existsRequest, TestContext.Current.CancellationToken);
         string existsJson = await existsResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", existsJson);
+        Assert.Contains("\"result\":true", existsJson, StringComparison.Ordinal);
     }
 
     /// <summary>Is category exists unknown id returns failure result.</summary>
@@ -107,7 +107,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- UpdateCategory ----------------------------------------------------------
@@ -130,7 +130,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(updateRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -150,7 +150,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- DeleteCategory ------------------------------------------------------------
@@ -172,7 +172,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(deleteRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -198,7 +198,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         using var createSubRequest = admin.BuildJsonPostRequest("/Management/CreateSubCategory", ValidSubCategoryPayload(subName, category.Id));
         var createResponse = await _client.SendAsync(createSubRequest, TestContext.Current.CancellationToken);
         string createJson = await createResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("\"result\":true", createJson);
+        Assert.Contains("\"result\":true", createJson, StringComparison.Ordinal);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -208,7 +208,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         var existsResponse = await _client.SendAsync(existsRequest, TestContext.Current.CancellationToken);
         string existsJson = await existsResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", existsJson);
+        Assert.Contains("\"result\":true", existsJson, StringComparison.Ordinal);
     }
 
     /// <summary>Is sub category exists unknown id returns failure result.</summary>
@@ -221,7 +221,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- UpdateSubCategory ----------------------------------------------------------
@@ -236,7 +236,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- DeleteSubCategory ------------------------------------------------------------
@@ -266,7 +266,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(deleteRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var finalScope = factory.Services.CreateScope();
         var finalDb = finalScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -312,7 +312,7 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         foreach (var key in _navigationCacheKeyList)
         {

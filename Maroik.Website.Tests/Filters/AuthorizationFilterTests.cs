@@ -466,9 +466,9 @@ public class AuthorizationFilterTests
         await CreateSut().OnAuthorizationAsync(BuildContext("AccountBook", "CreateIncome", "POST"));
 
         FakeLogRecord record = OnlyWarning("Access denied");
-        Assert.Contains("POST AccountBook/CreateIncome", record.Message);
-        Assert.Contains("user@test.com", record.Message);
-        Assert.Contains("password change", record.Message);
+        Assert.Contains("POST AccountBook/CreateIncome", record.Message, StringComparison.Ordinal);
+        Assert.Contains("user@test.com", record.Message, StringComparison.Ordinal);
+        Assert.Contains("password change", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>A pending forced password change still allows the profile page itself.</summary>
@@ -699,8 +699,8 @@ public class AuthorizationFilterTests
 
         await CreateSut().OnAuthorizationAsync(BuildContext("Dashboard", "UserIndex"));
 
-        Assert.Contains("gone@test.com", OnlyWarning("Session invalidated").Message);
-        Assert.Contains("account is deleted", OnlyWarning("Session invalidated").Message);
+        Assert.Contains("gone@test.com", OnlyWarning("Session invalidated").Message, StringComparison.Ordinal);
+        Assert.Contains("account is deleted", OnlyWarning("Session invalidated").Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that a session whose security stamp changed is invalidated with a Warning that names the email but not the stamp.</summary>
@@ -715,9 +715,9 @@ public class AuthorizationFilterTests
         await CreateSut().OnAuthorizationAsync(BuildContext("Dashboard", "UserIndex"));
 
         FakeLogRecord record = OnlyWarning("Session invalidated");
-        Assert.Contains("user@test.com", record.Message);
-        Assert.Contains("security stamp changed", record.Message);
-        Assert.DoesNotContain("old", record.Message.Replace("Session invalidated", ""));
+        Assert.Contains("user@test.com", record.Message, StringComparison.Ordinal);
+        Assert.Contains("security stamp changed", record.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("old", record.Message.Replace("Session invalidated", "", StringComparison.Ordinal), StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that a signed-in account requesting a page outside its menu logs an access-denied Warning with the method, route and email.</summary>
@@ -732,8 +732,8 @@ public class AuthorizationFilterTests
         await CreateSut().OnAuthorizationAsync(BuildContext("Unregistered", "Action"));
 
         FakeLogRecord record = OnlyWarning("Access denied");
-        Assert.Contains("GET Unregistered/Action", record.Message);
-        Assert.Contains("admin@test.com", record.Message);
+        Assert.Contains("GET Unregistered/Action", record.Message, StringComparison.Ordinal);
+        Assert.Contains("admin@test.com", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that a signed-in account posting to a disallowed action logs an access-denied Warning with the method, route and email.</summary>
@@ -748,8 +748,8 @@ public class AuthorizationFilterTests
         await CreateSut().OnAuthorizationAsync(BuildContext("Management", "DeleteAccount", "POST"));
 
         FakeLogRecord record = OnlyWarning("Access denied");
-        Assert.Contains("POST Management/DeleteAccount", record.Message);
-        Assert.Contains("user@test.com", record.Message);
+        Assert.Contains("POST Management/DeleteAccount", record.Message, StringComparison.Ordinal);
+        Assert.Contains("user@test.com", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that an anonymous post to a disallowed action logs an access-denied Warning marked as anonymous.</summary>
@@ -762,8 +762,8 @@ public class AuthorizationFilterTests
         await CreateSut().OnAuthorizationAsync(BuildContext("Management", "DeleteAccount", "POST"));
 
         FakeLogRecord record = OnlyWarning("Access denied");
-        Assert.Contains("POST Management/DeleteAccount", record.Message);
-        Assert.Contains("anonymous", record.Message);
+        Assert.Contains("POST Management/DeleteAccount", record.Message, StringComparison.Ordinal);
+        Assert.Contains("anonymous", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that an anonymous visitor requesting an unlisted page is not logged as a Warning or above.</summary>

@@ -57,9 +57,9 @@ public class HtmlParserServiceTests
         (string html, _) = await _sut.TransformImageAttributesAsync(
             "<img alt=\"original\" />", (_, _) => Task.FromResult<HtmlImgPatch?>(patch), TestContext.Current.CancellationToken);
 
-        Assert.Contains("alt=\"encrypted\"", html);
-        Assert.Contains("data-file=\"base64data\"", html);
-        Assert.Contains("data-contenttype=\"image/png\"", html);
+        Assert.Contains("alt=\"encrypted\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-file=\"base64data\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-contenttype=\"image/png\"", html, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that the tag is left unchanged when the patch factory returns null.</summary>
@@ -69,8 +69,8 @@ public class HtmlParserServiceTests
         (string html, _) = await _sut.TransformImageAttributesAsync(
             "<img alt=\"original\" />", (_, _) => Task.FromResult<HtmlImgPatch?>(null), TestContext.Current.CancellationToken);
 
-        Assert.Contains("alt=\"original\"", html);
-        Assert.DoesNotContain("data-file", html);
+        Assert.Contains("alt=\"original\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-file", html, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that a patch with Remove = true deletes the tag from the output (async overload).</summary>
@@ -83,8 +83,8 @@ public class HtmlParserServiceTests
                 alt == "a" ? new HtmlImgPatch(Remove: true) : new HtmlImgPatch(NewAlt: "B")),
             TestContext.Current.CancellationToken);
 
-        Assert.DoesNotContain("alt=\"a\"", html);
-        Assert.Contains("alt=\"B\"", html);
+        Assert.DoesNotContain("alt=\"a\"", html, StringComparison.Ordinal);
+        Assert.Contains("alt=\"B\"", html, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that each image's patch is correctly matched back to its own tag when
@@ -104,9 +104,9 @@ public class HtmlParserServiceTests
             TestContext.Current.CancellationToken);
 
         Assert.True(hasImages);
-        Assert.Contains("alt=\"A\"", html);
-        Assert.Contains("alt=\"B\"", html);
-        Assert.Contains("alt=\"C\"", html);
+        Assert.Contains("alt=\"A\"", html, StringComparison.Ordinal);
+        Assert.Contains("alt=\"B\"", html, StringComparison.Ordinal);
+        Assert.Contains("alt=\"C\"", html, StringComparison.Ordinal);
     }
 
     // -- TransformImageAttributes (sync) -----------------------------------------
@@ -118,7 +118,7 @@ public class HtmlParserServiceTests
         string html = _sut.TransformImageAttributes(
             "<img alt=\"original\" />", _ => new HtmlImgPatch(NewAlt: "decrypted"));
 
-        Assert.Contains("alt=\"decrypted\"", html);
+        Assert.Contains("alt=\"decrypted\"", html, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that the sync overload leaves alt unchanged when the patch factory returns null.</summary>
@@ -127,7 +127,7 @@ public class HtmlParserServiceTests
     {
         string html = _sut.TransformImageAttributes("<img alt=\"original\" />", _ => null);
 
-        Assert.Contains("alt=\"original\"", html);
+        Assert.Contains("alt=\"original\"", html, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that the sync overload deletes the tag when the patch has Remove = true,
@@ -139,9 +139,9 @@ public class HtmlParserServiceTests
             "<p>keep</p><img alt=\"forged\" /><img alt=\"ok\" />",
             alt => alt == "forged" ? new HtmlImgPatch(Remove: true) : new HtmlImgPatch(NewAlt: "clean"));
 
-        Assert.DoesNotContain("forged", html);
-        Assert.Contains("<p>keep</p>", html);
-        Assert.Contains("alt=\"clean\"", html);
+        Assert.DoesNotContain("forged", html, StringComparison.Ordinal);
+        Assert.Contains("<p>keep</p>", html, StringComparison.Ordinal);
+        Assert.Contains("alt=\"clean\"", html, StringComparison.Ordinal);
     }
 
     // -- Images without alt, and more images than the fetch limit ----------------------------
@@ -183,6 +183,6 @@ public class HtmlParserServiceTests
         (string result, _) = await transform.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
         for (int i = 0; i < 9; i++)
-            Assert.Contains($"alt=\"done-{i}\"", result);
+            Assert.Contains($"alt=\"done-{i}\"", result, StringComparison.Ordinal);
     }
 }

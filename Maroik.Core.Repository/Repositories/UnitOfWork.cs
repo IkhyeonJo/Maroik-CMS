@@ -1,4 +1,5 @@
 using System.Data;
+using System.Data.Common;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.PostgreSQL.Data;
 using Microsoft.EntityFrameworkCore;
@@ -86,9 +87,13 @@ public class UnitOfWork(ApplicationDbContext context) : IUnitOfWork
         {
             await _transaction.RollbackAsync(ct);
         }
-        catch
+        catch (DbException)
         {
-            // Ignore if the transaction has already been rolled back or committed.
+            // Expected and ignored: the database already ended the transaction (the session was dropped or the
+            // connection broke), so there is nothing left to roll back. Any other failure is a defect and propagates,
+            // after the finally below. Not logged here: the Repository layer does not log (pinned by
+            // UnitOfWorkTests.RollbackAsync_DoesNotThrow_WhenTheDatabaseAlreadyEndedTheTransaction /
+            // RollbackAsync_Rethrows_AFailureThatIsNotADatabaseError_AndStillClearsTheTracker).
         }
         finally
         {
@@ -111,13 +116,23 @@ public class UnitOfWork(ApplicationDbContext context) : IUnitOfWork
         // is left committed.
         if (_transaction != null)
         {
-            try { await _transaction.RollbackAsync(); }
-            catch { /* Ignore if the transaction has already been rolled back or committed */ }
-            await _transaction.DisposeAsync();
-            _transaction = null;
-            // Same reason as RollbackAsync: drop any deferred writes so they cannot be flushed by
-            // a later SaveChanges on the same scoped context.
-            context.ChangeTracker.Clear();
+            try
+            {
+                await _transaction.RollbackAsync();
+            }
+            catch (DbException)
+            {
+                // Expected and ignored, as in RollbackAsync: the database already ended the transaction. Any other
+                // failure propagates after the finally below.
+            }
+            finally
+            {
+                await _transaction.DisposeAsync();
+                _transaction = null;
+                // Same reason as RollbackAsync: drop any deferred writes so they cannot be flushed by
+                // a later SaveChanges on the same scoped context.
+                context.ChangeTracker.Clear();
+            }
         }
         GC.SuppressFinalize(this);
     }

@@ -40,7 +40,7 @@ public class AccountController(
     public async Task<IActionResult> Login(LoginInputViewModel loginInputViewModel, CancellationToken ct)
     {
         string userAgent = Request.Headers.UserAgent.ToString();
-        if (userAgent.Contains("MSIE") || userAgent.Contains("Trident"))
+        if (userAgent.Contains("MSIE", StringComparison.Ordinal) || userAgent.Contains("Trident", StringComparison.Ordinal))
         {
             TempData["Error"] = localizer["BlockInternetExplorer"].Value;
             return View();

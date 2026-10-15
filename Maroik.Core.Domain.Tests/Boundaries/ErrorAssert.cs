@@ -1,3 +1,4 @@
+using System.Globalization;
 using ErrorOr;
 using Maroik.Core.Domain.Errors;
 namespace Maroik.Core.Domain.Tests.Boundaries;
@@ -19,7 +20,7 @@ internal static class ErrorAssert
         Assert.Equal(type, error.Type);
         Assert.Equal(template, error.Metadata![DomainError.MessageTemplateMetadataKey]);
         Assert.Equal(args, (object[])error.Metadata![DomainError.MessageArgsMetadataKey]);
-        Assert.Equal(string.Format(template, args), error.Description);
+        Assert.Equal(string.Format(CultureInfo.InvariantCulture, template, args), error.Description);
     }
 
     /// <summary>Shorthand for <see cref="Is{T}"/> with <see cref="ErrorType.Validation"/>.</summary>

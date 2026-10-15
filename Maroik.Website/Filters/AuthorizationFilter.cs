@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Reflection;
 using System.Text.Json;
 using Maroik.Core.Contract.Dtos;
@@ -68,7 +69,7 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
     /// actions and their attributes never changes at runtime, so this is built once instead of
     /// re-scanning every controller's methods and custom attributes on every POST request.
     /// </summary>
-    private static readonly IReadOnlyDictionary<(string Controller, string Action), IReadOnlySet<string>> _postActionRoles =
+    private static readonly FrozenDictionary<(string Controller, string Action), FrozenSet<string>> _postActionRoles =
         BuildPostActionRoleMap();
 
     /// <summary>
@@ -81,9 +82,7 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
     /// still carry <c>[HttpPost]</c> + <c>[ValidateAntiForgeryToken]</c>, enforced by
     /// <c>WebsiteArchitectureTests.PostActions_MustCarry_AntiforgeryAndRoleAttributes</c>.
     /// </summary>
- #pragma warning disable CA1859
-    private static readonly IReadOnlySet<(string Controller, string Action)> _anonymousAccountPostActions =
- #pragma warning restore CA1859
+    private static readonly FrozenSet<(string Controller, string Action)> _anonymousAccountPostActions =
         new HashSet<(string Controller, string Action)>
         {
             ("Account", nameof(Controllers.AccountController.Login)),
@@ -92,7 +91,7 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
             ("Account", nameof(Controllers.AccountController.ConfirmEmail)),
             ("Account", nameof(Controllers.AccountController.ForgotPassword)),
             ("Account", nameof(Controllers.AccountController.ResetPassword)),
-        };
+        }.ToFrozenSet();
 
     /// <summary>The routing name of <paramref name="controllerType"/> (its type name minus the "Controller" suffix).</summary>
     private static string ControllerName(Type controllerType) =>
@@ -108,11 +107,9 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
         && method.IsDefined(typeof(ValidateAntiForgeryTokenAttribute));
 
     /// <summary>Builds <see cref="_postActionRoles"/> by reflecting over every controller's guarded POST actions once.</summary>
- #pragma warning disable CA1859
-    private static IReadOnlyDictionary<(string, string), IReadOnlySet<string>> BuildPostActionRoleMap()
- #pragma warning restore CA1859
+    private static FrozenDictionary<(string Controller, string Action), FrozenSet<string>> BuildPostActionRoleMap()
     {
-        var map = new Dictionary<(string, string), IReadOnlySet<string>>();
+        var map = new Dictionary<(string Controller, string Action), FrozenSet<string>>();
         foreach (Type controller in _cachedControllerTypes)
         {
             foreach (MethodInfo method in controller.GetMethods())
@@ -120,18 +117,16 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
                 if (!HasPostGuards(method) || !method.IsDefined(typeof(RequiredHttpPostAccessAttribute)))
                     continue;
 
- #pragma warning disable CA1859
-                IReadOnlySet<string> roles = method.GetCustomAttributes<RequiredHttpPostAccessAttribute>()
- #pragma warning restore CA1859
+                FrozenSet<string> roles = method.GetCustomAttributes<RequiredHttpPostAccessAttribute>()
                     .Select(attr => attr.Role)
                     .Where(role => !string.IsNullOrEmpty(role))
-                    .ToHashSet(StringComparer.Ordinal);
+                    .ToFrozenSet(StringComparer.Ordinal);
 
                 if (roles.Count > 0)
                     map[(ControllerName(controller), method.Name)] = roles;
             }
         }
-        return map;
+        return map.ToFrozenDictionary();
     }
 
     /// <summary>Loads (or restores from cache) the navigation menu data, then allows or denies the request before model binding.</summary>
@@ -366,7 +361,7 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
 
                     // Otherwise the action must be explicitly marked for the Anonymous role AND live
                     // on a controller that appears in the anonymous navigation menu.
-                    if (_postActionRoles.TryGetValue(endpoint, out IReadOnlySet<string>? anonRoles)
+                    if (_postActionRoles.TryGetValue(endpoint, out FrozenSet<string>? anonRoles)
                         && anonRoles.Contains(Role.Anonymous)
                         && anonymousCategories.Any(category => category.Controller == currentControllerName))
                     {
@@ -399,7 +394,7 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
 
                                 // The action must carry [RequiredHttpPostAccess(Role = <this role>)]
                                 // AND its controller must appear in this role's navigation menu.
-                                if (_postActionRoles.TryGetValue((currentControllerName, currentActionName), out IReadOnlySet<string>? allowedRoles)
+                                if (_postActionRoles.TryGetValue((currentControllerName, currentActionName), out FrozenSet<string>? allowedRoles)
                                     && allowedRoles.Contains(loggedInAccount.Role)
                                     && categories.Any(category => category.Controller == currentControllerName))
                                 {

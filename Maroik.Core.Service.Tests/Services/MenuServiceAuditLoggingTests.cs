@@ -50,8 +50,8 @@ public class MenuServiceAuditLoggingTests
     private void AssertOnlyInformation(string containing)
     {
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Information);
-        Assert.Contains(containing, record.Message);
-        Assert.Contains($"by admin {Actor}", record.Message);
+        Assert.Contains(containing, record.Message, StringComparison.Ordinal);
+        Assert.Contains($"by admin {Actor}", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that creating a menu category logs its name at Information.</summary>

@@ -12,7 +12,7 @@ public static class DecimalExtensions
     extension(decimal value)
     {
         /// <summary>
-        /// Returns a string representation of <paramref name="value"/> with trailing decimal zeros removed.
+        /// Returns a string representation of this value with trailing decimal zeros removed.
         /// Whole numbers are formatted without a decimal point (e.g. 1000.00 → "1000").
         /// </summary>
         public string TrimTrailingZeros() =>

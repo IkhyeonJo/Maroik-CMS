@@ -58,7 +58,7 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         string expected = string.Join(", ", Core.Domain.Media.ImageUploadPolicy.AllowedContentTypes);
-        Assert.Contains("id=\"ProfileAvatarFiles\"", html);
+        Assert.Contains("id=\"ProfileAvatarFiles\"", html, StringComparison.Ordinal);
         Assert.Matches($"id=\"ProfileAvatarFiles\"[^>]*accept=\"{System.Text.RegularExpressions.Regex.Escape(expected)}\"", html);
     }
 
@@ -70,7 +70,7 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
     {
         var session = await LoginAsUserAsync("management-profile-tz@test.com");
         using var request = session.BuildFormPostRequest("/Management/UpdateProfileTimeZone",
-            new MultipartFormDataContent { { new StringContent("Asia/Seoul"), "TimeZoneIanaId" } });
+            MultipartForm.Of(("TimeZoneIanaId", "Asia/Seoul")));
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
 
@@ -88,7 +88,7 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
     {
         var session = await LoginAsUserAsync("management-profile-tz-bad@test.com");
         using var request = session.BuildFormPostRequest("/Management/UpdateProfileTimeZone",
-            new MultipartFormDataContent { { new StringContent("Not/ARealZone"), "TimeZoneIanaId" } });
+            MultipartForm.Of(("TimeZoneIanaId", "Not/ARealZone")));
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
 
@@ -111,7 +111,7 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
     {
         var session = await LoginAsUserAsync($"management-profile-tz-msg-{timeZone.Replace('/', '-').ToLowerInvariant()}@test.com");
         using var post = session.BuildFormPostRequest("/Management/UpdateProfileTimeZone",
-            new MultipartFormDataContent { { new StringContent(timeZone), "TimeZoneIanaId" } });
+            MultipartForm.Of(("TimeZoneIanaId", timeZone)));
         var postResponse = await _client.SendAsync(post, TestContext.Current.CancellationToken);
 
         // Follow the redirect by hand with the session and whatever cookies the POST set (the TempData cookie).
@@ -143,7 +143,7 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -172,8 +172,8 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
         var changeResponse = await _client.SendAsync(change, TestContext.Current.CancellationToken);
         string json = await changeResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
-        Assert.Contains("sign in again", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
+        Assert.Contains("sign in again", json, StringComparison.Ordinal);
 
         using var profile = new HttpRequestMessage(HttpMethod.Get, "/Management/Profile");
         profile.Headers.Add("Cookie", session.CookieHeader);
@@ -211,7 +211,7 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
         });
         string json = await (await _client.SendAsync(change, ct)).Content.ReadAsStringAsync(ct);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -249,7 +249,7 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -274,7 +274,7 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -299,7 +299,7 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -318,14 +318,14 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
         // A real client always submits at least the other profile fields alongside the file
         // input, so a literally empty multipart body isn't representative — one harmless field
         // keeps the request well-formed while still attaching no file.
-        var form = new MultipartFormDataContent { { new StringContent("unused"), "Nickname" } };
+        var form = MultipartForm.Of(("Nickname", "unused"));
         using var request = session.BuildFormPostRequest("/Management/UpdateProfileAvatar", form);
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>Update profile avatar disallowed extension returns failure result.</summary>
@@ -334,15 +334,13 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
     {
         var session = await LoginAsUserAsync("management-profile-avatar-badext@test.com");
         var form = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent([1, 2, 3, 4]);
-        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
-        form.Add(fileContent, "ProfileAvatarFiles", "notanimage.txt");
+        MultipartForm.AddFile(form, "ProfileAvatarFiles", "notanimage.txt", [1, 2, 3, 4], "text/plain");
         using var request = session.BuildFormPostRequest("/Management/UpdateProfileAvatar", form);
 
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 }

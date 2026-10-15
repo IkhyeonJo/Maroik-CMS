@@ -252,7 +252,7 @@ public class DashboardService(
         string memUsageLimit = "";
         if (!string.IsNullOrEmpty(hostMemoryInfo))
         {
-            string[] temp = hostMemoryInfo.Replace("Memory: ", "").Split('/');
+            string[] temp = hostMemoryInfo.Replace("Memory: ", "", StringComparison.Ordinal).Split('/');
             if (temp.Length >= 2)
                 memUsageLimit = temp[1].Trim() + " / " + temp[0].Trim();
         }
@@ -260,7 +260,7 @@ public class DashboardService(
         string diskUsageLimit = "";
         if (!string.IsNullOrEmpty(hostDiskInfo))
         {
-            string[] temp = hostDiskInfo.Replace("Disk: ", "").Split('/');
+            string[] temp = hostDiskInfo.Replace("Disk: ", "", StringComparison.Ordinal).Split('/');
             if (temp.Length >= 2)
                 diskUsageLimit = temp[1].Trim() + " / " + temp[0].Trim();
         }

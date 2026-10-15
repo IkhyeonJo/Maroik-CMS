@@ -1,3 +1,4 @@
+using System.Globalization;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Website.Tests.Infrastructure;
@@ -50,21 +51,18 @@ public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
     /// <summary>A create/update-event form for an all-day event in <paramref name="calendarId"/> (id 0 creates).</summary>
     private static MultipartFormDataContent EventForm(long calendarId, string title, string startDate = "2030-06-01", string endDate = "2030-06-02", long id = 0)
     {
-        var form = new MultipartFormDataContent
-        {
-            { new StringContent(id.ToString()), "Id" },
-            { new StringContent(calendarId.ToString()), "CalendarId" },
-            { new StringContent(title), "Title" },
-            { new StringContent("true"), "AllDay" },
-            { new StringContent(startDate), "StartDate" },
-            { new StringContent(endDate), "EndDate" },
-            { new StringContent("Somewhere"), "Location" },
+        return MultipartForm.Of(
+            ("Id", id.ToString(CultureInfo.InvariantCulture)),
+            ("CalendarId", calendarId.ToString(CultureInfo.InvariantCulture)),
+            ("Title", title),
+            ("AllDay", "true"),
+            ("StartDate", startDate),
+            ("EndDate", endDate),
+            ("Location", "Somewhere"),
             // "Status" carries a real DB CHECK constraint restricting it to "Busy"/"Free" —
             // anything else (e.g. "Confirmed") is silently rejected by CreateCalendarEventAsync's
             // catch-all as "Input is invalid".
-            { new StringContent("Busy"), "Status" }
-        };
-        return form;
+            ("Status", "Busy"));
     }
 
     /// <summary>A title unique to this call, prefixed with the calling test's name.</summary>
@@ -97,7 +95,7 @@ public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- CreateCalendarEvent / IsCalendarEventExists: success path ------------------
@@ -113,7 +111,7 @@ public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
         using var createRequest = session.BuildFormPostRequest("/Calendar/CreateCalendarEvent", EventForm(calendarId, title));
         var createResponse = await _client.SendAsync(createRequest, TestContext.Current.CancellationToken);
         string createJson = await createResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("\"result\":true", createJson);
+        Assert.Contains("\"result\":true", createJson, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -123,7 +121,7 @@ public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
         var existsResponse = await _client.SendAsync(existsRequest, TestContext.Current.CancellationToken);
         string existsJson = await existsResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", existsJson);
+        Assert.Contains("\"result\":true", existsJson, StringComparison.Ordinal);
     }
 
     /// <summary>Is calendar event exists unknown id returns failure result.</summary>
@@ -136,7 +134,7 @@ public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- UpdateCalendarEvent ---------------------------------------------------------
@@ -161,7 +159,7 @@ public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(updateRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -181,7 +179,7 @@ public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>Update calendar event not owned by caller returns failure result.</summary>
@@ -206,7 +204,7 @@ public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
         var response = await otherClient.SendAsync(updateRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- DeleteCalendarEvent -----------------------------------------------------------
@@ -229,7 +227,7 @@ public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(deleteRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -246,6 +244,6 @@ public class CalendarControllerEventTests(MaroikWebApplicationFactory factory)
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 }

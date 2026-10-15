@@ -104,7 +104,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json); // service now returns a specific reason, not a generic "Input is invalid"
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal); // service now returns a specific reason, not a generic "Input is invalid"
     }
 
     /// <summary>Create fixed expenditure invalid deposit day for month returns input invalid.</summary>
@@ -123,7 +123,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json); // service now returns a specific reason, not a generic "Input is invalid"
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal); // service now returns a specific reason, not a generic "Input is invalid"
     }
 
     // -- CreateFixedExpenditure / IsFixedExpenditureExists: success path ---------
@@ -137,7 +137,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         using var createRequest = session.BuildJsonPostRequest("/Notice/CreateFixedExpenditure", ValidPayload(content: content));
         var createResponse = await _client.SendAsync(createRequest, TestContext.Current.CancellationToken);
         string createJson = await createResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("\"result\":true", createJson);
+        Assert.Contains("\"result\":true", createJson, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -147,7 +147,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         var existsResponse = await _client.SendAsync(existsRequest, TestContext.Current.CancellationToken);
         string existsJson = await existsResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", existsJson);
+        Assert.Contains("\"result\":true", existsJson, StringComparison.Ordinal);
     }
 
     /// <summary>Is fixed expenditure exists unknown id returns failure result.</summary>
@@ -160,7 +160,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- UpdateFixedExpenditure ------------------------------------------------------
@@ -188,7 +188,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         var response = await _client.SendAsync(updateRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -207,7 +207,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- DeleteFixedExpenditure ---------------------------------------------------------
@@ -230,7 +230,7 @@ public class NoticeControllerFixedExpenditureTests(MaroikWebApplicationFactory f
         var response = await _client.SendAsync(deleteRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

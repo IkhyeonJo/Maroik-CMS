@@ -545,7 +545,7 @@ public class ProfileServiceTests
 
         Assert.Equal("Profile.UpdateAvatarFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
     }
 
     /// <summary>An unknown IANA time zone is refused with the domain's validation error and nothing is written.</summary>
@@ -571,7 +571,7 @@ public class ProfileServiceTests
 
         Assert.Equal("Profile.UpdateTimezoneFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
     }
 
     /// <summary>A new password that breaks the complexity rule is refused before hashing and before any write; the lock is released.</summary>
@@ -604,7 +604,7 @@ public class ProfileServiceTests
 
         Assert.Equal("Profile.UpdatePasswordFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -664,7 +664,7 @@ public class ProfileServiceTests
 
         Assert.Equal("Profile.UploadAvatarFailed", result.ErrorCode);
         Assert.Equal(ServiceResult.TemporaryErrorKey, result.ErrorKey);
-        Assert.DoesNotContain("secret detail", result.ErrorKey);
+        Assert.DoesNotContain("secret detail", result.ErrorKey, StringComparison.Ordinal);
     }
 
     // -- Exact results, storage address and failure logging --------------------------------

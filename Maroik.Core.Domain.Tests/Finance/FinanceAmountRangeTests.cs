@@ -1,3 +1,4 @@
+using System.Globalization;
 using Maroik.Core.Domain.Finance;
 using Maroik.Core.Domain.Errors;
 namespace Maroik.Core.Domain.Tests.Finance;
@@ -35,7 +36,7 @@ public class FinanceAmountRangeTests
     [InlineData("79228162514264337593543950335")]
     public void ValidateWithinRange_ReturnsError_WhenMagnitudeExceedsTheColumn(string amount)
     {
-        var result = FinanceAmountPolicy.ValidateWithinRange(decimal.Parse(amount));
+        var result = FinanceAmountPolicy.ValidateWithinRange(decimal.Parse(amount, CultureInfo.InvariantCulture));
 
         Assert.True(result.IsError);
         Assert.Equal("Finance.AmountOutOfRange", result.FirstError.Code);
@@ -52,7 +53,7 @@ public class FinanceAmountRangeTests
 
         var args = (object[])error.Metadata![DomainError.MessageArgsMetadataKey];
         Assert.Equal("9,999,999,999,999,999.9999", args[0]);
-        Assert.Contains("9,999,999,999,999,999.9999", error.Description);
+        Assert.Contains("9,999,999,999,999,999.9999", error.Description, StringComparison.Ordinal);
     }
 
     /// <summary><c>ValidateAmount</c> applies both the non-negative and the range rule.</summary>
@@ -149,7 +150,7 @@ public class FinanceAmountRangeTests
     [InlineData("-10000000000000000")]
     public void Asset_Create_ReturnsError_WhenBalanceOutOfRange(string amount)
     {
-        var result = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", decimal.Parse(amount), "KRW", Now);
+        var result = Asset.Create("Wallet", "user@example.com", "FreeDepositAndWithdrawal", decimal.Parse(amount, CultureInfo.InvariantCulture), "KRW", Now);
 
         Assert.Equal("Finance.AmountOutOfRange", result.FirstError.Code);
     }

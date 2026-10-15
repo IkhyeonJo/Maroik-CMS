@@ -82,16 +82,27 @@ public class FileController(IFileValidationService fileValidationService, IOptio
 
             // Streamed straight from disk (not read into memory first). Opened here, inside the try,
             // so an unreadable file is still answered as "Invalid file" below.
-#pragma warning disable SCS0018
-            var fileStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read, FileShare.Read,
+            // resolvedPath comes from StoragePath.ResolveWithinRoot above, which returns null for any path
+            // outside the storage root (declared as an SCS0018 sanitizer in SecurityCodeScan.config.yml).
+            FileStream? fileStream = new(resolvedPath, FileMode.Open, FileAccess.Read, FileShare.Read,
                 bufferSize: 81920, FileOptions.Asynchronous | FileOptions.SequentialScan);
-#pragma warning restore SCS0018
+            try
+            {
+                if (!_contentTypeProvider.TryGetContentType(sanitizedFileName, out var contentType))
+                    contentType = "application/octet-stream";
 
-            if (!_contentTypeProvider.TryGetContentType(sanitizedFileName, out var contentType))
-                contentType = "application/octet-stream";
-
-            logger.LogInformation("File downloaded: {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
-            return File(fileStream, contentType, sanitizedFileName, enableRangeProcessing: true);
+                logger.LogInformation("File downloaded: {FilePath}. CorrelationId={CorrelationId}", filePath, correlationId);
+                var result = File(fileStream, contentType, sanitizedFileName, enableRangeProcessing: true);
+                // The result now owns the stream and disposes it once the response is written.
+                fileStream = null;
+                return result;
+            }
+            finally
+            {
+                // Reached with the stream still set only when something above threw before the
+                // hand-over: close the file now instead of leaving it open until the finalizer runs.
+                fileStream?.Dispose();
+            }
         }
         catch (Exception ex)
         {

@@ -1,6 +1,8 @@
 using System.Data;
+using System.Data.Common;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Storage;
 using OrmAccount = Maroik.Core.PostgreSQL.Models.Account;
 
@@ -106,7 +108,7 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
     public async Task BeginAsync_WithIsolationLevel_OpensTransactionAtThatLevel()
     {
         await using var context = NewDbContext();
-        var uow = new UnitOfWork(context);
+        await using var uow = new UnitOfWork(context);
 
         await uow.BeginAsync(IsolationLevel.RepeatableRead, TestContext.Current.CancellationToken);
 
@@ -133,7 +135,7 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
         await EnsureAccountsAsync(email);
 
         await using var context = NewDbContext();
-        var uow = new UnitOfWork(context);
+        await using var uow = new UnitOfWork(context);
         await uow.BeginAsync(ct: ct);
         context.Accounts.Add(new OrmAccount
         {
@@ -166,7 +168,7 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
         await EnsureAccountsAsync(email);
 
         await using var context = NewDbContext();
-        var uow = new UnitOfWork(context);
+        await using var uow = new UnitOfWork(context);
         await uow.BeginAsync(ct: ct);
         context.Accounts.Add(new OrmAccount
         {
@@ -231,6 +233,59 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
         Exception? ex = await Record.ExceptionAsync(async () => await uow.DisposeAsync());
 
         Assert.Null(ex);
+        Assert.Empty(context.ChangeTracker.Entries());
+    }
+
+    // -- A rollback that fails for another reason ---------------------------------------
+
+    /// <summary>Fails every rollback with an error that is not a database error (a bug, not a dropped session).</summary>
+    private sealed class FailingRollbackInterceptor : DbTransactionInterceptor
+    {
+        /// <summary>The exception every rollback fails with.</summary>
+        public InvalidOperationException Failure { get; } = new("unexpected rollback failure");
+
+        /// <inheritdoc />
+        public override ValueTask<InterceptionResult> TransactionRollingBackAsync(
+            DbTransaction transaction, TransactionEventData eventData, InterceptionResult result, CancellationToken cancellationToken = default)
+            => throw Failure;
+    }
+
+    /// <summary>Begins a unit of work over a context whose rollbacks fail with <see cref="FailingRollbackInterceptor.Failure"/>, with one entity tracked.</summary>
+    private async Task<(UnitOfWork Uow, PostgreSQL.Data.ApplicationDbContext Context, Exception Failure)> BeginWithAFailingRollbackAsync()
+    {
+        var interceptor = new FailingRollbackInterceptor();
+        var context = NewDbContext(interceptor);
+        var uow = new UnitOfWork(context);
+        await uow.BeginAsync(ct: TestContext.Current.CancellationToken);
+        context.Accounts.Add(new OrmAccount { Email = UniqueEmail("tracked"), Nickname = Unique("Tracked"), HashedPassword = "x", AvatarImagePath = "/a", Role = "User", TimeZoneIanaId = "UTC", SecurityStamp = "s" });
+        return (uow, context, interceptor.Failure);
+    }
+
+    /// <summary>
+    /// Only a database error during the rollback (the session the database already ended) is ignored; any other failure
+    /// is a defect and propagates — after the transaction is released and the tracker cleared all the same.
+    /// </summary>
+    [Fact]
+    public async Task RollbackAsync_Rethrows_AFailureThatIsNotADatabaseError_AndStillClearsTheTracker()
+    {
+        var (uow, context, failure) = await BeginWithAFailingRollbackAsync();
+
+        Exception thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => uow.RollbackAsync(TestContext.Current.CancellationToken));
+
+        Assert.Same(failure, thrown);
+        Assert.Empty(context.ChangeTracker.Entries());
+        await uow.DisposeAsync(); // nothing left to roll back
+    }
+
+    /// <summary>The same holds for the rollback <c>DisposeAsync</c> runs for a unit of work that was never ended.</summary>
+    [Fact]
+    public async Task DisposeAsync_Rethrows_AFailureThatIsNotADatabaseError_AndStillClearsTheTracker()
+    {
+        var (uow, context, failure) = await BeginWithAFailingRollbackAsync();
+
+        Exception thrown = await Assert.ThrowsAsync<InvalidOperationException>(async () => await uow.DisposeAsync());
+
+        Assert.Same(failure, thrown);
         Assert.Empty(context.ChangeTracker.Entries());
     }
 }

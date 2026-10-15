@@ -223,8 +223,19 @@ public abstract class GenericRepository<TDomain, TEntity>(ApplicationDbContext c
     /// Used to build the raw-SQL search predicates that <c>.ToString()</c> can't reach via LINQ
     /// (see <c>ExpenditureRepository.SearchByAccountEmailAsync</c>).
     /// </summary>
-    protected static string ToLikePattern(string search) =>
-        $"%{search.Replace("\\", @"\\").Replace("%", "\\%").Replace("_", "\\_")}%";
+    protected static string ToLikePattern(string search) => $"%{EscapeLike(search)}%";
+
+    /// <summary>The LIKE escape character <see cref="EscapeLike"/> escapes with (Postgres's default), for <c>EF.Functions.Like / ILike</c>.</summary>
+    protected const string LikeEscapeCharacter = "\\";
+
+    /// <summary>
+    /// <paramref name="value"/> with the LIKE wildcards (<c>%</c>, <c>_</c>) and the escape character (<c>\</c>) escaped, so
+    /// it matches only itself in a LIKE / ILIKE pattern that uses <see cref="LikeEscapeCharacter"/>.
+    /// </summary>
+    protected static string EscapeLike(string value) =>
+        value.Replace("\\", @"\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
 
     /// <summary>
     /// Deletes every row matching <paramref name="predicate"/>, including matching rows this context has

@@ -21,6 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Declares this project's path validators as SCS0018 sanitizers (see the file). -->
+    <AdditionalFiles Include="SecurityCodeScan.config.yml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Maroik.Core.Client\Maroik.Core.Client.csproj" />
     <ProjectReference Include="..\Maroik.Core.Contract\Maroik.Core.Contract.csproj" />
   </ItemGroup>

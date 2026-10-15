@@ -36,7 +36,7 @@ public class ProgramStartupTests(MaroikWebApplicationFactory factory)
         Exception? failure = StartupFailure(factory1.CreateClient);
 
         Assert.IsType<InvalidOperationException>(failure);
-        Assert.Contains("SessionExpireMinutes", failure.Message);
+        Assert.Contains("SessionExpireMinutes", failure.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Zero permitted login attempts would lock every account on its first try, so start-up refuses it.</summary>
@@ -48,7 +48,7 @@ public class ProgramStartupTests(MaroikWebApplicationFactory factory)
         Exception? failure = StartupFailure(factory1.CreateClient);
 
         Assert.IsType<InvalidOperationException>(failure);
-        Assert.Contains("MaxLoginAttempt", failure.Message);
+        Assert.Contains("MaxLoginAttempt", failure.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Without a Valkey connection string the Data Protection keyring is persisted to a folder under the content root.</summary>

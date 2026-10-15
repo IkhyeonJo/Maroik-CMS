@@ -32,7 +32,7 @@ public class ExceptionControllerTests(MaroikWebApplicationFactory factory)
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         // No Activity.Current in a plain HTTP request, so ErrorViewModel falls back to
         // HttpContext.TraceIdentifier, which is always populated -> ShowRequestId is true.
-        Assert.Contains("Request ID:", html);
+        Assert.Contains("Request ID:", html, StringComparison.Ordinal);
     }
 
     /// <summary>Error logged in user returns200.</summary>
@@ -76,7 +76,7 @@ public class ExceptionControllerTests(MaroikWebApplicationFactory factory)
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("Request ID:", html);
+        Assert.Contains("Request ID:", html, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -127,6 +127,6 @@ public class ExceptionControllerTests(MaroikWebApplicationFactory factory)
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.InternalServerError, response.StatusCode);
-        Assert.Contains("Request ID:", html);
+        Assert.Contains("Request ID:", html, StringComparison.Ordinal);
     }
 }

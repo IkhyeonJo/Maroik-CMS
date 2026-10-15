@@ -424,9 +424,9 @@ public class ThrottleEmailSendAttributeTests
         await new ThrottleEmailSendAttribute().OnActionExecutionAsync(context, NextReturning(() => { }));
 
         FakeLogRecord record = Assert.Single(collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
-        Assert.Contains("send-rate throttle is inactive", record.Message);
+        Assert.Contains("send-rate throttle is inactive", record.Message, StringComparison.Ordinal);
         Assert.IsType<TimeoutException>(record.Exception);
-        Assert.DoesNotContain("user@example.com", record.Message); // the address is not needed to diagnose the cache
+        Assert.DoesNotContain("user@example.com", record.Message, StringComparison.Ordinal); // the address is not needed to diagnose the cache
     }
 
     /// <summary>Failing to release the claim after a bounced request is also logged (the caller silently loses one retry window).</summary>
@@ -446,7 +446,7 @@ public class ThrottleEmailSendAttributeTests
         await new ThrottleEmailSendAttribute().OnActionExecutionAsync(context, NextReturning(() => { }));
 
         FakeLogRecord record = Assert.Single(collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
-        Assert.Contains("could not be released", record.Message);
+        Assert.Contains("could not be released", record.Message, StringComparison.Ordinal);
         Assert.IsType<TimeoutException>(record.Exception);
     }
 }

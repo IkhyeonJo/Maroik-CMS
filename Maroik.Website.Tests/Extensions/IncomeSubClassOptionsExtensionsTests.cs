@@ -27,7 +27,7 @@ public class IncomeSubClassOptionsExtensionsTests
     /// <summary>Writes <paramref name="content"/> to a string with the default HTML encoder.</summary>
     private static string Render(Microsoft.AspNetCore.Html.IHtmlContent content)
     {
-        var writer = new StringWriter(new StringBuilder());
+        using var writer = new StringWriter(new StringBuilder());
         content.WriteTo(writer, HtmlEncoder.Default);
         return writer.ToString();
     }
@@ -55,8 +55,8 @@ public class IncomeSubClassOptionsExtensionsTests
         int optionStart = html.IndexOf("<option", StringComparison.Ordinal);
         int optionEnd = html.IndexOf('>', optionStart);
         string firstOptionTag = html[optionStart..(optionEnd + 1)];
-        Assert.Contains("value=\"LaborIncome\"", firstOptionTag);
-        Assert.Contains("selected", firstOptionTag);
+        Assert.Contains("value=\"LaborIncome\"", firstOptionTag, StringComparison.Ordinal);
+        Assert.Contains("selected", firstOptionTag, StringComparison.Ordinal);
     }
 
     /// <summary>The number of non-overlapping occurrences of <paramref name="needle"/> in <paramref name="haystack"/>.</summary>

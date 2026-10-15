@@ -8,10 +8,8 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using NonFactors.Mvc.Grid;
 
@@ -74,13 +72,13 @@ public class ViewRenderingTests(MaroikWebApplicationFactory factory)
 
         string html = await GetHtmlAsync("/Dashboard/UserIndex", session);
 
-        Assert.Contains("id=\"year\"", html);
-        Assert.Contains($"<option value=\"{DateTime.UtcNow.Year}\" selected=\"selected\">", html);
-        Assert.Contains($"<option value=\"{DateTime.UtcNow.Year - 2}\">", html);   // an older year, not selected
-        Assert.Contains($"<option value=\"{DateTime.UtcNow.Month}\" selected=\"selected\">", html);
-        Assert.Contains("id=\"monetaryUnit\"", html);
-        Assert.Contains("<option value=\"KRW\"", html);
-        Assert.Contains("<option value=\"USD\"", html);
+        Assert.Contains("id=\"year\"", html, StringComparison.Ordinal);
+        Assert.Contains($"<option value=\"{DateTime.UtcNow.Year}\" selected=\"selected\">", html, StringComparison.Ordinal);
+        Assert.Contains($"<option value=\"{DateTime.UtcNow.Year - 2}\">", html, StringComparison.Ordinal);   // an older year, not selected
+        Assert.Contains($"<option value=\"{DateTime.UtcNow.Month}\" selected=\"selected\">", html, StringComparison.Ordinal);
+        Assert.Contains("id=\"monetaryUnit\"", html, StringComparison.Ordinal);
+        Assert.Contains("<option value=\"KRW\"", html, StringComparison.Ordinal);
+        Assert.Contains("<option value=\"USD\"", html, StringComparison.Ordinal);
         Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "<option value=\"(KRW|USD)\" selected=\"selected\">")); // exactly the default
     }
 
@@ -109,8 +107,8 @@ public class ViewRenderingTests(MaroikWebApplicationFactory factory)
 
         string html = await GetHtmlAsync("/Dashboard/UserIndex", session);
 
-        Assert.Contains("href=\"/Notice/FixedIncome\" class=\"dropdown-item\"", html);
-        Assert.Contains("href=\"/Notice/FixedExpenditure\" class=\"dropdown-item\"", html);
+        Assert.Contains("href=\"/Notice/FixedIncome\" class=\"dropdown-item\"", html, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Notice/FixedExpenditure\" class=\"dropdown-item\"", html, StringComparison.Ordinal);
     }
 
     // -- the MVC Grid table template in the filter modes the site's own grids do not use ---------------------------
@@ -160,9 +158,9 @@ public class ViewRenderingTests(MaroikWebApplicationFactory factory)
     {
         string html = await RenderGridAsync(GridFilterMode.Excel);
 
-        Assert.Contains("mvc-grid-excel-mode", html);
-        Assert.Contains("class=\"mvc-grid-title\"", html);
-        Assert.Contains("class=\"mvc-grid-options\"", html);
+        Assert.Contains("mvc-grid-excel-mode", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"mvc-grid-title\"", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"mvc-grid-options\"", html, StringComparison.Ordinal);
     }
 
     /// <summary>In row mode a choice column gets its own read-only value box and option list in the filter row.</summary>
@@ -171,8 +169,8 @@ public class ViewRenderingTests(MaroikWebApplicationFactory factory)
     {
         string html = await RenderGridAsync(GridFilterMode.Row);
 
-        Assert.Contains("mvc-grid-row-mode", html);
-        Assert.Contains("class=\"mvc-grid-options\"", html);
-        Assert.Contains("<option value=\"y\">Y</option>", html);
+        Assert.Contains("mvc-grid-row-mode", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"mvc-grid-options\"", html, StringComparison.Ordinal);
+        Assert.Contains("<option value=\"y\">Y</option>", html, StringComparison.Ordinal);
     }
 }

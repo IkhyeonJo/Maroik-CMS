@@ -1,3 +1,4 @@
+using System.Globalization;
 using Npgsql;
 
 namespace Maroik.E2E.Tests.Infrastructure;
@@ -124,7 +125,7 @@ public sealed class E2EDatabase(string connectionString)
         await connection.OpenAsync();
         await using var command = Build(connection, sql, parameters);
         object? result = await command.ExecuteScalarAsync();
-        return result is null or DBNull ? default : (T)Convert.ChangeType(result, Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T));
+        return result is null or DBNull ? default : (T)Convert.ChangeType(result, Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T), CultureInfo.InvariantCulture);
     }
 
     /// <summary>A command for <paramref name="sql"/> with each named parameter bound (<see langword="null"/> as <c>DBNull</c>).</summary>

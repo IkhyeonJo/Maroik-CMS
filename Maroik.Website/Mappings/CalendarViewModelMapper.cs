@@ -178,9 +178,9 @@ public static class CalendarViewModelMapper
             if (vm.AllDay)
             {
                 string[] d = vm.StartDate!.Split('-');
-                req.StartDate = new DateTime(int.Parse(d[0]), int.Parse(d[1]), int.Parse(d[2]), 0, 0, 0, DateTimeKind.Utc);
+                req.StartDate = new DateTime(int.Parse(d[0], CultureInfo.InvariantCulture), int.Parse(d[1], CultureInfo.InvariantCulture), int.Parse(d[2], CultureInfo.InvariantCulture), 0, 0, 0, DateTimeKind.Utc);
                 d = vm.EndDate!.Split('-');
-                req.EndDate = new DateTime(int.Parse(d[0]), int.Parse(d[1]), int.Parse(d[2]), 0, 0, 0, DateTimeKind.Utc);
+                req.EndDate = new DateTime(int.Parse(d[0], CultureInfo.InvariantCulture), int.Parse(d[1], CultureInfo.InvariantCulture), int.Parse(d[2], CultureInfo.InvariantCulture), 0, 0, 0, DateTimeKind.Utc);
                 req.StartDateTimeZoneIanaId = null;
                 req.EndDateTimeZoneIanaId = null;
             }
@@ -279,7 +279,7 @@ public static class CalendarViewModelMapper
         string[] dateParts = parts[0].Split('-');
         string[] timeParts = parts[1].Split(':');
         return new DateTime(
-            int.Parse(dateParts[0]), int.Parse(dateParts[1]), int.Parse(dateParts[2]),
-            int.Parse(timeParts[0]), int.Parse(timeParts[1]), 0, DateTimeKind.Unspecified);
+            int.Parse(dateParts[0], CultureInfo.InvariantCulture), int.Parse(dateParts[1], CultureInfo.InvariantCulture), int.Parse(dateParts[2], CultureInfo.InvariantCulture),
+            int.Parse(timeParts[0], CultureInfo.InvariantCulture), int.Parse(timeParts[1], CultureInfo.InvariantCulture), 0, DateTimeKind.Unspecified);
     }
 }

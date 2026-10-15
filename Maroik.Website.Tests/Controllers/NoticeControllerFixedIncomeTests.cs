@@ -106,7 +106,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json); // service now returns a specific reason, not a generic "Input is invalid"
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal); // service now returns a specific reason, not a generic "Input is invalid"
     }
 
     /// <summary>Create fixed income unknown deposit asset returns input invalid.</summary>
@@ -125,7 +125,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json); // service now returns a specific reason, not a generic "Input is invalid"
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal); // service now returns a specific reason, not a generic "Input is invalid"
     }
 
     // -- CreateFixedIncome / IsFixedIncomeExists: success path --------------------
@@ -139,7 +139,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         using var createRequest = session.BuildJsonPostRequest("/Notice/CreateFixedIncome", ValidPayload(content: content));
         var createResponse = await _client.SendAsync(createRequest, TestContext.Current.CancellationToken);
         string createJson = await createResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("\"result\":true", createJson);
+        Assert.Contains("\"result\":true", createJson, StringComparison.Ordinal);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -149,7 +149,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         var existsResponse = await _client.SendAsync(existsRequest, TestContext.Current.CancellationToken);
         string existsJson = await existsResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", existsJson);
+        Assert.Contains("\"result\":true", existsJson, StringComparison.Ordinal);
     }
 
     /// <summary>Is fixed income exists unknown id returns failure result.</summary>
@@ -162,7 +162,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- UpdateFixedIncome ---------------------------------------------------------
@@ -190,7 +190,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(updateRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -215,7 +215,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     // -- DeleteFixedIncome ----------------------------------------------------------
@@ -238,7 +238,7 @@ public class NoticeControllerFixedIncomeTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(deleteRequest, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

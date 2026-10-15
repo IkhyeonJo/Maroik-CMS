@@ -37,7 +37,7 @@ public class CalendarControllerReadOnlyTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>Is other calendar event exists unknown id returns failure result.</summary>
@@ -50,7 +50,7 @@ public class CalendarControllerReadOnlyTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":false", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
     }
 
     /// <summary>Get calendar shareds user session is forbidden.</summary>
@@ -75,7 +75,7 @@ public class CalendarControllerReadOnlyTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 
     /// <summary>Get browse calendars of interest user session returns success result.</summary>
@@ -88,6 +88,6 @@ public class CalendarControllerReadOnlyTests(MaroikWebApplicationFactory factory
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
     }
 }

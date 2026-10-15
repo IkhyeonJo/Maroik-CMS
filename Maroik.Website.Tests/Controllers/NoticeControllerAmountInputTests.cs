@@ -65,8 +65,8 @@ public class NoticeControllerAmountInputTests(MaroikWebApplicationFactory factor
     /// <summary>Asserts <paramref name="json"/> is the "Input is invalid" refusal.</summary>
     private static void AssertInputIsInvalid(string json)
     {
-        Assert.Contains("\"result\":false", json);
-        Assert.Contains("Input is invalid", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains("Input is invalid", json, StringComparison.Ordinal);
     }
 
     /// <summary>A fixed-income payload with <paramref name="amount"/> as its posted amount text.</summary>
@@ -95,7 +95,7 @@ public class NoticeControllerAmountInputTests(MaroikWebApplicationFactory factor
 
         string json = await PostAsync("/Notice/CreateFixedIncome", FixedIncomePayload(content, "3,000,000.5"));
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.Equal(3000000.5m, Query(db => db.FixedIncomes.Single(f => f.AccountEmail == Email && f.Content == content).Amount));
     }
 
@@ -117,12 +117,12 @@ public class NoticeControllerAmountInputTests(MaroikWebApplicationFactory factor
     public async Task UpdateFixedIncome_WithACommaGroupedAmount_StoresTheNumber()
     {
         string content = UniqueContent();
-        Assert.Contains("\"result\":true", await PostAsync("/Notice/CreateFixedIncome", FixedIncomePayload(content, "100")));
+        Assert.Contains("\"result\":true", await PostAsync("/Notice/CreateFixedIncome", FixedIncomePayload(content, "100")), StringComparison.Ordinal);
         long id = Query(db => db.FixedIncomes.Single(f => f.AccountEmail == Email && f.Content == content).Id);
 
         string json = await PostAsync("/Notice/UpdateFixedIncome", FixedIncomePayload(content, "1,500", id));
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.Equal(1500m, Query(db => db.FixedIncomes.Single(f => f.Id == id).Amount));
     }
 
@@ -132,7 +132,7 @@ public class NoticeControllerAmountInputTests(MaroikWebApplicationFactory factor
     public async Task UpdateFixedIncome_WithAMalformedAmount_IsRefused(string amount)
     {
         string content = UniqueContent();
-        Assert.Contains("\"result\":true", await PostAsync("/Notice/CreateFixedIncome", FixedIncomePayload(content, "100")));
+        Assert.Contains("\"result\":true", await PostAsync("/Notice/CreateFixedIncome", FixedIncomePayload(content, "100")), StringComparison.Ordinal);
         long id = Query(db => db.FixedIncomes.Single(f => f.AccountEmail == Email && f.Content == content).Id);
 
         string json = await PostAsync("/Notice/UpdateFixedIncome", FixedIncomePayload(content, amount, id));
@@ -151,7 +151,7 @@ public class NoticeControllerAmountInputTests(MaroikWebApplicationFactory factor
 
         string json = await PostAsync("/Notice/CreateFixedExpenditure", FixedExpenditurePayload(content, "1,200.25"));
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.Equal(1200.25m, Query(db => db.FixedExpenditures.Single(f => f.AccountEmail == Email && f.Content == content).Amount));
     }
 
@@ -173,12 +173,12 @@ public class NoticeControllerAmountInputTests(MaroikWebApplicationFactory factor
     public async Task UpdateFixedExpenditure_WithACommaGroupedAmount_StoresTheNumber()
     {
         string content = UniqueContent();
-        Assert.Contains("\"result\":true", await PostAsync("/Notice/CreateFixedExpenditure", FixedExpenditurePayload(content, "100")));
+        Assert.Contains("\"result\":true", await PostAsync("/Notice/CreateFixedExpenditure", FixedExpenditurePayload(content, "100")), StringComparison.Ordinal);
         long id = Query(db => db.FixedExpenditures.Single(f => f.AccountEmail == Email && f.Content == content).Id);
 
         string json = await PostAsync("/Notice/UpdateFixedExpenditure", FixedExpenditurePayload(content, "2,500", id));
 
-        Assert.Contains("\"result\":true", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
         Assert.Equal(2500m, Query(db => db.FixedExpenditures.Single(f => f.Id == id).Amount));
     }
 
@@ -188,7 +188,7 @@ public class NoticeControllerAmountInputTests(MaroikWebApplicationFactory factor
     public async Task UpdateFixedExpenditure_WithAMalformedAmount_IsRefused(string amount)
     {
         string content = UniqueContent();
-        Assert.Contains("\"result\":true", await PostAsync("/Notice/CreateFixedExpenditure", FixedExpenditurePayload(content, "100")));
+        Assert.Contains("\"result\":true", await PostAsync("/Notice/CreateFixedExpenditure", FixedExpenditurePayload(content, "100")), StringComparison.Ordinal);
         long id = Query(db => db.FixedExpenditures.Single(f => f.AccountEmail == Email && f.Content == content).Id);
 
         string json = await PostAsync("/Notice/UpdateFixedExpenditure", FixedExpenditurePayload(content, amount, id));

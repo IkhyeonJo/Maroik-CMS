@@ -1,8 +1,8 @@
 using System.Net;
-using System.Net.Http.Headers;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Enums;
 using Maroik.FileStorage.Controllers;
+using Maroik.FileStorage.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -51,11 +51,9 @@ public class FileControllerLoggingTests(WebApplicationFactory<Program> baseFacto
     private static MultipartFormDataContent Upload(string fileName, byte[] bytes, string filePath, string correlationId)
     {
         var content = new MultipartFormDataContent();
-        var file = new ByteArrayContent(bytes);
-        file.Headers.ContentType = MediaTypeHeaderValue.Parse("image/jpeg");
-        content.Add(file, "file", fileName);
-        content.Add(new StringContent(filePath), "filePath");
-        content.Add(new StringContent(correlationId), "correlationId");
+        MultipartForm.AddFile(content, "file", fileName, bytes, "image/jpeg");
+        MultipartForm.AddText(content, "filePath", filePath);
+        MultipartForm.AddText(content, "correlationId", correlationId);
         return content;
     }
 
@@ -66,14 +64,15 @@ public class FileControllerLoggingTests(WebApplicationFactory<Program> baseFacto
         var (client, logger) = CreateClient(ClamavScanResult.Infected);
         string target = UniqueTarget();
 
-        var response = await client.PostAsync("/api/File/upload", Upload("evil.jpg", _jpeg, target, "corr-virus-1"), TestContext.Current.CancellationToken);
+        using var form = Upload("evil.jpg", _jpeg, target, "corr-virus-1");
+        var response = await client.PostAsync("/api/File/upload", form, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         FakeLogRecord record = Assert.Single(logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
-        Assert.Contains("File upload refused", record.Message);
-        Assert.Contains("infected", record.Message);
-        Assert.Contains(target, record.Message);
-        Assert.Contains("corr-virus-1", record.Message);
+        Assert.Contains("File upload refused", record.Message, StringComparison.Ordinal);
+        Assert.Contains("infected", record.Message, StringComparison.Ordinal);
+        Assert.Contains(target, record.Message, StringComparison.Ordinal);
+        Assert.Contains("corr-virus-1", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that an upload that could not be scanned logs one Error with the correlation ID.</summary>
@@ -82,12 +81,13 @@ public class FileControllerLoggingTests(WebApplicationFactory<Program> baseFacto
     {
         var (client, logger) = CreateClient(ClamavScanResult.Unavailable);
 
-        await client.PostAsync("/api/File/upload", Upload("x.jpg", _jpeg, UniqueTarget(), "corr-scan-1"), TestContext.Current.CancellationToken);
+        using var form = Upload("x.jpg", _jpeg, UniqueTarget(), "corr-scan-1");
+        await client.PostAsync("/api/File/upload", form, TestContext.Current.CancellationToken);
 
         FakeLogRecord record = Assert.Single(logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Error);
-        Assert.Contains("File upload refused", record.Message);
-        Assert.Contains("could not be scanned", record.Message);
-        Assert.Contains("corr-scan-1", record.Message);
+        Assert.Contains("File upload refused", record.Message, StringComparison.Ordinal);
+        Assert.Contains("could not be scanned", record.Message, StringComparison.Ordinal);
+        Assert.Contains("corr-scan-1", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that an upload to a path outside the storage root is refused (400) with one Warning naming the path.</summary>
@@ -97,12 +97,13 @@ public class FileControllerLoggingTests(WebApplicationFactory<Program> baseFacto
         var (client, logger) = CreateClient(ClamavScanResult.Clean);
         const string traversal = "../../etc/cron.d";
 
-        var response = await client.PostAsync("/api/File/upload", Upload("x.jpg", _jpeg, traversal, "corr-path-1"), TestContext.Current.CancellationToken);
+        using var form = Upload("x.jpg", _jpeg, traversal, "corr-path-1");
+        var response = await client.PostAsync("/api/File/upload", form, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         FakeLogRecord record = Assert.Single(logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
-        Assert.Contains("Invalid file path", record.Message);
-        Assert.Contains(traversal, record.Message);
+        Assert.Contains("Invalid file path", record.Message, StringComparison.Ordinal);
+        Assert.Contains(traversal, record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that a clean upload logs only an Information entry.</summary>
@@ -111,11 +112,12 @@ public class FileControllerLoggingTests(WebApplicationFactory<Program> baseFacto
     {
         var (client, logger) = CreateClient(ClamavScanResult.Clean);
 
-        var response = await client.PostAsync("/api/File/upload", Upload("ok.jpg", _jpeg, UniqueTarget(), "corr-ok"), TestContext.Current.CancellationToken);
+        using var form = Upload("ok.jpg", _jpeg, UniqueTarget(), "corr-ok");
+        var response = await client.PostAsync("/api/File/upload", form, TestContext.Current.CancellationToken);
 
         Assert.True(response.IsSuccessStatusCode);
         Assert.DoesNotContain(logger.Collector.GetSnapshot(), r => r.Level >= LogLevel.Warning);
-        Assert.Contains(logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Information && r.Message.Contains("File uploaded"));
+        Assert.Contains(logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Information && r.Message.Contains("File uploaded", StringComparison.Ordinal));
     }
 
     /// <summary>Verifies that a download from a path outside the storage root returns 404 with one Warning naming the path and correlation ID.</summary>
@@ -123,19 +125,15 @@ public class FileControllerLoggingTests(WebApplicationFactory<Program> baseFacto
     public async Task Download_LogsAWarning_WhenThePathEscapesTheStorageRoot()
     {
         var (client, logger) = CreateClient(ClamavScanResult.Clean);
-        using var content = new MultipartFormDataContent
-        {
-            { new StringContent("../../etc/passwd"), "filePath" },
-            { new StringContent("corr-dl-1"), "correlationId" }
-        };
+        using var content = MultipartForm.Of(("filePath", "../../etc/passwd"), ("correlationId", "corr-dl-1"));
 
         var response = await client.PostAsync("/api/File/download", content, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         FakeLogRecord record = Assert.Single(logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
-        Assert.Contains("File download refused: path outside the storage root", record.Message);
-        Assert.Contains("../../etc/passwd", record.Message);
-        Assert.Contains("corr-dl-1", record.Message);
+        Assert.Contains("File download refused: path outside the storage root", record.Message, StringComparison.Ordinal);
+        Assert.Contains("../../etc/passwd", record.Message, StringComparison.Ordinal);
+        Assert.Contains("corr-dl-1", record.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that a download of a missing file returns 404 with one Warning naming the path.</summary>
@@ -144,16 +142,13 @@ public class FileControllerLoggingTests(WebApplicationFactory<Program> baseFacto
     {
         var (client, logger) = CreateClient(ClamavScanResult.Clean);
         string missing = Path.Combine(Path.GetTempPath(), $"maroik_missing_{Guid.NewGuid():N}.jpg");
-        using var content = new MultipartFormDataContent
-        {
-            { new StringContent(missing), "filePath" }
-        };
+        using var content = MultipartForm.Of(("filePath", missing));
 
         var response = await client.PostAsync("/api/File/download", content, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         FakeLogRecord record = Assert.Single(logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
-        Assert.Contains("File download failed: file not found", record.Message);
-        Assert.Contains(missing, record.Message);
+        Assert.Contains("File download failed: file not found", record.Message, StringComparison.Ordinal);
+        Assert.Contains(missing, record.Message, StringComparison.Ordinal);
     }
 }

@@ -286,8 +286,8 @@ public class SessionServiceTests
 
         FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot());
         Assert.Equal(LogLevel.Warning, record.Level);
-        Assert.Contains("could not be read", record.Message);
+        Assert.Contains("could not be read", record.Message, StringComparison.Ordinal);
         Assert.NotNull(record.Exception);
-        Assert.DoesNotContain("secret-9f3a", record.Message);
+        Assert.DoesNotContain("secret-9f3a", record.Message, StringComparison.Ordinal);
     }
 }

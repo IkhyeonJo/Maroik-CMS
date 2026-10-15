@@ -42,8 +42,8 @@ public class DataProtectionServiceTests
 
         string protectedValue = CreateSut().Protect(plaintext);
 
-        Assert.DoesNotContain("upload", protectedValue);
-        Assert.DoesNotContain("secret-path", protectedValue);
+        Assert.DoesNotContain("upload", protectedValue, StringComparison.Ordinal);
+        Assert.DoesNotContain("secret-path", protectedValue, StringComparison.Ordinal);
         Assert.Matches("^[A-Za-z0-9_-]+$", protectedValue);
     }
 

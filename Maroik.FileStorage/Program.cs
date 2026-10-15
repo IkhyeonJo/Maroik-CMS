@@ -2,6 +2,7 @@
 // Entry point for the file-storage microservice.
 // Configures DI, Swagger/OpenAPI, CORS, and the HTTP pipeline, then starts Kestrel.
 
+using System.Globalization;
 using Maroik.Core.Client.Clients;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.FileStorage.Contracts;
@@ -14,7 +15,7 @@ using Serilog.Events;
 
 // Bootstrap logger captures startup errors before the host is built.
 Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console(outputTemplate: LogTemplates.Console)
+    .WriteTo.Console(outputTemplate: LogTemplates.Console, formatProvider: CultureInfo.InvariantCulture)
     .CreateBootstrapLogger();
 
 try
@@ -27,7 +28,7 @@ try
         .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
         .MinimumLevel.Override("System", LogEventLevel.Warning)
         .Enrich.FromLogContext()
-        .WriteTo.Console(outputTemplate: LogTemplates.Console));
+        .WriteTo.Console(outputTemplate: LogTemplates.Console, formatProvider: CultureInfo.InvariantCulture));
 
     // Register MVC controllers (FileController and any future controllers).
     builder.Services.AddControllers();
@@ -42,7 +43,7 @@ try
     {
         var clamavSection = builder.Configuration.GetSection("Clamav");
         cfg.ClamavHost = clamavSection["Host"];
-        cfg.ClamavPort = Convert.ToInt32(clamavSection["Port"]);
+        cfg.ClamavPort = Convert.ToInt32(clamavSection["Port"], CultureInfo.InvariantCulture);
 
         // The one directory every stored/served file must resolve within. In the container the
         // working dir and content root are both /app, and the upload volume mounts at /app/upload.

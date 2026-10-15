@@ -1,3 +1,4 @@
+using System.Globalization;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Menu;
@@ -45,25 +46,25 @@ public class MenuService(
 
     /// <summary>Whole-search predicate for a category row — mirrors the sub-category overload below.</summary>
     private static bool Matches(CategoryResponse item, string search) =>
-        item.Id.ToString().Contains(search) ||
-        (item.Name ?? "").Contains(search) ||
-        (item.DisplayName ?? "").Contains(search) ||
-        (item.IconPath ?? "").Contains(search) ||
-        (item.Controller ?? "").Contains(search) ||
-        (item.Action ?? "").Contains(search) ||
-        (item.Role ?? "").Contains(search) ||
-        item.Order.ToString().Contains(search);
+        item.Id.ToString(CultureInfo.InvariantCulture).Contains(search, StringComparison.Ordinal) ||
+        (item.Name ?? "").Contains(search, StringComparison.Ordinal) ||
+        (item.DisplayName ?? "").Contains(search, StringComparison.Ordinal) ||
+        (item.IconPath ?? "").Contains(search, StringComparison.Ordinal) ||
+        (item.Controller ?? "").Contains(search, StringComparison.Ordinal) ||
+        (item.Action ?? "").Contains(search, StringComparison.Ordinal) ||
+        (item.Role ?? "").Contains(search, StringComparison.Ordinal) ||
+        item.Order.ToString(CultureInfo.InvariantCulture).Contains(search, StringComparison.Ordinal);
 
     /// <summary>Whole-search predicate for a sub-category row — mirrors the category overload above.</summary>
     private static bool Matches(SubCategoryResponse item, string search) =>
-        item.Id.ToString().Contains(search) ||
-        item.CategoryId.ToString().Contains(search) ||
-        (item.Name ?? "").Contains(search) ||
-        (item.DisplayName ?? "").Contains(search) ||
-        (item.IconPath ?? "").Contains(search) ||
-        (item.Action ?? "").Contains(search) ||
-        (item.Role ?? "").Contains(search) ||
-        item.Order.ToString().Contains(search);
+        item.Id.ToString(CultureInfo.InvariantCulture).Contains(search, StringComparison.Ordinal) ||
+        item.CategoryId.ToString(CultureInfo.InvariantCulture).Contains(search, StringComparison.Ordinal) ||
+        (item.Name ?? "").Contains(search, StringComparison.Ordinal) ||
+        (item.DisplayName ?? "").Contains(search, StringComparison.Ordinal) ||
+        (item.IconPath ?? "").Contains(search, StringComparison.Ordinal) ||
+        (item.Action ?? "").Contains(search, StringComparison.Ordinal) ||
+        (item.Role ?? "").Contains(search, StringComparison.Ordinal) ||
+        item.Order.ToString(CultureInfo.InvariantCulture).Contains(search, StringComparison.Ordinal);
 
     /// <inheritdoc />
     public async Task<CategoryResponse?> GetCategoryByIdAsync(int id, CancellationToken ct = default)

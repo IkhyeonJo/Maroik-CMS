@@ -90,8 +90,8 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
 
         string json = await PostJsonAsync(session, "/Calendar/GetCalendarEvents", CalendarsPayload(calendarId));
 
-        Assert.Contains("\"result\":true", json);
-        Assert.Contains("OwnerEvent-1", json);
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
+        Assert.Contains("OwnerEvent-1", json, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -109,8 +109,8 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
 
         string json = await PostJsonAsync(attackerSession, "/Calendar/GetCalendarEvents", CalendarsPayload(victimCalendar));
 
-        Assert.Contains("\"result\":false", json);
-        Assert.DoesNotContain("VictimSecretEvent-2", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("VictimSecretEvent-2", json, StringComparison.Ordinal);
     }
 
     /// <summary>Only the authorized subset of a mixed request is answered: the caller's own events come back, the foreign private ones do not.</summary>
@@ -126,8 +126,8 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
 
         string json = await PostJsonAsync(session, "/Calendar/GetCalendarEvents", CalendarsPayload(victimCalendar, ownCalendar));
 
-        Assert.Contains("OwnEvent-3", json);
-        Assert.DoesNotContain("VictimSecretEvent-3", json);
+        Assert.Contains("OwnEvent-3", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("VictimSecretEvent-3", json, StringComparison.Ordinal);
     }
 
     /// <summary>A calendar another user shared with users is visible only after subscribing to it (and while it stays shared).</summary>
@@ -146,9 +146,9 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
         string subscriberJson = await PostJsonAsync(subscriberSession, "/Calendar/GetCalendarEvents", CalendarsPayload(shared));
         string strangerJson = await PostJsonAsync(strangerSession, "/Calendar/GetCalendarEvents", CalendarsPayload(shared));
 
-        Assert.Contains("SharedEvent-4", subscriberJson);
-        Assert.DoesNotContain("SharedEvent-4", strangerJson);
-        Assert.Contains("\"result\":false", strangerJson);
+        Assert.Contains("SharedEvent-4", subscriberJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("SharedEvent-4", strangerJson, StringComparison.Ordinal);
+        Assert.Contains("\"result\":false", strangerJson, StringComparison.Ordinal);
     }
 
     /// <summary>Un-sharing a calendar hides it from a subscriber immediately, even though the stale subscription row still exists.</summary>
@@ -164,7 +164,7 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
 
         string json = await PostJsonAsync(subscriberSession, "/Calendar/GetCalendarEvents", CalendarsPayload(calendar));
 
-        Assert.DoesNotContain("WasSharedEvent-5", json);
+        Assert.DoesNotContain("WasSharedEvent-5", json, StringComparison.Ordinal);
     }
 
     /// <summary>A body without a usable calendar list is refused with the generic error.</summary>
@@ -175,8 +175,8 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
 
         string json = await PostJsonAsync(session, "/Calendar/GetCalendarEvents", CalendarsPayload());
 
-        Assert.Contains("\"result\":false", json);
-        Assert.Contains("Input is invalid", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains("Input is invalid", json, StringComparison.Ordinal);
     }
 
     // -- GetOtherCalendars -----------------------------------------------------------------------
@@ -219,8 +219,8 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
 
         string json = await PostJsonAsync(session, $"/Calendar/IsCalendarExists?id={victimCalendar}");
 
-        Assert.Contains("\"result\":false", json);
-        Assert.DoesNotContain("Private-8", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("Private-8", json, StringComparison.Ordinal);
     }
 
     /// <summary>An account with no calendar at all is told so (distinct from "not yours").</summary>
@@ -231,8 +231,8 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
 
         string json = await PostJsonAsync(session, "/Calendar/IsCalendarExists?id=1");
 
-        Assert.Contains("\"result\":false", json);
-        Assert.Contains("No calendar exists", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains("No calendar exists", json, StringComparison.Ordinal);
     }
 
     /// <summary>An event detail lookup by id only resolves events on the caller's own calendars.</summary>
@@ -253,8 +253,8 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
 
         string json = await PostJsonAsync(session, $"/Calendar/IsCalendarEventExists?id={victimEventId}");
 
-        Assert.Contains("\"result\":false", json);
-        Assert.DoesNotContain("VictimSecretEvent-10", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("VictimSecretEvent-10", json, StringComparison.Ordinal);
     }
 
     // -- AdminIndex / UserIndex -----------------------------------------------------------------------
@@ -301,7 +301,7 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("TeamCalendar-11", html);
+        Assert.Contains("TeamCalendar-11", html, StringComparison.Ordinal);
     }
 
     // -- UploadImageFile: pre-upload validation ---------------------------------------------------------
@@ -309,7 +309,8 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
     /// <summary>Uploads an editor image to <c>/Calendar/UploadImageFile</c>, asserts 200, and returns the response body.</summary>
     private async Task<string> UploadAsync(AuthenticatedSession session, string fileName, byte[] bytes)
     {
-        var form = new MultipartFormDataContent { { new ByteArrayContent(bytes), "summernoteImageFile", fileName } };
+        var form = new MultipartFormDataContent();
+        MultipartForm.AddFile(form, "summernoteImageFile", fileName, bytes);
         using var request = session.BuildFormPostRequest("/Calendar/UploadImageFile", form);
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
@@ -324,8 +325,8 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
 
         string json = await UploadAsync(session, "empty.png", []);
 
-        Assert.Contains("\"result\":false", json);
-        Assert.Contains("File Size must be smaller than", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains("File Size must be smaller than", json, StringComparison.Ordinal);
     }
 
     /// <summary>Only .jpg/.jpeg/.png are accepted; anything else (here a .gif, or a double extension) is refused before any decoding or storage.</summary>
@@ -339,8 +340,8 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
 
         string json = await UploadAsync(session, fileName, [1, 2, 3]);
 
-        Assert.Contains("\"result\":false", json);
-        Assert.Contains("Only .jpg or jpeg or .png file allowed.", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains("Only .jpg or jpeg or .png file allowed.", json, StringComparison.Ordinal);
     }
 
     /// <summary>Bytes that merely claim to be a PNG are refused by content validation, and nothing is stored.</summary>
@@ -353,8 +354,8 @@ public class CalendarControllerVisibilityTests(MaroikWebApplicationFactory facto
             .. "this is not an image"u8
         ]);
 
-        Assert.Contains("\"result\":false", json);
-        Assert.DoesNotContain("filePath", json);
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("filePath", json, StringComparison.Ordinal);
     }
 
     // -- Model validation ---------------------------------------------------------------------------------
