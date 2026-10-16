@@ -408,7 +408,6 @@ FodyWeavers.xsd
 # Environment files with real secrets — only the local-only .env.debug is committed
 .env
 .env.*
-!.env.debug
 
 # SSL/Certificate files
 *.pem
