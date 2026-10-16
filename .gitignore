@@ -458,3 +458,8 @@ Maroik.Website/wwwroot/**/custom/**/*.js.map
 
 # ASP.NET Core Data Protection key ring — machine-local secret, generated at runtime.
 Maroik.Website/dataprotection-keys/
+
+# Deployment configuration files for Docker Compose (production) — may contain sensitive information.
+docker-compose.prod.yml
+Maroik.Crontab/**
+Maroik.DeployOps/**
