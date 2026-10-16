@@ -27,3 +27,6 @@
 *.resx          text eol=lf
 *.config        text eol=lf
 *.DotSettings   text eol=lf
+
+Maroik.Website/wwwroot/** linguist-vendored
+Maroik.Website/wwwroot/*/custom/** -linguist-vendored
