@@ -51,6 +51,10 @@ Operations and hosting
 - `AllowedHosts` is `*`. The `amqp://guest:guest@localhost` fallbacks (`Program.cs`, `WorkerHost`) are never
   used in a deployment (the env files always set the connection string).
 - Data Protection keys are stored unencrypted (Valkey, or the file fallback); they only live on the server.
+- Every response carries `Cache-Control: no-cache, no-store`, static files (JS / CSS / images) included: the header
+  middleware in `Maroik.Website/Program.cs` runs before `UseStaticFiles`, and nothing overrides it. This is on purpose, so
+  the login page (and the pages after a logout) always come up fresh. Do not add browser caching for static files
+  (`OnPrepareResponse` `max-age` / `immutable`), even though the `asp-append-version` fingerprints would allow it.
 
 Authorization and navigation
 - The navigation menu is the access-control list: a `Category` maps to one controller, a `SubCategory`
@@ -170,6 +174,8 @@ Calendar
 
 Client scripts
 - No bundler, no `import`/`export`: every `site.ts` is an IIFE global script compiled 1:1.
+- `wwwroot/{admin,user,anonymous}` each keep the full vendored AdminLTE plugin set, including plugins no view references
+  (datatables, pdfmake, codemirror, jszip, dropzone, flot, raphael, ...). Do not prune them.
 - Each role (`admin` / `user` / `anonymous`) keeps its own script per view, even when two scripts are
   nearly identical. Do not merge them into shared scripts; the only shared helpers are the `window`
   globals each role's `_Layout` script defines.
