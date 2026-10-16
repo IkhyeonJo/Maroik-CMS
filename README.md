@@ -285,16 +285,6 @@ dotnet test --project Maroik.Core.Service.Tests            # any single project
 3. Copy Maroik folder to /home/ubuntu/
 4. Run Deploy.sh script
 
-## Default Accounts
-
-### Admin Account
-- ID: admin@maroik.com
-- Password: ghfkddl12gh!@
-
-### User Account
-- ID: user@maroik.com
-- Password: ghfkddl12gh!@
-
 ## Screenshots
 
 ### Login
