@@ -2,7 +2,12 @@ using Maroik.Core.Domain.Finance;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using OrmAsset = Maroik.Core.PostgreSQL.Models.Asset;
+using OrmExpenditure = Maroik.Core.PostgreSQL.Models.Expenditure;
+using OrmFixedExpenditure = Maroik.Core.PostgreSQL.Models.FixedExpenditure;
+using OrmFixedIncome = Maroik.Core.PostgreSQL.Models.FixedIncome;
+using OrmIncome = Maroik.Core.PostgreSQL.Models.Income;
 
 namespace Maroik.Core.Repository.Tests.Repositories;
 
@@ -453,5 +458,61 @@ public sealed class AssetRepositoryTests(DatabaseFixture database) : RepositoryT
         await SeedAsync(MakeAsset("Wallet", alice));
 
         Assert.Empty(await Sut.SearchByAccountEmailAsync(alice, "no-such-" + Token, TestContext.Current.CancellationToken));
+    }
+    // -- LockReferencingRecordsAsync (records before the asset, for a rename) ----------
+
+    /// <summary>
+    /// Every record of the account naming the asset — income, fixed income, an expenditure paid from it, a transfer into
+    /// it, a fixed expenditure — is locked until the transaction ends; a record of another asset is not.
+    /// </summary>
+    [Fact]
+    public async Task LockReferencingRecordsAsync_LocksEveryRecordNamingTheAsset_AndNoOther()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        string alice = UniqueEmail("alice");
+        await EnsureAssetsAsync(alice, "Renamed", "Other");
+        DateTime now = DateTime.UtcNow;
+        var income = new OrmIncome { AccountEmail = alice, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "c", Amount = 1, DepositMyAssetProductName = "Renamed", Note = "", Created = now, Updated = now };
+        var fixedIncome = new OrmFixedIncome { AccountEmail = alice, MainClass = "RegularIncome", SubClass = "LaborIncome", Content = "c", Amount = 1, DepositMyAssetProductName = "Renamed", DepositMonth = 1, DepositDay = 25, MaturityDate = now.AddYears(1), Note = "", Created = now, Updated = now };
+        var paidFrom = new OrmExpenditure { AccountEmail = alice, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "c", Amount = 1, PaymentMethod = "Renamed", Note = "", Created = now, Updated = now };
+        var transferInto = new OrmExpenditure { AccountEmail = alice, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "c", Amount = 1, PaymentMethod = "Other", MyDepositAsset = "Renamed", Note = "", Created = now, Updated = now };
+        var fixedExpenditure = new OrmFixedExpenditure { AccountEmail = alice, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "c", Amount = 1, PaymentMethod = "Renamed", DepositMonth = 1, DepositDay = 25, MaturityDate = now.AddYears(1), Note = "", Created = now, Updated = now };
+        var unrelated = new OrmExpenditure { AccountEmail = alice, MainClass = "ConsumerSpending", SubClass = "MealOrEatOutExpenses", Content = "c", Amount = 1, PaymentMethod = "Other", Note = "", Created = now, Updated = now };
+        Context.AddRange(income, fixedIncome, paidFrom, transferInto, fixedExpenditure, unrelated);
+        await Context.SaveChangesAsync(ct);
+        Context.ChangeTracker.Clear();
+
+        await using var tx = await Context.Database.BeginTransactionAsync(ct);
+        await Sut.LockReferencingRecordsAsync(alice, "Renamed", ct);
+
+        await using var other = new NpgsqlConnection(Context.Database.GetConnectionString());
+        await other.OpenAsync(ct);
+        Assert.False(await CanLockAsync(other, "Income", income.Id, ct));
+        Assert.False(await CanLockAsync(other, "FixedIncome", fixedIncome.Id, ct));
+        Assert.False(await CanLockAsync(other, "Expenditure", paidFrom.Id, ct));
+        Assert.False(await CanLockAsync(other, "Expenditure", transferInto.Id, ct));
+        Assert.False(await CanLockAsync(other, "FixedExpenditure", fixedExpenditure.Id, ct));
+        Assert.True(await CanLockAsync(other, "Expenditure", unrelated.Id, ct));
+    }
+
+    /// <summary>Whether <paramref name="connection"/> can lock row <paramref name="id"/> of <paramref name="table"/> right now (FOR UPDATE NOWAIT, released at once).</summary>
+    private static async Task<bool> CanLockAsync(NpgsqlConnection connection, string table, long id, CancellationToken ct)
+    {
+        await using var tx = await connection.BeginTransactionAsync(ct);
+        await using var command = new NpgsqlCommand($"""SELECT 1 FROM "{table}" WHERE "Id" = @id FOR UPDATE NOWAIT""", connection, tx);
+        command.Parameters.AddWithValue("id", id);
+        try
+        {
+            await command.ExecuteNonQueryAsync(ct);
+            return true;
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.LockNotAvailable)
+        {
+            return false;
+        }
+        finally
+        {
+            await tx.RollbackAsync(ct);
+        }
     }
 }
