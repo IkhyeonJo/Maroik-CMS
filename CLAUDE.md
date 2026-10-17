@@ -334,7 +334,8 @@ Also `error`, by rule ID:
   `Thread.Sleep`) or write to `Console`. It is wired in `Directory.Build.props` for every `.csproj` whose name does not end
   in `.Tests` (a build-time analyzer, `PrivateAssets=all`, so not a runtime dependency — the `.csproj` package graph that
   `SolutionLayeringArchitectureTests` checks is unchanged). A method ID names one overload, so the file lists every overload;
-  pin the analyzer version to the SDK's compiler (Roslyn 5.0 → 5.0.0).
+  before bumping the analyzer, check that the `Microsoft.CodeAnalysis` version its DLL references (not the package number;
+  5.6.0 references 4.12) is not newer than the SDK's compiler (Roslyn 5.0), or the analyzer silently fails to load (CS8032).
 
 - **Unnecessary usings** (IDE0005): it runs at build time only because `Directory.Build.props` sets
   `GenerateDocumentationFile` (which also checks doc-comment references such as `paramref`; missing doc comments, CS1591,
