@@ -60,6 +60,37 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 - **Use-case DTOs.** Self-registration, admin account creation and admin account update each have their own request type, so a registration form can never carry a role, lock or confirmation flag.
 - **Test-first development.** Every change starts with a failing test, including the log entries it must write; real PostgreSQL and RabbitMQ run in Testcontainers instead of mocks wherever the behaviour depends on them.
 
+## Development Timeline
+Maroik has been built by one developer since May 2021. It was developed in a private repository until September 2026, when the project moved to this public repository; all development now happens here. The earlier history — about 4,300 commits — stays in the private repository; those commits show on the contribution graph of the [author's GitHub profile](https://github.com/IkhyeonJo).
+
+| When | Milestone |
+|---|---|
+| 2021-05 | Project starts as *MyLaboratory*: ASP.NET Core (2.1 → .NET 5) with MariaDB, run under docker-compose from the first week |
+| 2021-06 | AdminLTE 3 layout, NonFactors MVC grid |
+| 2021-07 | Excel export, registration with e-mail confirmation, password reset, separate admin / user dashboards, English / Korean localization (resx) |
+| 2021-08 | Account book: assets, income, expenditure, fixed income / expenditure with deposit-day notices |
+| 2021-12 | MariaDB 10.6 |
+| 2022-08 | Public anonymous dashboard and landing pages |
+| 2022-09 | .NET 6 |
+| 2022-10 | Renamed to **Maroik**; Free Forum with Summernote editor, HTML sanitizing, locked and notice posts |
+| 2022-11 | Security headers |
+| 2023-03 | .NET 7 |
+| 2024-02 | .NET 8 |
+| 2024-05 | Private notes, default monetary unit, dashboard year / month selection |
+| 2024-06 – 09 | Calendar (FullCalendar): calendars, events, reminders, sharing, browsing others' calendars |
+| 2024-09 | Maroik.FileStorage service |
+| 2025-01 | Attachments and inline images for forum posts, calendar events and private notes; server resource monitoring on the admin dashboard |
+| 2025-03 | .NET 9 |
+| 2025-04 | MariaDB → PostgreSQL |
+| 2025-05 | DNS moved from AWS Route 53 to Cloudflare; ClamAV virus scanning of uploads |
+| 2025-12 | Project split into Core layers (Repository, Service, Client, PostgreSQL) |
+| 2026-04 | Maroik.Core.Contract; first unit tests |
+| 2026-05 – 08 | DDD + Clean Architecture refactor, ending with the Maroik.Core.Domain project; CI/CD with a coverage gate; Serilog |
+| 2026-07 | Valkey (replacing Redis), RabbitMQ and the Maroik.Worker mail service |
+| 2026-09 | Client scripts migrated to TypeScript; repository and E2E tests on real PostgreSQL (Testcontainers); a series of whole-solution reviews fixing race conditions and security gaps; strict TDD and logging rules; mutation testing (Domain 78 % → 92 %) |
+| 2026-09-28 | Moved from the private repository to this public repository, where all development continues |
+| 2026-10 | Service mutation score 70 % → 96 %; TLS ended at Cloudflare through a Cloudflare Tunnel; RSA replaced with ASP.NET Core Data Protection; memory-safety, logging-template, security and banned-API analyzers as build errors; admin and menu safeguards against locking administrators out |
+
 ## Architecture
 
 ### Layers — DDD + Clean Architecture
