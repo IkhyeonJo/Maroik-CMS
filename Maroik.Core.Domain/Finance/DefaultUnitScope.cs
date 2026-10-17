@@ -21,9 +21,12 @@ public sealed class DefaultUnitScope
     /// <summary>Each asset's currency label, by product name.</summary>
     public IReadOnlyDictionary<string, string> CurrencyByProduct { get; }
 
-    /// <summary>The scope of <paramref name="defaultUnit"/> over <paramref name="allAssets"/> (the account's assets, deleted included).</summary>
+    /// <summary>
+    /// The scope of <paramref name="defaultUnit"/> over <paramref name="allAssets"/> (the account's assets, deleted
+    /// included). A product name is unique within an account (the <c>(ProductName, AccountEmail)</c> primary key).
+    /// </summary>
     public static DefaultUnitScope Of(string defaultUnit, IEnumerable<Asset> allAssets) =>
-        new(defaultUnit, allAssets.GroupBy(a => a.ProductName).ToDictionary(g => g.Key, g => g.Last().Balance.Currency.Value).AsReadOnly());
+        new(defaultUnit, allAssets.ToDictionary(a => a.ProductName, a => a.Balance.Currency.Value, StringComparer.Ordinal).AsReadOnly());
 
     /// <summary>Whether <paramref name="income"/> counts: its deposit asset carries the default unit.</summary>
     public bool Includes(Income income) => CarriesTheDefaultUnit(income.DepositMyAssetProductName);
