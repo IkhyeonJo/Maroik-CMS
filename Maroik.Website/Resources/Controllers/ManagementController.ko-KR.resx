@@ -243,6 +243,9 @@
   <data name="The last active administrator cannot be locked, deleted or demoted." xml:space="preserve">
     <value>마지막 활성 관리자는 잠그거나 삭제하거나 강등할 수 없습니다.</value>
   </data>
+  <data name="The menu entry that lets administrators open menu management cannot be removed, moved or given to another role." xml:space="preserve">
+    <value>관리자가 메뉴 관리에 들어가는 메뉴 항목은 삭제하거나, 옮기거나, 다른 역할로 바꿀 수 없습니다.</value>
+  </data>
   <data name="This account has already been created." xml:space="preserve">
     <value>이미 생성된 계정입니다.</value>
   </data>

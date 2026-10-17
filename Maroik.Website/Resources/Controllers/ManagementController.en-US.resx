@@ -243,6 +243,9 @@
   <data name="The last active administrator cannot be locked, deleted or demoted." xml:space="preserve">
     <value>The last active administrator cannot be locked, deleted or demoted.</value>
   </data>
+  <data name="The menu entry that lets administrators open menu management cannot be removed, moved or given to another role." xml:space="preserve">
+    <value>The menu entry that lets administrators open menu management cannot be removed, moved or given to another role.</value>
+  </data>
   <data name="This account has already been created." xml:space="preserve">
     <value>This account has already been created.</value>
   </data>

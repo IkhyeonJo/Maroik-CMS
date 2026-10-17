@@ -36,6 +36,16 @@ public class MenuServiceTests
         _unitOfWork.Object,
         _logger);
 
+    /// <summary>
+    /// Every menu write locks the whole menu first. By default it is empty — no route to menu management, so the menu
+    /// safeguard lets every change through — unless a test seeds one with <see cref="SeedMenuManagementRoute"/>.
+    /// </summary>
+    public MenuServiceTests()
+    {
+        _categoryRepo.Setup(r => r.GetAllForUpdateAsync(It.IsAny<CancellationToken>())).ReturnsAsync(() => []);
+        _subCategoryRepo.Setup(r => r.GetAllForUpdateAsync(It.IsAny<CancellationToken>())).ReturnsAsync(() => []);
+    }
+
     // -- Helpers --------------------------------------------------------------
 
     /// <summary>A persisted category named <paramref name="name"/>.</summary>
@@ -664,5 +674,214 @@ public class MenuServiceTests
 
         Assert.Equal("Menu.DeleteSubCategoryFailed", result.ErrorCode);
         AssertLoggedError("Failed to delete sub-category Notice", thrown);
+    }
+
+    // -- Menu safeguard: the administrators' last route to menu management stays ---------
+
+    /// <summary>The seeded Admin "Management" category (a dropdown: no action of its own).</summary>
+    private static Category AdminManagement() =>
+        Category.Reconstitute(2, "Management", "Management", "nav-icon fas fa-cog", "Management", "", Role.Admin, 4);
+
+    /// <summary>The seeded Admin "Menu" item under <see cref="AdminManagement"/>.</summary>
+    private static SubCategory AdminMenu() =>
+        SubCategory.Reconstitute(3, 2, "Menu", "Menu", "far fa-circle nav-icon", "Menu", Role.Admin, 3);
+
+    /// <summary>The locked menu holds exactly one route to Management/Menu: category 2 with its item 3 (fresh rows per call).</summary>
+    private void SeedMenuManagementRoute()
+    {
+        _categoryRepo.Setup(r => r.GetAllForUpdateAsync(It.IsAny<CancellationToken>())).ReturnsAsync(() => [AdminManagement()]);
+        _subCategoryRepo.Setup(r => r.GetAllForUpdateAsync(It.IsAny<CancellationToken>())).ReturnsAsync(() => [AdminMenu()]);
+    }
+
+    /// <summary>
+    /// Asserts the safeguard's refusal: the domain conflict (its English template is the resx key), a rollback with no
+    /// commit, and one Warning naming what was refused, for whom and why.
+    /// </summary>
+    private void AssertRefusedAndRolledBack(ServiceResult result, string warning)
+    {
+        Assert.False(result.Success);
+        Assert.Equal(ServiceErrorType.Conflict, result.ErrorType);
+        Assert.Equal("Menu.LastMenuManagementRoute", result.ErrorCode);
+        Assert.Equal(
+            "The menu entry that lets administrators open menu management cannot be removed, moved or given to another role.",
+            result.ErrorKey);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+        FakeLogRecord record = Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Warning);
+        Assert.Equal(warning, record.Message);
+        Assert.Null(record.Exception);
+    }
+
+    /// <summary>Handing the last route's category to another role is refused and nothing is written.</summary>
+    [Fact]
+    public async Task UpdateCategoryAsync_RefusesTakingTheLastMenuManagementRouteAway()
+    {
+        SeedMenuManagementRoute();
+        _categoryRepo.Setup(r => r.FindByIdForUpdateAsync(2, It.IsAny<CancellationToken>())).ReturnsAsync(AdminManagement());
+
+        ServiceResult result = await CreateSut().UpdateCategoryAsync(new CategoryRequest
+        {
+            Id = 2, Name = "Management", DisplayName = "Management", Controller = "Management", Action = "", Role = Role.User, Order = 4
+        }, Actor, TestContext.Current.CancellationToken);
+
+        AssertRefusedAndRolledBack(result, "Menu category 2 update refused for admin admin@example.com: Menu.LastMenuManagementRoute");
+        _categoryRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Category>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Refused too when the row being edited is the very instance the locked menu holds: the "before" verdict is taken
+    /// before the in-place update, so the change is not judged against itself.
+    /// </summary>
+    [Fact]
+    public async Task UpdateCategoryAsync_RefusesTheChange_WhenTheEditedRowIsTheLockedInstance()
+    {
+        Category management = AdminManagement();
+        _categoryRepo.Setup(r => r.GetAllForUpdateAsync(It.IsAny<CancellationToken>())).ReturnsAsync([management]);
+        _subCategoryRepo.Setup(r => r.GetAllForUpdateAsync(It.IsAny<CancellationToken>())).ReturnsAsync([AdminMenu()]);
+        _categoryRepo.Setup(r => r.FindByIdForUpdateAsync(2, It.IsAny<CancellationToken>())).ReturnsAsync(management);
+
+        ServiceResult result = await CreateSut().UpdateCategoryAsync(new CategoryRequest
+        {
+            Id = 2, Name = "Management", DisplayName = "Management", Controller = "Dashboard", Action = "", Role = Role.Admin, Order = 4
+        }, Actor, TestContext.Current.CancellationToken);
+
+        AssertRefusedAndRolledBack(result, "Menu category 2 update refused for admin admin@example.com: Menu.LastMenuManagementRoute");
+    }
+
+    /// <summary>Pointing the last route's item at another action is refused and nothing is written.</summary>
+    [Fact]
+    public async Task UpdateSubCategoryAsync_RefusesTakingTheLastMenuManagementRouteAway()
+    {
+        SeedMenuManagementRoute();
+        _subCategoryRepo.Setup(r => r.FindByIdForUpdateAsync(3, It.IsAny<CancellationToken>())).ReturnsAsync(AdminMenu());
+
+        ServiceResult result = await CreateSut().UpdateSubCategoryAsync(new SubCategoryRequest
+        {
+            Id = 3, CategoryId = 2, Name = "Menu", DisplayName = "Menu", Action = "Account", Role = Role.Admin, Order = 3
+        }, Actor, TestContext.Current.CancellationToken);
+
+        AssertRefusedAndRolledBack(result, "Menu sub-category 3 update refused for admin admin@example.com: Menu.LastMenuManagementRoute");
+        _subCategoryRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<SubCategory>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A change that keeps the route (here a new label and order) still goes through.</summary>
+    [Fact]
+    public async Task UpdateSubCategoryAsync_CommitsAChangeThatKeepsTheRoute()
+    {
+        SeedMenuManagementRoute();
+        _subCategoryRepo.Setup(r => r.FindByIdForUpdateAsync(3, It.IsAny<CancellationToken>())).ReturnsAsync(AdminMenu());
+
+        ServiceResult result = await CreateSut().UpdateSubCategoryAsync(new SubCategoryRequest
+        {
+            Id = 3, CategoryId = 2, Name = "Menu", DisplayName = "Menu settings", Action = "Menu", Role = Role.Admin, Order = 9
+        }, Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _subCategoryRepo.Verify(r => r.UpdateEntityAsync(It.Is<SubCategory>(s => s.Id == 3 && s.Order == 9), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>Deleting the last route's category (which would take its items with it) is refused.</summary>
+    [Fact]
+    public async Task DeleteCategoryAsync_RefusesTakingTheLastMenuManagementRouteAway()
+    {
+        SeedMenuManagementRoute();
+
+        ServiceResult result = await CreateSut().DeleteCategoryAsync(new CategoryRequest { Id = 2, Name = "Management" }, Actor, TestContext.Current.CancellationToken);
+
+        AssertRefusedAndRolledBack(result, "Menu category 2 delete refused for admin admin@example.com: Menu.LastMenuManagementRoute");
+        _categoryRepo.Verify(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>Deleting the last route's item is refused.</summary>
+    [Fact]
+    public async Task DeleteSubCategoryAsync_RefusesTakingTheLastMenuManagementRouteAway()
+    {
+        SeedMenuManagementRoute();
+
+        ServiceResult result = await CreateSut().DeleteSubCategoryAsync(new SubCategoryRequest { Id = 3, Name = "Menu" }, Actor, TestContext.Current.CancellationToken);
+
+        AssertRefusedAndRolledBack(result, "Menu sub-category 3 delete refused for admin admin@example.com: Menu.LastMenuManagementRoute");
+        _subCategoryRepo.Verify(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A category delete now runs in a transaction (the menu stays locked from the check to the delete) and commits.</summary>
+    [Fact]
+    public async Task DeleteCategoryAsync_BeginsAndCommitsTheTransaction_OnSuccess()
+    {
+        ServiceResult result = await CreateSut().DeleteCategoryAsync(new CategoryRequest { Id = 1, Name = "Forum" }, Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _categoryRepo.Verify(r => r.DeleteByIdAsync(1, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A sub-category delete now runs in a transaction and commits.</summary>
+    [Fact]
+    public async Task DeleteSubCategoryAsync_BeginsAndCommitsTheTransaction_OnSuccess()
+    {
+        ServiceResult result = await CreateSut().DeleteSubCategoryAsync(new SubCategoryRequest { Id = 1, Name = "Notice" }, Actor, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _subCategoryRepo.Verify(r => r.DeleteByIdAsync(1, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.BeginAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A delete that throws rolls the transaction back.</summary>
+    [Fact]
+    public async Task DeleteCategoryAsync_RollsBack_WhenTheRepositoryThrows()
+    {
+        _categoryRepo.Setup(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("boom"));
+
+        await CreateSut().DeleteCategoryAsync(new CategoryRequest { Id = 1, Name = "Forum" }, Actor, TestContext.Current.CancellationToken);
+
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>A sub-category delete that throws rolls the transaction back.</summary>
+    [Fact]
+    public async Task DeleteSubCategoryAsync_RollsBack_WhenTheRepositoryThrows()
+    {
+        _subCategoryRepo.Setup(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("boom"));
+
+        await CreateSut().DeleteSubCategoryAsync(new SubCategoryRequest { Id = 1, Name = "Notice" }, Actor, TestContext.Current.CancellationToken);
+
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Every menu write takes its locks in one order — all categories, then all sub-categories, then the edited row —
+    /// so two concurrent menu writes cannot deadlock, and the safeguard judges a menu nobody else can change meanwhile.
+    /// </summary>
+    [Fact]
+    public async Task MenuWrites_LockCategoriesThenSubCategoriesThenTheEditedRow()
+    {
+        List<string> calls = [];
+        _categoryRepo.Setup(r => r.GetAllForUpdateAsync(It.IsAny<CancellationToken>())).Callback(() => calls.Add("categories")).ReturnsAsync(() => []);
+        _subCategoryRepo.Setup(r => r.GetAllForUpdateAsync(It.IsAny<CancellationToken>())).Callback(() => calls.Add("subCategories")).ReturnsAsync(() => []);
+        _categoryRepo.Setup(r => r.FindByIdForUpdateAsync(1, It.IsAny<CancellationToken>())).Callback(() => calls.Add("category row")).ReturnsAsync(MakeCategory(id: 1));
+        _subCategoryRepo.Setup(r => r.FindByIdForUpdateAsync(1, It.IsAny<CancellationToken>())).Callback(() => calls.Add("sub-category row")).ReturnsAsync(MakeSubCategory(id: 1));
+        _categoryRepo.Setup(r => r.DeleteByIdAsync(1, It.IsAny<CancellationToken>())).Callback(() => calls.Add("category delete")).Returns(Task.CompletedTask);
+        _subCategoryRepo.Setup(r => r.DeleteByIdAsync(1, It.IsAny<CancellationToken>())).Callback(() => calls.Add("sub-category delete")).Returns(Task.CompletedTask);
+        MenuService sut = CreateSut();
+
+        _ = await sut.UpdateCategoryAsync(new CategoryRequest { Id = 1, Name = "Forum" }, Actor, TestContext.Current.CancellationToken);
+        _ = await sut.UpdateSubCategoryAsync(new SubCategoryRequest { Id = 1, CategoryId = 1, Name = "Notice" }, Actor, TestContext.Current.CancellationToken);
+        _ = await sut.DeleteCategoryAsync(new CategoryRequest { Id = 1, Name = "Forum" }, Actor, TestContext.Current.CancellationToken);
+        _ = await sut.DeleteSubCategoryAsync(new SubCategoryRequest { Id = 1, Name = "Notice" }, Actor, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+        [
+            "categories", "subCategories", "category row",
+            "categories", "subCategories", "sub-category row",
+            "categories", "subCategories", "category delete",
+            "categories", "subCategories", "sub-category delete",
+        ], calls);
     }
 }

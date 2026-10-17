@@ -163,4 +163,53 @@ public sealed class SubCategoryRepositoryTests(DatabaseFixture database) : Repos
         Assert.True(await Context.SubCategories.AnyAsync(sc => sc.Id == keep.Id, TestContext.Current.CancellationToken));
         Assert.False(await Context.SubCategories.AnyAsync(sc => sc.Id == remove.Id, TestContext.Current.CancellationToken));
     }
+
+    // -- GetAllForUpdateAsync -----------------------------------------------
+
+    /// <summary>
+    /// Every sub-category comes back — the seeded ones and this test's — in id order (the lock order every menu write
+    /// shares).
+    /// </summary>
+    [Fact]
+    public async Task GetAllForUpdateAsync_ReturnsEverySubCategory_InIdOrder()
+    {
+        long catId = await SeedCategoryAsync();
+        var first = MakeSubCategory(catId, Unique("First"));
+        var second = MakeSubCategory(catId, Unique("Second"));
+        await SeedAsync(first, second);
+
+        await using var unitOfWork = new UnitOfWork(Context);
+        await unitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
+        List<SubCategory> result = await Sut.GetAllForUpdateAsync(TestContext.Current.CancellationToken);
+        await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            await Context.SubCategories.OrderBy(sc => sc.Id).Select(sc => sc.Id).ToListAsync(TestContext.Current.CancellationToken),
+            result.Select(sc => sc.Id));
+        Assert.Contains(result, sc => sc.Id == first.Id && sc.Name == first.Name && sc.CategoryId == catId);
+        Assert.Contains(result, sc => sc.Id == second.Id && sc.Name == second.Name && sc.CategoryId == catId);
+    }
+
+    /// <summary>The returned rows stay locked until the transaction ends: another transaction cannot take them meanwhile.</summary>
+    [Fact]
+    public async Task GetAllForUpdateAsync_LocksTheRowsUntilTheTransactionEnds()
+    {
+        long catId = await SeedCategoryAsync();
+        var subCategory = MakeSubCategory(catId, Unique("Locked"));
+        await SeedAsync(subCategory);
+
+        await using var unitOfWork = new UnitOfWork(Context);
+        await unitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
+        _ = await Sut.GetAllForUpdateAsync(TestContext.Current.CancellationToken);
+
+        await using var other = NewDbContext();
+        await using var otherUnitOfWork = new UnitOfWork(other);
+        await otherUnitOfWork.BeginAsync(ct: TestContext.Current.CancellationToken);
+        var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(() => other.Database.ExecuteSqlInterpolatedAsync(
+            $"""SELECT 1 FROM "SubCategory" WHERE "Id" = {subCategory.Id} FOR UPDATE NOWAIT""", TestContext.Current.CancellationToken));
+        Assert.Equal(Npgsql.PostgresErrorCodes.LockNotAvailable, ex.SqlState);
+        await otherUnitOfWork.RollbackAsync(TestContext.Current.CancellationToken);
+
+        await unitOfWork.CommitAsync(TestContext.Current.CancellationToken);
+    }
 }
