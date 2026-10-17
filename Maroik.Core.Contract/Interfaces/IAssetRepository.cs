@@ -12,6 +12,14 @@ public interface IAssetRepository : IGenericRepository<Asset>
     /// </summary>
     Task<int> UpdateAssetWithProductNameAsync(Asset asset, string originalProductName, CancellationToken ct = default);
 
+    /// <summary>
+    /// Row-locks (SELECT ... FOR UPDATE) every income, fixed income, expenditure and fixed expenditure of the account
+    /// that names <paramref name="productName"/> (as deposit asset, payment method or transfer deposit asset), table by
+    /// table and in id order. A rename takes these locks before the asset's own: its <c>ON UPDATE CASCADE</c> rewrites
+    /// those rows, and a record edit locks its record before its assets, so taking the asset first would deadlock with it.
+    /// </summary>
+    Task LockReferencingRecordsAsync(string accountEmail, string productName, CancellationToken ct = default);
+
     /// <summary>Returns all assets belonging to the given account.</summary>
     Task<List<Asset>> GetByAccountEmailAsync(string accountEmail, CancellationToken ct = default);
 

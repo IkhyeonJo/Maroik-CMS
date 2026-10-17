@@ -37,6 +37,41 @@ public class AssetRepository(ApplicationDbContext context)
              """, ct);
     }
 
+    /// <inheritdoc />
+    public async Task LockReferencingRecordsAsync(string accountEmail, string productName, CancellationToken ct = default)
+    {
+        // One statement per table (FOR UPDATE cannot follow a UNION), always in this table order and each in id order,
+        // so two renames locking overlapping records take them in the same order.
+        await Context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             SELECT 1 FROM "Income"
+             WHERE "AccountEmail" = {accountEmail} AND "DepositMyAssetProductName" = {productName}
+             ORDER BY "Id"
+             FOR UPDATE
+             """, ct);
+        await Context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             SELECT 1 FROM "FixedIncome"
+             WHERE "AccountEmail" = {accountEmail} AND "DepositMyAssetProductName" = {productName}
+             ORDER BY "Id"
+             FOR UPDATE
+             """, ct);
+        await Context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             SELECT 1 FROM "Expenditure"
+             WHERE "AccountEmail" = {accountEmail} AND ("PaymentMethod" = {productName} OR "MyDepositAsset" = {productName})
+             ORDER BY "Id"
+             FOR UPDATE
+             """, ct);
+        await Context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             SELECT 1 FROM "FixedExpenditure"
+             WHERE "AccountEmail" = {accountEmail} AND ("PaymentMethod" = {productName} OR "MyDepositAsset" = {productName})
+             ORDER BY "Id"
+             FOR UPDATE
+             """, ct);
+    }
+
     /// <summary>Maps a persisted <see cref="OrmAsset"/> row to the <see cref="Asset"/> domain object.</summary>
     protected override Asset ToDomain(OrmAsset e) => Asset.Reconstitute(
         e.ProductName, e.AccountEmail, e.Item,

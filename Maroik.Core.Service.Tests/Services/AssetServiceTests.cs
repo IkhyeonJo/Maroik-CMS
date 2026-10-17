@@ -321,6 +321,43 @@ public class AssetServiceTests
         _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// A rename locks the records naming the asset before the asset itself: the cascade rewrites those records, and a
+    /// record edit locks its record before its assets, so the asset-first order deadlocks with it.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAsync_Rename_LocksTheReferencingRecords_BeforeTheAsset()
+    {
+        List<string> calls = [];
+        _assetRepo.Setup(r => r.LockReferencingRecordsAsync(Email, "OldName", It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("records")).Returns(Task.CompletedTask);
+        _assetRepo.Setup(r => r.FindByEmailAndProductNameForUpdateAsync(Email, "OldName", It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("asset")).ReturnsAsync(MakeAsset("OldName"));
+        _assetRepo.Setup(r => r.UpdateAssetWithProductNameAsync(It.IsAny<Asset>(), "OldName", It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, ValidRequest("NewName"), "OldName", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal(["records", "asset"], calls);
+    }
+
+    /// <summary>An update that keeps the name cascades nothing, so it locks no record.</summary>
+    [Theory]
+    [InlineData("MyBank")]
+    [InlineData(null)]
+    public async Task UpdateAsync_KeepingTheName_LocksNoRecord(string? requestedName)
+    {
+        SetupFindAsset(MakeAsset("MyBank"));
+        _assetRepo.Setup(r => r.UpdateAssetWithProductNameAsync(It.IsAny<Asset>(), "MyBank", It.IsAny<CancellationToken>())).ReturnsAsync(1);
+        AssetRequest request = ValidRequest();
+        request.ProductName = requestedName;
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, request, "MyBank", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        _assetRepo.Verify(r => r.LockReferencingRecordsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // -- DeleteAsync ----------------------------------------------------------
 
     /// <summary>Verifies that <c>DeleteAsync</c> returns fail when asset not found.</summary>

@@ -106,6 +106,12 @@ public class AssetService(
                 return ServiceResult.Validation("Asset.ItemInvalid", ServiceErrorKeys.AssetItemInvalid);
             }
 
+            // A rename's ON UPDATE CASCADE rewrites every record naming the asset. An income / expenditure edit locks
+            // its record first and its assets second, so the rename takes those records before the asset too —
+            // locking the asset first would leave each transaction holding what the other waits for (a deadlock).
+            if (request.ProductName is { } newName && !string.Equals(newName, originalProductName, StringComparison.Ordinal))
+                await assetRepository.LockReferencingRecordsAsync(accountEmail, originalProductName, ct);
+
             // Row-locks the asset for the rest of this transaction (held until commit/rollback),
             // so a concurrent Income/Expenditure balance mutation on the same asset can't be lost
             // under this action's absolute-overwrite of Balance.
