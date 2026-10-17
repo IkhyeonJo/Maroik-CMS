@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Maroik.Core.Contract.Interfaces;
+using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Website.Tests.Infrastructure;
@@ -318,7 +319,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     private string EncryptToken(string rawToken)
     {
         using var scope = factory.Services.CreateScope();
-        return scope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
+        return scope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(ProtectedValue.MailToken, rawToken);
     }
 
     /// <summary>The stored <c>EmailConfirmed</c> flag of <paramref name="email"/>.</summary>
@@ -484,7 +485,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
         using var scope = factory.Services.CreateScope();
         var protector = scope.ServiceProvider.GetRequiredService<IDataProtectionService>();
-        string encryptedToken = protector.Protect(rawToken);
+        string encryptedToken = protector.Protect(ProtectedValue.MailToken, rawToken);
 
         var response = await _client.GetAsync($"/Account/ResetPassword?resetPasswordToken={Uri.EscapeDataString(encryptedToken)}", TestContext.Current.CancellationToken);
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
@@ -505,7 +506,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
         using var scope = factory.Services.CreateScope();
         var protector = scope.ServiceProvider.GetRequiredService<IDataProtectionService>();
-        string encryptedToken = protector.Protect(rawToken);
+        string encryptedToken = protector.Protect(ProtectedValue.MailToken, rawToken);
 
         var response = await PostFormAsync("/Account/ResetPassword", new Dictionary<string, string>
         {
@@ -600,7 +601,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     {
         using var scope = factory.Services.CreateScope();
         var protector = scope.ServiceProvider.GetRequiredService<IDataProtectionService>();
-        string encryptedToken = protector.Protect(GuidToken.Generate(DateTime.UtcNow)); // well-formed but not stored on any account
+        string encryptedToken = protector.Protect(ProtectedValue.MailToken, GuidToken.Generate(DateTime.UtcNow)); // well-formed but not stored on any account
 
         var response = await PostFormAsync("/Account/ResetPassword", new Dictionary<string, string>
         {
@@ -628,7 +629,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
         using var scope = factory.Services.CreateScope();
         var protector = scope.ServiceProvider.GetRequiredService<IDataProtectionService>();
-        string encryptedToken = protector.Protect(rawToken);
+        string encryptedToken = protector.Protect(ProtectedValue.MailToken, rawToken);
 
         var response = await PostFormAsync("/Account/ResetPassword", new Dictionary<string, string>
         {
@@ -789,7 +790,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         string rawToken = GuidToken.Generate(DateTime.UtcNow);
         await SeedAccountAsync(email, emailConfirmed: true, resetPasswordToken: rawToken);
         using var scope = factory.Services.CreateScope();
-        string encryptedToken = scope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
+        string encryptedToken = scope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(ProtectedValue.MailToken, rawToken);
 
         var response = await PostFormAsync("/Account/ResetPassword", new Dictionary<string, string>
         {

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
+using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Contract.Misc.Settings;
 using Maroik.Core.Domain.Media;
 using Microsoft.Extensions.Logging;
@@ -109,7 +110,7 @@ public class AttachmentContentService(
             {
                 byte[] fileData = await fileClient.DownloadAsync(alt, settings.Value.FileStorageBaseUrl ?? "", token);
                 return new HtmlImgPatch(
-                    NewAlt: dataProtection.Protect(alt),
+                    NewAlt: dataProtection.Protect(ProtectedValue.StoredFilePath, alt),
                     DataFile: Convert.ToBase64String(fileData),
                     DataContentType: GetImageContentType(alt));
             }
@@ -164,7 +165,7 @@ public class AttachmentContentService(
         if (string.IsNullOrEmpty(alt)) return null;
         try
         {
-            return dataProtection.Unprotect(alt);
+            return dataProtection.Unprotect(ProtectedValue.StoredFilePath, alt);
         }
         catch (Exception ex)
         {

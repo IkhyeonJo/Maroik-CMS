@@ -1,3 +1,5 @@
+using Maroik.Core.Contract.Misc.Enums;
+
 namespace Maroik.Core.Contract.Interfaces;
 
 /// <summary>
@@ -9,13 +11,13 @@ namespace Maroik.Core.Contract.Interfaces;
 /// </summary>
 public interface IDataProtectionService
 {
-    /// <summary>Protects <paramref name="plaintext"/> and returns it as a URL-safe (base64url) string.</summary>
-    string Protect(string plaintext);
+    /// <summary>Protects <paramref name="plaintext"/> as a <paramref name="kind"/> and returns it as a URL-safe (base64url) string.</summary>
+    string Protect(ProtectedValue kind, string plaintext);
 
     /// <summary>
-    /// Recovers the plaintext of a value <see cref="Protect"/> produced. Throws a
+    /// Recovers the plaintext of a value <see cref="Protect"/> produced for the same <paramref name="kind"/>. Throws a
     /// <see cref="System.Security.Cryptography.CryptographicException"/> for anything else — a malformed, tampered
-    /// or foreign value.
+    /// or foreign value, or one protected as the other kind.
     /// </summary>
-    string Unprotect(string protectedValue);
+    string Unprotect(ProtectedValue kind, string protectedValue);
 }

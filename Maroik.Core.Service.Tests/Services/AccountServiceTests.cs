@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
+using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Contract.Misc.Helpers;
 using Maroik.Core.Contract.Misc.Messaging;
 using Maroik.Core.Contract.Misc.Settings;
@@ -308,7 +309,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
         _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$hashed");
         _accountRepo.Setup(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         SetupMailSuccess();
         var sut = CreateSut();
 
@@ -340,7 +341,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()))
             .Callback<Account, CancellationToken>((a, _) => created = a)
             .Returns(Task.CompletedTask);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         SetupMailSuccess();
 
         var request = new RegisterAccountRequest
@@ -457,7 +458,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()))
             .Callback<Account, CancellationToken>((a, _) => created = a)
             .Returns(Task.CompletedTask);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         SetupMailSuccess();
         var sut = CreateSut();
 
@@ -479,7 +480,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
         _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$hashed");
         _accountRepo.Setup(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         SetupMailSuccess();
         using var activity = new Activity("test-request");
         activity.Start();
@@ -507,7 +508,7 @@ public class AccountServiceTests
         _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$hashed");
         _accountRepo.Setup(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         SetupMailFailure();
         var sut = CreateSut();
 
@@ -535,7 +536,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
         _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$hashed");
         _accountRepo.Setup(r => r.CreateAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Throws(new InvalidOperationException("key misconfigured"));
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Throws(new InvalidOperationException("key misconfigured"));
         var sut = CreateSut();
 
         var request = new RegisterAccountRequest
@@ -613,7 +614,7 @@ public class AccountServiceTests
         string token = GuidToken.Generate(Now);
         var existing = ActiveAccount(emailConfirmed: false, registrationToken: token);
         SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         SetupMailSuccess();
         var sut = CreateSut();
 
@@ -718,7 +719,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ConfirmEmailAsync_ReturnsInvalidToken_WhenDecryptionFails()
     {
-        _dataProtection.Setup(r => r.Unprotect(It.IsAny<string>())).Throws(new Exception("bad cipher"));
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, It.IsAny<string>())).Throws(new Exception("bad cipher"));
         var sut = CreateSut();
 
         ConfirmEmailResult result = await sut.ConfirmEmailAsync("bad-encrypted-token", ConfirmPassword, TestContext.Current.CancellationToken);
@@ -732,7 +733,7 @@ public class AccountServiceTests
     public async Task ConfirmEmailAsync_ReturnsInvalidToken_WhenAccountNotFound()
     {
         string freshToken = GuidToken.Generate(Now);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(freshToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
         var sut = CreateSut();
 
@@ -747,7 +748,7 @@ public class AccountServiceTests
     public async Task ConfirmEmailAsync_ReturnsInvalidToken_WhenTokenIsExpired()
     {
         string expiredToken = BuildExpiredToken();
-        _dataProtection.Setup(r => r.Unprotect("enc-expired")).Returns(expiredToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc-expired")).Returns(expiredToken);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ActiveAccount());
         var sut = CreateSut();
@@ -764,7 +765,7 @@ public class AccountServiceTests
     {
         string freshToken = GuidToken.Generate(Now);
         var account = ActiveAccount(emailConfirmed: false, registrationToken: freshToken);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(freshToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.UpdateEmailConfirmationAsync(
@@ -793,7 +794,7 @@ public class AccountServiceTests
     {
         string freshToken = GuidToken.Generate(Now);
         var account = ActiveAccount(emailConfirmed: false, registrationToken: freshToken);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(freshToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.UpdateEmailConfirmationAsync(
@@ -818,7 +819,7 @@ public class AccountServiceTests
     {
         string freshToken = GuidToken.Generate(Now);
         var account = ActiveAccount(emailConfirmed: false, registrationToken: freshToken);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(freshToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.UpdateEmailConfirmationAsync(
@@ -837,7 +838,7 @@ public class AccountServiceTests
     {
         string freshToken = GuidToken.Generate(Now);
         var account = ActiveAccount(emailConfirmed: true);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(freshToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.UpdateMessageAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
@@ -920,7 +921,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.UpdateResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
         _accountRepo.Setup(r => r.UpdateMessageAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-reset-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-reset-token");
         SetupMailSuccess();
         var sut = CreateSut();
 
@@ -945,7 +946,7 @@ public class AccountServiceTests
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.UpdateResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
         _accountRepo.Setup(r => r.UpdateMessageAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(1);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-reset-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-reset-token");
         SetupMailSuccess();
         var sut = CreateSut();
 
@@ -965,7 +966,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ValidateResetPasswordTokenAsync_ReturnsFailToReset_WhenDecryptionFails()
     {
-        _dataProtection.Setup(r => r.Unprotect(It.IsAny<string>())).Throws(new Exception("bad cipher"));
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, It.IsAny<string>())).Throws(new Exception("bad cipher"));
         var sut = CreateSut();
 
         ResetPasswordValidationResult result = await sut.ValidateResetPasswordTokenAsync("bad", TestContext.Current.CancellationToken);
@@ -978,7 +979,7 @@ public class AccountServiceTests
     public async Task ValidateResetPasswordTokenAsync_ReturnsFailToReset_WhenTokenExpired()
     {
         string expiredToken = BuildExpiredToken();
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(expiredToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(expiredToken);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ActiveAccount());
         var sut = CreateSut();
@@ -993,7 +994,7 @@ public class AccountServiceTests
     public async Task ValidateResetPasswordTokenAsync_ReturnsToken_WhenValid()
     {
         string freshToken = GuidToken.Generate(Now);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(freshToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ActiveAccount());
         var sut = CreateSut();
@@ -1010,7 +1011,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ResetPasswordAsync_ReturnsFail_WhenDecryptionFails()
     {
-        _dataProtection.Setup(r => r.Unprotect(It.IsAny<string>())).Throws(new Exception("bad cipher"));
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, It.IsAny<string>())).Throws(new Exception("bad cipher"));
         var sut = CreateSut();
 
         (ServiceResult result, _) = await sut.ResetPasswordAsync("bad", "newpass", TestContext.Current.CancellationToken);
@@ -1023,7 +1024,7 @@ public class AccountServiceTests
     public async Task ResetPasswordAsync_ReturnsFail_WhenTokenExpired()
     {
         string expiredToken = BuildExpiredToken();
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(expiredToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(expiredToken);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ActiveAccount());
         var sut = CreateSut();
@@ -1039,7 +1040,7 @@ public class AccountServiceTests
     {
         string freshToken = GuidToken.Generate(Now);
         var account = ActiveAccount(locked: true, loginAttempt: 3, resetPasswordToken: freshToken);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(freshToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _passwordService.Setup(p => p.HashPassword("NewPass1!")).Returns("$2a$13$newhash");
@@ -1066,7 +1067,7 @@ public class AccountServiceTests
         string freshToken = GuidToken.Generate(Now);
         var account = ActiveAccount(email: "reset@example.com", locked: true, loginAttempt: 3, resetPasswordToken: freshToken);
         string oldStamp = account.SecurityStamp;
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(freshToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _passwordService.Setup(p => p.HashPassword("NewPass1!")).Returns("$2a$13$newhash");
@@ -1092,7 +1093,7 @@ public class AccountServiceTests
     {
         string freshToken = GuidToken.Generate(Now);
         var account = ActiveAccount(agreedServiceTerms: false, resetPasswordToken: freshToken);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(freshToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(freshToken);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _passwordService.Setup(p => p.HashPassword("NewPass1!")).Returns("$2a$13$newhash");
@@ -1237,7 +1238,7 @@ public class AccountServiceTests
         string expired = BuildExpiredToken();
         var existing = ActiveAccount(emailConfirmed: false, registrationToken: expired);
         SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         SetupMailSuccess();
 
         RegisterResult result = await CreateSut().RegisterAsync(NewRegistration(), _emailTemplate, TestContext.Current.CancellationToken);
@@ -1276,7 +1277,7 @@ public class AccountServiceTests
         string squatterToken = GuidToken.Generate(Now);
         var existing = ActiveAccount(emailConfirmed: false, registrationToken: squatterToken); // nickname "User", time zone "UTC"
         SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         SetupMailSuccess();
         Account? saved = null;
         _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()))
@@ -1326,7 +1327,7 @@ public class AccountServiceTests
         var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now)); // nickname "User"
         SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
         _accountRepo.Setup(r => r.NicknameExistsIgnoreCaseAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         SetupMailSuccess();
 
         RegisterResult result = await CreateSut().RegisterAsync(NewRegistration(nickname: "user"), _emailTemplate, TestContext.Current.CancellationToken);
@@ -1432,7 +1433,7 @@ public class AccountServiceTests
         string expired = BuildExpiredToken();
         var account = ActiveAccount(emailConfirmed: false, registrationToken: expired);
         SetupUnconfirmedAccountForRegister(account, lockedRead: account);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         SetupMailSuccess();
 
         RegisterResult result = await CreateSut().ResendConfirmationEmailAsync(account.Email.Value, _emailTemplate, TestContext.Current.CancellationToken);
@@ -1482,7 +1483,7 @@ public class AccountServiceTests
     {
         var account = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
         SetupUnconfirmedAccountForRegister(account, lockedRead: account);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         SetupMailSuccess();
         _accountRepo.Setup(r => r.UpdateMessageAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("db down"));
@@ -1499,7 +1500,7 @@ public class AccountServiceTests
     {
         var account = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
         SetupUnconfirmedAccountForRegister(account, lockedRead: account);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         SetupMailFailure();
         _accountRepo.Setup(r => r.UpdateMessageAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("db down"));
@@ -1560,7 +1561,7 @@ public class AccountServiceTests
     public async Task ValidateRegistrationTokenAsync_ReturnsTheTokenForTheForm_WhenTheLinkIsLive()
     {
         string token = GuidToken.Generate(Now);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(token);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(token, It.IsAny<CancellationToken>()))
             .ReturnsAsync(ActiveAccount(emailConfirmed: false, registrationToken: token));
 
@@ -1581,9 +1582,9 @@ public class AccountServiceTests
     {
         string token = kind == "expired" ? BuildExpiredToken() : GuidToken.Generate(Now);
         if (kind == "undecryptable")
-            _dataProtection.Setup(r => r.Unprotect("enc")).Throws(new FormatException("bad cipher"));
+            _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Throws(new FormatException("bad cipher"));
         else
-            _dataProtection.Setup(r => r.Unprotect("enc")).Returns(token);
+            _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(token, It.IsAny<CancellationToken>()))
             .ReturnsAsync(kind == "unknown" ? null : ActiveAccount(emailConfirmed: false, registrationToken: token));
 
@@ -1599,7 +1600,7 @@ public class AccountServiceTests
     /// <summary>Arranges e-mail confirmation: <c>"enc"</c> decrypts to <paramref name="rawToken"/>, the token lookup returns <paramref name="found"/>, and the locked re-read returns <paramref name="locked"/>.</summary>
     private void SetupConfirmLookup(Account found, Account? locked, string rawToken)
     {
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(rawToken);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(rawToken);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(found);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(locked);
     }
@@ -1681,7 +1682,7 @@ public class AccountServiceTests
     public async Task ConfirmEmailAsync_RollsBackAndRethrows_WhenTheLockedReadThrows()
     {
         string token = GuidToken.Generate(Now);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(token);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByRegistrationTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ActiveAccount(emailConfirmed: false, registrationToken: token));
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -1699,7 +1700,7 @@ public class AccountServiceTests
     public async Task ForgotPasswordAsync_StillReturnsTrue_WhenTheEqualizationWorkThrows()
     {
         _accountRepo.Setup(r => r.FindByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Throws(new InvalidOperationException("data protection down"));
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Throws(new InvalidOperationException("data protection down"));
 
         bool result = await CreateSut().ForgotPasswordAsync("ghost@example.com", _emailTemplate, TestContext.Current.CancellationToken);
 
@@ -1728,7 +1729,7 @@ public class AccountServiceTests
     {
         string token = GuidToken.Generate(Now);
         var account = ActiveAccount(resetPasswordToken: token);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(token);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
 
         (ServiceResult result, _) = await CreateSut().ResetPasswordAsync("enc", "weak", TestContext.Current.CancellationToken);
@@ -1746,7 +1747,7 @@ public class AccountServiceTests
     {
         string token = GuidToken.Generate(Now);
         var found = ActiveAccount(resetPasswordToken: token);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(token);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(found);
         _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$newhash");
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -1766,7 +1767,7 @@ public class AccountServiceTests
         string token = GuidToken.Generate(Now);
         var found = ActiveAccount(resetPasswordToken: token);
         var consumed = ActiveAccount(resetPasswordToken: null);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(token);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(found);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(consumed);
         _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$newhash");
@@ -1783,7 +1784,7 @@ public class AccountServiceTests
     {
         string token = GuidToken.Generate(Now);
         var account = ActiveAccount(resetPasswordToken: token);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(token);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$newhash");
@@ -1839,7 +1840,7 @@ public class AccountServiceTests
     {
         string token = GuidToken.Generate(Now);
         Account account = ActiveAccount(locked: locked, loginAttempt: locked ? 5 : 0, resetPasswordToken: token);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(token);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(token, It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(account.Email.Value, It.IsAny<CancellationToken>())).ReturnsAsync(account);
         _passwordService.Setup(p => p.HashPassword(It.IsAny<string>())).Returns("$2a$13$newhash");
@@ -1895,7 +1896,7 @@ public class AccountServiceTests
     public async Task ValidateRegistrationTokenAsync_LogsAWarning_WhenTheTokenDoesNotDecrypt()
     {
         var thrown = new FormatException("bad");
-        _dataProtection.Setup(r => r.Unprotect("enc")).Throws(thrown);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Throws(thrown);
 
         ConfirmEmailResult result = await CreateSut().ValidateRegistrationTokenAsync("enc", TestContext.Current.CancellationToken);
 
@@ -1907,7 +1908,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ValidateRegistrationTokenAsync_LogsAWarning_WhenTheLinkIsDead()
     {
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(BuildExpiredToken());
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(BuildExpiredToken());
 
         await CreateSut().ValidateRegistrationTokenAsync("enc", TestContext.Current.CancellationToken);
 
@@ -1919,7 +1920,7 @@ public class AccountServiceTests
     public async Task ForgotPasswordAsync_LogsAWarning_WhenTheEqualizationWorkThrows()
     {
         var thrown = new InvalidOperationException("data protection down");
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Throws(thrown);
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Throws(thrown);
 
         await CreateSut().ForgotPasswordAsync("ghost@example.com", _emailTemplate, TestContext.Current.CancellationToken);
 
@@ -1951,7 +1952,7 @@ public class AccountServiceTests
     {
         Account account = ActiveAccount();
         _accountRepo.Setup(r => r.FindByEmailAsync(account.Email.Value, It.IsAny<CancellationToken>())).ReturnsAsync(account);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         if (published) SetupMailSuccess(); else SetupMailFailure();
 
         await CreateSut().ForgotPasswordAsync(account.Email.Value, _emailTemplate, TestContext.Current.CancellationToken);
@@ -1966,7 +1967,7 @@ public class AccountServiceTests
     public async Task ValidateResetPasswordTokenAsync_LogsAWarning_WhenTheTokenDoesNotDecrypt()
     {
         var thrown = new FormatException("bad");
-        _dataProtection.Setup(r => r.Unprotect("enc")).Throws(thrown);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Throws(thrown);
 
         await CreateSut().ValidateResetPasswordTokenAsync("enc", TestContext.Current.CancellationToken);
 
@@ -1977,7 +1978,7 @@ public class AccountServiceTests
     [Fact]
     public async Task ValidateResetPasswordTokenAsync_ReportsADeadLink_WhenNoAccountHoldsTheToken()
     {
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(GuidToken.Generate(Now));
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(GuidToken.Generate(Now));
 
         ResetPasswordValidationResult result = await CreateSut().ValidateResetPasswordTokenAsync("enc", TestContext.Current.CancellationToken);
 
@@ -1990,7 +1991,7 @@ public class AccountServiceTests
     public async Task ResetPasswordAsync_RefusesAndLogs_WhenTheTokenDoesNotDecrypt()
     {
         var thrown = new FormatException("bad");
-        _dataProtection.Setup(r => r.Unprotect("enc")).Throws(thrown);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Throws(thrown);
 
         (ServiceResult result, _) = await CreateSut().ResetPasswordAsync("enc", "NewPass1!", TestContext.Current.CancellationToken);
 
@@ -2005,7 +2006,7 @@ public class AccountServiceTests
     public async Task ResetPasswordAsync_RefusesALiveTokenOfADeletedOrUnconfirmedAccount(bool deleted, bool emailConfirmed)
     {
         string token = GuidToken.Generate(Now);
-        _dataProtection.Setup(r => r.Unprotect("enc")).Returns(token);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.MailToken, "enc")).Returns(token);
         _accountRepo.Setup(r => r.FindByResetPasswordTokenAsync(token, It.IsAny<CancellationToken>()))
             .ReturnsAsync(ActiveAccount(deleted: deleted, emailConfirmed: emailConfirmed, resetPasswordToken: token));
 
@@ -2090,7 +2091,7 @@ public class AccountServiceTests
     {
         Account account = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
         SetupUnconfirmedAccountForRegister(account, lockedRead: account);
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Returns("enc-token");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Returns("enc-token");
         return account;
     }
 
@@ -2125,7 +2126,7 @@ public class AccountServiceTests
     {
         Account account = GivenAResendableAccount();
         var thrown = new InvalidOperationException("data protection down");
-        _dataProtection.Setup(r => r.Protect(It.IsAny<string>())).Throws(thrown);
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.MailToken, It.IsAny<string>())).Throws(thrown);
 
         RegisterResult result = await CreateSut().ResendConfirmationEmailAsync(account.Email.Value, _emailTemplate, TestContext.Current.CancellationToken);
 

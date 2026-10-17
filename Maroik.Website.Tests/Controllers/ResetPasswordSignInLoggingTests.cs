@@ -1,4 +1,5 @@
 using Maroik.Core.Contract.Interfaces;
+using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Website.Controllers;
@@ -66,7 +67,7 @@ public class ResetPasswordSignInLoggingTests(MaroikWebApplicationFactory factory
                 Updated = DateTime.UtcNow
             });
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-            encryptedToken = scope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
+            encryptedToken = scope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(ProtectedValue.MailToken, rawToken);
         }
         using HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions
         {

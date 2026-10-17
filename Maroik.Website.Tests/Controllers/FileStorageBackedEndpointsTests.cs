@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json;
 using ImageMagick;
 using Maroik.Core.Contract.Interfaces;
@@ -196,6 +197,10 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         string token = doc.RootElement.GetProperty("filePath").GetString()!;
         Assert.NotEmpty(token);
         Assert.DoesNotContain("upload/", token, StringComparison.Ordinal); // the client only ever sees an opaque Data Protection token
+        // ...protected as a stored file path, which the editor's save reads back; it is no mailed token.
+        var protection = host.Factory.Services.GetRequiredService<IDataProtectionService>();
+        Assert.Equal(stored, protection.Unprotect(ProtectedValue.StoredFilePath, token));
+        Assert.ThrowsAny<CryptographicException>(() => protection.Unprotect(ProtectedValue.MailToken, token));
     }
 
     /// <summary>

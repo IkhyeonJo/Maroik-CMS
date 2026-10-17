@@ -1,5 +1,6 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
+using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Contract.Misc.Extensions;
 using Maroik.Core.Contract.Misc.Helpers;
 using Maroik.Core.Contract.Misc.Settings;
@@ -973,7 +974,7 @@ public class ManagementController(
                 fileContents = Convert.ToBase64String(uploadResult.FileBytes!),
                 contentType = uploadResult.ContentType!
             },
-            filePath = dataProtection.Protect(uploadResult.FilePath!)
+            filePath = dataProtection.Protect(ProtectedValue.StoredFilePath, uploadResult.FilePath!)
         });
     }
     #endregion

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
+using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Contract.Misc.Helpers;
 using Maroik.Core.Contract.Misc.Messaging;
 using Maroik.Core.Contract.Misc.Settings;
@@ -412,7 +413,7 @@ public class AccountService(
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         string rawToken;
-        try { rawToken = dataProtection.Unprotect(encryptedToken); }
+        try { rawToken = dataProtection.Unprotect(ProtectedValue.MailToken, encryptedToken); }
         catch (Exception e)
         {
             logger.LogWarning(e, "Failed to decrypt registration token");
@@ -435,7 +436,7 @@ public class AccountService(
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         string rawToken;
-        try { rawToken = dataProtection.Unprotect(encryptedToken); }
+        try { rawToken = dataProtection.Unprotect(ProtectedValue.MailToken, encryptedToken); }
         catch (Exception e)
         {
             logger.LogWarning(e, "Failed to decrypt registration token");
@@ -574,7 +575,7 @@ public class AccountService(
         {
             try
             {
-                _ = dataProtection.Protect(GuidToken.Generate(utcNow));
+                _ = dataProtection.Protect(ProtectedValue.MailToken, GuidToken.Generate(utcNow));
                 // The write targets NoAccountEmail, never `email`: for an address that IS registered
                 // (but unconfirmed or deleted) this branch must not touch that stranger's row — an
                 // anonymous caller who merely knows the address could otherwise rewrite its Updated
@@ -604,7 +605,7 @@ public class AccountService(
             await accountRepository.UpdateResetPasswordTokenAsync(
                 account.Email.Value, account.ResetPasswordToken, account.Updated, ct);
 
-            string body = mailClient.GetMailResetPasswordBody(dataProtection.Protect(resetPasswordToken), emailTemplate.Title, emailTemplate.Content0, emailTemplate.Content1, settings.Value.DomainName ?? "");
+            string body = mailClient.GetMailResetPasswordBody(dataProtection.Protect(ProtectedValue.MailToken, resetPasswordToken), emailTemplate.Title, emailTemplate.Content0, emailTemplate.Content1, settings.Value.DomainName ?? "");
             bool published = await PublishMailAsync(account.Email.Value, emailTemplate.Subject, body, ct);
             if (published)
                 logger.LogInformation("Password reset requested for {Email}", account.Email.Value);
@@ -622,7 +623,7 @@ public class AccountService(
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         string rawToken;
-        try { rawToken = dataProtection.Unprotect(encryptedToken); }
+        try { rawToken = dataProtection.Unprotect(ProtectedValue.MailToken, encryptedToken); }
         catch (Exception e)
         {
             logger.LogWarning(e, "Failed to decrypt reset password token");
@@ -649,7 +650,7 @@ public class AccountService(
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         string rawToken;
-        try { rawToken = dataProtection.Unprotect(encryptedToken); }
+        try { rawToken = dataProtection.Unprotect(ProtectedValue.MailToken, encryptedToken); }
         catch (Exception e)
         {
             logger.LogWarning(e, "Failed to decrypt reset password token");
@@ -764,7 +765,7 @@ public class AccountService(
         string body;
         try
         {
-            body = mailClient.GetMailConfirmationBody(dataProtection.Protect(account.RegistrationToken!), emailTemplate.Title, emailTemplate.Content0, emailTemplate.Content1, settings.Value.DomainName ?? "");
+            body = mailClient.GetMailConfirmationBody(dataProtection.Protect(ProtectedValue.MailToken, account.RegistrationToken!), emailTemplate.Title, emailTemplate.Content0, emailTemplate.Content1, settings.Value.DomainName ?? "");
         }
         catch (Exception e)
         {

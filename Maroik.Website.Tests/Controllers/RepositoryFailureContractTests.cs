@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Maroik.Core.Contract.Interfaces;
+using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.PostgreSQL.Data;
 using Maroik.Website.Tests.Infrastructure;
@@ -97,7 +98,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         await using var host = HostWithFailing<IAccountRepository>(nameof(IAccountRepository.UpdateEmailConfirmationAsync));
         var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false });
         using var protectionScope = host.Services.CreateScope();
-        string encrypted = protectionScope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
+        string encrypted = protectionScope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(ProtectedValue.MailToken, rawToken);
 
         var (cookie, token) = await AntiForgeryAsync(client, $"/Account/ConfirmEmail?registrationToken={Uri.EscapeDataString(encrypted)}");
 
@@ -127,7 +128,7 @@ public class RepositoryFailureContractTests(MaroikWebApplicationFactory factory)
         await using var host = HostWithFailing<IAccountRepository>(nameof(IAccountRepository.FindByEmailForUpdateAsync));
         var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false });
         using var protectionScope = host.Services.CreateScope();
-        string encrypted = protectionScope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(rawToken);
+        string encrypted = protectionScope.ServiceProvider.GetRequiredService<IDataProtectionService>().Protect(ProtectedValue.MailToken, rawToken);
         var (cookie, token) = await AntiForgeryAsync(client, "/Account/ResetPassword");
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "/Account/ResetPassword");
