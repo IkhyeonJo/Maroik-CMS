@@ -273,6 +273,37 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         Assert.False(finalDb.SubCategories.Any(s => s.Id == createdSub.Id));
     }
 
+    /// <summary>
+    /// The seeded Admin "Menu" item is the administrators' only route to this page, so deleting it is refused with the
+    /// localized safeguard message and the row stays (MenuSafeguardPolicy). The tests in this class only ever add User rows on
+    /// other controllers, so the seed's route is the only one in the shared database.
+    /// </summary>
+    [Fact]
+    public async Task DeleteSubCategory_TheLastRouteToMenuManagement_IsRefusedAndKept()
+    {
+        var admin = await LoginAsAdminAsync();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var management = db.Categories.Single(c => c.Role == Role.Admin && c.Controller == "Management");
+        var menu = db.SubCategories.Single(s => s.CategoryId == management.Id && s.Role == Role.Admin && s.Action == "Menu");
+
+        using var deleteRequest = admin.BuildJsonPostRequest("/Management/DeleteSubCategory", new
+        {
+            Id = (int)menu.Id, CategoryId = menu.CategoryId, Name = menu.Name, DisplayName = menu.DisplayName,
+            IconPath = menu.IconPath, Controller = "", Action = menu.Action, Role = menu.Role, Order = menu.Order
+        });
+        var response = await _client.SendAsync(deleteRequest, TestContext.Current.CancellationToken);
+        string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains(
+            "The menu entry that lets administrators open menu management cannot be removed, moved or given to another role.",
+            json, StringComparison.Ordinal);
+        using var verifyScope = factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.True(verifyDb.SubCategories.Any(s => s.Id == menu.Id && s.Action == "Menu" && s.Role == Role.Admin));
+    }
+
     // -- Cache invalidation --------------------------------------------------------
 
     /// <summary>Every navigation-menu cache key; a menu write must evict all of them.</summary>

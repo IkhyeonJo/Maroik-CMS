@@ -29,12 +29,17 @@ public class MenuServiceAuditLoggingTests
     /// <summary>Captures the log entries the system under test writes.</summary>
     private readonly FakeLogger<MenuService> _logger = new();
 
-    /// <summary>Arranges a unit of work that always succeeds.</summary>
+    /// <summary>
+    /// Arranges a unit of work that always succeeds, and an empty locked menu (every update / delete locks the whole
+    /// menu first; an empty one has no route to menu management, so the menu safeguard lets the change through).
+    /// </summary>
     public MenuServiceAuditLoggingTests()
     {
         _unitOfWork.Setup(u => u.BeginAsync(It.IsAny<IsolationLevel?>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.CommitAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.RollbackAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _categoryRepo.Setup(r => r.GetAllForUpdateAsync(It.IsAny<CancellationToken>())).ReturnsAsync(() => []);
+        _subCategoryRepo.Setup(r => r.GetAllForUpdateAsync(It.IsAny<CancellationToken>())).ReturnsAsync(() => []);
     }
 
     /// <summary>The service under test over the mocked dependencies and the capturing logger.</summary>

@@ -110,7 +110,8 @@ public class MenuService(
             // FOR UPDATE, inside this explicit transaction: without BeginAsync/CommitAsync around
             // it, the lock would be released the instant this SELECT completes (its own implicit,
             // auto-committed transaction) and buy nothing against a concurrent update racing in
-            // between this read and the write below.
+            // between this read and the write below. The whole menu is locked first (see LockMenuAsync).
+            MenuSnapshot before = await LockMenuAsync(ct);
             Category? category = await categoryRepository.FindByIdForUpdateAsync(request.Id, ct);
             if (category == null)
                 return await unitOfWork.FailAsync(ServiceResult.NotFound("Category.NotFound", ServiceErrorKeys.InputInvalid), ct);
@@ -119,6 +120,14 @@ public class MenuService(
                 request.Controller, request.Action, request.Role, request.Order);
             if (updateResult.IsError)
                 return await unitOfWork.FailAsync(updateResult.FirstError, ct);
+
+            var safeguardResult = MenuSafeguardPolicy.CheckChange(before, before.WithCategory(category));
+            if (safeguardResult.IsError)
+            {
+                await unitOfWork.RollbackAsync(ct);
+                logger.LogWarning("Menu category {CategoryId} update refused for admin {Admin}: {ErrorCode}", request.Id, actorEmail, safeguardResult.FirstError.Code);
+                return ServiceResult.FromError(safeguardResult.FirstError);
+            }
 
             await categoryRepository.UpdateEntityAsync(category, ct);
             await unitOfWork.CommitAsync(ct);
@@ -136,15 +145,29 @@ public class MenuService(
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteCategoryAsync(CategoryRequest request, string actorEmail, CancellationToken ct = default)
     {
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
+            // The menu stays locked from the safeguard check to the delete (see LockMenuAsync). The category's items go
+            // with it (SubCategory_fk_0 ON DELETE CASCADE), which WithoutCategory accounts for.
+            MenuSnapshot before = await LockMenuAsync(ct);
+            var safeguardResult = MenuSafeguardPolicy.CheckChange(before, before.WithoutCategory(request.Id));
+            if (safeguardResult.IsError)
+            {
+                await unitOfWork.RollbackAsync(ct);
+                logger.LogWarning("Menu category {CategoryId} delete refused for admin {Admin}: {ErrorCode}", request.Id, actorEmail, safeguardResult.FirstError.Code);
+                return ServiceResult.FromError(safeguardResult.FirstError);
+            }
+
             await categoryRepository.DeleteByIdAsync(request.Id, ct);
+            await unitOfWork.CommitAsync(ct);
             logger.LogInformation("Menu category {CategoryId} ({Name}) deleted by admin {Admin}", request.Id, request.Name, actorEmail);
             return ServiceResult.Ok();
         }
         catch (Exception e)
         {
             logger.LogError(e, "Failed to delete category {Name}", request.Name);
+            await unitOfWork.RollbackAsync(ct);
             return ServiceResult.Failure("Menu.DeleteCategoryFailed", ServiceResult.TemporaryErrorKey);
         }
     }
@@ -177,7 +200,9 @@ public class MenuService(
         try
         {
             // FOR UPDATE, inside this explicit transaction — see UpdateCategoryAsync for why the
-            // transaction wrapper is required for the lock to mean anything.
+            // transaction wrapper is required for the lock to mean anything. The whole menu is locked first (see
+            // LockMenuAsync).
+            MenuSnapshot before = await LockMenuAsync(ct);
             SubCategory? subCategory = await subCategoryRepository.FindByIdForUpdateAsync(request.Id, ct);
             if (subCategory == null)
                 return await unitOfWork.FailAsync(ServiceResult.NotFound("SubCategory.NotFound", ServiceErrorKeys.InputInvalid), ct);
@@ -186,6 +211,14 @@ public class MenuService(
                 request.DisplayName, request.IconPath, request.Action, request.Role, request.Order);
             if (updateResult.IsError)
                 return await unitOfWork.FailAsync(updateResult.FirstError, ct);
+
+            var safeguardResult = MenuSafeguardPolicy.CheckChange(before, before.WithSubCategory(subCategory));
+            if (safeguardResult.IsError)
+            {
+                await unitOfWork.RollbackAsync(ct);
+                logger.LogWarning("Menu sub-category {SubCategoryId} update refused for admin {Admin}: {ErrorCode}", request.Id, actorEmail, safeguardResult.FirstError.Code);
+                return ServiceResult.FromError(safeguardResult.FirstError);
+            }
 
             await subCategoryRepository.UpdateEntityAsync(subCategory, ct);
             await unitOfWork.CommitAsync(ct);
@@ -203,16 +236,43 @@ public class MenuService(
     /// <inheritdoc />
     public async Task<ServiceResult> DeleteSubCategoryAsync(SubCategoryRequest request, string actorEmail, CancellationToken ct = default)
     {
+        await unitOfWork.BeginAsync(ct: ct);
         try
         {
+            // The menu stays locked from the safeguard check to the delete (see LockMenuAsync).
+            MenuSnapshot before = await LockMenuAsync(ct);
+            var safeguardResult = MenuSafeguardPolicy.CheckChange(before, before.WithoutSubCategory(request.Id));
+            if (safeguardResult.IsError)
+            {
+                await unitOfWork.RollbackAsync(ct);
+                logger.LogWarning("Menu sub-category {SubCategoryId} delete refused for admin {Admin}: {ErrorCode}", request.Id, actorEmail, safeguardResult.FirstError.Code);
+                return ServiceResult.FromError(safeguardResult.FirstError);
+            }
+
             await subCategoryRepository.DeleteByIdAsync(request.Id, ct);
+            await unitOfWork.CommitAsync(ct);
             logger.LogInformation("Menu sub-category {SubCategoryId} ({Name}) deleted by admin {Admin}", request.Id, request.Name, actorEmail);
             return ServiceResult.Ok();
         }
         catch (Exception e)
         {
             logger.LogError(e, "Failed to delete sub-category {Name}", request.Name);
+            await unitOfWork.RollbackAsync(ct);
             return ServiceResult.Failure("Menu.DeleteSubCategoryFailed", ServiceResult.TemporaryErrorKey);
         }
+    }
+
+    /// <summary>
+    /// Locks the whole menu — every category, then every sub-category, each in id order — for the rest of the
+    /// transaction and returns it as the "before" of the change <see cref="MenuSafeguardPolicy"/> judges. Every
+    /// update / delete takes these locks first and in this order, so the menu cannot change between the check and the
+    /// write (two administrators each removing one of two routes to menu management at once would otherwise both pass
+    /// and leave none), and two menu writes cannot deadlock on each other.
+    /// </summary>
+    private async Task<MenuSnapshot> LockMenuAsync(CancellationToken ct)
+    {
+        List<Category> categories = await categoryRepository.GetAllForUpdateAsync(ct);
+        List<SubCategory> subCategories = await subCategoryRepository.GetAllForUpdateAsync(ct);
+        return new MenuSnapshot(categories, subCategories);
     }
 }

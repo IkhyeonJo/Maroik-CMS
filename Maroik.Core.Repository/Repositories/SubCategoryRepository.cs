@@ -60,6 +60,22 @@ public class SubCategoryRepository(ApplicationDbContext context)
     }
 
     /// <inheritdoc />
+    public async Task<List<SubCategory>> GetAllForUpdateAsync(CancellationToken ct = default)
+    {
+        // Raw SQL is required because EF Core LINQ cannot emit FOR UPDATE; ORDER BY without LIMIT locks every row in
+        // id order. AsNoTracking for the same reason as FindByIdForUpdateAsync.
+        var entities = await Set.FromSqlInterpolated(
+            $"""
+             SELECT *
+             FROM "SubCategory"
+             ORDER BY "Id"
+             FOR UPDATE
+             """).AsNoTracking().ToListAsync(ct);
+
+        return [.. entities.Select(ToDomain)];
+    }
+
+    /// <inheritdoc />
     public Task DeleteByIdAsync(long id, CancellationToken ct = default)
         => DeleteWhereAsync(e => e.Id == id, ct);
 }

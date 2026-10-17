@@ -69,8 +69,14 @@ Authorization and navigation
   cannot lock, delete or demote their own account (re-saving it unchanged, unlocking and restoring it stay allowed), and
   nobody can lock, delete or demote the last active administrator (Admin, not locked, not deleted). Each admin edit / delete
   first locks the active administrators' rows (`FindActiveAdminsForUpdateAsync`, email order), then the edited row, so two
-  concurrent edits cannot leave no administrator. A failed-login lockout is not covered (see Accounts). The menu has no
-  safeguard: an administrator can still edit or delete any menu entry, including the ones that grant their own access.
+  concurrent edits cannot leave no administrator. A failed-login lockout is not covered (see Accounts).
+- Menu safeguard (`MenuSafeguardPolicy`, applied by `MenuService` category / sub-category update and delete): a change that
+  takes away the administrators' last route to `Management/Menu` — the Admin "Management" category and its Admin "Menu"
+  item in the seed — is refused, or nobody could repair the menu from the UI. Every other entry stays the administrator's
+  call, and so does that one while a second route to it exists; a menu that already had no route is not held to one. Each
+  update / delete first locks every category, then every sub-category (`GetAllForUpdateAsync`, id order), then the edited
+  row, so two concurrent menu writes can neither both pass the check nor deadlock. `MenuSnapshot` judges a menu with
+  `MenuNavigationMatcher`'s rule (pinned by `MenuSafeguardTests.TheSnapshot_AgreesWithTheNavigationMatcher`).
 - The admin-only GET pages (`Management/Account`, `Management/Menu`, `Dashboard/AdminIndex`, ...) are protected
   by the menu alone, while their POSTs also carry a role attribute. Getting the menu's `Role` right is the
   administrator's job; do not add a second role check to those GETs.
