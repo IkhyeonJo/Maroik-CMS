@@ -196,42 +196,24 @@ public class BoardService(
                 return ServiceResult.NotFound("Board.NotFound", ServiceErrorKeys.InputInvalid);
             }
 
-            // Only the original writer may edit content. An admin who is not the writer may still
-            // reach this point, but only to clear an existing lock (see below) -- everything else
-            // is rejected. This is the only way an admin can ever clear a lock on someone else's
-            // post, since the ownership gate below would otherwise block them from this method
-            // entirely. (The Forum edit page itself is owner-only, so this path is reached by
-            // posting to EditFreeBoard directly rather than through that page.)
-            bool isOwner = board.CanBeEditedBy(writerNickname);
-            bool adminClearingSomeoneElsesLock = !request.Locked && board.CanLockBeClearedBy(writerNickname, isAdmin);
-            switch (isOwner)
+            // Only the original writer may edit content; an admin who is not the writer may only clear an
+            // existing lock (Board.EditBy). This is the only way an admin can ever clear a lock on someone
+            // else's post. (The Forum edit page itself is owner-only, so that path is reached by posting to
+            // EditFreeBoard directly rather than through that page.)
+            var editResult = board.EditBy(writerNickname, isAdmin, request.Title, content, request.Locked, utcNow);
+            if (editResult.IsError)
             {
-                case false when !adminClearingSomeoneElsesLock:
+                await unitOfWork.RollbackAsync(ct);
+                return ServiceResult.FromError(editResult.FirstError);
+            }
+
+            switch (editResult.Value)
+            {
+                case BoardEdit.Refused:
                     await unitOfWork.RollbackAsync(ct);
                     logger.LogWarning("Board edit refused: {Requester} may not edit post {BoardId}", writerNickname, board.Id);
                     return ServiceResult.Fail(ServiceErrorKeys.InputInvalid);
-                case true:
-                {
-                    var updateResult = board.Update(request.Title, content, utcNow);
-                    if (updateResult.IsError)
-                    {
-                        await unitOfWork.RollbackAsync(ct);
-                        return ServiceResult.FromError(updateResult.FirstError);
-                    }
-
-                    // Apply the lock from the request. A lock is only ever raised by the post's own
-                    // author (at write or edit time) -- an admin who is not the author can only CLEAR
-                    // one (see the default branch below), never impose it -- so the author may lower
-                    // it as well as raise it. (Noticed, by contrast, is set only at write time and
-                    // deliberately kept out of this edit path.)
-                    if (request.Locked) board.Lock(utcNow);
-                    else board.Unlock(utcNow);
-                    break;
-                }
-                default:
-                    // adminClearingSomeoneElsesLock: an admin acting on a post they don't own may only
-                    // clear its lock -- title and content are left untouched.
-                    board.Unlock(utcNow);
+                case BoardEdit.LockCleared:
                     logger.LogInformation("Lock on post {BoardId} of {Writer} cleared by admin {Requester}", board.Id, board.Writer, writerNickname);
                     break;
             }
@@ -328,10 +310,7 @@ public class BoardService(
             IEnumerable<BoardComment> existing = await boardCommentRepository.GetByBoardIdOrderedAsync(request.BoardId, ct);
             List<BoardComment> existingList = existing.ToList();
 
-            // The comment order continues from the highest existing order, so that a prior
-            // soft-deleted comment (excluded from existingList) cannot cause a new comment to
-            // collide with the Order of one still active.
-            long order = existingList.Count == 0 ? 0 : existingList.Max(c => c.Order) + 1;
+            long order = BoardComment.NextOrder(existingList);
 
             var commentResult = BoardComment.Create(request.BoardId, order, request.AvatarImagePath, request.Writer, content, utcNow);
             if (commentResult.IsError)

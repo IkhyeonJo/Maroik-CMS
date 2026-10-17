@@ -236,4 +236,13 @@ public sealed class Expenditure : AggregateRoot<long>
         Updated = utcNow;
         return Result.Success;
     }
+
+    /// <summary>
+    /// What this expenditure does to asset balances: it withdraws <see cref="Amount"/> from <see cref="PaymentMethod"/>
+    /// and, for a transfer, deposits it into <see cref="MyDepositAsset"/>.
+    /// </summary>
+    public IReadOnlyList<BalanceMovement> BalanceMovements() =>
+        string.IsNullOrEmpty(MyDepositAsset)
+            ? [new BalanceMovement(PaymentMethod, Amount, IsDeposit: false)]
+            : [new BalanceMovement(PaymentMethod, Amount, IsDeposit: false), new BalanceMovement(MyDepositAsset, Amount, IsDeposit: true)];
 }

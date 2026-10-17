@@ -48,10 +48,8 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
         if (validation.IsError) return ServiceResult.FromError(validation.FirstError);
 
         Asset? asset = await assetBalance.GetAssetForReadAsync(accountEmail, request.DepositMyAssetProductName ?? "", ct);
-        if (asset == null)
-            return ServiceResult.NotFound("FixedIncome.AssetNotFound", ServiceErrorKeys.SelectedAssetNotFound);
-        if (asset.Deleted)
-            return DeletedAssetResult;
+        if (!AssetUsagePolicy.CanUse(asset, out var refusal))
+            return AssetRefusalMapper.ToResult(RecordType, refusal);
 
         string currency = asset.Balance.Currency.Value;
         var registerResult = FixedIncome.Register(accountEmail, request.MainClass, request.SubClass,
@@ -80,10 +78,8 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
             return ServiceResult.NotFound("FixedIncome.NotFound", ServiceErrorKeys.FixedIncomeNotFound);
 
         Asset? asset = await assetBalance.GetAssetForReadAsync(accountEmail, request.DepositMyAssetProductName ?? "", ct);
-        if (asset == null)
-            return ServiceResult.NotFound("FixedIncome.AssetNotFound", ServiceErrorKeys.SelectedAssetNotFound);
-        if (asset.Deleted)
-            return DeletedAssetResult;
+        if (!AssetUsagePolicy.CanUse(asset, out var refusal))
+            return AssetRefusalMapper.ToResult(RecordType, refusal);
         string currency = asset.Balance.Currency.Value;
 
         var updateResult = fi.Update(request.MainClass, request.SubClass, request.Content,
@@ -121,9 +117,8 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
             fixedIncome.ClearUnpunctuality(utcNow);
     }
 
-    /// <summary>Failure returned when the chosen deposit asset has been soft-deleted.</summary>
-    private static ServiceResult DeletedAssetResult => ServiceResult.Conflict(
-        "FixedIncome.AssetDeleted", ServiceErrorKeys.AssetAlreadyDeleted);
+    /// <summary>The record type that prefixes this service's error codes.</summary>
+    private const string RecordType = "FixedIncome";
 
     /// <summary>
     /// Validates the income class and deposit month/day of a fixed-income request.

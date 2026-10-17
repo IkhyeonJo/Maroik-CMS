@@ -49,8 +49,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
         bool requiresDepositAsset = validation.Value;
 
         Asset? payAsset = await assetBalance.GetAssetForReadAsync(accountEmail, request.PaymentMethod ?? "", ct);
-        if (payAsset == null) return AssetNotFoundResult;
-        if (payAsset.Deleted) return DeletedAssetResult;
+        if (!AssetUsagePolicy.CanUse(payAsset, out var paymentRefusal)) return AssetRefusalMapper.ToResult(RecordType, paymentRefusal);
 
         if (requiresDepositAsset)
         {
@@ -59,10 +58,8 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
                 return ServiceResult.FromError(depositCheck.FirstError);
 
             Asset? depAsset = await assetBalance.GetAssetForReadAsync(accountEmail, request.MyDepositAsset ?? "", ct);
-            if (depAsset == null) return AssetNotFoundResult;
-            if (depAsset.Deleted) return DeletedAssetResult;
-            if (payAsset.Balance.Currency != depAsset.Balance.Currency)
-                return CurrencyMismatchResult;
+            if (!AssetUsagePolicy.CanTransferInto(payAsset, depAsset, out var depositRefusal))
+                return AssetRefusalMapper.ToResult(RecordType, depositRefusal);
         }
 
         string currency = payAsset.Balance.Currency.Value;
@@ -88,8 +85,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
         bool requiresDepositAsset = validation.Value;
 
         Asset? payAsset = await assetBalance.GetAssetForReadAsync(accountEmail, request.PaymentMethod ?? "", ct);
-        if (payAsset == null) return AssetNotFoundResult;
-        if (payAsset.Deleted) return DeletedAssetResult;
+        if (!AssetUsagePolicy.CanUse(payAsset, out var paymentRefusal)) return AssetRefusalMapper.ToResult(RecordType, paymentRefusal);
 
         if (requiresDepositAsset)
         {
@@ -97,11 +93,9 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
             if (depositCheck.IsError)
                 return ServiceResult.FromError(depositCheck.FirstError);
 
-            var depAsset = await assetBalance.GetAssetForReadAsync(accountEmail, request.MyDepositAsset ?? "", ct);
-            if (depAsset == null) return AssetNotFoundResult;
-            if (depAsset.Deleted) return DeletedAssetResult;
-            if (payAsset.Balance.Currency != depAsset.Balance.Currency)
-                return CurrencyMismatchResult;
+            Asset? depAsset = await assetBalance.GetAssetForReadAsync(accountEmail, request.MyDepositAsset ?? "", ct);
+            if (!AssetUsagePolicy.CanTransferInto(payAsset, depAsset, out var depositRefusal))
+                return AssetRefusalMapper.ToResult(RecordType, depositRefusal);
         }
 
         FixedExpenditure? fe = await fixedExpenditureRepository.FindByEmailAndIdAsync(accountEmail, request.Id, ct);
@@ -144,17 +138,8 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
             fixedExpenditure.ClearUnpunctuality(utcNow);
     }
 
-    /// <summary>Failure returned when a transfer's payment asset and deposit asset hold different currencies.</summary>
-    private static ServiceResult CurrencyMismatchResult => ServiceResult.Validation(
-        "FixedExpenditure.CurrencyMismatch", ServiceErrorKeys.CurrencyMismatch);
-
-    /// <summary>Failure returned when a referenced asset does not exist on the caller's account.</summary>
-    private static ServiceResult AssetNotFoundResult => ServiceResult.NotFound(
-        "FixedExpenditure.AssetNotFound", ServiceErrorKeys.SelectedAssetNotFound);
-
-    /// <summary>Failure returned when a referenced asset has been soft-deleted.</summary>
-    private static ServiceResult DeletedAssetResult => ServiceResult.Conflict(
-        "FixedExpenditure.AssetDeleted", ServiceErrorKeys.AssetAlreadyDeleted);
+    /// <summary>The record type that prefixes this service's error codes.</summary>
+    private const string RecordType = "FixedExpenditure";
 
     /// <summary>
     /// Validates the MainClass/SubClass combination and the deposit month/day of a fixed-expenditure

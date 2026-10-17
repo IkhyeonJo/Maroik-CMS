@@ -3,7 +3,6 @@ using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Misc.Settings;
 using Maroik.Core.Domain.Account;
 using Maroik.Core.Domain.Calendar;
-using Maroik.Core.Domain.ValueObjects;
 using Maroik.Core.Service.Extensions;
 using Maroik.Core.Service.Mappers;
 using Microsoft.Extensions.Logging;
@@ -126,11 +125,11 @@ public class CalendarService(
             ];
         }
 
-        List<CalendarSharedResponse> anonymousShares = [.. (await GetCalendarSharedAsync(ct)).Where(x => x.Anonymous)];
+        List<CalendarShared> guestShares = [.. (await calendarSharedRepository.GetAllAsync(ct)).Where(s => s.Anonymous)];
         return
         [
             .. (from c in allCalendars
-                join cs in anonymousShares on c.Id equals cs.CalendarId
+                join cs in guestShares on c.Id equals cs.Id
                 select new CalendarResponse { Id = c.Id, Name = c.Name, HtmlColorCode = c.HtmlColorCode })
             .OrderBy(x => x.Name)
         ];
@@ -210,13 +209,13 @@ public class CalendarService(
     public async Task<List<CalendarBrowseSummaryResponse>> GetBrowseCalendarsOfInterestAsync(string accountEmail, CancellationToken ct = default)
     {
         List<CalendarResponse> allCalendars = await GetAllCalendarsAsync(ct);
-        List<CalendarSharedResponse> userSharedCalendars = [.. (await GetCalendarSharedAsync(ct)).Where(x => x.User)];
+        List<CalendarShared> userSharedCalendars = [.. (await calendarSharedRepository.GetAllAsync(ct)).Where(s => s.User)];
         List<OtherCalendarResponse> subscriptions = await GetOtherCalendarsAsync(accountEmail, ct);
 
         return
         [
             .. (from calendar in allCalendars
-                join calendarShared in userSharedCalendars on calendar.Id equals calendarShared.CalendarId
+                join calendarShared in userSharedCalendars on calendar.Id equals calendarShared.Id
                 join subscription in subscriptions on calendar.Id equals subscription.CalendarId into subscriptionGroup
                 from subscription in subscriptionGroup.DefaultIfEmpty()
                 select new CalendarBrowseSummaryResponse
@@ -243,7 +242,7 @@ public class CalendarService(
             // default READ COMMITTED isolation, since a plain SELECT takes no lock. The
             // "Calendar_AccountEmail_Name_unique" constraint (caught below) is what actually
             // closes the race; this check only avoids the round trip in the common case.
-            if (calendars.Any(c => c.Name == request.Name))
+            if (Calendar.IsNameTaken(calendars, request.Name))
                 return await unitOfWork.FailAsync(ServiceResult.Conflict("Calendar.NameExists", ServiceErrorKeys.CalendarExists), ct);
 
             var calendarResult = Calendar.Create(accountEmail, request.Name, request.Description, request.TimeZoneIanaId, request.HtmlColorCode, utcNow);
@@ -287,7 +286,7 @@ public class CalendarService(
             // read and this transaction's write and have its change silently overwritten by
             // UpdateEntityAsync's full-row snapshot below.
             Calendar? previous = await calendarRepository.FindByIdForUpdateAsync(request.Id, ct);
-            if (previous == null || previous.AccountEmail.Value != accountEmail)
+            if (previous == null || !previous.IsOwnedBy(accountEmail))
                 return await unitOfWork.FailAsync(ServiceResult.NotFound("Calendar.NotFound", ServiceErrorKeys.CalendarNotFound), ct);
 
             var updateResult = previous.Update(request.Name, request.Description, request.TimeZoneIanaId, request.HtmlColorCode, utcNow);
@@ -347,21 +346,15 @@ public class CalendarService(
             List<Calendar> calendars = await calendarRepository.GetByAccountEmailAsync(accountEmail, ct);
 
             // Create the default calendar only when the user has none yet (e.g., first login).
-            if (calendars.Count != 0)
+            if (!Calendar.NeedsDefault(calendars))
             {
                 await unitOfWork.RollbackAsync(ct);
                 return ServiceResult.Ok();
             }
 
-            // This first-visit auto-provisioning must always succeed so the calendar grid is never
-            // permanently empty — fall back to UTC if the account's own TimeZoneIanaId is missing
-            // or unrecognized, rather than letting Calendar.Create's normal (and deliberately
-            // strict) validation silently fail an action the user didn't request.
-            string timeZoneIanaId = request.TimeZoneIanaId ?? "";
-            if (TimeZoneId.Create(timeZoneIanaId).IsError)
-                timeZoneIanaId = "UTC";
-
-            var calendarResult = Calendar.Create(accountEmail, request.Name, request.Description, timeZoneIanaId, request.HtmlColorCode, utcNow);
+            // CreateDefault falls back to UTC for a missing or unrecognized account time zone, so this
+            // first-visit provisioning does not fail on an action the user didn't request.
+            var calendarResult = Calendar.CreateDefault(accountEmail, request.Name, request.Description, request.TimeZoneIanaId, request.HtmlColorCode, utcNow);
             if (calendarResult.IsError)
                 return await unitOfWork.FailAsync(calendarResult.FirstError, ct);
 
@@ -446,7 +439,7 @@ public class CalendarService(
         var calendarSharedRequests = requests.ToList();
 
         List<Calendar> ownedCalendars = await calendarRepository.GetByAccountEmailAsync(email, ct);
-        if (calendarSharedRequests.Any(req => ownedCalendars.All(c => c.Id != req.CalendarId)))
+        if (!CalendarAccessPolicy.OwnsAll(ownedCalendars, calendarSharedRequests.Select(req => req.CalendarId)))
         {
             return ServiceResult.Validation("CalendarShared.InvalidTarget", ServiceErrorKeys.InputInvalid);
         }
@@ -466,10 +459,11 @@ public class CalendarService(
                 // throws when the row is missing, which would fail the whole request.
                 HashSet<long> existingShareIds = [.. (await calendarSharedRepository.GetAllAsync(ct)).Select(s => s.Id)];
 
-                foreach (CalendarSharedRequest req in calendarSharedRequests)
+                List<CalendarShared> shares =
+                    [.. calendarSharedRequests.Select(req => CalendarShared.CreatePrivate(req.CalendarId).Update(req.User, req.Anonymous))];
+                foreach (CalendarShared shared in shares)
                 {
-                    CalendarShared shared = CalendarShared.CreatePrivate(req.CalendarId).Update(req.User, req.Anonymous);
-                    if (existingShareIds.Contains(req.CalendarId))
+                    if (existingShareIds.Contains(shared.Id))
                         await calendarSharedRepository.UpdateEntityAsync(shared, ct);
                     else
                         await calendarSharedRepository.CreateAsync(shared, ct);
@@ -479,9 +473,9 @@ public class CalendarService(
                 // (every account that had subscribed), not just one — otherwise leftover subscription
                 // rows silently reactivate the moment the calendar is shared again. One batched DELETE
                 // per calendar instead of one round trip per subscriber.
-                foreach (CalendarSharedRequest req in calendarSharedRequests.Where(r => !r.User))
+                foreach (CalendarShared shared in shares.Where(s => !s.User))
                 {
-                    await otherCalendarRepository.DeleteByCalendarIdAsync(req.CalendarId, ct);
+                    await otherCalendarRepository.DeleteByCalendarIdAsync(shared.Id, ct);
                 }
 
                 await unitOfWork.CommitAsync(ct);
@@ -520,7 +514,7 @@ public class CalendarService(
             List<Calendar> calendars = await calendarRepository.GetByAccountEmailAsync(email, ct);
 
             // Verify the target calendar belongs to the requesting user.
-            if (calendars.All(c => c.Id != request.CalendarId))
+            if (!CalendarAccessPolicy.Owns(calendars, request.CalendarId))
             {
                 await unitOfWork.RollbackAsync(ct);
                 return ServiceResult.NotFound("Calendar.NotFound", ServiceErrorKeys.CalendarDoesNotExist);
@@ -584,7 +578,7 @@ public class CalendarService(
             List<Calendar> calendars = await calendarRepository.GetByAccountEmailAsync(email, ct);
 
             // Verify the target calendar belongs to the requesting user.
-            if (calendars.All(c => c.Id != request.CalendarId))
+            if (!CalendarAccessPolicy.Owns(calendars, request.CalendarId))
             {
                 await unitOfWork.RollbackAsync(ct);
                 return ServiceResult.NotFound("Calendar.NotFound", ServiceErrorKeys.CalendarDoesNotExist);
@@ -597,7 +591,7 @@ public class CalendarService(
             CalendarEvent? existing = await calendarEventRepository.FindByIdForUpdateAsync(request.Id, ct);
             // Verify the existing event currently belongs to one of the caller's calendars
             // before allowing any mutation or reassignment.
-            if (existing == null || existing.Id <= 0 || calendars.All(c => c.Id != existing.CalendarId))
+            if (existing is not { Id: > 0 } || !CalendarAccessPolicy.OwnsEvent(calendars, existing))
             {
                 await unitOfWork.RollbackAsync(ct);
                 return ServiceResult.Validation("CalendarEvent.InvalidRequest", ServiceErrorKeys.InputInvalid);
@@ -657,7 +651,7 @@ public class CalendarService(
             CalendarEvent? evt = await calendarEventRepository.FindByIdAsync(calendarEventId, ct);
 
             // Ensure the event exists and belongs to one of the requesting user's calendars.
-            if (evt == null || calendars.All(c => c.Id != evt.CalendarId))
+            if (!CalendarAccessPolicy.OwnsEvent(calendars, evt))
                 return await unitOfWork.FailAsync(ServiceResult.NotFound("CalendarEvent.NotFound", ServiceErrorKeys.CalendarEventNotFound), ct);
 
             await calendarEventRepository.DeleteByIdAsync(evt.Id, ct);

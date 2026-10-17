@@ -518,9 +518,9 @@ public class ProfileServiceTests
         _accountRepo.Verify(r => r.UpdateDefaultMonetaryUnitAsync(account.Email.Value, null, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    /// <summary>Verifies that <c>UpdateDefaultMonetaryUnitAsync</c> ignores a soft-deleted asset's currency.</summary>
+    /// <summary>Verifies that <c>UpdateDefaultMonetaryUnitAsync</c> accepts a soft-deleted asset's currency (the dashboard counts deleted assets too).</summary>
     [Fact]
-    public async Task UpdateDefaultMonetaryUnitAsync_SetsNull_WhenUnitOnlyExistsOnDeletedAsset()
+    public async Task UpdateDefaultMonetaryUnitAsync_SetsUnit_WhenUnitOnlyExistsOnDeletedAsset()
     {
         var account = ActiveAccount();
         _assetRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -530,7 +530,7 @@ public class ProfileServiceTests
 
         await sut.UpdateDefaultMonetaryUnitAsync(account.Email.Value, "USD", TestContext.Current.CancellationToken);
 
-        _accountRepo.Verify(r => r.UpdateDefaultMonetaryUnitAsync(account.Email.Value, null, It.IsAny<CancellationToken>()), Times.Once);
+        _accountRepo.Verify(r => r.UpdateDefaultMonetaryUnitAsync(account.Email.Value, "USD", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // -- Failure branches ---------------------------------------------------------

@@ -216,4 +216,7 @@ public sealed class Income : AggregateRoot<long>
         Updated = utcNow;
         return Result.Success;
     }
+
+    /// <summary>What this income does to asset balances: it deposits <see cref="Amount"/> into <see cref="DepositMyAssetProductName"/>.</summary>
+    public IReadOnlyList<BalanceMovement> BalanceMovements() => [new BalanceMovement(DepositMyAssetProductName, Amount, IsDeposit: true)];
 }

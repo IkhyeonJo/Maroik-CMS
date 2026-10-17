@@ -192,6 +192,34 @@ public sealed class Board : AggregateRoot<long>
         Updated = utcNow;
     }
 
+    /// <summary>
+    /// Applies an edit request from <paramref name="nickname"/>. Only the author edits the title and content, and
+    /// sets the lock to <paramref name="locked"/> (an author may raise or lower their own lock). An administrator
+    /// who is not the author may only clear an existing lock (<see cref="CanLockBeClearedBy"/>, asked for with
+    /// <paramref name="locked"/> false); title and content stay as they are. Anyone else is refused and nothing
+    /// changes. A content edit the post's own rules reject (<see cref="Update"/>) is returned as that error.
+    /// </summary>
+    public ErrorOr<BoardEdit> EditBy(string nickname, bool isAdmin, string? title, string? content, bool locked, DateTime utcNow)
+    {
+        if (CanBeEditedBy(nickname))
+        {
+            var updateResult = Update(title, content, utcNow);
+            if (updateResult.IsError) return updateResult.Errors;
+
+            if (locked) Lock(utcNow);
+            else Unlock(utcNow);
+            return BoardEdit.ContentEdited;
+        }
+
+        if (!locked && CanLockBeClearedBy(nickname, isAdmin))
+        {
+            Unlock(utcNow);
+            return BoardEdit.LockCleared;
+        }
+
+        return BoardEdit.Refused;
+    }
+
     /// <summary>Unlocks the post, making it viewable and commentable by everyone again.</summary>
     public void Unlock(DateTime utcNow)
     {

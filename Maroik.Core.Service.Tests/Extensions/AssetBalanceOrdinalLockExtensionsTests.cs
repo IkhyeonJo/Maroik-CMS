@@ -1,5 +1,6 @@
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Finance;
+using Maroik.Core.Domain.ValueObjects;
 using Maroik.Core.Service.Extensions;
 using Moq;
 
@@ -109,45 +110,25 @@ public class AssetBalanceOrdinalLockExtensionsTests
         Assert.False(result.ContainsKey("Missing"));
     }
 
-    // -- ApplyAssetBalanceAdjustmentsAsync(string accountEmail, ...) — fetches then applies --------
+    // -- ApplyBalanceMovementsAsync — applies to the given assets ---------------------------------
 
-    /// <summary>The accountEmail overload fetches the referenced assets itself, then applies and saves them.</summary>
-    [Fact]
-    public async Task ApplyAssetBalanceAdjustmentsAsync_WithAccountEmail_FetchesThenAppliesAndSaves()
-    {
-        Asset wallet = MakeAsset("Wallet", amount: 100m);
-        _assetBalance.Setup(a => a.GetAssetsAsync(Email, It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<string, Asset>(StringComparer.Ordinal) { ["Wallet"] = wallet });
-        Asset? saved = null;
-        _assetBalance.Setup(a => a.SaveAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>()))
-            .Callback<Asset, CancellationToken>((asset, _) => saved = asset)
-            .Returns(Task.CompletedTask);
-
-        var result = await _assetBalance.Object.ApplyAssetBalanceAdjustmentsAsync(
-            Email, [new AssetBalanceAdjustment("Wallet", 30m, IsDeposit: true)],
-            "NotFound", "not found", Now, TestContext.Current.CancellationToken);
-
-        Assert.False(result.IsError);
-        _assetBalance.Verify(a => a.GetAssetsAsync(Email, It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()), Times.Once);
-        Assert.NotNull(saved);
-        Assert.Equal(130m, saved.Balance.Amount);
-    }
-
-    // -- ApplyAssetBalanceAdjustmentsAsync(Dictionary<string, Asset>, ...) — applies to given assets --
+    /// <summary>A movement of <paramref name="amount"/> in <paramref name="currency"/> on <paramref name="assetName"/>.</summary>
+    private static BalanceMovement Move(string assetName, decimal amount, bool isDeposit, string currency = "KRW") =>
+        new(assetName, Money.Create(amount, currency).Value, isDeposit);
 
     /// <summary>
-    /// The pre-fetched-dictionary overload never calls GetAssetsAsync, so
+    /// The movements are applied to the dictionary the caller passes, never fetched again, so
     /// ExpenditureService/IncomeService's Update/Delete, which already fetched the assets for their
     /// own pre-write validation, do not fetch them a second time.
     /// </summary>
     [Fact]
-    public async Task ApplyAssetBalanceAdjustmentsAsync_WithDictionary_NeverFetches()
+    public async Task ApplyBalanceMovementsAsync_NeverFetches()
     {
         Dictionary<string, Asset> assets = new(StringComparer.Ordinal) { ["Wallet"] = MakeAsset("Wallet") };
         _assetBalance.Setup(a => a.SaveAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
-        var result = await _assetBalance.Object.ApplyAssetBalanceAdjustmentsAsync(
-            assets, [new AssetBalanceAdjustment("Wallet", 30m, IsDeposit: true)],
+        var result = await _assetBalance.Object.ApplyBalanceMovementsAsync(
+            assets, [Move("Wallet", 30m, isDeposit: true)],
             "NotFound", "not found", Now, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsError);
@@ -156,7 +137,7 @@ public class AssetBalanceOrdinalLockExtensionsTests
 
     /// <summary>Deposits and withdrawals apply in order and only the touched assets are saved.</summary>
     [Fact]
-    public async Task ApplyAssetBalanceAdjustmentsAsync_WithDictionary_DepositsAndWithdraws_SavesOnlyTouchedAssets()
+    public async Task ApplyBalanceMovementsAsync_DepositsAndWithdraws_SavesOnlyTouchedAssets()
     {
         Asset payment = MakeAsset("Payment", amount: 100m);
         Asset deposit = MakeAsset("Deposit", amount: 50m);
@@ -170,12 +151,9 @@ public class AssetBalanceOrdinalLockExtensionsTests
             .Callback<Asset, CancellationToken>((asset, _) => saved.Add(asset))
             .Returns(Task.CompletedTask);
 
-        var result = await _assetBalance.Object.ApplyAssetBalanceAdjustmentsAsync(
+        var result = await _assetBalance.Object.ApplyBalanceMovementsAsync(
             assets,
-            [
-                new AssetBalanceAdjustment("Payment", 40m, IsDeposit: false),
-                new AssetBalanceAdjustment("Deposit", 40m, IsDeposit: true)
-            ],
+            [Move("Payment", 40m, isDeposit: false), Move("Deposit", 40m, isDeposit: true)],
             "NotFound", "not found", Now, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsError);
@@ -186,56 +164,53 @@ public class AssetBalanceOrdinalLockExtensionsTests
         Assert.DoesNotContain(untouched, saved);
     }
 
-    /// <summary>Entries with an empty asset name are skipped entirely (not looked up, not saved).</summary>
+    /// <summary>A movement with an empty asset name is skipped entirely (not looked up, not saved).</summary>
     [Fact]
-    public async Task ApplyAssetBalanceAdjustmentsAsync_WithDictionary_SkipsEmptyAssetNameEntries()
+    public async Task ApplyBalanceMovementsAsync_SkipsAMovementWithAnEmptyAssetName()
     {
         Dictionary<string, Asset> assets = new(StringComparer.Ordinal) { ["Wallet"] = MakeAsset("Wallet") };
         var saveCalls = 0;
         _assetBalance.Setup(a => a.SaveAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>()))
             .Callback(() => saveCalls++).Returns(Task.CompletedTask);
 
-        var result = await _assetBalance.Object.ApplyAssetBalanceAdjustmentsAsync(
-            assets, [new AssetBalanceAdjustment(null, 10m, IsDeposit: true), new AssetBalanceAdjustment("", 10m, IsDeposit: true)],
+        var result = await _assetBalance.Object.ApplyBalanceMovementsAsync(
+            assets, [Move("", 10m, isDeposit: true)],
             "NotFound", "not found", Now, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsError);
         Assert.Equal(0, saveCalls);
     }
 
-    /// <summary>An adjustment referencing a name absent from the dictionary fails with the caller's not-found error, saving nothing.</summary>
+    /// <summary>A movement on a name absent from the dictionary fails with the caller's not-found error, saving nothing.</summary>
     [Fact]
-    public async Task ApplyAssetBalanceAdjustmentsAsync_WithDictionary_ReturnsNotFound_WhenNameMissingFromDictionary()
+    public async Task ApplyBalanceMovementsAsync_ReturnsNotFound_WhenNameMissingFromDictionary()
     {
         Dictionary<string, Asset> assets = new(StringComparer.Ordinal) { ["Wallet"] = MakeAsset("Wallet") };
         var saveCalls = 0;
         _assetBalance.Setup(a => a.SaveAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>()))
             .Callback(() => saveCalls++).Returns(Task.CompletedTask);
 
-        var result = await _assetBalance.Object.ApplyAssetBalanceAdjustmentsAsync(
+        var result = await _assetBalance.Object.ApplyBalanceMovementsAsync(
             assets,
-            [
-                new AssetBalanceAdjustment("Wallet", 10m, IsDeposit: true),
-                new AssetBalanceAdjustment("Missing", 10m, IsDeposit: true)
-            ],
+            [Move("Wallet", 10m, isDeposit: true), Move("Missing", 10m, isDeposit: true)],
             "Income.AssetNotFound", "The asset could not be found.", Now, TestContext.Current.CancellationToken);
 
         Assert.True(result.IsError);
         Assert.Equal("Income.AssetNotFound", result.FirstError.Code);
-        // Not even "Wallet" (processed before the missing one) is saved — the whole adjustment
-        // batch fails atomically rather than partially persisting.
+        // Not even "Wallet" (processed before the missing one) is saved — the whole batch fails
+        // atomically rather than partially persisting.
         Assert.Equal(0, saveCalls);
     }
 
-    /// <summary>An adjustment recorded in a different currency than the asset's current one is rejected, not silently misapplied.</summary>
+    /// <summary>A movement recorded in a different currency than the asset's current one is rejected, not silently misapplied.</summary>
     [Fact]
-    public async Task ApplyAssetBalanceAdjustmentsAsync_WithDictionary_ReturnsError_OnCurrencyMismatch()
+    public async Task ApplyBalanceMovementsAsync_ReturnsError_OnCurrencyMismatch()
     {
         Dictionary<string, Asset> assets = new(StringComparer.Ordinal) { ["Wallet"] = MakeAsset("Wallet", currency: "KRW") };
         _assetBalance.Setup(a => a.SaveAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
-        var result = await _assetBalance.Object.ApplyAssetBalanceAdjustmentsAsync(
-            assets, [new AssetBalanceAdjustment("Wallet", 10m, IsDeposit: true, Currency: "USD")],
+        var result = await _assetBalance.Object.ApplyBalanceMovementsAsync(
+            assets, [Move("Wallet", 10m, isDeposit: true, currency: "USD")],
             "NotFound", "not found", Now, TestContext.Current.CancellationToken);
 
         Assert.True(result.IsError);
