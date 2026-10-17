@@ -666,6 +666,23 @@ public class ExpenditureServiceTests
         _expenditureRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Expenditure>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>
+    /// An edit is refused in the same order as a new expenditure (AssetUsagePolicy): a missing payment asset is
+    /// reported before an archived deposit asset, not the other way round.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAsync_ReportsAMissingPaymentAsset_BeforeAnArchivedDepositAsset()
+    {
+        GivenExistingExpenditure(ExistingTransfer());
+        GivenAssets(MakeAsset("Checking"), MakeAsset("Savings"), MakeAsset("Archived", deleted: true));
+
+        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(SavingsTransferRequest("Unknown", "Archived")), TestContext.Current.CancellationToken);
+
+        Assert.Equal("Expenditure.AssetNotFound", result.ErrorCode);
+        Assert.Equal(ServiceErrorKeys.SelectedAssetNotFound, result.ErrorKey);
+        _expenditureRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Expenditure>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     /// <summary>A record whose ORIGINAL deposit asset has since been archived cannot be edited (its old balance impact cannot be reverted).</summary>
     [Fact]
     public async Task UpdateAsync_ReturnsAssetDeleted_WhenThePreviousDepositAssetIsArchived()

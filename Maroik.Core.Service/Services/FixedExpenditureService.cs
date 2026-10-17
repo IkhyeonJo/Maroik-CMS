@@ -49,7 +49,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
         bool requiresDepositAsset = validation.Value;
 
         Asset? payAsset = await assetBalance.GetAssetForReadAsync(accountEmail, request.PaymentMethod ?? "", ct);
-        if (!AssetUsagePolicy.CanUse(payAsset, out var paymentRefusal)) return AssetRefusalMapper.ToResult(RecordType, paymentRefusal);
+        if (!AssetUsagePolicy.CanUse(payAsset, out var paymentRefusal)) return AssetRefusalMapper.ToResult(AssetRefusalMapper.FixedExpenditure, paymentRefusal);
 
         if (requiresDepositAsset)
         {
@@ -59,7 +59,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
 
             Asset? depAsset = await assetBalance.GetAssetForReadAsync(accountEmail, request.MyDepositAsset ?? "", ct);
             if (!AssetUsagePolicy.CanTransferInto(payAsset, depAsset, out var depositRefusal))
-                return AssetRefusalMapper.ToResult(RecordType, depositRefusal);
+                return AssetRefusalMapper.ToResult(AssetRefusalMapper.FixedExpenditure, depositRefusal);
         }
 
         string currency = payAsset.Balance.Currency.Value;
@@ -85,7 +85,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
         bool requiresDepositAsset = validation.Value;
 
         Asset? payAsset = await assetBalance.GetAssetForReadAsync(accountEmail, request.PaymentMethod ?? "", ct);
-        if (!AssetUsagePolicy.CanUse(payAsset, out var paymentRefusal)) return AssetRefusalMapper.ToResult(RecordType, paymentRefusal);
+        if (!AssetUsagePolicy.CanUse(payAsset, out var paymentRefusal)) return AssetRefusalMapper.ToResult(AssetRefusalMapper.FixedExpenditure, paymentRefusal);
 
         if (requiresDepositAsset)
         {
@@ -95,7 +95,7 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
 
             Asset? depAsset = await assetBalance.GetAssetForReadAsync(accountEmail, request.MyDepositAsset ?? "", ct);
             if (!AssetUsagePolicy.CanTransferInto(payAsset, depAsset, out var depositRefusal))
-                return AssetRefusalMapper.ToResult(RecordType, depositRefusal);
+                return AssetRefusalMapper.ToResult(AssetRefusalMapper.FixedExpenditure, depositRefusal);
         }
 
         FixedExpenditure? fe = await fixedExpenditureRepository.FindByEmailAndIdAsync(accountEmail, request.Id, ct);
@@ -137,9 +137,6 @@ public class FixedExpenditureService(IFixedExpenditureRepository fixedExpenditur
         else
             fixedExpenditure.ClearUnpunctuality(utcNow);
     }
-
-    /// <summary>The record type that prefixes this service's error codes.</summary>
-    private const string RecordType = "FixedExpenditure";
 
     /// <summary>
     /// Validates the MainClass/SubClass combination and the deposit month/day of a fixed-expenditure

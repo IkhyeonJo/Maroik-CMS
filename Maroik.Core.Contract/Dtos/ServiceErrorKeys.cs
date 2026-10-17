@@ -95,6 +95,12 @@ public static class ServiceErrorKeys
     public const string AssetNotFoundByProductName = "Fail to find the asset by given product name";
     /// <summary>The asset an income / expenditure refers to does not exist.</summary>
     public const string SelectedAssetNotFound = "The selected asset could not be found.";
+
+    /// <summary>An asset a stored expenditure moved no longer exists, so its balance change cannot be undone.</summary>
+    public const string ReferencedExpenditureAssetNotFound = "The asset referenced by this expenditure could not be found.";
+
+    /// <summary>An asset a stored income moved no longer exists, so its balance change cannot be undone.</summary>
+    public const string ReferencedIncomeAssetNotFound = "The asset referenced by this income could not be found.";
     /// <summary>The asset an income / expenditure refers to is soft-deleted.</summary>
     public const string AssetAlreadyDeleted = "Actions cannot be executed with assets that have already been deleted.";
     /// <summary>A transfer's payment asset and deposit asset carry different currency labels.</summary>

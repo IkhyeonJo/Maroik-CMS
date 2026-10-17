@@ -10,6 +10,16 @@ namespace Maroik.Core.Service.Extensions;
 /// </summary>
 public static class AssetBalanceOrdinalLockExtensions
 {
+    extension(Dictionary<string, Asset> assets)
+    {
+        /// <summary>
+        /// The asset named <paramref name="productName"/> among these (row-locked) assets; null when the name is empty
+        /// or not among them — the "missing asset" the <see cref="AssetUsagePolicy"/> checks expect.
+        /// </summary>
+        public Asset? FindAsset(string? productName) =>
+            !string.IsNullOrEmpty(productName) && assets.TryGetValue(productName, out var asset) ? asset : null;
+    }
+
     extension(IAssetBalanceStore assetBalance)
     {
         /// <summary>

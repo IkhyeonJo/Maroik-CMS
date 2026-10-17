@@ -108,7 +108,7 @@ public class AccountService(
             if (account.CheckSignInOnceAuthenticated() is { } refusal)
             {
                 await unitOfWork.RollbackAsync(ct);
-                return RefuseSignIn(refusal, email);
+                return SignInRefusalResponder.Refuse(logger, refusal, email);
             }
 
             // Successful login: clear any prior failed attempt counter.
@@ -714,26 +714,6 @@ public class AccountService(
             logger.LogError(e, "Failed to reset password for {Email}", found.Email.Value);
             await unitOfWork.RollbackAsync(ct);
             return (ServiceResult.Failure("Account.ResetPasswordFailed", ServiceErrorKeys.ResetPasswordFailed), null);
-        }
-    }
-
-    /// <summary>
-    /// Logs and answers a sign-in that <see cref="Account.CheckSignInOnceAuthenticated"/> refused
-    /// (<see cref="SignInRefusal.ServiceTermsNotAgreed"/> is the remaining member).
-    /// </summary>
-    private LoginResult RefuseSignIn(SignInRefusal refusal, string email)
-    {
-        switch (refusal)
-        {
-            case SignInRefusal.Deleted:
-                logger.LogWarning("Login refused: deleted account {Email}", email);
-                return LoginResult.Fail(ServiceErrorKeys.AccountDeleted);
-            case SignInRefusal.EmailNotConfirmed:
-                logger.LogWarning("Login refused: email not confirmed for {Email}", email);
-                return LoginResult.Fail(ServiceErrorKeys.EmailNotConfirmed);
-            default:
-                logger.LogWarning("Login refused: service terms not accepted for {Email}", email);
-                return LoginResult.Fail(ServiceErrorKeys.ServiceTermsNotAgreed);
         }
     }
 

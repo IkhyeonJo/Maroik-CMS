@@ -26,8 +26,14 @@ public class DefaultUnitScopeTests
     /// <summary>Every asset's currency is listed by product name, the deleted one included.</summary>
     [Fact]
     public void CurrencyByProduct_ListsEveryAsset_IncludingDeletedOnes()
-        => Assert.Equal(new Dictionary<string, string> { ["Bank"] = "KRW", ["Broker"] = "USD", ["OldWallet"] = "KRW" },
+        => Assert.Equal<IReadOnlyDictionary<string, string>>(
+            new Dictionary<string, string> { ["Bank"] = "KRW", ["Broker"] = "USD", ["OldWallet"] = "KRW" },
             KrwScope().CurrencyByProduct);
+
+    /// <summary>The scope hands out its lookup read-only: a caller that needs to change it must take a copy.</summary>
+    [Fact]
+    public void CurrencyByProduct_IsReadOnly()
+        => Assert.IsNotType<Dictionary<string, string>>(KrwScope().CurrencyByProduct, exactMatch: false);
 
     /// <summary>An income counts when its deposit asset carries the default unit, a deleted asset included.</summary>
     [Theory]

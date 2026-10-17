@@ -14,8 +14,15 @@ public class AssetUsagePolicyTests
     private static Asset AssetOf(string name = "Wallet", string currency = "KRW", bool deleted = false)
         => Asset.Reconstitute(name, "user@example.com", "CashAsset", 1000m, currency, null, deleted, Now, Now);
 
-    /// <summary>A check's outcome as one value: <see langword="null"/> when it passed, otherwise its refusal.</summary>
-    private static AssetRefusal? Outcome(bool passed, AssetRefusal refusal) => passed ? null : refusal;
+    /// <summary>
+    /// A check's refusal, after asserting it agrees with the check's result: a passed check leaves no refusal behind
+    /// (so it cannot be read as a reason by mistake), a failed one always names one.
+    /// </summary>
+    private static AssetRefusal? Outcome(bool passed, AssetRefusal? refusal)
+    {
+        Assert.Equal(passed, refusal is null);
+        return refusal;
+    }
 
     // -- CanUse -----------------------------------------------------------------
 
@@ -32,7 +39,7 @@ public class AssetUsagePolicyTests
     /// <summary>An active required asset is accepted.</summary>
     [Fact]
     public void CanUse_AcceptsAnActiveAsset()
-        => Assert.True(AssetUsagePolicy.CanUse(AssetOf(), out _));
+        => Assert.Null(Outcome(AssetUsagePolicy.CanUse(AssetOf(), out var passed1), passed1));
 
     // -- CanTransferInto --------------------------------------------------------
 
@@ -56,7 +63,7 @@ public class AssetUsagePolicyTests
     /// <summary>An active deposit asset in the payment asset's currency is accepted.</summary>
     [Fact]
     public void CanTransferInto_AcceptsAnActiveDepositAssetInTheSameCurrency()
-        => Assert.True(AssetUsagePolicy.CanTransferInto(AssetOf(), AssetOf("Savings"), out _));
+        => Assert.Null(Outcome(AssetUsagePolicy.CanTransferInto(AssetOf(), AssetOf("Savings"), out var passed2), passed2));
 
     // -- CanMoveBack ------------------------------------------------------------
 
@@ -69,7 +76,7 @@ public class AssetUsagePolicyTests
     /// <summary>Missing and active assets are not refused here.</summary>
     [Fact]
     public void CanMoveBack_AcceptsMissingAndActiveAssets()
-        => Assert.True(AssetUsagePolicy.CanMoveBack([null, AssetOf()], out _));
+        => Assert.Null(Outcome(AssetUsagePolicy.CanMoveBack([null, AssetOf()], out var passed3), passed3));
 
     // -- CanRecordExpenditure ---------------------------------------------------
 
@@ -91,13 +98,13 @@ public class AssetUsagePolicyTests
             Outcome(AssetUsagePolicy.CanRecordExpenditure(true, AssetOf(), null, out var missing), missing));
         Assert.Equal(AssetRefusal.CurrencyMismatch,
             Outcome(AssetUsagePolicy.CanRecordExpenditure(true, AssetOf(), AssetOf("Savings", "USD"), out var mismatch), mismatch));
-        Assert.True(AssetUsagePolicy.CanRecordExpenditure(true, AssetOf(), AssetOf("Savings"), out _));
+        Assert.Null(Outcome(AssetUsagePolicy.CanRecordExpenditure(true, AssetOf(), AssetOf("Savings"), out var passed4), passed4));
     }
 
     /// <summary>A non-transfer expenditure ignores whatever deposit asset was resolved.</summary>
     [Fact]
     public void CanRecordExpenditure_IgnoresTheDepositAsset_ForANonTransfer()
-        => Assert.True(AssetUsagePolicy.CanRecordExpenditure(false, AssetOf(), AssetOf("Savings", "USD", deleted: true), out _));
+        => Assert.Null(Outcome(AssetUsagePolicy.CanRecordExpenditure(false, AssetOf(), AssetOf("Savings", "USD", deleted: true), out var passed5), passed5));
 
     // -- CanRetargetExpenditure -------------------------------------------------
 
@@ -136,8 +143,8 @@ public class AssetUsagePolicyTests
     [Fact]
     public void CanRetargetExpenditure_AcceptsActiveAssets_AndIgnoresANonTransfersDepositAsset()
     {
-        Assert.True(AssetUsagePolicy.CanRetargetExpenditure(false, AssetOf(), AssetOf("Savings", "USD", deleted: true), AssetOf("Old"), null, out _));
-        Assert.True(AssetUsagePolicy.CanRetargetExpenditure(true, AssetOf(), AssetOf("Savings"), AssetOf("Old"), AssetOf("OldSavings"), out _));
+        Assert.Null(Outcome(AssetUsagePolicy.CanRetargetExpenditure(false, AssetOf(), AssetOf("Savings", "USD", deleted: true), AssetOf("Old"), null, out var passed6), passed6));
+        Assert.Null(Outcome(AssetUsagePolicy.CanRetargetExpenditure(true, AssetOf(), AssetOf("Savings"), AssetOf("Old"), AssetOf("OldSavings"), out var passed7), passed7));
     }
 
     // -- CanRetargetIncome ------------------------------------------------------
@@ -159,7 +166,7 @@ public class AssetUsagePolicyTests
     [InlineData(null)]
     [InlineData("")]
     public void CanRetargetIncome_LeavesAnUnnamedNewAsset_ToTheIncome(string? nextName)
-        => Assert.True(AssetUsagePolicy.CanRetargetIncome(AssetOf(), nextName, null, out _));
+        => Assert.Null(Outcome(AssetUsagePolicy.CanRetargetIncome(AssetOf(), nextName, null, out var passed8), passed8));
 
     /// <summary>A deleted new deposit asset is refused; an active one is accepted.</summary>
     [Fact]
@@ -167,6 +174,6 @@ public class AssetUsagePolicyTests
     {
         Assert.Equal(AssetRefusal.Deleted,
             Outcome(AssetUsagePolicy.CanRetargetIncome(null, "Savings", AssetOf("Savings", deleted: true), out var refusal), refusal));
-        Assert.True(AssetUsagePolicy.CanRetargetIncome(AssetOf(), "Savings", AssetOf("Savings"), out _));
+        Assert.Null(Outcome(AssetUsagePolicy.CanRetargetIncome(AssetOf(), "Savings", AssetOf("Savings"), out var passed9), passed9));
     }
 }

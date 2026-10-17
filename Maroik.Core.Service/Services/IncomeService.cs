@@ -47,7 +47,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
 
             Asset? depositAsset = await assetBalance.GetAssetAsync(accountEmail, request.DepositMyAssetProductName ?? "", ct);
             if (!AssetUsagePolicy.CanUse(depositAsset, out var refusal))
-                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(RecordType, refusal), ct);
+                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(AssetRefusalMapper.Income, refusal), ct);
 
             string currency = depositAsset.Balance.Currency.Value;
             var incomeResult = Income.Record(accountEmail, request.MainClass, request.SubClass,
@@ -60,7 +60,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
 
             Dictionary<string, Asset> touchedAssets = new(StringComparer.Ordinal) { [depositAsset.ProductName] = depositAsset };
             var moveResult = await assetBalance.ApplyBalanceMovementsAsync(
-                touchedAssets, income.BalanceMovements(), AssetNotFoundCode, ReferencedAssetNotFoundMessage, utcNow, ct);
+                touchedAssets, income.BalanceMovements(), AssetRefusalMapper.Income.AssetNotFound, ServiceErrorKeys.ReferencedIncomeAssetNotFound, utcNow, ct);
             if (moveResult.IsError)
                 return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
@@ -99,10 +99,10 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
             Dictionary<string, Asset> touchedAssets = await assetBalance.GetAssetsOrdinalAsync(accountEmail,
                 [previous.DepositMyAssetProductName, request.DepositMyAssetProductName], ct);
 
-            Asset? prevAsset = Find(touchedAssets, previous.DepositMyAssetProductName);
-            Asset? newAsset = Find(touchedAssets, request.DepositMyAssetProductName);
+            Asset? prevAsset = touchedAssets.FindAsset(previous.DepositMyAssetProductName);
+            Asset? newAsset = touchedAssets.FindAsset(request.DepositMyAssetProductName);
             if (!AssetUsagePolicy.CanRetargetIncome(prevAsset, request.DepositMyAssetProductName, newAsset, out var refusal))
-                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(RecordType, refusal), ct);
+                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(AssetRefusalMapper.Income, refusal), ct);
             string newCurrency = newAsset?.Balance.Currency.Value ?? prevAsset?.Balance.Currency.Value ?? "";
 
             IReadOnlyList<BalanceMovement> before = previous.BalanceMovements();
@@ -114,7 +114,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
 
             await incomeRepository.UpdateEntityAsync(previous, ct);
             var moveResult = await assetBalance.ApplyBalanceMovementsAsync(touchedAssets,
-                BalanceMovement.Replacing(before, previous.BalanceMovements()), AssetNotFoundCode, ReferencedAssetNotFoundMessage, utcNow, ct);
+                BalanceMovement.Replacing(before, previous.BalanceMovements()), AssetRefusalMapper.Income.AssetNotFound, ServiceErrorKeys.ReferencedIncomeAssetNotFound, utcNow, ct);
             if (moveResult.IsError)
                 return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
@@ -146,11 +146,11 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
             // matching Create/Update: a deleted asset's balance must not be touched.
             Dictionary<string, Asset> touchedAssets = await assetBalance.GetAssetsOrdinalAsync(
                 accountEmail, [income.DepositMyAssetProductName], ct);
-            if (!AssetUsagePolicy.CanMoveBack([Find(touchedAssets, income.DepositMyAssetProductName)], out var refusal))
-                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(RecordType, refusal), ct);
+            if (!AssetUsagePolicy.CanMoveBack([touchedAssets.FindAsset(income.DepositMyAssetProductName)], out var refusal))
+                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(AssetRefusalMapper.Income, refusal), ct);
 
             var moveResult = await assetBalance.ApplyBalanceMovementsAsync(touchedAssets,
-                BalanceMovement.Undoing(income.BalanceMovements()), AssetNotFoundCode, ReferencedAssetNotFoundMessage, utcNow, ct);
+                BalanceMovement.Undoing(income.BalanceMovements()), AssetRefusalMapper.Income.AssetNotFound, ServiceErrorKeys.ReferencedIncomeAssetNotFound, utcNow, ct);
             if (moveResult.IsError)
                 return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
@@ -166,19 +166,6 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
             return UnexpectedFailure;
         }
     }
-
-    /// <summary>The record type that prefixes this service's error codes.</summary>
-    private const string RecordType = "Income";
-
-    /// <summary>Error code of a failure caused by an asset that is not on the caller's account.</summary>
-    private const string AssetNotFoundCode = "Income.AssetNotFound";
-
-    /// <summary>Message of a failure caused by an asset the stored record moved that no longer exists.</summary>
-    private const string ReferencedAssetNotFoundMessage = "The asset referenced by this income could not be found.";
-
-    /// <summary>The asset named <paramref name="name"/> among <paramref name="assets"/>; null when the name is empty or absent.</summary>
-    private static Asset? Find(Dictionary<string, Asset> assets, string? name) =>
-        !string.IsNullOrEmpty(name) && assets.TryGetValue(name, out var asset) ? asset : null;
 
     /// <summary>Generic failure returned (after logging) when a write throws unexpectedly.</summary>
     private static ServiceResult UnexpectedFailure => ServiceResult.Failure(
