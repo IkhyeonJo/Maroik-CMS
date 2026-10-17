@@ -70,19 +70,25 @@ Maroik has been built by one developer since May 2021. It was developed in a pri
 | 2021-07 | Excel export, registration with e-mail confirmation, password reset, separate admin / user dashboards, English / Korean localization (resx) |
 | 2021-08 | Account book: assets, income, expenditure, fixed income / expenditure with deposit-day notices |
 | 2021-12 | MariaDB 10.6 |
-| 2022-08 | Public anonymous dashboard and landing pages |
+| 2022-07 | User dashboard backend and charts for income and expenditure |
+| 2022-08 | Public anonymous dashboard and landing pages; role-based navigation menu (Admin / User / Anonymous) stored in the database |
 | 2022-09 | .NET 6 |
-| 2022-10 | Renamed to **Maroik**; Free Forum with Summernote editor, HTML sanitizing, locked and notice posts |
-| 2022-11 | Security headers |
+| 2022-10 | Renamed to **Maroik**; Free Forum with Summernote editor and HTML sanitizing |
+| 2022-11 | Forum comments, locked and notice posts; security headers |
 | 2023-03 | .NET 7 |
-| 2024-02 | .NET 8 |
-| 2024-05 | Private notes, default monetary unit, dashboard year / month selection |
-| 2024-06 – 09 | Calendar (FullCalendar): calendars, events, reminders, sharing, browsing others' calendars |
+| 2023-04 | Income and expenditure statistics |
+| 2023-08 | Global AJAX error handling; debugging docker-compose in VS Code |
+| 2024-02 | .NET 8; dashboard breakdowns of each income / expenditure class |
+| 2024-04 – 09 | Calendar (FullCalendar): calendars, events, reminders, sharing, browsing others' calendars |
+| 2024-05 | Private notes, per-account time zones, default monetary unit, dashboard year / month selection |
 | 2024-09 | Maroik.FileStorage service |
-| 2025-01 | Attachments and inline images for forum posts, calendar events and private notes; server resource monitoring on the admin dashboard |
+| 2025-01 | Attachments and inline images for forum posts, calendar events and private notes; server resource monitoring on the admin dashboard; Let's Encrypt certificates renewed automatically with Certbot |
 | 2025-03 | .NET 9 |
 | 2025-04 | MariaDB → PostgreSQL |
-| 2025-05 | DNS moved from AWS Route 53 to Cloudflare; ClamAV virus scanning of uploads |
+| 2025-05 | DNS moved from AWS Route 53 to Cloudflare; ClamAV virus scanning of uploads; public demo account |
+| 2025-07 | Database transactions for account-book writes |
+| 2025-08 | BCrypt password hashing |
+| 2025-11 | .NET 10; data access split into repositories and clients |
 | 2025-12 | Project split into Core layers (Repository, Service, Client, PostgreSQL) |
 | 2026-04 | Maroik.Core.Contract; first unit tests |
 | 2026-05 – 08 | DDD + Clean Architecture refactor, ending with the Maroik.Core.Domain project; CI/CD with a coverage gate; Serilog |
