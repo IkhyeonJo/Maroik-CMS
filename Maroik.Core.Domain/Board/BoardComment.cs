@@ -54,6 +54,14 @@ public sealed class BoardComment : AggregateRoot<long>
     }
 
     /// <summary>
+    /// The <see cref="Order"/> of the next comment on a post, given its <paramref name="existing"/> comments: one past
+    /// the highest, or 0 for the first. Continuing from the highest (rather than counting) keeps a new comment from
+    /// colliding with a still-active one after an earlier comment was soft-deleted and left out of the list.
+    /// </summary>
+    public static long NextOrder(IReadOnlyCollection<BoardComment> existing) =>
+        existing.Count == 0 ? 0 : existing.Max(c => c.Order) + 1;
+
+    /// <summary>
     /// Rebuilds a <see cref="BoardComment"/> from trusted raw values from the repository layer.
     /// Bypasses validation — use only with data from the trusted repository layer.
     /// </summary>

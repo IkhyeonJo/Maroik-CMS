@@ -89,6 +89,25 @@ public sealed class Calendar : AggregateRoot<long>
     }
 
     /// <summary>
+    /// Whether an account with <paramref name="accountCalendars"/> needs its default calendar: only when it has none
+    /// yet (e.g. on its first visit), so the calendar page is never empty.
+    /// </summary>
+    public static bool NeedsDefault(IReadOnlyCollection<Calendar> accountCalendars) => accountCalendars.Count == 0;
+
+    /// <summary>
+    /// Creates an account's default calendar like <see cref="Create"/>, except that an unusable time zone falls back to
+    /// UTC instead of failing: the account did not ask for this calendar, so the provisioning must not fail on it.
+    /// </summary>
+    public static ErrorOr<Calendar> CreateDefault(
+        string? accountEmailValue, string? name, string? description, string? timeZoneValue, string? htmlColorCode, DateTime utcNow)
+        => Create(accountEmailValue, name, description,
+            TimeZoneId.Create(timeZoneValue).IsError ? "UTC" : timeZoneValue, htmlColorCode, utcNow);
+
+    /// <summary>Whether <paramref name="name"/> is already the name of one of <paramref name="accountCalendars"/> (names are unique per account).</summary>
+    public static bool IsNameTaken(IEnumerable<Calendar> accountCalendars, string? name) =>
+        accountCalendars.Any(c => string.Equals(c.Name, name, StringComparison.Ordinal));
+
+    /// <summary>
     /// Creates a new calendar.
     /// </summary>
     public static ErrorOr<Calendar> Create(
@@ -118,6 +137,9 @@ public sealed class Calendar : AggregateRoot<long>
     // ------------------------------------------------------------------------
     // Domain behaviours
     // ------------------------------------------------------------------------
+
+    /// <summary>Whether the account <paramref name="accountEmail"/> owns this calendar.</summary>
+    public bool IsOwnedBy(string accountEmail) => string.Equals(AccountEmail.Value, accountEmail, StringComparison.Ordinal);
 
     /// <summary>Updates the calendar's display fields.</summary>
     public ErrorOr<Success> Update(

@@ -9,14 +9,14 @@ namespace Maroik.Core.Domain.Tests.Finance;
 public class DefaultMonetaryUnitPolicyTests
 {
     /// <summary>A persisted asset named <paramref name="productName"/> held in <paramref name="currency"/>.</summary>
-    private static Asset MakeAsset(string productName, string currency) => Asset.Reconstitute(
+    private static Asset MakeAsset(string productName, string currency, bool deleted = false) => Asset.Reconstitute(
         productName,
         "user@example.com",
         "Deposit",
         1000m,
         currency,
         note: null,
-        deleted: false,
+        deleted: deleted,
         created: DateTime.UtcNow,
         updated: DateTime.UtcNow);
 
@@ -61,4 +61,31 @@ public class DefaultMonetaryUnitPolicyTests
 
         Assert.Equal("KRW", result?.Value);
     }
+
+    // -- Choose -----------------------------------------------------------------
+
+    /// <summary>A requested unit carried by an active asset is chosen.</summary>
+    [Fact]
+    public void Choose_ReturnsTheRequestedUnit_WhenAnActiveAssetCarriesIt()
+        => Assert.Equal("USD", DefaultMonetaryUnitPolicy.Choose("USD", [MakeAsset("Bank", "KRW"), MakeAsset("Broker", "USD")]));
+
+    /// <summary>A requested unit no asset carries, or none at all, is not chosen.</summary>
+    [Theory]
+    [InlineData("JPY")]
+    [InlineData(null)]
+    public void Choose_ReturnsNull_WhenNoAssetCarriesTheRequestedUnit(string? requested)
+        => Assert.Null(DefaultMonetaryUnitPolicy.Choose(requested, [MakeAsset("Bank", "KRW")]));
+
+    /// <summary>A unit only a deleted asset carries is still chosen: the dashboard counts deleted assets too.</summary>
+    [Fact]
+    public void Choose_ReturnsTheRequestedUnit_WhenOnlyADeletedAssetCarriesIt()
+        => Assert.Equal("USD", DefaultMonetaryUnitPolicy.Choose("USD", [MakeAsset("Bank", "KRW"), MakeAsset("Old", "USD", deleted: true)]));
+
+    // -- Selectable -------------------------------------------------------------
+
+    /// <summary>The selectable units are the distinct currencies of every asset, deleted ones included.</summary>
+    [Fact]
+    public void Selectable_ListsTheDistinctCurrenciesOfEveryAsset_IncludingDeletedOnes()
+        => Assert.Equal(["KRW", "USD", "JPY"], DefaultMonetaryUnitPolicy.Selectable(
+            [MakeAsset("Bank", "KRW"), MakeAsset("Broker", "USD"), MakeAsset("Card", "KRW"), MakeAsset("Old", "JPY", deleted: true)]));
 }

@@ -241,10 +241,7 @@ public class ProfileService(
     {
         List<Asset> assets = await assetRepository.GetByAccountEmailAsync(accountEmail, ct);
 
-        // A deleted asset's currency must not remain selectable as the default monetary unit.
-        string? newUnit = assets.Where(x => !x.Deleted).Select(x => x.Balance.Currency.Value).Distinct().Contains(monetaryUnit)
-            ? monetaryUnit
-            : null;
+        string? newUnit = DefaultMonetaryUnitPolicy.Choose(monetaryUnit, assets);
 
         // Column-scoped write: only DefaultMonetaryUnit, no Updated bump (background correction).
         // A no-op (0 rows) when the account does not exist, matching the prior silent return.

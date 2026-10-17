@@ -275,6 +275,32 @@ public sealed class Account : AggregateRoot<string>
     }
 
     /// <summary>
+    /// Whether a caller that has proven this account's password may be signed in: refused when the account is
+    /// deleted, then when its email is unconfirmed, then when the service terms are not accepted. A lock is not
+    /// part of this check — it is refused before the password is looked at, so a lock cannot become a password
+    /// oracle — and these states are only disclosed once the password matched.
+    /// </summary>
+    public SignInRefusal? CheckSignInOnceAuthenticated() =>
+        Deleted ? SignInRefusal.Deleted
+        : !EmailConfirmed ? SignInRefusal.EmailNotConfirmed
+        : !AgreedServiceTerms ? SignInRefusal.ServiceTermsNotAgreed
+        : null;
+
+    /// <summary>
+    /// Whether a password-reset mail is sent for this account: only for one that is confirmed and not deleted. A
+    /// locked account qualifies — resetting the password is how a user recovers from a lockout.
+    /// </summary>
+    public bool CanRequestPasswordReset => !Deleted && EmailConfirmed;
+
+    /// <summary>
+    /// Whether the reset link carrying <paramref name="rawToken"/> (the token this account was found by) still
+    /// works at <paramref name="utcNow"/>: the account must still qualify (<see cref="CanRequestPasswordReset"/>)
+    /// and the token must not have expired.
+    /// </summary>
+    public bool AcceptsResetToken(string rawToken, DateTime utcNow) =>
+        CanRequestPasswordReset && GuidToken.IsTokenAlive(rawToken, utcNow);
+
+    /// <summary>
     /// Stores a password-reset token
     /// so an email can be dispatched by the application layer.
     /// Available even when the account is locked, since resetting the password

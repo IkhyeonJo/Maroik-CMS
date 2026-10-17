@@ -105,25 +105,10 @@ public class AccountService(
                 return LoginResult.Fail(ServiceErrorKeys.EmailOrPasswordWrong);
             }
 
-            if (account.Deleted)
+            if (account.CheckSignInOnceAuthenticated() is { } refusal)
             {
                 await unitOfWork.RollbackAsync(ct);
-                logger.LogWarning("Login refused: deleted account {Email}", email);
-                return LoginResult.Fail(ServiceErrorKeys.AccountDeleted);
-            }
-
-            if (!account.EmailConfirmed)
-            {
-                await unitOfWork.RollbackAsync(ct);
-                logger.LogWarning("Login refused: email not confirmed for {Email}", email);
-                return LoginResult.Fail(ServiceErrorKeys.EmailNotConfirmed);
-            }
-
-            if (!account.AgreedServiceTerms)
-            {
-                await unitOfWork.RollbackAsync(ct);
-                logger.LogWarning("Login refused: service terms not accepted for {Email}", email);
-                return LoginResult.Fail(ServiceErrorKeys.ServiceTermsNotAgreed);
+                return RefuseSignIn(refusal, email);
             }
 
             // Successful login: clear any prior failed attempt counter.
@@ -585,7 +570,7 @@ public class AccountService(
         // equivalent work here first, mirroring LoginAsync's VerifyDummy + dummy-write hardening.
         // (The async mail publish on the success path is the only residual asymmetry, the same
         // trade-off LoginAsync accepts.)
-        if (account == null || account.Deleted || !account.EmailConfirmed)
+        if (account is not { CanRequestPasswordReset: true })
         {
             try
             {
@@ -650,7 +635,7 @@ public class AccountService(
         // the same guard on ForgotPasswordAsync / ResetPasswordAsync so a soft-deleted account's
         // lingering token can never be reported "valid" here only to be rejected at the actual reset.
         // A valid link returns the still-encrypted token so the client can pass it back during the actual reset.
-        if (account != null && !account.Deleted && GuidToken.IsTokenAlive(rawToken, utcNow) && account.EmailConfirmed)
+        if (account != null && account.AcceptsResetToken(rawToken, utcNow))
             return new ResetPasswordValidationResult
             {
                 FailToReset = false, ResetPasswordToken = encryptedToken
@@ -672,7 +657,7 @@ public class AccountService(
         }
 
         Account? found = await FindByResetPasswordTokenAsync(rawToken, ct);
-        if (found == null || found.Deleted || !GuidToken.IsTokenAlive(rawToken, utcNow) || !found.EmailConfirmed)
+        if (found == null || !found.AcceptsResetToken(rawToken, utcNow))
         {
             logger.LogWarning("Password reset rejected: invalid or expired token");
             return (ServiceResult.Fail(ServiceErrorKeys.Signals.ResetPasswordInvalid), null);
@@ -729,6 +714,26 @@ public class AccountService(
             logger.LogError(e, "Failed to reset password for {Email}", found.Email.Value);
             await unitOfWork.RollbackAsync(ct);
             return (ServiceResult.Failure("Account.ResetPasswordFailed", ServiceErrorKeys.ResetPasswordFailed), null);
+        }
+    }
+
+    /// <summary>
+    /// Logs and answers a sign-in that <see cref="Account.CheckSignInOnceAuthenticated"/> refused
+    /// (<see cref="SignInRefusal.ServiceTermsNotAgreed"/> is the remaining member).
+    /// </summary>
+    private LoginResult RefuseSignIn(SignInRefusal refusal, string email)
+    {
+        switch (refusal)
+        {
+            case SignInRefusal.Deleted:
+                logger.LogWarning("Login refused: deleted account {Email}", email);
+                return LoginResult.Fail(ServiceErrorKeys.AccountDeleted);
+            case SignInRefusal.EmailNotConfirmed:
+                logger.LogWarning("Login refused: email not confirmed for {Email}", email);
+                return LoginResult.Fail(ServiceErrorKeys.EmailNotConfirmed);
+            default:
+                logger.LogWarning("Login refused: service terms not accepted for {Email}", email);
+                return LoginResult.Fail(ServiceErrorKeys.ServiceTermsNotAgreed);
         }
     }
 

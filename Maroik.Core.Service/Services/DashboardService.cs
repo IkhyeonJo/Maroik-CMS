@@ -86,7 +86,7 @@ public class DashboardService(
             SelectedYear = yearInt,
             SelectedMonth = monthInt,
             EndYear = accountToday.Year,
-            MonetaryUnits = allAssets.Select(x => x.Balance.Currency.Value).Distinct()
+            MonetaryUnits = DefaultMonetaryUnitPolicy.Selectable(allAssets)
         };
 
         if (summary.DefaultMonetaryUnit != null)
@@ -106,40 +106,15 @@ public class DashboardService(
             List<Income> ymIncomes = [.. yearIncomes.Where(x => x.Created >= ymStart && x.Created < ymEnd)];
             List<Expenditure> ymExpenditures = [.. yearExpenditures.Where(x => x.Created >= ymStart && x.Created < ymEnd)];
 
-            // Filter by default monetary unit via a currency-by-product lookup built once. Uses
-            // allAssets (not the deleted-filtered `assets`) so a transaction tied to a
-            // since-deleted asset still resolves its currency correctly instead of being dropped
-            // from the totals.
-            string defaultUnit = summary.DefaultMonetaryUnit;
-            Dictionary<string, string> currencyByProduct = allAssets
-                .GroupBy(a => a.ProductName)
-                .ToDictionary(g => g.Key, g => g.Last().Balance.Currency.Value);
-            summary.CurrencyByProduct = currencyByProduct;
+            // Only the records whose asset carries the default unit count (DefaultUnitScope, looked up
+            // among allAssets so a record tied to a since-deleted asset keeps its currency).
+            DefaultUnitScope scope = DefaultUnitScope.Of(summary.DefaultMonetaryUnit, allAssets);
+            summary.CurrencyByProduct = scope.CurrencyByProduct;
 
-            summary.YearIncomes =
-            [
-                .. yearIncomes
-                    .Where(x => currencyByProduct.GetValueOrDefault(x.DepositMyAssetProductName) == defaultUnit)
-                    .Select(IncomeMapper.ToResponse)
-            ];
-            summary.YearExpenditures =
-            [
-                .. yearExpenditures
-                    .Where(x => currencyByProduct.GetValueOrDefault(x.PaymentMethod) == defaultUnit)
-                    .Select(ExpenditureMapper.ToResponse)
-            ];
-            summary.YearMonthIncomes =
-            [
-                .. ymIncomes
-                    .Where(x => currencyByProduct.GetValueOrDefault(x.DepositMyAssetProductName) == defaultUnit)
-                    .Select(IncomeMapper.ToResponse)
-            ];
-            summary.YearMonthExpenditures =
-            [
-                .. ymExpenditures
-                    .Where(x => currencyByProduct.GetValueOrDefault(x.PaymentMethod) == defaultUnit)
-                    .Select(ExpenditureMapper.ToResponse)
-            ];
+            summary.YearIncomes = [.. yearIncomes.Where(scope.Includes).Select(IncomeMapper.ToResponse)];
+            summary.YearExpenditures = [.. yearExpenditures.Where(scope.Includes).Select(ExpenditureMapper.ToResponse)];
+            summary.YearMonthIncomes = [.. ymIncomes.Where(scope.Includes).Select(IncomeMapper.ToResponse)];
+            summary.YearMonthExpenditures = [.. ymExpenditures.Where(scope.Includes).Select(ExpenditureMapper.ToResponse)];
 
             // Per-main-class subClass amount/percentage breakdowns (labor/business/pension income,
             // meal/housing/education spending, ...) the dashboard view displays. Computed here, from
@@ -159,13 +134,7 @@ public class DashboardService(
         var firstIncome = await incomeRepository.GetFirstByAccountEmailOrderedByCreatedAsync(accountEmail, ct);
         var firstExpenditure = await expenditureRepository.GetFirstByAccountEmailOrderedByCreatedAsync(accountEmail, ct);
 
-        DateTime firstCreated = DateTime.MaxValue;
-        if (firstIncome != null && firstIncome.Created != DateTime.MinValue && firstIncome.Created < firstCreated)
-            firstCreated = firstIncome.Created;
-        if (firstExpenditure != null && firstExpenditure.Created != DateTime.MinValue && firstExpenditure.Created < firstCreated)
-            firstCreated = firstExpenditure.Created;
-        if (firstCreated == DateTime.MaxValue)
-            firstCreated = utcNow;
+        DateTime firstCreated = FinanceHistoryPolicy.StartsAt(firstIncome?.Created, firstExpenditure?.Created, utcNow);
 
         // Convert to user timezone. ConvertTimeByTimeZoneIanaId (not the raw TimeZoneInfo API) is
         // required here: firstCreated is DateTimeKind.Unspecified as returned by Npgsql but

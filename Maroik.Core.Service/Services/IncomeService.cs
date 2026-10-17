@@ -1,4 +1,3 @@
-using ErrorOr;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Finance;
@@ -47,10 +46,8 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
                 return await unitOfWork.FailAsync(classResult.FirstError, ct);
 
             Asset? depositAsset = await assetBalance.GetAssetAsync(accountEmail, request.DepositMyAssetProductName ?? "", ct);
-            if (depositAsset == null)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Income.AssetNotFound", ServiceErrorKeys.SelectedAssetNotFound), ct);
-            if (depositAsset.Deleted)
-                return await unitOfWork.FailAsync(DeletedAssetResult, ct);
+            if (!AssetUsagePolicy.CanUse(depositAsset, out var refusal))
+                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(RecordType, refusal), ct);
 
             string currency = depositAsset.Balance.Currency.Value;
             var incomeResult = Income.Record(accountEmail, request.MainClass, request.SubClass,
@@ -61,10 +58,11 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
             var income = incomeResult.Value;
             await incomeRepository.CreateAsync(income, ct);
 
-            var depositResult = depositAsset.Deposit(income.Amount, utcNow);
-            if (depositResult.IsError)
-                return await unitOfWork.FailAsync(depositResult.FirstError, ct);
-            await assetBalance.SaveAsync(depositAsset, ct);
+            Dictionary<string, Asset> touchedAssets = new(StringComparer.Ordinal) { [depositAsset.ProductName] = depositAsset };
+            var moveResult = await assetBalance.ApplyBalanceMovementsAsync(
+                touchedAssets, income.BalanceMovements(), AssetNotFoundCode, ReferencedAssetNotFoundMessage, utcNow, ct);
+            if (moveResult.IsError)
+                return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
             await unitOfWork.CommitAsync(ct);
             return ServiceResult.Ok();
@@ -101,20 +99,13 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
             Dictionary<string, Asset> touchedAssets = await assetBalance.GetAssetsOrdinalAsync(accountEmail,
                 [previous.DepositMyAssetProductName, request.DepositMyAssetProductName], ct);
 
-            Asset? prevAsset = !string.IsNullOrEmpty(previous.DepositMyAssetProductName) && touchedAssets.TryGetValue(previous.DepositMyAssetProductName, out var pa) ? pa : null;
-            if (prevAsset?.Deleted == true)
-                return await unitOfWork.FailAsync(DeletedAssetResult, ct);
-
-            Asset? newAsset = !string.IsNullOrEmpty(request.DepositMyAssetProductName) && touchedAssets.TryGetValue(request.DepositMyAssetProductName, out var na) ? na : null;
-            if (!string.IsNullOrEmpty(request.DepositMyAssetProductName) && newAsset == null)
-                return await unitOfWork.FailAsync(ServiceResult.NotFound("Income.AssetNotFound", ServiceErrorKeys.SelectedAssetNotFound), ct);
-            // A record must not be retargeted onto a since-archived asset, matching Create: a
-            // deleted asset's balance must never be touched.
-            if (newAsset?.Deleted == true)
-                return await unitOfWork.FailAsync(DeletedAssetResult, ct);
+            Asset? prevAsset = Find(touchedAssets, previous.DepositMyAssetProductName);
+            Asset? newAsset = Find(touchedAssets, request.DepositMyAssetProductName);
+            if (!AssetUsagePolicy.CanRetargetIncome(prevAsset, request.DepositMyAssetProductName, newAsset, out var refusal))
+                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(RecordType, refusal), ct);
             string newCurrency = newAsset?.Balance.Currency.Value ?? prevAsset?.Balance.Currency.Value ?? "";
 
-            var oldSnapshot = new IncomeSnapshot(previous.DepositMyAssetProductName, previous.Amount.Amount, previous.Amount.Currency.Value);
+            IReadOnlyList<BalanceMovement> before = previous.BalanceMovements();
 
             var updateResult = previous.Update(request.MainClass, request.SubClass, request.Content,
                 Math.Abs(request.Amount), newCurrency, request.DepositMyAssetProductName, request.Note, utcNow, request.Created);
@@ -122,10 +113,10 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
                 return await unitOfWork.FailAsync(updateResult.FirstError, ct);
 
             await incomeRepository.UpdateEntityAsync(previous, ct);
-            var adjustResult = await AdjustAssetBalancesAsync(touchedAssets, oldSnapshot,
-                new IncomeSnapshot(previous.DepositMyAssetProductName, previous.Amount.Amount, previous.Amount.Currency.Value), utcNow, ct);
-            if (adjustResult.IsError)
-                return await unitOfWork.FailAsync(adjustResult.FirstError, ct);
+            var moveResult = await assetBalance.ApplyBalanceMovementsAsync(touchedAssets,
+                BalanceMovement.Replacing(before, previous.BalanceMovements()), AssetNotFoundCode, ReferencedAssetNotFoundMessage, utcNow, ct);
+            if (moveResult.IsError)
+                return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
             await unitOfWork.CommitAsync(ct);
             return ServiceResult.Ok();
@@ -153,16 +144,15 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
 
             // An income referencing a since-archived (soft-deleted) asset must not be deletable,
             // matching Create/Update: a deleted asset's balance must not be touched.
-            Dictionary<string, Asset> assetsToCheck = await assetBalance.GetAssetsOrdinalAsync(
+            Dictionary<string, Asset> touchedAssets = await assetBalance.GetAssetsOrdinalAsync(
                 accountEmail, [income.DepositMyAssetProductName], ct);
-            if (!string.IsNullOrEmpty(income.DepositMyAssetProductName) &&
-                assetsToCheck.TryGetValue(income.DepositMyAssetProductName, out var assetToCheck) && assetToCheck.Deleted)
-                return await unitOfWork.FailAsync(DeletedAssetResult, ct);
+            if (!AssetUsagePolicy.CanMoveBack([Find(touchedAssets, income.DepositMyAssetProductName)], out var refusal))
+                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(RecordType, refusal), ct);
 
-            var adjustResult = await AdjustAssetBalancesAsync(assetsToCheck,
-                new IncomeSnapshot(income.DepositMyAssetProductName, income.Amount.Amount, income.Amount.Currency.Value), null, utcNow, ct);
-            if (adjustResult.IsError)
-                return await unitOfWork.FailAsync(adjustResult.FirstError, ct);
+            var moveResult = await assetBalance.ApplyBalanceMovementsAsync(touchedAssets,
+                BalanceMovement.Undoing(income.BalanceMovements()), AssetNotFoundCode, ReferencedAssetNotFoundMessage, utcNow, ct);
+            if (moveResult.IsError)
+                return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
             await incomeRepository.DeleteByIdAsync(income.Id, ct);
 
@@ -177,36 +167,20 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
         }
     }
 
-    /// <summary>Failure returned when the income's deposit asset has been soft-deleted.</summary>
-    private static ServiceResult DeletedAssetResult => ServiceResult.Conflict(
-        "Income.AssetDeleted", ServiceErrorKeys.AssetAlreadyDeleted);
+    /// <summary>The record type that prefixes this service's error codes.</summary>
+    private const string RecordType = "Income";
+
+    /// <summary>Error code of a failure caused by an asset that is not on the caller's account.</summary>
+    private const string AssetNotFoundCode = "Income.AssetNotFound";
+
+    /// <summary>Message of a failure caused by an asset the stored record moved that no longer exists.</summary>
+    private const string ReferencedAssetNotFoundMessage = "The asset referenced by this income could not be found.";
+
+    /// <summary>The asset named <paramref name="name"/> among <paramref name="assets"/>; null when the name is empty or absent.</summary>
+    private static Asset? Find(Dictionary<string, Asset> assets, string? name) =>
+        !string.IsNullOrEmpty(name) && assets.TryGetValue(name, out var asset) ? asset : null;
 
     /// <summary>Generic failure returned (after logging) when a write throws unexpectedly.</summary>
     private static ServiceResult UnexpectedFailure => ServiceResult.Failure(
         "Income.Unexpected", ServiceResult.TemporaryErrorKey);
-
-    /// <summary>
-    /// Reverts <paramref name="toRevert"/>'s asset impact and applies <paramref name="toApply"/>'s asset impact.
-    /// Pass null for toApply when deleting. Applies against <paramref name="touchedAssets"/> — the
-    /// dictionary the caller already fetched (via <see cref="AssetBalanceOrdinalLockExtensions.GetAssetsOrdinalAsync"/>)
-    /// for its own pre-write validation — instead of fetching the same assets again.
-    /// </summary>
-    private async Task<ErrorOr<Success>> AdjustAssetBalancesAsync(
-        Dictionary<string, Asset> touchedAssets, IncomeSnapshot toRevert, IncomeSnapshot? toApply, DateTime utcNow, CancellationToken ct = default)
-    {
-        List<AssetBalanceAdjustment> adjustments =
-            [new(toRevert.DepositAssetName, toRevert.Amount, IsDeposit: false, Currency: toRevert.Currency)];
-        if (toApply.HasValue)
-            adjustments.Add(new(toApply.Value.DepositAssetName, toApply.Value.Amount, IsDeposit: true, Currency: toApply.Value.Currency));
-
-        return await assetBalance.ApplyAssetBalanceAdjustmentsAsync(
-            touchedAssets, adjustments, "Income.AssetNotFound", "The asset referenced by this income could not be found.", utcNow, ct);
-    }
-
-    /// <summary>
-    /// Captures the asset-related fields of an <see cref="Income"/> at a point in time (including the
-    /// currency the amount was recorded in) so that the corresponding asset balance can be correctly
-    /// reversed during update or delete operations.
-    /// </summary>
-    private readonly record struct IncomeSnapshot(string? DepositAssetName, decimal Amount, string Currency);
 }

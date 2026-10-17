@@ -1,4 +1,3 @@
-using ErrorOr;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Finance;
@@ -66,47 +65,23 @@ public class ExpenditureService(
             Dictionary<string, Asset> touchedAssets = await assetBalance.GetAssetsOrdinalAsync(
                 accountEmail, [request.PaymentMethod, isTransfer ? request.MyDepositAsset : null], ct);
 
-            Asset? paymentAsset = !string.IsNullOrEmpty(request.PaymentMethod) && touchedAssets.TryGetValue(request.PaymentMethod, out var pay) ? pay : null;
-            Asset? depositAsset = isTransfer && !string.IsNullOrEmpty(request.MyDepositAsset) && touchedAssets.TryGetValue(request.MyDepositAsset, out var dep) ? dep : null;
-
-            if (paymentAsset == null)
-                return await unitOfWork.FailAsync(AssetNotFoundResult, ct);
-            if (paymentAsset.Deleted)
-                return await unitOfWork.FailAsync(DeletedAssetResult, ct);
-
-            if (isTransfer)
-            {
-                if (depositAsset == null)
-                    return await unitOfWork.FailAsync(AssetNotFoundResult, ct);
-                if (depositAsset.Deleted)
-                    return await unitOfWork.FailAsync(DeletedAssetResult, ct);
-                if (paymentAsset.Balance.Currency != depositAsset.Balance.Currency)
-                    return await unitOfWork.FailAsync(CurrencyMismatchResult, ct);
-            }
+            Asset? paymentAsset = Find(touchedAssets, request.PaymentMethod);
+            if (!AssetUsagePolicy.CanRecordExpenditure(isTransfer, paymentAsset, Find(touchedAssets, request.MyDepositAsset), out var refusal))
+                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(RecordType, refusal), ct);
 
             string currency = paymentAsset.Balance.Currency.Value;
-            string? myDepositAsset = depositCheck.Value;
-
             var expenditureResult = Expenditure.Record(accountEmail, request.MainClass, request.SubClass,
-                request.Content, Math.Abs(request.Amount), currency, request.PaymentMethod, myDepositAsset, utcNow, request.Note, request.Created);
+                request.Content, Math.Abs(request.Amount), currency, request.PaymentMethod, depositCheck.Value, utcNow, request.Note, request.Created);
             if (expenditureResult.IsError)
                 return await unitOfWork.FailAsync(expenditureResult.FirstError, ct);
 
             var expenditure = expenditureResult.Value;
             await expenditureRepository.CreateAsync(expenditure, ct);
 
-            var withdrawResult = paymentAsset.Withdraw(expenditure.Amount, utcNow);
-            if (withdrawResult.IsError)
-                return await unitOfWork.FailAsync(withdrawResult.FirstError, ct);
-            await assetBalance.SaveAsync(paymentAsset, ct);
-
-            if (depositAsset != null)
-            {
-                var depositResult = depositAsset.Deposit(expenditure.Amount, utcNow);
-                if (depositResult.IsError)
-                    return await unitOfWork.FailAsync(depositResult.FirstError, ct);
-                await assetBalance.SaveAsync(depositAsset, ct);
-            }
+            var moveResult = await assetBalance.ApplyBalanceMovementsAsync(
+                touchedAssets, expenditure.BalanceMovements(), AssetNotFoundCode, ReferencedAssetNotFoundMessage, utcNow, ct);
+            if (moveResult.IsError)
+                return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
             await unitOfWork.CommitAsync(ct);
             return ServiceResult.Ok();
@@ -129,8 +104,9 @@ public class ExpenditureService(
             if (classResult.IsError)
                 return await unitOfWork.FailAsync(classResult.FirstError, ct);
 
+            bool isTransfer = classResult.Value;
             // The transfer rule (ExpenditureClassPolicy.ResolveDepositAsset) is checked before any asset is looked up or locked.
-            var depositCheck = ExpenditureClassPolicy.ResolveDepositAsset("Expenditure", classResult.Value, request.PaymentMethod ?? "", request.MyDepositAsset);
+            var depositCheck = ExpenditureClassPolicy.ResolveDepositAsset("Expenditure", isTransfer, request.PaymentMethod ?? "", request.MyDepositAsset);
             if (depositCheck.IsError)
                 return await unitOfWork.FailAsync(depositCheck.FirstError, ct);
 
@@ -144,56 +120,26 @@ public class ExpenditureService(
             // Lock every asset this update can touch (old + new payment/deposit) in a single
             // ordinal-ordered batch so concurrent transactions on the same asset pair cannot deadlock.
             Dictionary<string, Asset> touchedAssets = await assetBalance.GetAssetsOrdinalAsync(accountEmail,
-                [request.PaymentMethod, classResult.Value ? request.MyDepositAsset : null, previous.PaymentMethod, previous.MyDepositAsset], ct);
+                [request.PaymentMethod, isTransfer ? request.MyDepositAsset : null, previous.PaymentMethod, previous.MyDepositAsset], ct);
 
-            Asset? newPayAsset = !string.IsNullOrEmpty(request.PaymentMethod) && touchedAssets.TryGetValue(request.PaymentMethod, out var np) ? np : null;
-            Asset? newDepAsset = classResult.Value && !string.IsNullOrEmpty(request.MyDepositAsset) && touchedAssets.TryGetValue(request.MyDepositAsset, out var nd) ? nd : null;
+            Asset? newPayAsset = Find(touchedAssets, request.PaymentMethod);
+            if (!AssetUsagePolicy.CanRetargetExpenditure(isTransfer, newPayAsset, Find(touchedAssets, request.MyDepositAsset),
+                    Find(touchedAssets, previous.PaymentMethod), Find(touchedAssets, previous.MyDepositAsset), out var refusal))
+                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(RecordType, refusal), ct);
 
-            // A record must not be retargeted onto a since-archived asset, matching Create: a
-            // deleted asset's balance must never be touched.
-            if (newPayAsset?.Deleted == true || newDepAsset?.Deleted == true)
-                return await unitOfWork.FailAsync(DeletedAssetResult, ct);
-
-            // Matches CreateAsync: the payment asset is required regardless of transfer/non-transfer,
-            // so a retarget onto a nonexistent asset name fails clean here instead of silently
-            // persisting the update and only surfacing as an AdjustAssetBalancesAsync rollback later.
-            if (newPayAsset == null)
-                return await unitOfWork.FailAsync(AssetNotFoundResult, ct);
-
-            if (classResult.Value)
-            {
-                if (newDepAsset == null)
-                    return await unitOfWork.FailAsync(AssetNotFoundResult, ct);
-                if (newPayAsset.Balance.Currency != newDepAsset.Balance.Currency)
-                    return await unitOfWork.FailAsync(CurrencyMismatchResult, ct);
-            }
-
-            Asset? prevPayAsset = !string.IsNullOrEmpty(previous.PaymentMethod) && touchedAssets.TryGetValue(previous.PaymentMethod, out var pp) ? pp : null;
-            if (prevPayAsset?.Deleted == true)
-                return await unitOfWork.FailAsync(DeletedAssetResult, ct);
-            if (!string.IsNullOrEmpty(previous.MyDepositAsset))
-            {
-                Asset? prevDepAsset = touchedAssets.GetValueOrDefault(previous.MyDepositAsset);
-                if (prevDepAsset?.Deleted == true)
-                    return await unitOfWork.FailAsync(DeletedAssetResult, ct);
-            }
-
-            // newPayAsset is guaranteed non-null past the AssetNotFoundResult guard above.
             string newCurrency = newPayAsset.Balance.Currency.Value;
-            string? myDepositAsset = depositCheck.Value;
-
-            var oldSnapshot = new ExpenditureSnapshot(previous.PaymentMethod, previous.MyDepositAsset, previous.Amount.Amount, previous.Amount.Currency.Value);
+            IReadOnlyList<BalanceMovement> before = previous.BalanceMovements();
 
             var updateResult = previous.Update(request.MainClass, request.SubClass, request.Content,
-                Math.Abs(request.Amount), newCurrency, request.PaymentMethod, myDepositAsset, request.Note, utcNow, request.Created);
+                Math.Abs(request.Amount), newCurrency, request.PaymentMethod, depositCheck.Value, request.Note, utcNow, request.Created);
             if (updateResult.IsError)
                 return await unitOfWork.FailAsync(updateResult.FirstError, ct);
 
             await expenditureRepository.UpdateEntityAsync(previous, ct);
-            var adjustResult = await AdjustAssetBalancesAsync(touchedAssets, oldSnapshot,
-                new ExpenditureSnapshot(previous.PaymentMethod, previous.MyDepositAsset, previous.Amount.Amount, previous.Amount.Currency.Value), utcNow, ct);
-            if (adjustResult.IsError)
-                return await unitOfWork.FailAsync(adjustResult.FirstError, ct);
+            var moveResult = await assetBalance.ApplyBalanceMovementsAsync(touchedAssets,
+                BalanceMovement.Replacing(before, previous.BalanceMovements()), AssetNotFoundCode, ReferencedAssetNotFoundMessage, utcNow, ct);
+            if (moveResult.IsError)
+                return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
             await unitOfWork.CommitAsync(ct);
             return ServiceResult.Ok();
@@ -218,20 +164,15 @@ public class ExpenditureService(
             if (expenditure == null)
                 return await unitOfWork.FailAsync(ServiceResult.NotFound("Expenditure.NotFound", ServiceErrorKeys.ExpenditureNotFound), ct);
 
-            // An expenditure referencing a since-archived (soft-deleted) asset must not be
-            // deletable, matching Create/Update: a deleted asset's balance must not be touched.
-            Dictionary<string, Asset> assetsToCheck = await assetBalance.GetAssetsOrdinalAsync(
+            Dictionary<string, Asset> touchedAssets = await assetBalance.GetAssetsOrdinalAsync(
                 accountEmail, [expenditure.PaymentMethod, expenditure.MyDepositAsset], ct);
-            if (!string.IsNullOrEmpty(expenditure.PaymentMethod) &&
-                assetsToCheck.TryGetValue(expenditure.PaymentMethod, out var payAssetToCheck) && payAssetToCheck.Deleted || !string.IsNullOrEmpty(expenditure.MyDepositAsset) &&
-                assetsToCheck.TryGetValue(expenditure.MyDepositAsset, out var depAssetToCheck) && depAssetToCheck.Deleted)
-                return await unitOfWork.FailAsync(DeletedAssetResult, ct);
+            if (!AssetUsagePolicy.CanMoveBack([Find(touchedAssets, expenditure.PaymentMethod), Find(touchedAssets, expenditure.MyDepositAsset)], out var refusal))
+                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(RecordType, refusal), ct);
 
-            var adjustResult = await AdjustAssetBalancesAsync(assetsToCheck,
-                new ExpenditureSnapshot(expenditure.PaymentMethod, expenditure.MyDepositAsset, expenditure.Amount.Amount, expenditure.Amount.Currency.Value),
-                null, utcNow, ct);
-            if (adjustResult.IsError)
-                return await unitOfWork.FailAsync(adjustResult.FirstError, ct);
+            var moveResult = await assetBalance.ApplyBalanceMovementsAsync(touchedAssets,
+                BalanceMovement.Undoing(expenditure.BalanceMovements()), AssetNotFoundCode, ReferencedAssetNotFoundMessage, utcNow, ct);
+            if (moveResult.IsError)
+                return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
             await expenditureRepository.DeleteByIdAsync(expenditure.Id, ct);
 
@@ -245,50 +186,20 @@ public class ExpenditureService(
         }
     }
 
-    /// <summary>Failure returned when a transfer's payment asset and deposit asset hold different currencies.</summary>
-    private static ServiceResult CurrencyMismatchResult => ServiceResult.Validation(
-        "Expenditure.CurrencyMismatch", ServiceErrorKeys.CurrencyMismatch);
+    /// <summary>The record type that prefixes this service's error codes.</summary>
+    private const string RecordType = "Expenditure";
 
-    /// <summary>Failure returned when a referenced asset does not exist on the caller's account.</summary>
-    private static ServiceResult AssetNotFoundResult => ServiceResult.NotFound(
-        "Expenditure.AssetNotFound", ServiceErrorKeys.SelectedAssetNotFound);
+    /// <summary>Error code of a failure caused by an asset that is not on the caller's account.</summary>
+    private const string AssetNotFoundCode = "Expenditure.AssetNotFound";
 
-    /// <summary>Failure returned when a referenced asset has been soft-deleted.</summary>
-    private static ServiceResult DeletedAssetResult => ServiceResult.Conflict(
-        "Expenditure.AssetDeleted", ServiceErrorKeys.AssetAlreadyDeleted);
+    /// <summary>Message of a failure caused by an asset the stored record moved that no longer exists.</summary>
+    private const string ReferencedAssetNotFoundMessage = "The asset referenced by this expenditure could not be found.";
+
+    /// <summary>The asset named <paramref name="name"/> among <paramref name="assets"/>; null when the name is empty or absent.</summary>
+    private static Asset? Find(Dictionary<string, Asset> assets, string? name) =>
+        !string.IsNullOrEmpty(name) && assets.TryGetValue(name, out var asset) ? asset : null;
 
     /// <summary>Generic failure returned (after logging) when a write throws unexpectedly.</summary>
     private static ServiceResult UnexpectedFailure => ServiceResult.Failure(
         "Expenditure.Unexpected", ServiceResult.TemporaryErrorKey);
-
-    /// <summary>
-    /// Reverts <paramref name="toRevert"/>'s asset impact and applies <paramref name="toApply"/>'s asset impact.
-    /// Pass null for toApply when deleting. Applies against <paramref name="touchedAssets"/> — the
-    /// dictionary the caller already fetched (via <see cref="AssetBalanceOrdinalLockExtensions.GetAssetsOrdinalAsync"/>)
-    /// for its own pre-write validation — instead of fetching the same assets again.
-    /// </summary>
-    private async Task<ErrorOr<Success>> AdjustAssetBalancesAsync(
-        Dictionary<string, Asset> touchedAssets, ExpenditureSnapshot toRevert, ExpenditureSnapshot? toApply, DateTime utcNow, CancellationToken ct = default)
-    {
-        List<AssetBalanceAdjustment> adjustments =
-        [
-            new(toRevert.PaymentMethod, toRevert.Amount, IsDeposit: true, Currency: toRevert.Currency),
-            new(toRevert.MyDepositAsset, toRevert.Amount, IsDeposit: false, Currency: toRevert.Currency)
-        ];
-        if (!toApply.HasValue)
-            return await assetBalance.ApplyAssetBalanceAdjustmentsAsync(
-                touchedAssets, adjustments, "Expenditure.AssetNotFound", "The asset referenced by this expenditure could not be found.", utcNow, ct);
-        adjustments.Add(new AssetBalanceAdjustment(toApply.Value.PaymentMethod, toApply.Value.Amount, IsDeposit: false, Currency: toApply.Value.Currency));
-        adjustments.Add(new AssetBalanceAdjustment(toApply.Value.MyDepositAsset, toApply.Value.Amount, IsDeposit: true, Currency: toApply.Value.Currency));
-
-        return await assetBalance.ApplyAssetBalanceAdjustmentsAsync(
-            touchedAssets, adjustments, "Expenditure.AssetNotFound", "The asset referenced by this expenditure could not be found.", utcNow, ct);
-    }
-
-    /// <summary>
-    /// Captures the asset-related fields of an <see cref="Expenditure"/> at a point in time (including
-    /// the currency the amount was recorded in) so that the corresponding asset balances can be
-    /// correctly reversed during update or delete operations.
-    /// </summary>
-    private readonly record struct ExpenditureSnapshot(string? PaymentMethod, string? MyDepositAsset, decimal Amount, string Currency);
 }

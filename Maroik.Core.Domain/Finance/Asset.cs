@@ -190,6 +190,10 @@ public sealed class Asset : AggregateRoot<(string ProductName, string AccountEma
         return Result.Success;
     }
 
+    /// <summary>Carries out <paramref name="movement"/>: a <see cref="Deposit"/> or a <see cref="Withdraw"/> of its amount.</summary>
+    public ErrorOr<Success> Apply(BalanceMovement movement, DateTime utcNow) =>
+        movement.IsDeposit ? Deposit(movement.Amount, utcNow) : Withdraw(movement.Amount, utcNow);
+
     /// <summary>Subtracts the given amount from the balance (e.g. on expenditure payment).</summary>
     public ErrorOr<Success> Withdraw(Money amount, DateTime utcNow)
     {
