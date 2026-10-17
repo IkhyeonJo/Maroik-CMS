@@ -1,5 +1,6 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
+using Maroik.Core.Contract.Misc.Enums;
 using Maroik.Core.Contract.Misc.Settings;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Logging;
@@ -342,7 +343,7 @@ public class AttachmentContentServiceTests
         byte[] fileData = [5, 6, 7];
         _fileClient.Setup(f => f.DownloadAsync("upload/img.png", It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(fileData);
-        _dataProtection.Setup(r => r.Protect("upload/img.png")).Returns("encrypted-path");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.StoredFilePath, "upload/img.png")).Returns("encrypted-path");
 
         (string html, bool hasImages) = await CreateSut().PrepareHtmlForDisplayAsync("<html/>", TestContext.Current.CancellationToken);
 
@@ -396,7 +397,7 @@ public class AttachmentContentServiceTests
         _htmlParser.Setup(p => p.TransformImageAttributes("<clean/>", It.IsAny<Func<string, HtmlImgPatch?>>()))
             .Callback<string, Func<string, HtmlImgPatch?>>((_, factory) => capturedFactory = factory)
             .Returns("<final/>");
-        _dataProtection.Setup(r => r.Unprotect("encrypted-alt")).Returns("decrypted-alt");
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.StoredFilePath, "encrypted-alt")).Returns("decrypted-alt");
 
         string result = CreateSut().SanitizeAndDecryptContent("<raw/>");
 
@@ -421,7 +422,7 @@ public class AttachmentContentServiceTests
         _htmlParser.Setup(p => p.TransformImageAttributes("<clean/>", It.IsAny<Func<string, HtmlImgPatch?>>()))
             .Callback<string, Func<string, HtmlImgPatch?>>((_, factory) => capturedFactory = factory)
             .Returns("<final/>");
-        _dataProtection.Setup(r => r.Unprotect("upload/Forum/whatever.png")).Throws<FormatException>();
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.StoredFilePath, "upload/Forum/whatever.png")).Throws<FormatException>();
 
         CreateSut().SanitizeAndDecryptContent("<raw/>");
 
@@ -476,7 +477,7 @@ public class AttachmentContentServiceTests
             .Callback<string, Func<string, CancellationToken, Task<HtmlImgPatch?>>, CancellationToken>((_, factory, _) => capturedFactory = factory)
             .ReturnsAsync(("<html/>", true));
         _fileClient.Setup(f => f.DownloadAsync(path, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([1, 2, 3]);
-        _dataProtection.Setup(r => r.Protect(path)).Returns("enc");
+        _dataProtection.Setup(r => r.Protect(ProtectedValue.StoredFilePath, path)).Returns("enc");
 
         await CreateSut().PrepareHtmlForDisplayAsync("<html/>", TestContext.Current.CancellationToken);
         HtmlImgPatch? patch = await capturedFactory!(path, TestContext.Current.CancellationToken);
@@ -563,7 +564,7 @@ public class AttachmentContentServiceTests
             .Callback<string, Func<string, HtmlImgPatch?>>((_, factory) => capturedFactory = factory)
             .Returns("<final/>");
         var thrown = new FormatException("not base64");
-        _dataProtection.Setup(r => r.Unprotect("forged")).Throws(thrown);
+        _dataProtection.Setup(r => r.Unprotect(ProtectedValue.StoredFilePath, "forged")).Throws(thrown);
 
         CreateSut().SanitizeAndDecryptContent("<raw/>");
         capturedFactory!("forged");
