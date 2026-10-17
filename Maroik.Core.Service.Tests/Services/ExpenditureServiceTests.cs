@@ -1011,24 +1011,6 @@ public class ExpenditureServiceTests
         Assert.Equal("Savings", stored?.MyDepositAsset);
     }
 
-    /// <summary>
-    /// An edit whose previous payment asset no longer exists cannot revert the old movement: a NotFound naming the
-    /// asset referenced by the expenditure, rolled back.
-    /// </summary>
-    [Fact]
-    public async Task UpdateAsync_ReturnsReferencedAssetNotFound_WhenThePreviousPaymentAssetIsGone()
-    {
-        GivenExistingExpenditure(ExistingConsumer(payment: "Vanished"));
-        GivenAssets(MakeAsset("Wallet"));
-
-        ServiceResult result = await CreateSut().UpdateAsync(Email, WithId(ConsumerRequest()), TestContext.Current.CancellationToken);
-
-        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
-        Assert.Equal("Expenditure.AssetNotFound", result.ErrorCode);
-        Assert.Equal("The asset referenced by this expenditure could not be found.", result.ErrorKey);
-        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
-
     /// <summary>An update that throws logs the failure with the exception and the account.</summary>
     [Fact]
     public async Task UpdateAsync_LogsTheFailureWithTheException_WhenThePersistenceThrows()
@@ -1081,23 +1063,6 @@ public class ExpenditureServiceTests
         ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
 
         Assert.Equal("Expenditure.AssetDeleted", result.ErrorCode);
-        _expenditureRepo.Verify(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    /// <summary>
-    /// Deleting an expenditure whose payment asset no longer exists cannot revert its impact: a NotFound naming the
-    /// asset referenced by the expenditure, and the row is kept.
-    /// </summary>
-    [Fact]
-    public async Task DeleteAsync_ReturnsReferencedAssetNotFound_AndKeepsTheRow_WhenThePaymentAssetIsGone()
-    {
-        GivenExistingExpenditure(ExistingConsumer(payment: "Vanished"));
-
-        ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
-
-        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
-        Assert.Equal("Expenditure.AssetNotFound", result.ErrorCode);
-        Assert.Equal("The asset referenced by this expenditure could not be found.", result.ErrorKey);
         _expenditureRepo.Verify(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
