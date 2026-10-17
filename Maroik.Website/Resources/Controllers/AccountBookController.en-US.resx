@@ -420,12 +420,6 @@
   <data name="The selected asset could not be found." xml:space="preserve">
     <value>The selected asset could not be found.</value>
   </data>
-  <data name="The asset referenced by this expenditure could not be found." xml:space="preserve">
-    <value>The asset referenced by this expenditure could not be found.</value>
-  </data>
-  <data name="The asset referenced by this income could not be found." xml:space="preserve">
-    <value>The asset referenced by this income could not be found.</value>
-  </data>
   <data name="Unknown expenditure main class." xml:space="preserve">
     <value>Unknown expenditure main class.</value>
   </data>

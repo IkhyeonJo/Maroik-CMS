@@ -79,7 +79,7 @@ public class ExpenditureService(
             await expenditureRepository.CreateAsync(expenditure, ct);
 
             var moveResult = await assetBalance.ApplyBalanceMovementsAsync(
-                touchedAssets, expenditure.BalanceMovements(), AssetRefusalMapper.Expenditure.AssetNotFound, ServiceErrorKeys.ReferencedExpenditureAssetNotFound, utcNow, ct);
+                touchedAssets, expenditure.BalanceMovements(), utcNow, ct);
             if (moveResult.IsError)
                 return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
@@ -137,7 +137,7 @@ public class ExpenditureService(
 
             await expenditureRepository.UpdateEntityAsync(previous, ct);
             var moveResult = await assetBalance.ApplyBalanceMovementsAsync(touchedAssets,
-                BalanceMovement.Replacing(before, previous.BalanceMovements()), AssetRefusalMapper.Expenditure.AssetNotFound, ServiceErrorKeys.ReferencedExpenditureAssetNotFound, utcNow, ct);
+                BalanceMovement.Replacing(before, previous.BalanceMovements()), utcNow, ct);
             if (moveResult.IsError)
                 return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
@@ -170,7 +170,7 @@ public class ExpenditureService(
                 return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(AssetRefusalMapper.Expenditure, refusal), ct);
 
             var moveResult = await assetBalance.ApplyBalanceMovementsAsync(touchedAssets,
-                BalanceMovement.Undoing(expenditure.BalanceMovements()), AssetRefusalMapper.Expenditure.AssetNotFound, ServiceErrorKeys.ReferencedExpenditureAssetNotFound, utcNow, ct);
+                BalanceMovement.Undoing(expenditure.BalanceMovements()), utcNow, ct);
             if (moveResult.IsError)
                 return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 

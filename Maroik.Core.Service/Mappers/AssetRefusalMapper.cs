@@ -11,7 +11,7 @@ namespace Maroik.Core.Service.Mappers;
 internal static class AssetRefusalMapper
 {
     /// <summary>The error codes of one record type, one per <see cref="AssetRefusal"/> it can be refused with.</summary>
-    /// <param name="AssetNotFound">Code of <see cref="AssetRefusal.NotFound"/>, also used when a stored record's asset is gone.</param>
+    /// <param name="AssetNotFound">Code of <see cref="AssetRefusal.NotFound"/>.</param>
     /// <param name="AssetDeleted">Code of <see cref="AssetRefusal.Deleted"/>.</param>
     /// <param name="CurrencyMismatch">
     /// Code of <see cref="AssetRefusal.CurrencyMismatch"/>; none for a record type that names a single asset (an

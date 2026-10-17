@@ -60,7 +60,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
 
             Dictionary<string, Asset> touchedAssets = new(StringComparer.Ordinal) { [depositAsset.ProductName] = depositAsset };
             var moveResult = await assetBalance.ApplyBalanceMovementsAsync(
-                touchedAssets, income.BalanceMovements(), AssetRefusalMapper.Income.AssetNotFound, ServiceErrorKeys.ReferencedIncomeAssetNotFound, utcNow, ct);
+                touchedAssets, income.BalanceMovements(), utcNow, ct);
             if (moveResult.IsError)
                 return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
@@ -114,7 +114,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
 
             await incomeRepository.UpdateEntityAsync(previous, ct);
             var moveResult = await assetBalance.ApplyBalanceMovementsAsync(touchedAssets,
-                BalanceMovement.Replacing(before, previous.BalanceMovements()), AssetRefusalMapper.Income.AssetNotFound, ServiceErrorKeys.ReferencedIncomeAssetNotFound, utcNow, ct);
+                BalanceMovement.Replacing(before, previous.BalanceMovements()), utcNow, ct);
             if (moveResult.IsError)
                 return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
@@ -150,7 +150,7 @@ public class IncomeService(IIncomeRepository incomeRepository, IAssetBalanceStor
                 return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(AssetRefusalMapper.Income, refusal), ct);
 
             var moveResult = await assetBalance.ApplyBalanceMovementsAsync(touchedAssets,
-                BalanceMovement.Undoing(income.BalanceMovements()), AssetRefusalMapper.Income.AssetNotFound, ServiceErrorKeys.ReferencedIncomeAssetNotFound, utcNow, ct);
+                BalanceMovement.Undoing(income.BalanceMovements()), utcNow, ct);
             if (moveResult.IsError)
                 return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 

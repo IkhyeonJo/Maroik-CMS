@@ -51,17 +51,17 @@ public static class AssetBalanceOrdinalLockExtensions
         /// the caller made for its own pre-write validation), then saves every touched asset, without fetching the
         /// assets a second time. Nothing is saved unless every movement succeeds.
         /// </summary>
-        /// <param name="assets">Already row-locked assets, keyed by name, covering every name in <paramref name="movements"/>.</param>
+        /// <param name="assets">
+        /// Already row-locked assets, keyed by name, covering every name in <paramref name="movements"/>: a new asset
+        /// passed <see cref="AssetUsagePolicy"/>, and a stored record's assets exist by its foreign keys (an asset is only
+        /// ever soft-deleted) and were locked with the rest. A name outside them is a bug, not a refusal, and throws.
+        /// </param>
         /// <param name="movements">Movements to carry out; one with an empty <see cref="BalanceMovement.AssetName"/> is skipped.</param>
-        /// <param name="notFoundErrorCode">Error code used when a non-empty asset name does not resolve to an asset.</param>
-        /// <param name="notFoundErrorMessage">Error message used when a non-empty asset name does not resolve to an asset.</param>
         /// <param name="utcNow">The current UTC time, stamped on every adjusted asset.</param>
         /// <param name="ct">Cancellation token.</param>
         public async Task<ErrorOr<Success>> ApplyBalanceMovementsAsync(
             Dictionary<string, Asset> assets,
             IEnumerable<BalanceMovement> movements,
-            string notFoundErrorCode,
-            string notFoundErrorMessage,
             DateTime utcNow,
             CancellationToken ct = default)
         {
@@ -69,10 +69,7 @@ public static class AssetBalanceOrdinalLockExtensions
 
             foreach (var movement in movements.Where(m => !string.IsNullOrEmpty(m.AssetName)))
             {
-                if (!assets.TryGetValue(movement.AssetName, out var asset))
-                    return Error.NotFound(notFoundErrorCode, notFoundErrorMessage);
-
-                var result = asset.Apply(movement, utcNow);
+                var result = assets[movement.AssetName].Apply(movement, utcNow);
                 if (result.IsError) return result.Errors;
 
                 touchedNames.Add(movement.AssetName);

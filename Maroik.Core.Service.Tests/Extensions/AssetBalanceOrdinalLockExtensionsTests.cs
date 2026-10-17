@@ -153,7 +153,7 @@ public class AssetBalanceOrdinalLockExtensionsTests
 
         var result = await _assetBalance.Object.ApplyBalanceMovementsAsync(
             assets, [Move("Wallet", 30m, isDeposit: true)],
-            "NotFound", "not found", Now, TestContext.Current.CancellationToken);
+            Now, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsError);
         _assetBalance.Verify(a => a.GetAssetsAsync(It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -178,7 +178,7 @@ public class AssetBalanceOrdinalLockExtensionsTests
         var result = await _assetBalance.Object.ApplyBalanceMovementsAsync(
             assets,
             [Move("Payment", 40m, isDeposit: false), Move("Deposit", 40m, isDeposit: true)],
-            "NotFound", "not found", Now, TestContext.Current.CancellationToken);
+            Now, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsError);
         Assert.Equal(60m, payment.Balance.Amount);
@@ -199,30 +199,9 @@ public class AssetBalanceOrdinalLockExtensionsTests
 
         var result = await _assetBalance.Object.ApplyBalanceMovementsAsync(
             assets, [Move("", 10m, isDeposit: true)],
-            "NotFound", "not found", Now, TestContext.Current.CancellationToken);
+            Now, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsError);
-        Assert.Equal(0, saveCalls);
-    }
-
-    /// <summary>A movement on a name absent from the dictionary fails with the caller's not-found error, saving nothing.</summary>
-    [Fact]
-    public async Task ApplyBalanceMovementsAsync_ReturnsNotFound_WhenNameMissingFromDictionary()
-    {
-        Dictionary<string, Asset> assets = new(StringComparer.Ordinal) { ["Wallet"] = MakeAsset("Wallet") };
-        var saveCalls = 0;
-        _assetBalance.Setup(a => a.SaveAsync(It.IsAny<Asset>(), It.IsAny<CancellationToken>()))
-            .Callback(() => saveCalls++).Returns(Task.CompletedTask);
-
-        var result = await _assetBalance.Object.ApplyBalanceMovementsAsync(
-            assets,
-            [Move("Wallet", 10m, isDeposit: true), Move("Missing", 10m, isDeposit: true)],
-            "Income.AssetNotFound", "The asset could not be found.", Now, TestContext.Current.CancellationToken);
-
-        Assert.True(result.IsError);
-        Assert.Equal("Income.AssetNotFound", result.FirstError.Code);
-        // Not even "Wallet" (processed before the missing one) is saved — the whole batch fails
-        // atomically rather than partially persisting.
         Assert.Equal(0, saveCalls);
     }
 
@@ -235,7 +214,7 @@ public class AssetBalanceOrdinalLockExtensionsTests
 
         var result = await _assetBalance.Object.ApplyBalanceMovementsAsync(
             assets, [Move("Wallet", 10m, isDeposit: true, currency: "USD")],
-            "NotFound", "not found", Now, TestContext.Current.CancellationToken);
+            Now, TestContext.Current.CancellationToken);
 
         Assert.True(result.IsError);
         Assert.Equal("Asset.CurrencyMismatch", result.FirstError.Code);

@@ -856,23 +856,6 @@ public class IncomeServiceTests
         Assert.Equal("The income record could not be found.", result.ErrorKey);
     }
 
-    /// <summary>
-    /// Deleting an income whose deposit asset no longer exists cannot revert its impact: a NotFound naming the
-    /// asset referenced by the income, and the row is kept.
-    /// </summary>
-    [Fact]
-    public async Task DeleteAsync_ReturnsReferencedAssetNotFound_AndKeepsTheRow_WhenTheDepositAssetIsGone()
-    {
-        GivenExistingIncome(MakeIncome(1, "Vanished"));
-
-        ServiceResult result = await CreateSut().DeleteAsync(Email, 1, TestContext.Current.CancellationToken);
-
-        Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
-        Assert.Equal("Income.AssetNotFound", result.ErrorCode);
-        Assert.Equal("The asset referenced by this income could not be found.", result.ErrorKey);
-        _incomeRepo.Verify(r => r.DeleteByIdAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
     /// <summary>A delete that throws logs the failure with the exception and the account.</summary>
     [Fact]
     public async Task DeleteAsync_LogsTheFailureWithTheException_WhenThePersistenceThrows()
