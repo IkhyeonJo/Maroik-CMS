@@ -288,7 +288,7 @@ dotnet test --project Maroik.Core.Service.Tests            # any single project
 ## Screenshots
 
 ### Login
-<img width="551" height="574" alt="0" src="https://github.com/user-attachments/assets/748bba8d-09d0-4dff-9d40-b85df3aa7764" />
+<img width="551" height="574" alt="1" src="https://github.com/user-attachments/assets/54821d51-5fce-46b6-a182-c97bbfa86b76" />
 
 ### User Dashboard
 <img width="1893" height="934" alt="1" src="https://github.com/user-attachments/assets/663dd6a7-9325-4f02-9ae5-057fe3cc5034" />
