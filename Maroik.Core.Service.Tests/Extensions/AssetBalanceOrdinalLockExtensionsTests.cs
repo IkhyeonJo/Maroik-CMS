@@ -110,6 +110,30 @@ public class AssetBalanceOrdinalLockExtensionsTests
         Assert.False(result.ContainsKey("Missing"));
     }
 
+    // -- FindAsset ----------------------------------------------------------------------------------
+
+    /// <summary>A name among the assets finds that asset.</summary>
+    [Fact]
+    public void FindAsset_ReturnsTheNamedAsset()
+    {
+        Asset wallet = MakeAsset("Wallet");
+        Dictionary<string, Asset> assets = new(StringComparer.Ordinal) { ["Wallet"] = wallet };
+
+        Assert.Same(wallet, assets.FindAsset("Wallet"));
+    }
+
+    /// <summary>An empty or absent name finds nothing.</summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("Missing")]
+    public void FindAsset_ReturnsNull_ForAnEmptyOrAbsentName(string? name)
+    {
+        Dictionary<string, Asset> assets = new(StringComparer.Ordinal) { ["Wallet"] = MakeAsset("Wallet") };
+
+        Assert.Null(assets.FindAsset(name));
+    }
+
     // -- ApplyBalanceMovementsAsync — applies to the given assets ---------------------------------
 
     /// <summary>A movement of <paramref name="amount"/> in <paramref name="currency"/> on <paramref name="assetName"/>.</summary>

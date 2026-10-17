@@ -65,9 +65,9 @@ public class ExpenditureService(
             Dictionary<string, Asset> touchedAssets = await assetBalance.GetAssetsOrdinalAsync(
                 accountEmail, [request.PaymentMethod, isTransfer ? request.MyDepositAsset : null], ct);
 
-            Asset? paymentAsset = Find(touchedAssets, request.PaymentMethod);
-            if (!AssetUsagePolicy.CanRecordExpenditure(isTransfer, paymentAsset, Find(touchedAssets, request.MyDepositAsset), out var refusal))
-                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(RecordType, refusal), ct);
+            Asset? paymentAsset = touchedAssets.FindAsset(request.PaymentMethod);
+            if (!AssetUsagePolicy.CanRecordExpenditure(isTransfer, paymentAsset, touchedAssets.FindAsset(request.MyDepositAsset), out var refusal))
+                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(AssetRefusalMapper.Expenditure, refusal), ct);
 
             string currency = paymentAsset.Balance.Currency.Value;
             var expenditureResult = Expenditure.Record(accountEmail, request.MainClass, request.SubClass,
@@ -79,7 +79,7 @@ public class ExpenditureService(
             await expenditureRepository.CreateAsync(expenditure, ct);
 
             var moveResult = await assetBalance.ApplyBalanceMovementsAsync(
-                touchedAssets, expenditure.BalanceMovements(), AssetNotFoundCode, ReferencedAssetNotFoundMessage, utcNow, ct);
+                touchedAssets, expenditure.BalanceMovements(), AssetRefusalMapper.Expenditure.AssetNotFound, ServiceErrorKeys.ReferencedExpenditureAssetNotFound, utcNow, ct);
             if (moveResult.IsError)
                 return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
@@ -122,10 +122,10 @@ public class ExpenditureService(
             Dictionary<string, Asset> touchedAssets = await assetBalance.GetAssetsOrdinalAsync(accountEmail,
                 [request.PaymentMethod, isTransfer ? request.MyDepositAsset : null, previous.PaymentMethod, previous.MyDepositAsset], ct);
 
-            Asset? newPayAsset = Find(touchedAssets, request.PaymentMethod);
-            if (!AssetUsagePolicy.CanRetargetExpenditure(isTransfer, newPayAsset, Find(touchedAssets, request.MyDepositAsset),
-                    Find(touchedAssets, previous.PaymentMethod), Find(touchedAssets, previous.MyDepositAsset), out var refusal))
-                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(RecordType, refusal), ct);
+            Asset? newPayAsset = touchedAssets.FindAsset(request.PaymentMethod);
+            if (!AssetUsagePolicy.CanRetargetExpenditure(isTransfer, newPayAsset, touchedAssets.FindAsset(request.MyDepositAsset),
+                    touchedAssets.FindAsset(previous.PaymentMethod), touchedAssets.FindAsset(previous.MyDepositAsset), out var refusal))
+                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(AssetRefusalMapper.Expenditure, refusal), ct);
 
             string newCurrency = newPayAsset.Balance.Currency.Value;
             IReadOnlyList<BalanceMovement> before = previous.BalanceMovements();
@@ -137,7 +137,7 @@ public class ExpenditureService(
 
             await expenditureRepository.UpdateEntityAsync(previous, ct);
             var moveResult = await assetBalance.ApplyBalanceMovementsAsync(touchedAssets,
-                BalanceMovement.Replacing(before, previous.BalanceMovements()), AssetNotFoundCode, ReferencedAssetNotFoundMessage, utcNow, ct);
+                BalanceMovement.Replacing(before, previous.BalanceMovements()), AssetRefusalMapper.Expenditure.AssetNotFound, ServiceErrorKeys.ReferencedExpenditureAssetNotFound, utcNow, ct);
             if (moveResult.IsError)
                 return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
@@ -166,11 +166,11 @@ public class ExpenditureService(
 
             Dictionary<string, Asset> touchedAssets = await assetBalance.GetAssetsOrdinalAsync(
                 accountEmail, [expenditure.PaymentMethod, expenditure.MyDepositAsset], ct);
-            if (!AssetUsagePolicy.CanMoveBack([Find(touchedAssets, expenditure.PaymentMethod), Find(touchedAssets, expenditure.MyDepositAsset)], out var refusal))
-                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(RecordType, refusal), ct);
+            if (!AssetUsagePolicy.CanMoveBack([touchedAssets.FindAsset(expenditure.PaymentMethod), touchedAssets.FindAsset(expenditure.MyDepositAsset)], out var refusal))
+                return await unitOfWork.FailAsync(AssetRefusalMapper.ToResult(AssetRefusalMapper.Expenditure, refusal), ct);
 
             var moveResult = await assetBalance.ApplyBalanceMovementsAsync(touchedAssets,
-                BalanceMovement.Undoing(expenditure.BalanceMovements()), AssetNotFoundCode, ReferencedAssetNotFoundMessage, utcNow, ct);
+                BalanceMovement.Undoing(expenditure.BalanceMovements()), AssetRefusalMapper.Expenditure.AssetNotFound, ServiceErrorKeys.ReferencedExpenditureAssetNotFound, utcNow, ct);
             if (moveResult.IsError)
                 return await unitOfWork.FailAsync(moveResult.FirstError, ct);
 
@@ -185,19 +185,6 @@ public class ExpenditureService(
             return await unitOfWork.FailAsync(UnexpectedFailure, ct);
         }
     }
-
-    /// <summary>The record type that prefixes this service's error codes.</summary>
-    private const string RecordType = "Expenditure";
-
-    /// <summary>Error code of a failure caused by an asset that is not on the caller's account.</summary>
-    private const string AssetNotFoundCode = "Expenditure.AssetNotFound";
-
-    /// <summary>Message of a failure caused by an asset the stored record moved that no longer exists.</summary>
-    private const string ReferencedAssetNotFoundMessage = "The asset referenced by this expenditure could not be found.";
-
-    /// <summary>The asset named <paramref name="name"/> among <paramref name="assets"/>; null when the name is empty or absent.</summary>
-    private static Asset? Find(Dictionary<string, Asset> assets, string? name) =>
-        !string.IsNullOrEmpty(name) && assets.TryGetValue(name, out var asset) ? asset : null;
 
     /// <summary>Generic failure returned (after logging) when a write throws unexpectedly.</summary>
     private static ServiceResult UnexpectedFailure => ServiceResult.Failure(

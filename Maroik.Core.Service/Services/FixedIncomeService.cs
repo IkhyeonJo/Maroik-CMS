@@ -49,7 +49,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
 
         Asset? asset = await assetBalance.GetAssetForReadAsync(accountEmail, request.DepositMyAssetProductName ?? "", ct);
         if (!AssetUsagePolicy.CanUse(asset, out var refusal))
-            return AssetRefusalMapper.ToResult(RecordType, refusal);
+            return AssetRefusalMapper.ToResult(AssetRefusalMapper.FixedIncome, refusal);
 
         string currency = asset.Balance.Currency.Value;
         var registerResult = FixedIncome.Register(accountEmail, request.MainClass, request.SubClass,
@@ -79,7 +79,7 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
 
         Asset? asset = await assetBalance.GetAssetForReadAsync(accountEmail, request.DepositMyAssetProductName ?? "", ct);
         if (!AssetUsagePolicy.CanUse(asset, out var refusal))
-            return AssetRefusalMapper.ToResult(RecordType, refusal);
+            return AssetRefusalMapper.ToResult(AssetRefusalMapper.FixedIncome, refusal);
         string currency = asset.Balance.Currency.Value;
 
         var updateResult = fi.Update(request.MainClass, request.SubClass, request.Content,
@@ -116,9 +116,6 @@ public class FixedIncomeService(IFixedIncomeRepository fixedIncomeRepository, IA
         else
             fixedIncome.ClearUnpunctuality(utcNow);
     }
-
-    /// <summary>The record type that prefixes this service's error codes.</summary>
-    private const string RecordType = "FixedIncome";
 
     /// <summary>
     /// Validates the income class and deposit month/day of a fixed-income request.

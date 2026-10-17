@@ -109,7 +109,7 @@ public class DashboardService(
             // Only the records whose asset carries the default unit count (DefaultUnitScope, looked up
             // among allAssets so a record tied to a since-deleted asset keeps its currency).
             DefaultUnitScope scope = DefaultUnitScope.Of(summary.DefaultMonetaryUnit, allAssets);
-            summary.CurrencyByProduct = scope.CurrencyByProduct;
+            summary.CurrencyByProduct = new Dictionary<string, string>(scope.CurrencyByProduct, StringComparer.Ordinal);
 
             summary.YearIncomes = [.. yearIncomes.Where(scope.Includes).Select(IncomeMapper.ToResponse)];
             summary.YearExpenditures = [.. yearExpenditures.Where(scope.Includes).Select(ExpenditureMapper.ToResponse)];
