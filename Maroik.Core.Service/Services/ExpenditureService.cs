@@ -89,7 +89,8 @@ public class ExpenditureService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create expenditure for account {AccountEmail}", accountEmail);
-            return await unitOfWork.FailAsync(UnexpectedFailure, ct);
+            await unitOfWork.RollbackAsync(ct);
+            return UnexpectedFailure;
         }
     }
 
@@ -147,7 +148,8 @@ public class ExpenditureService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to update expenditure {ExpenditureId} for account {AccountEmail}", request.Id, accountEmail);
-            return await unitOfWork.FailAsync(UnexpectedFailure, ct);
+            await unitOfWork.RollbackAsync(ct);
+            return UnexpectedFailure;
         }
     }
 
@@ -182,7 +184,8 @@ public class ExpenditureService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to delete expenditure {ExpenditureId} for account {AccountEmail}", id, accountEmail);
-            return await unitOfWork.FailAsync(UnexpectedFailure, ct);
+            await unitOfWork.RollbackAsync(ct);
+            return UnexpectedFailure;
         }
     }
 
