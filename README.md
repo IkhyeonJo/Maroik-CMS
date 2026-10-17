@@ -291,21 +291,20 @@ dotnet test --project Maroik.Core.Service.Tests            # any single project
 <img width="551" height="574" alt="1" src="https://github.com/user-attachments/assets/54821d51-5fce-46b6-a182-c97bbfa86b76" />
 
 ### User Dashboard
-<img width="1893" height="934" alt="1" src="https://github.com/user-attachments/assets/663dd6a7-9325-4f02-9ae5-057fe3cc5034" />
+<img width="1893" height="934" alt="2" src="https://github.com/user-attachments/assets/670fa326-a4ac-4d40-998c-ee03c60b0c66" />
 
 ### Calendar
-<img width="1894" height="932" alt="2" src="https://github.com/user-attachments/assets/8cf018c1-0edb-4963-869e-aa9a16da3f75" />
+<img width="1894" height="932" alt="3" src="https://github.com/user-attachments/assets/68a9864e-805d-4e4b-a1dd-0a473ac939f9" />
 
 ### Forum
-<img width="1911" height="935" alt="3" src="https://github.com/user-attachments/assets/222a259e-0be9-44f2-896a-62834060d87c" />
+<img width="1911" height="935" alt="4" src="https://github.com/user-attachments/assets/b24632b5-00e1-48dd-8b59-783f0b59cdcf" />
 
 ### NonfactorGrid
-<img width="1914" height="935" alt="4" src="https://github.com/user-attachments/assets/278f170f-f2ee-4c02-9a3a-1ef6bb6f1c3c" />
-<img width="1916" height="930" alt="5" src="https://github.com/user-attachments/assets/74695073-ba46-4ffe-a9ca-e8fe7a995cb4" />
+<img width="1914" height="935" alt="5" src="https://github.com/user-attachments/assets/9b503e28-2677-4069-a72b-e604997eb68a" />
+<img width="1916" height="930" alt="6" src="https://github.com/user-attachments/assets/479cd480-568e-4cb9-b391-56f62d7dc098" />
 
 ### User Profile
-<img width="1885" height="932" alt="6" src="https://github.com/user-attachments/assets/bb54de54-3032-4d09-8e94-ded722824c51" />
-
+<img width="1885" height="932" alt="7" src="https://github.com/user-attachments/assets/6162c519-b963-4eef-a286-dd91db5e9efe" />
 
 ## Contributing
 1. Fork the repository
