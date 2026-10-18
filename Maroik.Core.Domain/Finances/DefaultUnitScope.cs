@@ -15,11 +15,11 @@ public sealed class DefaultUnitScope
     private DefaultUnitScope(string defaultUnit, IReadOnlyDictionary<string, string> currencyByProduct)
     {
         _defaultUnit = defaultUnit;
-        CurrencyByProduct = currencyByProduct;
+        _currencyByProduct = currencyByProduct;
     }
 
     /// <summary>Each asset's currency label, by product name.</summary>
-    public IReadOnlyDictionary<string, string> CurrencyByProduct { get; }
+    private readonly IReadOnlyDictionary<string, string> _currencyByProduct;
 
     /// <summary>
     /// The scope of <paramref name="defaultUnit"/> over <paramref name="allAssets"/> (the account's assets, deleted
@@ -35,5 +35,5 @@ public sealed class DefaultUnitScope
     public bool Includes(Expenditure expenditure) => CarriesTheDefaultUnit(expenditure.PaymentMethod);
 
     /// <summary>Whether the asset named <paramref name="productName"/> carries the default unit (an unknown asset does not).</summary>
-    private bool CarriesTheDefaultUnit(string productName) => CurrencyByProduct.GetValueOrDefault(productName) == _defaultUnit;
+    private bool CarriesTheDefaultUnit(string productName) => _currencyByProduct.GetValueOrDefault(productName) == _defaultUnit;
 }

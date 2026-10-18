@@ -109,25 +109,19 @@ public class DashboardService(
             // Only the records whose asset carries the default unit count (DefaultUnitScope, looked up
             // among allAssets so a record tied to a since-deleted asset keeps its currency).
             DefaultUnitScope scope = DefaultUnitScope.Of(summary.DefaultMonetaryUnit, allAssets);
-            summary.CurrencyByProduct = new Dictionary<string, string>(scope.CurrencyByProduct, StringComparer.Ordinal);
-
-            summary.YearIncomes = [.. yearIncomes.Where(scope.Includes).Select(IncomeMapper.ToResponse)];
-            summary.YearExpenditures = [.. yearExpenditures.Where(scope.Includes).Select(ExpenditureMapper.ToResponse)];
-            summary.YearMonthIncomes = [.. ymIncomes.Where(scope.Includes).Select(IncomeMapper.ToResponse)];
-            summary.YearMonthExpenditures = [.. ymExpenditures.Where(scope.Includes).Select(ExpenditureMapper.ToResponse)];
 
             // Per-main-class subClass amount/percentage breakdowns (labor/business/pension income,
             // meal/housing/education spending, ...) the dashboard view displays. Computed here, from
             // IncomeClassPolicy/ExpenditureClassPolicy's own main-class list, so the view model
             // mapper only reads pre-computed numbers instead of re-deriving these sums itself.
             summary.YearIncomeBreakdown = BuildBreakdown(
-                summary.YearIncomes.Select(i => (i.MainClass, i.SubClass, i.Amount)), IncomeClassPolicy.SubClassesByMainClass.Keys);
+                yearIncomes.Where(scope.Includes).Select(i => (i.MainClass, i.SubClass, i.Amount.Amount)), IncomeClassPolicy.SubClassesByMainClass.Keys);
             summary.YearMonthIncomeBreakdown = BuildBreakdown(
-                summary.YearMonthIncomes.Select(i => (i.MainClass, i.SubClass, i.Amount)), IncomeClassPolicy.SubClassesByMainClass.Keys);
+                ymIncomes.Where(scope.Includes).Select(i => (i.MainClass, i.SubClass, i.Amount.Amount)), IncomeClassPolicy.SubClassesByMainClass.Keys);
             summary.YearExpenditureBreakdown = BuildBreakdown(
-                summary.YearExpenditures.Select(e => (e.MainClass, e.SubClass, e.Amount)), ExpenditureClassPolicy.SubClassesByMainClass.Keys);
+                yearExpenditures.Where(scope.Includes).Select(e => (e.MainClass, e.SubClass, e.Amount.Amount)), ExpenditureClassPolicy.SubClassesByMainClass.Keys);
             summary.YearMonthExpenditureBreakdown = BuildBreakdown(
-                summary.YearMonthExpenditures.Select(e => (e.MainClass, e.SubClass, e.Amount)), ExpenditureClassPolicy.SubClassesByMainClass.Keys);
+                ymExpenditures.Where(scope.Includes).Select(e => (e.MainClass, e.SubClass, e.Amount.Amount)), ExpenditureClassPolicy.SubClassesByMainClass.Keys);
         }
 
         // Compute StartYear
@@ -257,18 +251,18 @@ public class DashboardService(
     /// <summary>
     /// Computes a <see cref="FinanceBreakdownDto"/> per main class in <paramref name="mainClasses"/> from
     /// <paramref name="items"/> via <see cref="FinanceBreakdownPolicy"/>. Shared by both the income and
-    /// expenditure call sites -- callers project their <c>IncomeResponse</c>/<c>ExpenditureResponse</c>
-    /// list to the common <c>(MainClass, SubClass, Amount)</c> shape first. Groups <paramref name="items"/>
+    /// expenditure call sites -- callers project their <c>Income</c>/<c>Expenditure</c> rows to the common
+    /// <c>(MainClass, SubClass, Amount)</c> shape first. Groups <paramref name="items"/>
     /// by main class once via <see cref="Enumerable.ToLookup{TSource,TKey}(IEnumerable{TSource},Func{TSource,TKey})"/>
     /// so this is a single O(items) pass rather than re-scanning the full list once per main class.
     /// </summary>
     private static Dictionary<string, FinanceBreakdownDto> BuildBreakdown(
-        IEnumerable<(string? MainClass, string? SubClass, decimal Amount)> items, IEnumerable<string> mainClasses)
+        IEnumerable<(string MainClass, string SubClass, decimal Amount)> items, IEnumerable<string> mainClasses)
     {
         var byMainClass = items.ToLookup(i => i.MainClass);
         return mainClasses.ToDictionary(
             mainClass => mainClass,
-            mainClass => ToDto(FinanceBreakdownPolicy.Compute(byMainClass[mainClass].Select(i => (i.SubClass, i.Amount)))));
+            mainClass => ToDto(FinanceBreakdownPolicy.Compute(byMainClass[mainClass].Select((string? SubClass, decimal Amount) (i) => (i.SubClass, i.Amount)))));
     }
 
     /// <summary>Copies a domain <see cref="FinanceBreakdownPolicy.SubClassBreakdown"/> into its DTO (fresh, mutable dictionaries).</summary>

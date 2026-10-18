@@ -1,6 +1,5 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Domain.Finances;
-using Maroik.Core.Domain.Extensions;
 using Maroik.Website.Models.ViewModels.Dashboards;
 
 namespace Maroik.Website.Mappers;
@@ -8,17 +7,16 @@ namespace Maroik.Website.Mappers;
 /// <summary>
 /// Converts a <see cref="DashboardDto"/> returned by <c>IDashboardService</c> into the
 /// <see cref="UserIndexOutputViewModel"/> expected by the Dashboard view.
-/// Handles response-to-ViewModel mapping only (timezone conversion, currency lookup, and copying
-/// the per-category sums/percentages <c>DashboardService</c> already computed via
-/// <see cref="FinanceBreakdownPolicy"/> onto their named view-model
-/// properties) — no summing or percentage math happens here.
+/// Handles response-to-ViewModel mapping only (the year selectors, and the per-category sums/percentages
+/// <c>DashboardService</c> already computed via <see cref="FinanceBreakdownPolicy"/> copied onto their named
+/// view-model properties) — no summing or percentage math happens here.
 /// </summary>
 public static class DashboardViewModelMapper
 {
     extension(DashboardDto summary)
     {
         /// <summary>Maps the summary to a fully-populated <see cref="UserIndexOutputViewModel"/>.</summary>
-        public UserIndexOutputViewModel ToViewModel(string timeZoneId)
+        public UserIndexOutputViewModel ToViewModel()
         {
             var vm = new UserIndexOutputViewModel
             {
@@ -32,69 +30,12 @@ public static class DashboardViewModelMapper
 
             if (summary.DefaultMonetaryUnit == null) return vm;
 
-            // All assets, deleted ones included (summary.Assets omits them): a transaction tied to a
-            // since-deleted asset is counted in the totals, so its row must still show its currency.
-            IReadOnlyDictionary<string, string?> currencyByProduct = summary.CurrencyByProduct
-                .ToDictionary(kv => kv.Key, kv => (string?)kv.Value);
-
-            vm.IncomeYearOutputViewModels = MapIncomes(summary.YearIncomes, currencyByProduct, timeZoneId);
-            vm.ExpenditureYearOutputViewModels = MapExpenditures(summary.YearExpenditures, currencyByProduct, timeZoneId);
-            vm.IncomeYearMonthOutputViewModels = MapIncomes(summary.YearMonthIncomes, currencyByProduct, timeZoneId);
-            vm.ExpenditureYearMonthOutputViewModels = MapExpenditures(summary.YearMonthExpenditures, currencyByProduct, timeZoneId);
-
             AssignIncomeBreakdown(vm, summary.YearIncomeBreakdown, summary.YearMonthIncomeBreakdown);
             AssignExpenditureBreakdown(vm, summary.YearExpenditureBreakdown, summary.YearMonthExpenditureBreakdown);
 
             return vm;
         }
     }
-
-    // ── Mapping helpers ──────────────────────────────────────────────────────
-
-    /// <summary>Maps income DTOs to the dashboard's income rows: currency looked up by deposit asset, timestamps converted to <paramref name="timeZoneId"/>.</summary>
-    private static List<IncomeOutputViewModel> MapIncomes(
-        IEnumerable<IncomeResponse> items,
-        IReadOnlyDictionary<string, string?> currencyByProduct,
-        string timeZoneId)
-        =>
-        [
-            .. items.Select(item => new IncomeOutputViewModel
-            {
-                Id = item.Id,
-                MainClass = item.MainClass,
-                SubClass = item.SubClass,
-                Content = item.Content,
-                Amount = item.Amount,
-                MonetaryUnit = currencyByProduct.GetValueOrDefault(item.DepositMyAssetProductName ?? ""),
-                DepositMyAssetProductName = item.DepositMyAssetProductName,
-                Created = item.Created.ConvertTimeByTimeZoneIanaId(timeZoneId),
-                Updated = item.Updated.ConvertTimeByTimeZoneIanaId(timeZoneId),
-                Note = item.Note
-            })
-        ];
-
-    /// <summary>Maps expenditure DTOs to the dashboard's expenditure rows: currency looked up by payment asset, timestamps converted to <paramref name="timeZoneId"/>.</summary>
-    private static List<ExpenditureOutputViewModel> MapExpenditures(
-        IEnumerable<ExpenditureResponse> items,
-        IReadOnlyDictionary<string, string?> currencyByProduct,
-        string timeZoneId)
-        =>
-        [
-            .. items.Select(item => new ExpenditureOutputViewModel
-            {
-                Id = item.Id,
-                MainClass = item.MainClass,
-                SubClass = item.SubClass,
-                Content = item.Content,
-                Amount = item.Amount,
-                MonetaryUnit = currencyByProduct.GetValueOrDefault(item.PaymentMethod ?? ""),
-                PaymentMethod = item.PaymentMethod,
-                Note = item.Note,
-                MyDepositAsset = item.MyDepositAsset,
-                Created = item.Created.ConvertTimeByTimeZoneIanaId(timeZoneId),
-                Updated = item.Updated.ConvertTimeByTimeZoneIanaId(timeZoneId)
-            })
-        ];
 
     // ── Breakdown assignment (lookups only — DashboardService already computed every number) ────
 

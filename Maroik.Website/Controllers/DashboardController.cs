@@ -83,7 +83,7 @@ public class DashboardController(
         string? timeZoneId = loggedInAccount.TimeZoneIanaId;
 
         var summary = await dashboardService.GetSummaryAsync(email!, year, month, timeZoneId!, ct);
-        return View(summary.ToViewModel(timeZoneId!));
+        return View(summary.ToViewModel());
     }
     #endregion
 
