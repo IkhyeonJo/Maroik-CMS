@@ -32,10 +32,6 @@ public class OtherCalendarRepository(ApplicationDbContext context)
         => QueryAsync(e => e.AccountEmail == email, ct: ct);
 
     /// <inheritdoc />
-    public Task<List<OtherCalendar>> GetAllAsync(CancellationToken ct = default)
-        => QueryAllAsync(ct: ct);
-
-    /// <inheritdoc />
     public Task DeleteByAccountEmailAsync(string email, CancellationToken ct = default)
         => DeleteWhereAsync(e => e.AccountEmail == email, ct);
 
