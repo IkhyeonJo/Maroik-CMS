@@ -1,5 +1,5 @@
-using Maroik.Core.Domain.Board;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Boards;
+using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
 using OrmBoard = Maroik.Core.PostgreSQL.Models.Board;

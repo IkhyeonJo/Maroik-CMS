@@ -1,6 +1,6 @@
 using ICSharpCode.SharpZipLib.Zip;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
+using Maroik.Core.Contract.Enums;
 using Maroik.FileStorage.Services;
 using Maroik.FileStorage.Settings;
 using Microsoft.AspNetCore.Http;

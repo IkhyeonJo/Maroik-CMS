@@ -1,5 +1,5 @@
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Board;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Boards;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;

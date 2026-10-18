@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.PostgreSQL.Contexts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Maroik.Core.Repository.Repositories;

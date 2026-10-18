@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,7 +40,7 @@ public class ExceptionControllerTests(MaroikWebApplicationFactory factory)
     public async Task Error_LoggedInUser_Returns200()
     {
         var session = await AuthenticatedSessionHelper.LoginAsync(
-            factory, _client, "exception-error-user@test.com", "UserPassword1!", Core.Domain.Account.Role.User,
+            factory, _client, "exception-error-user@test.com", "UserPassword1!", Core.Domain.Accounts.Role.User,
             TestContext.Current.CancellationToken);
         using var request = new HttpRequestMessage(HttpMethod.Get, "/Exception/Error");
         request.Headers.Add("Cookie", session.CookieHeader);

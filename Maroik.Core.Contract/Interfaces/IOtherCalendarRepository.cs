@@ -1,4 +1,4 @@
-using Maroik.Core.Domain.Calendar;
+using Maroik.Core.Domain.Calendars;
 namespace Maroik.Core.Contract.Interfaces;
 
 /// <summary>

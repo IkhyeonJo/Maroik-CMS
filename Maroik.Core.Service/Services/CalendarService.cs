@@ -1,8 +1,8 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Calendar;
+using Maroik.Core.Contract.Settings;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Calendars;
 using Maroik.Core.Service.Extensions;
 using Maroik.Core.Service.Mappers;
 using Microsoft.Extensions.Logging;

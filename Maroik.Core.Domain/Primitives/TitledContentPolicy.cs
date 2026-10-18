@@ -2,7 +2,7 @@ namespace Maroik.Core.Domain.Primitives;
 
 /// <summary>
 /// Shared length limits for a title + free-text body pair, used by aggregates that combine both
-/// (<see cref="Board.Board"/>'s Title/Content, <see cref="Calendar.CalendarEvent"/>'s
+/// (<see cref="Boards.Board"/>'s Title/Content, <see cref="Calendars.CalendarEvent"/>'s
 /// Title/Description). Centralized so the Create/Update methods on both aggregates can't drift
 /// apart from each other or from the persisted column shapes they both share.
 /// </summary>

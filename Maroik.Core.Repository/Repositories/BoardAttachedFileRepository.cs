@@ -1,6 +1,6 @@
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Board;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Boards;
+using Maroik.Core.PostgreSQL.Contexts;
 using Microsoft.EntityFrameworkCore;
 using OrmBoardAttachedFile = Maroik.Core.PostgreSQL.Models.BoardAttachedFile;
 

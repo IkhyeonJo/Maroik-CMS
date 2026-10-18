@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using Maroik.Core.Client.Clients;
-using Maroik.Core.Contract.Misc.Enums;
+using Maroik.Core.Contract.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 

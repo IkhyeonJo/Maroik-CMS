@@ -1,8 +1,8 @@
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Finance;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Finances;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Maroik.Website.Tests.Controllers;

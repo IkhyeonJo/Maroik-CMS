@@ -1,9 +1,9 @@
 using System.Text.Json;
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Domain.Account;
+using Maroik.Core.Domain.Accounts;
 using Maroik.Website.Constants;
 using Maroik.Website.Extensions;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Testing;

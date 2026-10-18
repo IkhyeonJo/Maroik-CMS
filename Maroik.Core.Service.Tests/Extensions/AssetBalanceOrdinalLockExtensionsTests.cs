@@ -1,5 +1,5 @@
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Finance;
+using Maroik.Core.Domain.Finances;
 using Maroik.Core.Domain.ValueObjects;
 using Maroik.Core.Service.Extensions;
 using Moq;

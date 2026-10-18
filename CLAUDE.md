@@ -38,7 +38,7 @@ Deployment and schema
 - Judge code against the schema, the seed scripts and the tests only. The production data is the owner's
   responsibility: do not raise checks against existing production rows, ask for queries to be run against it, or
   add safeguards for hypothetical legacy rows.
-- `Maroik.Core.PostgreSQL` (`ApplicationDbContext`, `Models/*`) is EF Core scaffold output. Leave it out of
+- `Maroik.Core.PostgreSQL` (`Contexts/ApplicationDbContext`, `Models/*`) is EF Core scaffold output. Leave it out of
   repo-wide comment / style passes; touch it only when the schema mapping itself changes.
 
 Operations and hosting
@@ -374,11 +374,27 @@ sanitizer entry must be proven to matter: rename its method in the file and the 
   not only on a happy-path method such as `StopAsync`.
 - A client from `IHttpClientFactory` is disposed after use (`using HttpClient`); it does not own its pooled handler, and a
   response it already returned (the streaming `OpenReadAsync`) keeps working.
-- Tests: multipart bodies are built with the per-project `Infrastructure/MultipartForm` helper (`Of`, `AddText`, `AddFile`),
+- Tests: multipart bodies are built with the per-project `Fixtures/MultipartForm` helper (`Of`, `AddText`, `AddFile`),
   never `new StringContent(...)` / `new ByteArrayContent(...)` added inline; a helper that sends a request takes a
   `Func<...>` and disposes what it builds (`ErrorOf`, `Send`).
 - A leak fix with observable behaviour gets a regression test like any bug fix (`FileClientTests.EveryCall_DisposesTheHttpClientItCreated`,
   `FileControllerTests.Download_ClosesTheFile_WhenItFailsAfterOpeningIt`); where nothing is observable, the build error is the red step.
+
+## Folder names are plural nouns
+
+The folder that directly holds a `.cs` file is a plural noun (`Accounts`, `Calendars`, `Fixtures`, `ArchitectureRules`,
+`Mappers`), and its namespace matches it. A singular noun is pluralized (`Account` → `Accounts`); an adjective or a
+mass / concept word is first replaced by a noun that has a plural (`Shared` → `Layouts`, `Infrastructure` → `Fixtures`,
+`Architecture` → `ArchitectureRules`, `Messaging` → `Messages`, `Time` → `TimeZones`, `Media` → `Uploads`).
+A `Resources/...` resx folder mirrors its class's folder, so it follows. Razor `Views/{Controller}` folders hold no `.cs` and
+keep the controller name.
+
+`.editorconfig` cannot see folder names, so the `CheckPluralFolderNames` target in `Directory.Build.props` warns at build
+time (`MAROIK0001`) for a folder whose name does not end in `s`; the zero-warning rule makes it a gate. It covers
+`Maroik.Core.PostgreSQL` too: EF Core's scaffold puts everything at the project root by default, and this project's folders
+are the scaffold options, so re-scaffold with `--context-dir Contexts --output-dir Models`.
+The namespace follows the folder path; `.editorconfig` makes a mismatch a build error (`IDE0130`), so a folder rename
+cannot leave its namespace behind.
 
 ## Always write resx + unit tests alongside code
 
@@ -420,7 +436,7 @@ are plain IDs, not object references), the same criterion applied to
 
 `Maroik.Core.Repository.Tests` runs entirely against a real PostgreSQL 17 database
 (Testcontainers) — there is no EF Core InMemory provider. One container is shared by
-the whole assembly (`Infrastructure/PostgresContainerFixture`, an xUnit v3 assembly
+the whole assembly (`Fixtures/PostgresContainerFixture`, an xUnit v3 assembly
 fixture); it loads the real schema **and seed data** from
 `Maroik.DB/PostgreSQL/SQL_Init_Script/Debugging/Init.sql` into a template database,
 and each test class gets its own throwaway DB cloned from that template
@@ -471,7 +487,7 @@ keep new Service tests to that standard.
 ## Architecture validation tests
 
 The layering / ArchNet rules are enforced by NetArchTest-based `*ArchitectureTests`
-classes in each `*.Tests` project's `Architecture/` folder, plus the solution-wide
+classes in each `*.Tests` project's `ArchitectureRules/` folder, plus the solution-wide
 `SolutionLayeringArchitectureTests` (in `Maroik.Core.Contract.Tests`) that validates
 the `.csproj` project- and package-reference graph itself. They run under
 `dotnet test`, so a violation fails the test run. Keep them green; extend them
@@ -500,7 +516,7 @@ falls back to the baked (often English, sometimes value-specific) string instead
 code was interpolated straight into the message, so no resx key could ever match it.
 
 Enforced by `DomainArchitectureTests.Domain_ErrorMessages_MustGoThrough_DomainError`
-(`Maroik.Core.Domain.Tests/Architecture/DomainArchitectureTests.cs`) — a NetArchTest custom rule that
+(`Maroik.Core.Domain.Tests/ArchitectureRules/DomainArchitectureTests.cs`) — a NetArchTest custom rule that
 inspects each type's IL for a direct call to a raw `ErrorOr.Error` factory method (a type-dependency
 check doesn't work here since every Domain type legitimately depends on the unrelated `ErrorOr<T>`
 return type). Keep it green; when a new error is added, add it via `DomainError`, and add the
@@ -508,7 +524,7 @@ matching resx entry — with a `{0}`/`{1}` composite-format key, not a baked val
 resx pair (`en-US` + `ko-KR`) that can surface it.
 
 Cultures are a Website concern: the supported UI cultures and the culture → default time-zone pre-select
-live in `Maroik.Website/Constants/CulturePolicy.cs`, not in the domain. `Maroik.Core.Domain.Time.DateTimeExtensions`
+live in `Maroik.Website/Constants/CulturePolicy.cs`, not in the domain. `Maroik.Core.Domain.TimeZones.DateTimeExtensions`
 is time-zone conversion, not language handling.
 
 ## Service error keys must come from ServiceErrorKeys

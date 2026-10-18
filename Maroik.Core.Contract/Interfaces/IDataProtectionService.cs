@@ -1,4 +1,4 @@
-using Maroik.Core.Contract.Misc.Enums;
+using Maroik.Core.Contract.Enums;
 
 namespace Maroik.Core.Contract.Interfaces;
 

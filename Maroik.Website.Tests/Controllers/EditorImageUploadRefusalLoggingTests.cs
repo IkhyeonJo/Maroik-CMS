@@ -1,8 +1,8 @@
-using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Account;
+using Maroik.Core.Contract.Settings;
+using Maroik.Core.Domain.Accounts;
 using Maroik.Core.Service.Services;
 using Maroik.Website.Controllers;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;

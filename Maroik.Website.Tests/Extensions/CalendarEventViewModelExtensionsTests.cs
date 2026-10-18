@@ -1,7 +1,7 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Website.Extensions;
-using Maroik.Website.Models.ViewModels.Calendar;
+using Maroik.Website.Models.ViewModels.Calendars;
 using Moq;
 
 namespace Maroik.Website.Tests.Extensions;

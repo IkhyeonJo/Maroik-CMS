@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
-using Maroik.FileStorage.Tests.Infrastructure;
+using Maroik.FileStorage.Tests.Fixtures;
 
 namespace Maroik.FileStorage.Tests;
 

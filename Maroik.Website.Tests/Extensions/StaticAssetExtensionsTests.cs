@@ -1,4 +1,4 @@
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Tests.Fixtures;
 
 namespace Maroik.Website.Tests.Extensions;
 

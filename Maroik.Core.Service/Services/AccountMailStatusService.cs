@@ -1,6 +1,6 @@
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Helpers;
-using Maroik.Core.Domain.Account;
+using Maroik.Core.Contract.Helpers;
+using Maroik.Core.Domain.Accounts;
 
 namespace Maroik.Core.Service.Services;
 

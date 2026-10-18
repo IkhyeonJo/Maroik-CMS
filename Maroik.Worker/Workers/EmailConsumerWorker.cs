@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
-using Maroik.Core.Contract.Misc.Messaging;
+using Maroik.Core.Contract.Messages;
 using Maroik.Worker.Contracts;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;

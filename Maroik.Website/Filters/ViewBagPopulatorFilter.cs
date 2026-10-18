@@ -1,8 +1,8 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Time;
+using Maroik.Core.Contract.Settings;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.TimeZones;
 using Maroik.Website.Constants;
 using Maroik.Website.Extensions;
 using Microsoft.AspNetCore.Localization;

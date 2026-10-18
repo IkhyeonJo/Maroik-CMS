@@ -1,7 +1,7 @@
 using System.Text.Json;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.PostgreSQL.Contexts;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OrmCalendar = Maroik.Core.PostgreSQL.Models.Calendar;

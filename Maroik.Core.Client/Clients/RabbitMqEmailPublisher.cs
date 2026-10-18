@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Messaging;
+using Maroik.Core.Contract.Messages;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 

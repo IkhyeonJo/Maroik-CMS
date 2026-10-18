@@ -1,5 +1,5 @@
 using System.Text;
-using Maroik.Core.Contract.Misc.Messaging;
+using Maroik.Core.Contract.Messages;
 using Maroik.Worker.Workers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;

@@ -1,7 +1,7 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Messaging;
-using Maroik.Core.Contract.Misc.Settings;
+using Maroik.Core.Contract.Messages;
+using Maroik.Core.Contract.Settings;
 using Maroik.Worker.Handlers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;

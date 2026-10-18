@@ -1,5 +1,5 @@
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Domain.Menu;
+using Maroik.Core.Domain.Menus;
 
 namespace Maroik.Core.Service.Mappers;
 

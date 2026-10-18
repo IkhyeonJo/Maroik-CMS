@@ -1,5 +1,5 @@
 using System.Globalization;
-using Maroik.Core.Domain.Finance;
+using Maroik.Core.Domain.Finances;
 using Maroik.Website.Constants;
 
 namespace Maroik.Website.Tests;

@@ -1,5 +1,5 @@
-using Maroik.Core.Domain.Finance;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Finances;
+using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;

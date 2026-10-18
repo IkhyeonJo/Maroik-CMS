@@ -4,7 +4,7 @@ using Maroik.Website.Attributes;
 using Maroik.Website.Constants;
 using Maroik.Website.Contracts;
 using Maroik.Website.Extensions;
-using Maroik.Website.Models.ViewModels.Account;
+using Maroik.Website.Models.ViewModels.Accounts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 
