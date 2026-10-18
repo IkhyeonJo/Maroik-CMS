@@ -1,5 +1,5 @@
+using Maroik.Core.Contract.Extensions;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Helpers;
 using Maroik.Core.Domain.Accounts;
 
 namespace Maroik.Core.Service.Services;
@@ -17,7 +17,7 @@ public class AccountMailStatusService(IAccountRepository accountRepository, Time
         // Column-scoped write (Message/Updated only): this runs from the worker and must not
         // full-row-overwrite an Account the web app is editing at the same moment.
         await accountRepository.UpdateMessageAsync(
-            email, EnumHelper.GetDescription(AccountMessage.FailToMailSent), timeProvider.GetUtcNow().UtcDateTime, ct);
+            email, AccountMessage.FailToMailSent.GetDescription(), timeProvider.GetUtcNow().UtcDateTime, ct);
     }
 
     /// <inheritdoc />
@@ -27,7 +27,7 @@ public class AccountMailStatusService(IAccountRepository accountRepository, Time
         if (account == null)
             return;
 
-        if (account.Message != EnumHelper.GetDescription(AccountMessage.FailToMailSent))
+        if (account.Message != AccountMessage.FailToMailSent.GetDescription())
             return;
 
         await accountRepository.UpdateMessageAsync(email, null, timeProvider.GetUtcNow().UtcDateTime, ct);

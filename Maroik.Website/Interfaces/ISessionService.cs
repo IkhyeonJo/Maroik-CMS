@@ -1,6 +1,6 @@
 using Maroik.Core.Contract.Dtos;
 
-namespace Maroik.Website.Contracts;
+namespace Maroik.Website.Interfaces;
 
 /// <summary>
 /// Service interface for reading and writing the current user's account data

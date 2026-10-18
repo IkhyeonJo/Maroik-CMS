@@ -1,7 +1,7 @@
 using System.Globalization;
+using Maroik.Core.Domain.Errors;
 using Maroik.Core.Domain.Finances;
 using Maroik.Core.Domain.ValueObjects;
-using Maroik.Core.Domain.Errors;
 namespace Maroik.Core.Domain.Tests.Finances;
 
 /// <summary>

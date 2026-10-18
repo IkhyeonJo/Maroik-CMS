@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Website.Constants;
-using Maroik.Website.Contracts;
+using Maroik.Website.Interfaces;
 
 namespace Maroik.Website.Services;
 

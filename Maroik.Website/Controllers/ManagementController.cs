@@ -1,8 +1,7 @@
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Enums;
 using Maroik.Core.Contract.Extensions;
-using Maroik.Core.Contract.Helpers;
+using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Settings;
 using Maroik.Core.Domain.Accounts;
 using Maroik.Core.Domain.Boards;
@@ -10,8 +9,8 @@ using Maroik.Core.Domain.TimeZones;
 using Maroik.Core.Domain.Uploads;
 using Maroik.Website.Attributes;
 using Maroik.Website.Constants;
-using Maroik.Website.Contracts;
 using Maroik.Website.Extensions;
+using Maroik.Website.Interfaces;
 using Maroik.Website.Mappers;
 using Maroik.Website.Models;
 using Maroik.Website.Models.ViewModels.Managements;
@@ -276,7 +275,7 @@ public class ManagementController(
                 TimeZoneIanaId = accountInputViewModel.TimeZoneIanaId,
                 EmailConfirmed = true,
                 AgreedServiceTerms = true,
-                Message = EnumHelper.GetDescription(AccountMessage.Success)
+                Message = AccountMessage.Success.GetDescription()
             }, AdminEmail, HttpContext.RequestAborted);
 
             return createResult.Success

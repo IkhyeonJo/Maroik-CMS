@@ -285,7 +285,7 @@ How:
 
 - **Structured templates with named placeholders** (`"Locked account {Email} after {Attempts} attempts"`), never string
   interpolation or concatenation, so the values stay queryable and cannot forge extra log lines. The console output templates
-  (`Maroik.Website/Constants/LogTemplates.cs`, `Maroik.FileStorage/Helpers/LogTemplates.cs`, `WorkerHost.ConsoleOutputTemplate`)
+  (`Maroik.Website/Constants/LogTemplates.cs`, `Maroik.FileStorage/Constants/LogTemplates.cs`, `WorkerHost.ConsoleOutputTemplate`)
   render `{Message:j}`, not Serilog's usual `:lj` — `:l` writes a string value raw, so a line break inside it would start a
   forged line. Keep `:j`; each host has a test that fails if a value can break the line.
 - **Never log secrets or content:** passwords, password hashes, registration / reset tokens or their protected (Data Protection) form, session
@@ -395,6 +395,21 @@ time (`MAROIK0001`) for a folder whose name does not end in `s`; the zero-warnin
 are the scaffold options, so re-scaffold with `--context-dir Contexts --output-dir Models`.
 The namespace follows the folder path; `.editorconfig` makes a mismatch a build error (`IDE0130`), so a folder rename
 cannot leave its namespace behind.
+
+Interfaces a project defines live in `Interfaces/` (`Maroik.Core.Contract`, and the hosts' own: `Maroik.Website/Interfaces`,
+`Maroik.Worker/Interfaces`, `Maroik.FileStorage/Interfaces`), constants such as the console `LogTemplates` in `Constants/`,
+extension methods in `Extensions/` (`EnumExtensions.GetDescription`), and `*Mapper` classes in `Mappers/`.
+
+## One type per file, named after it
+
+Every `.cs` file holds one top-level type (class, record, struct, interface, enum, delegate) and is named after it
+(`AdminStanding.cs`, `MenuSnapshot.cs`, `SeededAccount.cs`). StyleCop.Analyzers is referenced for that alone: `.editorconfig`
+sets SA1402 (one type per file; `stylecop.json` counts every kind of type, not only classes) and SA1649 (file name = first
+type) to `error` by rule ID, and `stylecop.globalconfig` turns every other StyleCop rule off. That file uses category lines —
+the one exception to "configure analyzers by rule ID only" below, which holds only while no `AnalysisLevel=latest-all` /
+`AnalysisMode` is set — plus a rule-ID line for SA1201, which 1.2.0-beta.556 reports with no source location for C# 14
+`extension` blocks (a location-less diagnostic follows only a rule-ID line in a global config). Nested types are fine, and
+SA1649 does not judge a `partial` type, so `ProgramAccessor.cs` (`public partial class Program`) keeps its name.
 
 ## Always write resx + unit tests alongside code
 

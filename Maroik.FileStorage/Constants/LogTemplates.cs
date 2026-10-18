@@ -1,4 +1,4 @@
-namespace Maroik.FileStorage.Helpers;
+namespace Maroik.FileStorage.Constants;
 
 /// <summary>Serilog output templates shared by the bootstrap logger and the host logger in <c>Program.cs</c>.</summary>
 public static class LogTemplates

@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Net.Sockets;
-using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Enums;
+using Maroik.Core.Contract.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace Maroik.Core.Client.Clients;

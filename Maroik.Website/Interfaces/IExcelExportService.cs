@@ -1,6 +1,6 @@
 using Maroik.Core.Contract.Dtos;
 
-namespace Maroik.Website.Contracts;
+namespace Maroik.Website.Interfaces;
 
 /// <summary>
 /// Builds in-memory Excel workbooks for the grids' Excel export (account book, notices, accounts, menu).

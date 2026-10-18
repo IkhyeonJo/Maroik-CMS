@@ -1,0 +1,18 @@
+is_global = true
+
+# StyleCop.Analyzers is referenced only for SA1402 / SA1649, which .editorconfig sets to error by rule ID. Every other
+# StyleCop rule is off by category. A category line here works because no AnalysisLevel=latest-all / AnalysisMode is
+# set (see CLAUDE.md).
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.DocumentationRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.LayoutRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.MaintainabilityRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.NamingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.OrderingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.ReadabilityRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpacingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpecialRules.severity = none
+
+# SA1201 (1.2.0-beta.556) reports "A <unknown> should not follow ..." with no source location for C# 14 extension
+# blocks. A diagnostic without a location is not governed by a category line, nor by any .editorconfig section, only
+# by a rule-ID line in a global config.
+dotnet_diagnostic.SA1201.severity = none
