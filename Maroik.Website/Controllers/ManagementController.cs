@@ -5,7 +5,7 @@ using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Settings;
 using Maroik.Core.Domain.Accounts;
 using Maroik.Core.Domain.Boards;
-using Maroik.Core.Domain.TimeZones;
+using Maroik.Core.Domain.Extensions;
 using Maroik.Core.Domain.Uploads;
 using Maroik.Website.Attributes;
 using Maroik.Website.Constants;

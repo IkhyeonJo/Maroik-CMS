@@ -1,5 +1,5 @@
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Domain.TimeZones;
+using Maroik.Core.Domain.Extensions;
 using Maroik.Website.Mappers;
 
 namespace Maroik.Website.Tests.Mappers;

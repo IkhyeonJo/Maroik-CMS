@@ -398,7 +398,12 @@ cannot leave its namespace behind.
 
 Interfaces a project defines live in `Interfaces/` (`Maroik.Core.Contract`, and the hosts' own: `Maroik.Website/Interfaces`,
 `Maroik.Worker/Interfaces`, `Maroik.FileStorage/Interfaces`), constants such as the console `LogTemplates` in `Constants/`,
-extension methods in `Extensions/` (`EnumExtensions.GetDescription`), and `*Mapper` classes in `Mappers/`.
+extension methods in `Extensions/` (`EnumExtensions.GetDescription`, the Domain's `DateTimeExtensions` too), and `*Mapper`
+classes in `Mappers/`. `Interfaces/` holds only interfaces (a record a contract carries, such as `HtmlImgPatch`, is a `Dtos/`
+type) and `Extensions/` only classes of extension members (a plain static helper is named for its job, e.g.
+`Maroik.Website/Serializers/ClientJsonSerializer`). Enforced for every production project except the
+`Maroik.Core.PostgreSQL` scaffold by `FolderRoleArchitectureTests` (`Maroik.Core.Contract.Tests`), which reads the sources
+with the Roslyn parser.
 
 ## One type per file, named after it
 
@@ -539,7 +544,7 @@ matching resx entry — with a `{0}`/`{1}` composite-format key, not a baked val
 resx pair (`en-US` + `ko-KR`) that can surface it.
 
 Cultures are a Website concern: the supported UI cultures and the culture → default time-zone pre-select
-live in `Maroik.Website/Constants/CulturePolicy.cs`, not in the domain. `Maroik.Core.Domain.TimeZones.DateTimeExtensions`
+live in `Maroik.Website/Constants/CulturePolicy.cs`, not in the domain. `Maroik.Core.Domain.Extensions.DateTimeExtensions`
 is time-zone conversion, not language handling.
 
 ## Service error keys must come from ServiceErrorKeys

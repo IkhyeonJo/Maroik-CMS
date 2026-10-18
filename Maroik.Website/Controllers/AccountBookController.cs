@@ -2,7 +2,7 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Accounts;
 using Maroik.Core.Domain.Finances;
-using Maroik.Core.Domain.TimeZones;
+using Maroik.Core.Domain.Extensions;
 using Maroik.Website.Attributes;
 using Maroik.Website.Extensions;
 using Maroik.Website.Interfaces;

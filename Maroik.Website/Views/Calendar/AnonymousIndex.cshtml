@@ -21,7 +21,7 @@
 @Html.Hidden("maxHoursBeforeEvent", CalendarReminderPolicy.MaxHoursBeforeEvent)
 @Html.Hidden("maxDaysBeforeEvent", CalendarReminderPolicy.MaxDaysBeforeEvent)
 @Html.Hidden("maxWeeksBeforeEvent", CalendarReminderPolicy.MaxWeeksBeforeEvent)
-@Html.Hidden("reminderTimeIntervals", JsonSerialization.ToClientJson(Model.TimeIntervals))
+@Html.Hidden("reminderTimeIntervals", ClientJsonSerializer.Serialize(Model.TimeIntervals))
 @Html.Hidden("defaultReminderTimeOfDay", CalendarReminderPolicy.DefaultReminderTimeOfDay)
 
 @Html.Hidden("localizerEmail", Localizer["Email"].Value)
@@ -105,7 +105,7 @@
 @Html.Hidden("localizerErrorRangeDay", Localizer["ErrorRangeDay"].Value)
 @Html.Hidden("localizerErrorRangeWeek", Localizer["ErrorRangeWeek"].Value)
 @Html.Hidden("localizerFailedToLoadCalendars", Localizer["FailedToLoadCalendars"].Value)
-@Html.Hidden("otherCalendarEventOutputViewModels", JsonSerialization.ToClientJson(Model.OtherCalendarEventOutputViewModels))
+@Html.Hidden("otherCalendarEventOutputViewModels", ClientJsonSerializer.Serialize(Model.OtherCalendarEventOutputViewModels))
 
 <section class="content">
     <div class="container-fluid">

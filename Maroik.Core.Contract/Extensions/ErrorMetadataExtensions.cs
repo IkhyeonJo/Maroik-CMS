@@ -1,7 +1,7 @@
 using ErrorOr;
 using Maroik.Core.Domain.Errors;
 
-namespace Maroik.Core.Contract.Dtos;
+namespace Maroik.Core.Contract.Extensions;
 
 /// <summary>
 /// Shared helper (internal to this assembly) that turns a domain <see cref="Error"/> into a

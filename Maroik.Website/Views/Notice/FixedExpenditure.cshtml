@@ -68,9 +68,9 @@
 @* Expenditure main→sub-class taxonomy, the deposit-asset sub-class set, the deposit
    month→max-day rule and the "no maturity date" sentinel — authoritative in
    ExpenditureClassPolicy / FixedSchedulePolicy; the form reads these instead of hardcoding them. *@
-@Html.Hidden("expenditureSubClassMap", JsonSerialization.ToClientJson(ExpenditureClassPolicy.SubClassesByMainClass))
-@Html.Hidden("expenditureDepositAssetSubClasses", JsonSerialization.ToClientJson(ExpenditureClassPolicy.DepositAssetSubClasses))
-@Html.Hidden("maxDepositDayByMonth", JsonSerialization.ToClientJson(FixedSchedulePolicy.MaxDepositDayByMonth))
+@Html.Hidden("expenditureSubClassMap", ClientJsonSerializer.Serialize(ExpenditureClassPolicy.SubClassesByMainClass))
+@Html.Hidden("expenditureDepositAssetSubClasses", ClientJsonSerializer.Serialize(ExpenditureClassPolicy.DepositAssetSubClasses))
+@Html.Hidden("maxDepositDayByMonth", ClientJsonSerializer.Serialize(FixedSchedulePolicy.MaxDepositDayByMonth))
 @Html.Hidden("noMaturityDate", FixedSchedulePolicy.NoMaturityDateIso)
 @Html.Hidden("localizerFailedToLoadAmountLabel", Localizer["Failed to load the amount label."].Value)
 

@@ -1,4 +1,4 @@
-namespace Maroik.Core.Contract.Interfaces;
+namespace Maroik.Core.Contract.Dtos;
 
 /// <summary>
 /// Instructions for a transformed <c>&lt;img&gt;</c> tag. Null attribute fields are left unchanged;

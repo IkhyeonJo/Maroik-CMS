@@ -1,4 +1,5 @@
 using ErrorOr;
+using Maroik.Core.Contract.Extensions;
 
 namespace Maroik.Core.Contract.Dtos;
 

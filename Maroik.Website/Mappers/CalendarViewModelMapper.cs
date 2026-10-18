@@ -3,9 +3,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Domain.Calendars;
-using Maroik.Core.Domain.TimeZones;
+using Maroik.Core.Domain.Extensions;
 using Maroik.Website.Extensions;
 using Maroik.Website.Models.ViewModels.Calendars;
+using Maroik.Website.Serializers;
 
 namespace Maroik.Website.Mappers;
 
@@ -127,7 +128,7 @@ public static class CalendarViewModelMapper
         /// Serializes reminder response objects to the JSON array the client edit-form expects.
         /// </summary>
         public string ToSerializedReminders()
-            => JsonSerialization.ToClientJson(reminders.Select(x => new CalendarReminderDto
+            => ClientJsonSerializer.Serialize(reminders.Select(x => new CalendarReminderDto
             {
                 Method = x.Method ?? "",
                 MinutesBeforeEvent = x.MinutesBeforeEvent,

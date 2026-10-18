@@ -1,7 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 
-namespace Maroik.Website.Extensions;
+namespace Maroik.Website.Serializers;
 
 /// <summary>
 /// Central System.Text.Json settings for the web layer's ad-hoc serialization — the
@@ -15,9 +15,9 @@ namespace Maroik.Website.Extensions;
 /// MVC own request/response serialization is configured separately and is unaffected.
 /// </para>
 /// </summary>
-public static class JsonSerialization
+public static class ClientJsonSerializer
 {
-    /// <summary>Shared options backing <see cref="ToClientJson"/>.</summary>
+    /// <summary>Shared options backing <see cref="Serialize"/>.</summary>
     private static readonly JsonSerializerOptions _clientPayload = new()
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -27,5 +27,5 @@ public static class JsonSerialization
     /// Serializes <paramref name="value"/> for embedding in a page (hidden field) or an AJAX payload
     /// that a client script will <c>JSON.parse</c>.
     /// </summary>
-    public static string ToClientJson(object? value) => JsonSerializer.Serialize(value, _clientPayload);
+    public static string Serialize(object? value) => JsonSerializer.Serialize(value, _clientPayload);
 }
