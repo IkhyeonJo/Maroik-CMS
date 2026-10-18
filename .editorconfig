@@ -106,8 +106,11 @@ csharp_style_deconstructed_variable_declaration = true:suggestion
 csharp_prefer_simple_default_expression = true:suggestion
 csharp_style_pattern_local_over_anonymous_function = true:suggestion
 csharp_style_inlined_variable_declaration = true:suggestion
-# Namespaces
-csharp_style_namespace_declarations = file_scoped:warning
+# Namespaces: file-scoped only (`namespace X;`), never a block (`namespace X { ... }`).
+# A build error by rule ID (IDE0161), not only through TreatWarningsAsErrors; it runs at build time
+# because Directory.Build.props sets EnforceCodeStyleInBuild.
+csharp_style_namespace_declarations = file_scoped:error
+dotnet_diagnostic.IDE0161.severity = error
 ###############################
 # C# Formatting Rules         #
 ###############################
