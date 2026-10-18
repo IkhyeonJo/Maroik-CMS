@@ -4,11 +4,12 @@ using Maroik.Core.Domain.Boards;
 using Maroik.Core.Domain.Calendars;
 using Maroik.Core.Domain.Finances;
 using Maroik.Core.Domain.Menus;
+using Maroik.Core.Domain.Tests.Fixtures;
 using Maroik.Core.Domain.ValueObjects;
 using DomainAccount = Maroik.Core.Domain.Accounts.Account;
 using DomainTitledContentPolicy = Maroik.Core.Domain.Primitives.TitledContentPolicy;
 
-namespace Maroik.Core.Domain.Tests.Boundaries;
+namespace Maroik.Core.Domain.Tests.Invariants;
 
 /// <summary>
 /// The message template of each domain error is the key the Website uses to find its ko-KR translation

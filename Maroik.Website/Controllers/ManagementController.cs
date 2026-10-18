@@ -1056,21 +1056,21 @@ public class ManagementController(
                         };
 
                     // Preload comments and accounts for detail view
-                    privateNoteOutputViewModel.DetailBoardComments =
-                    [
-                        .. await boardService.GetCommentsByBoardIdAsync((long)boardId, HttpContext.RequestAborted)
-                    ];
+                    List<BoardCommentResponse> comments = [.. await boardService.GetCommentsByBoardIdAsync((long)boardId, HttpContext.RequestAborted)];
                     // Only the accounts shown on this page (the note's author and its commenters) are
                     // needed, to highlight admin-authored entries — not every account in the system.
-                    var detailNicknames = privateNoteOutputViewModel.DetailBoardComments.Select(c => c.Writer)
+                    var detailNicknames = comments.Select(c => c.Writer)
                         .Append(privateNoteBoard.Writer)
                         .Where(w => !string.IsNullOrEmpty(w))
                         .Select(w => w!)
                         .Distinct();
-                    privateNoteOutputViewModel.AllAccounts = await accountService.GetAccountsByNicknamesAsync(detailNicknames, HttpContext.RequestAborted);
-                    privateNoteOutputViewModel.AdminNicknames = privateNoteOutputViewModel.AllAccounts.ToAdminNicknameSet();
+                    HashSet<string> adminNicknames = (await accountService.GetAccountsByNicknamesAsync(detailNicknames, HttpContext.RequestAborted)).ToAdminNicknameSet();
+                    // Only its writer may delete a private-note comment, admins included (BoardService.DeleteCommentAsync checks again).
+                    privateNoteOutputViewModel.DetailBoardComments =
+                        [.. comments.Select(c => c.ToCommentRow(privateNoteBoard.Writer, loggedInAccount.IsOwner(c.Writer), adminNicknames))];
                     privateNoteOutputViewModel.LoggedInAccount = loggedInAccount;
                     privateNoteOutputViewModel.LoggedInAccountTimeZoneIanaId = loggedInAccount.TimeZoneIanaId ?? "";
+                    privateNoteOutputViewModel.ViewerSeesLocalTime = loggedInAccount.SeesLocalTime();
 
                     return View(privateNoteOutputViewModel);
                 }
@@ -1187,31 +1187,31 @@ public class ManagementController(
 
                 #region Board data logic
 
-                privateNoteOutputViewModel.Boards = [.. pageItems];
+                List<BoardResponse> boardResponses = [.. pageItems];
 
                 #endregion
 
                 #region Preload comment counts and attached files for view
                 privateNoteOutputViewModel.LoggedInAccount = loggedInAccount;
                 privateNoteOutputViewModel.LoggedInAccountTimeZoneIanaId = loggedInAccount.TimeZoneIanaId ?? "";
-                var boardResponses = privateNoteOutputViewModel.Boards.ToList();
+                privateNoteOutputViewModel.ViewerSeesLocalTime = loggedInAccount.SeesLocalTime();
                 // Only the writers on this page are needed (to highlight admin-authored notes).
                 var listNicknames = boardResponses.Select(b => b.Writer)
                     .Where(w => !string.IsNullOrEmpty(w))
                     .Select(w => w!)
                     .Distinct();
-                privateNoteOutputViewModel.AllAccounts = await accountService.GetAccountsByNicknamesAsync(listNicknames, HttpContext.RequestAborted);
-                privateNoteOutputViewModel.AdminNicknames = privateNoteOutputViewModel.AllAccounts.ToAdminNicknameSet();
+                HashSet<string> adminNicknames = (await accountService.GetAccountsByNicknamesAsync(listNicknames, HttpContext.RequestAborted)).ToAdminNicknameSet();
                 List<long> boardIds = [.. boardResponses.Select(b => b.Id)];
                 Dictionary<long, int> commentCounts = await boardService.GetCommentCountsForBoardsAsync(boardIds, HttpContext.RequestAborted);
                 Dictionary<long, BoardAttachedFileDto?> attachedFiles = await boardService.GetAttachedFilesForBoardsAsync(boardIds, HttpContext.RequestAborted);
 
-                foreach (var board in boardResponses)
-                {
-                    privateNoteOutputViewModel.CommentCountByBoardId[board.Id] = commentCounts.GetValueOrDefault(board.Id, 0);
-                    BoardAttachedFileDto? af = attachedFiles.GetValueOrDefault(board.Id);
-                    privateNoteOutputViewModel.AttachedFilesByBoardId[board.Id] = af != null && !string.IsNullOrEmpty(af.Name) ? [af] : [];
-                }
+                // A private note's title is shown to its writer only, admins included (Board.CanBeViewedBy).
+                privateNoteOutputViewModel.Boards =
+                [
+                    .. boardResponses.Select(board => board.ToListRow(
+                        board.IsTitleVisibleToOwner(loggedInAccount), adminNicknames,
+                        commentCounts.GetValueOrDefault(board.Id, 0), attachedFiles.GetValueOrDefault(board.Id)))
+                ];
                 #endregion
 
                 privateNoteOutputViewModel.SelectedSearchType = searchType;

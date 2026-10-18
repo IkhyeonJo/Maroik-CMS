@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace Maroik.Website.Tests.Filters;
+namespace Maroik.Website.Tests.Fixtures;
 
 /// <summary>Minimal <see cref="Controller"/> subclass used as the action target in filter tests.</summary>
 internal class FakeController : Controller

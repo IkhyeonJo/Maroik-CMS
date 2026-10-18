@@ -1,4 +1,5 @@
 using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Primitives;
 using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Website.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
@@ -99,6 +100,29 @@ public class CalendarControllerCalendarTests(MaroikWebApplicationFactory factory
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Contains("The calendar already exists.", json, StringComparison.Ordinal);
+    }
+
+    /// <summary>A description past the body limit is refused with the localized domain message, not stored.</summary>
+    [Fact]
+    public async Task CreateCalendar_OverLongDescription_IsRefusedWithTheLimit()
+    {
+        var session = await LoginAsUserAsync("calendar-longdesc@test.com");
+        object payload = new
+        {
+            Calendars = new[]
+            {
+                new { Id = 0, Name = "LongDescription", Description = new string('x', TitledContentPolicy.MaxBodyLength + 1), TimeZoneIanaId = "UTC", HtmlColorCode = "#3788d8" }
+            }
+        };
+        using var request = session.BuildJsonPostRequest("/Calendar/CreateCalendar", payload);
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains($"Calendar description must be {TitledContentPolicy.MaxBodyLength} characters or fewer.", json, StringComparison.Ordinal);
+        using var scope = factory.Services.CreateScope();
+        Assert.False(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Calendars.Any(c => c.Name == "LongDescription"));
     }
 
     /// <summary>Is calendar exists unknown id returns failure result.</summary>

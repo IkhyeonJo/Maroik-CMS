@@ -13,6 +13,9 @@ public class CalendarEventAttachedFileOutputViewModel
     /// <summary>File extension (e.g. ".zip").</summary>
     public string? Extension { get; set; }
 
-    /// <summary>File size in bytes.</summary>
-    public long Size { get; set; }
+    /// <summary>
+    /// File size as the page shows it, in thousands-grouped kilobytes without the unit (<see cref="Extensions.Int64Extensions"/>'s
+    /// <c>ToKilobytesLabel</c>, the label the post attachments show too), so the client only appends "KB".
+    /// </summary>
+    public string SizeLabel { get; set; } = "";
 }

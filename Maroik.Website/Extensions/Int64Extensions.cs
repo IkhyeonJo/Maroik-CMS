@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Maroik.Core.Contract.Extensions;
+namespace Maroik.Website.Extensions;
 
 /// <summary>Extension methods for <see cref="long"/> to format byte counts for display.</summary>
 public static class Int64Extensions

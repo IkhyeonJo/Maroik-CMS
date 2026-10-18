@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Maroik.Core.Contract.Dtos;
+using Maroik.Website.Extensions;
 using Maroik.Website.Mappers;
 using Maroik.Website.Models.ViewModels.Calendars;
 
@@ -38,18 +39,32 @@ public class CalendarViewModelMapperTests
 
     // -- ToDisplayViewModel: an attachment ------------------------------------
 
-    /// <summary>An attachment is described to the client by its name, extension and size; its id, event id and storage path are not carried over.</summary>
+    /// <summary>
+    /// An attachment is described to the client by its name, extension and size label; its id, event id and storage path are not
+    /// carried over. The label is the post attachments' one (whole kilobytes, truncated, thousands-grouped), so 2,500,000 bytes
+    /// reads "2,441" on a calendar event as on a post.
+    /// </summary>
     [Fact]
-    public void ToDisplayViewModel_DescribesAnAttachment_ByNameExtensionAndSizeOnly()
+    public void ToDisplayViewModel_DescribesAnAttachment_ByNameExtensionAndSizeLabelOnly()
     {
-        var dto = new CalendarEventAttachedFileDto { Id = 7, CalendarEventId = 9, Name = "report", Extension = ".zip", Size = 2048, Path = "upload/Calendar/x/report.zip" };
+        var dto = new CalendarEventAttachedFileDto { Id = 7, CalendarEventId = 9, Name = "report", Extension = ".zip", Size = 2_500_000, Path = "upload/Calendar/x/report.zip" };
 
         CalendarEventAttachedFileOutputViewModel vm = dto.ToDisplayViewModel();
 
         Assert.Equal("report", vm.Name);
         Assert.Equal(".zip", vm.Extension);
-        Assert.Equal(2048, vm.Size);
-        Assert.Equal(["Extension", "Name", "Size"], typeof(CalendarEventAttachedFileOutputViewModel).GetProperties().Select(p => p.Name).Order());
+        Assert.Equal(2_500_000L.ToKilobytesLabel(), vm.SizeLabel);
+        Assert.Equal("2,441", vm.SizeLabel);
+        Assert.Equal(["Extension", "Name", "SizeLabel"], typeof(CalendarEventAttachedFileOutputViewModel).GetProperties().Select(p => p.Name).Order());
+    }
+
+    /// <summary>The size label truncates to whole kilobytes like the post attachments' label, where the client used to round: 1,600 bytes is "1".</summary>
+    [Fact]
+    public void ToDisplayViewModel_SizeLabel_TruncatesToWholeKilobytes()
+    {
+        var dto = new CalendarEventAttachedFileDto { Name = "a", Extension = ".zip", Size = 1_600, Path = "p" };
+
+        Assert.Equal("1", dto.ToDisplayViewModel().SizeLabel);
     }
 
     // -- ToDisplayViewModel: all-day events -----------------------------------

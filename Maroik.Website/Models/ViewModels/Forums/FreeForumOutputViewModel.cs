@@ -1,5 +1,6 @@
 // ReSharper disable PropertyCanBeMadeInitOnly.Global
 using Maroik.Core.Contract.Dtos;
+using Maroik.Website.Models.ViewModels.Boards;
 
 namespace Maroik.Website.Models.ViewModels.Forums;
 
@@ -21,10 +22,10 @@ public class FreeForumOutputViewModel
     public Pager? Pager { get; set; }
 
     /// <summary>Pinned (noticed) posts displayed at the top of the board above the regular post list.</summary>
-    public IEnumerable<BoardResponse> NoticeBoards { get; set; } = [];
+    public List<BoardListRowViewModel> NoticeBoards { get; set; } = [];
 
     /// <summary>Regular (non-pinned) posts for the current page.</summary>
-    public IEnumerable<BoardResponse> Boards { get; set; } = [];
+    public List<BoardListRowViewModel> Boards { get; set; } = [];
 
     /// <summary>Full detail of the post currently open in the detail panel; null when no post is selected.</summary>
     public BoardOutputViewModel? BoardOutputViewModel { get; set; }
@@ -49,20 +50,11 @@ public class FreeForumOutputViewModel
     /// <summary>IANA time-zone ID of the logged-in user, used to display post timestamps in local time.</summary>
     public string LoggedInAccountTimeZoneIanaId { get; set; } = "";
 
-    /// <summary>All registered accounts; used to look up writer nicknames when rendering the post list.</summary>
-    public List<AccountResponse> AllAccounts { get; set; } = [];
-
-    /// <summary>Nicknames of every Admin account in <see cref="AllAccounts"/>, for highlighting admin-authored posts/comments.</summary>
-    public HashSet<string> AdminNicknames { get; set; } = [];
-
-    /// <summary>Maps each board post ID to its comment count for the comment badge in the post list.</summary>
-    public Dictionary<long, int> CommentCountByBoardId { get; set; } = [];
-
-    /// <summary>Maps each board post ID to its list of attached files for the attachment icon in the post list.</summary>
-    public Dictionary<long, List<BoardAttachedFileDto>> AttachedFilesByBoardId { get; set; } = [];
+    /// <summary>True when the viewer sees times in their own time zone (<c>AccountViewPolicy.SeesLocalTime</c>), false for UTC.</summary>
+    public bool ViewerSeesLocalTime { get; set; }
 
     /// <summary>Comments on the currently open detail post, rendered in the detail panel.</summary>
-    public List<BoardCommentResponse> DetailBoardComments { get; set; } = [];
+    public List<BoardCommentRowViewModel> DetailBoardComments { get; set; } = [];
 
     /// <summary>The search field selected by the user ("Title" or "Writer"; empty for no search).</summary>
     public string SelectedSearchType { get; set; } = "";

@@ -119,8 +119,12 @@ Accounts
   as it. Anyone can also lock any account with `MaxLoginAttempt` wrong guesses. Both are accepted.
 
 Data access and transactions
-- Every service write spells out its own `BeginAsync` / `CommitAsync` / `RollbackAsync` (and the service tests
-  assert them). Do not fold them into a decorator, filter or "unit of work per request" helper.
+- Every service write that runs in a transaction (several statements that must succeed together, or a `FOR UPDATE`
+  lock) spells out its own `BeginAsync` / `CommitAsync` / `RollbackAsync` (and the service tests assert them). Do not
+  fold them into a decorator, filter or "unit of work per request" helper. A single column-scoped write runs on its own
+  (`ProfileService.UpdateTimeZoneAsync`, the fixed income / expenditure CRUD), and so do the mail flows that persist a
+  token, send, then record the outcome (`AccountService.ForgotPasswordAsync`): a transaction around the send would hold
+  a row lock across the network call.
 - Several rows are locked in one statement, `... ORDER BY <column> FOR UPDATE` without `LIMIT` (e.g. the asset
   balance lock). This is the pattern that fixed a lost-update bug; do not report it as a deadlock-ordering
   risk. (`LIMIT` combined with `ORDER BY ... FOR UPDATE` would be a different, documented caveat.)
@@ -403,7 +407,11 @@ classes in `Mappers/`. `Interfaces/` holds only interfaces (a record a contract 
 type) and `Extensions/` only classes of extension members (a plain static helper is named for its job, e.g.
 `Maroik.Website/Serializers/ClientJsonSerializer`). Enforced for every production project except the
 `Maroik.Core.PostgreSQL` scaffold by `FolderRoleArchitectureTests` (`Maroik.Core.Contract.Tests`), which reads the sources
-with the Roslyn parser.
+with the Roslyn parser. The same test holds the `*.Tests` projects to one rule: every type that is not a `*Tests` class (a
+fake, a fixture, an assertion helper such as `ErrorAssert` or `RepositoryPaths`) lives in `Fixtures/`, so the folders that
+mirror the production code hold only its tests. A test class covers one area and sits in that area's folder
+(`Calendars/CalendarBoundaryTests`); only the cross-aggregate checks of `Maroik.Core.Domain.Tests/Invariants` (the clock, the
+error contract) have no production folder of their own.
 
 ## One type per file, named after it
 

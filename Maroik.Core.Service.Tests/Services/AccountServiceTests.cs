@@ -1355,6 +1355,28 @@ public class AccountServiceTests
         _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>
+    /// A time zone the domain refuses surfaces only under the lock, when the earlier registration is replaced: the transaction is
+    /// rolled back, the domain's error is returned and nothing is written or mailed.
+    /// </summary>
+    [Fact]
+    public async Task RegisterAsync_Unconfirmed_RollsBackWithTheDomainError_WhenTheTimeZoneIsUnknown()
+    {
+        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
+        SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
+        RegisterAccountRequest request = NewRegistration();
+        request.TimeZoneIanaId = "Not/AZone";
+
+        RegisterResult result = await CreateSut().RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Success);
+        Assert.Equal("'{0}' is not a recognised time-zone ID.", result.ErrorKey);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
+        _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     /// <summary>A weak password or an invalid nickname is refused before hashing or taking the row lock.</summary>
     [Theory]
     [InlineData("TestUser", "weak")]

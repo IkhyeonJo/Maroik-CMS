@@ -3,6 +3,7 @@ using System.Xml.Linq;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Service.Services;
 using Maroik.Website.Controllers;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -20,7 +21,7 @@ namespace Maroik.Website.Tests.Resources;
 public class ServiceErrorKeyResxTests
 {
     /// <summary>The Maroik.Website project folder.</summary>
-    private static readonly string _websiteDir = FindWebsiteDirectory();
+    private static readonly string _websiteDir = RepositoryPaths.Website;
 
     /// <summary>Every top-level <see cref="ServiceErrorKeys"/> value (the <see cref="ServiceErrorKeys.Signals"/> are not resx keys).</summary>
     private static readonly HashSet<string> _keys = typeof(ServiceErrorKeys)
@@ -47,14 +48,6 @@ public class ServiceErrorKeyResxTests
         var resolver = new DefaultAssemblyResolver();
         resolver.AddSearchDirectory(AppContext.BaseDirectory);
         return new ReaderParameters { AssemblyResolver = resolver };
-    }
-
-    /// <summary>Walks up to the directory holding <c>Maroik.sln</c> and returns its <c>Maroik.Website</c> subfolder.</summary>
-    private static string FindWebsiteDirectory()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Maroik.sln"))) dir = dir.Parent;
-        return Path.Combine(dir?.FullName ?? throw new InvalidOperationException("Could not locate Maroik.sln"), "Maroik.Website");
     }
 
     /// <summary>A type and every type nested in it (compiler-generated state machines and closures included).</summary>

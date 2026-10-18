@@ -2,7 +2,7 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Moq;
 
-namespace Maroik.Core.Service.Tests.Services;
+namespace Maroik.Core.Service.Tests.Fixtures;
 
 /// <summary>
 /// An <see cref="IImageValidatorService"/> mock whose <c>StripMetadata</c> hands the bytes back unchanged, labelled

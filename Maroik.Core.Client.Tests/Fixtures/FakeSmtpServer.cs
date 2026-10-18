@@ -6,7 +6,7 @@ using System.Text;
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 
-namespace Maroik.Core.Client.Tests.Clients;
+namespace Maroik.Core.Client.Tests.Fixtures;
 
 /// <summary>
 /// A minimal in-process SMTP server for exercising <c>MailClient.SendMailAsync</c> through the real

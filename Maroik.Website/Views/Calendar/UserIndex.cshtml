@@ -250,7 +250,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="createCalendarDescription">@Localizer["Description"].Value</label>
-                                <textarea class="form-control form-control-sm" id="createCalendarDescription" name="createCalendarDescription" maxlength="16384"></textarea> @*maxlength: 16KB*@
+                                <textarea class="form-control form-control-sm" id="createCalendarDescription" name="createCalendarDescription" maxlength="@TitledContentPolicy.MaxBodyLength"></textarea>
                             </div>
                         </div>
 
@@ -308,7 +308,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="editCalendarDescription">@Localizer["Description"].Value</label>
-                                <textarea class="form-control form-control-sm" id="editCalendarDescription" name="editCalendarDescription" maxlength="16384"></textarea> @*maxlength: 16KB*@
+                                <textarea class="form-control form-control-sm" id="editCalendarDescription" name="editCalendarDescription" maxlength="@TitledContentPolicy.MaxBodyLength"></textarea>
                             </div>
                         </div>
 
@@ -371,7 +371,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="createCalendarEventName">@Localizer["Name"].Value</label>
-                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="createCalendarEventName" name="createCalendarEventName" value="" maxlength="100">
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="createCalendarEventName" name="createCalendarEventName" value="" maxlength="@TitledContentPolicy.MaxTitleLength">
                                 <span class="field-validation-valid text-danger" data-valmsg-for="createCalendarEventName" data-valmsg-replace="true"></span>
                             </div>
                         </div>
@@ -491,7 +491,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="createCalendarEventDescription">@Localizer["Description"].Value</label>
-                                <textarea class="form-control form-control-sm" id="createCalendarEventDescription" name="createCalendarEventDescription" maxlength="16384"></textarea> @*maxlength: 16KB*@
+                                <textarea class="form-control form-control-sm" id="createCalendarEventDescription" name="createCalendarEventDescription" maxlength="@TitledContentPolicy.MaxBodyLength"></textarea>
                             </div>
                         </div>
 
@@ -631,7 +631,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="editCalendarEventName">@Localizer["Name"].Value</label>
-                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="editCalendarEventName" name="editCalendarEventName" value="" maxlength="100">
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="editCalendarEventName" name="editCalendarEventName" value="" maxlength="@TitledContentPolicy.MaxTitleLength">
                                 <span class="field-validation-valid text-danger" data-valmsg-for="editCalendarEventName" data-valmsg-replace="true"></span>
                             </div>
                         </div>
@@ -737,7 +737,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="editCalendarEventDescription">@Localizer["Description"].Value</label>
-                                <textarea class="form-control form-control-sm" id="editCalendarEventDescription" name="editCalendarEventDescription" maxlength="16384"></textarea> @*maxlength: 16KB*@
+                                <textarea class="form-control form-control-sm" id="editCalendarEventDescription" name="editCalendarEventDescription" maxlength="@TitledContentPolicy.MaxBodyLength"></textarea>
                             </div>
                         </div>
 
@@ -888,7 +888,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="viewCalendarEventName">@Localizer["Name"].Value</label>
-                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="viewCalendarEventName" name="viewCalendarEventName" value="" maxlength="100" disabled/>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="viewCalendarEventName" name="viewCalendarEventName" value="" maxlength="@TitledContentPolicy.MaxTitleLength" disabled/>
                                 <span class="field-validation-valid text-danger" data-valmsg-for="viewCalendarEventName" data-valmsg-replace="true"></span>
                             </div>
                         </div>
@@ -994,7 +994,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="viewCalendarEventDescription">@Localizer["Description"].Value</label>
-                                <textarea class="form-control form-control-sm" id="viewCalendarEventDescription" name="viewCalendarEventDescription" maxlength="16384" disabled></textarea> @*maxlength: 16KB*@
+                                <textarea class="form-control form-control-sm" id="viewCalendarEventDescription" name="viewCalendarEventDescription" maxlength="@TitledContentPolicy.MaxBodyLength" disabled></textarea>
                             </div>
                         </div>
 

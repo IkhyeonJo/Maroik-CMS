@@ -50,12 +50,7 @@ public static class AuthenticatedSessionHelper
             }
         }
 
-        using var getRequest = new HttpRequestMessage(HttpMethod.Get, "/Account/Login");
-        var getResponse = await client.SendAsync(getRequest, ct);
-        string html = await getResponse.Content.ReadAsStringAsync(ct);
-        string loginToken = ExtractAntiForgeryToken(html);
-        string loginAntiforgeryCookie = ExtractCookieValue(getResponse, AntiforgeryCookieName)
-            ?? throw new InvalidOperationException("No antiforgery cookie on the Login GET response.");
+        (string loginToken, string loginAntiforgeryCookie) = await GetLoginPageAntiforgeryAsync(client, ct);
 
         using var postRequest = new HttpRequestMessage(HttpMethod.Post, "/Account/Login");
         postRequest.Headers.Add("Cookie", $"{AntiforgeryCookieName}={loginAntiforgeryCookie}");
@@ -91,22 +86,39 @@ public static class AuthenticatedSessionHelper
     /// </summary>
     public static async Task<AuthenticatedSession> AnonymousAsync(HttpClient client, CancellationToken ct)
     {
-        using var getRequest = new HttpRequestMessage(HttpMethod.Get, "/Account/Login");
-        var getResponse = await client.SendAsync(getRequest, ct);
-        string token = ExtractAntiForgeryToken(await getResponse.Content.ReadAsStringAsync(ct));
-        string antiforgeryCookie = ExtractCookieValue(getResponse, AntiforgeryCookieName)
-            ?? throw new InvalidOperationException("No antiforgery cookie on the Login GET response.");
+        (string token, string antiforgeryCookie) = await GetLoginPageAntiforgeryAsync(client, ct);
         return new AuthenticatedSession("", antiforgeryCookie, token, "");
     }
 
+    /// <summary>
+    /// GETs <c>/Account/Login</c> and returns its antiforgery token / cookie pair. Anything but a rendered page (a redirect,
+    /// an error page) fails with the status, the redirect target and the start of the body, so a test that cannot get a
+    /// token says why instead of only that the token is missing.
+    /// </summary>
+    private static async Task<(string Token, string Cookie)> GetLoginPageAntiforgeryAsync(HttpClient client, CancellationToken ct)
+    {
+        using var getRequest = new HttpRequestMessage(HttpMethod.Get, "/Account/Login");
+        using HttpResponseMessage getResponse = await client.SendAsync(getRequest, ct);
+        string html = await getResponse.Content.ReadAsStringAsync(ct);
+        if (getResponse.StatusCode != System.Net.HttpStatusCode.OK)
+            throw new InvalidOperationException(
+                $"GET /Account/Login answered {(int)getResponse.StatusCode} {getResponse.StatusCode} " +
+                $"(Location: {getResponse.Headers.Location?.ToString() ?? "none"}):\n{html[..Math.Min(html.Length, 2000)]}");
+
+        string token = ExtractAntiForgeryToken(html);
+        string cookie = ExtractCookieValue(getResponse, AntiforgeryCookieName)
+            ?? throw new InvalidOperationException("No antiforgery cookie on the Login GET response.");
+        return (token, cookie);
+    }
+
     /// <summary>The value of <paramref name="cookieName"/> from the response's <c>Set-Cookie</c> headers, or <see langword="null"/>.</summary>
-    private static string? ExtractCookieValue(HttpResponseMessage response, string cookieName)
+    internal static string? ExtractCookieValue(HttpResponseMessage response, string cookieName)
     {
         return !response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders) ? null : (from header in setCookieHeaders select header.Split(';', 2)[0] into namePart let eq = namePart.IndexOf('=', StringComparison.Ordinal) where eq > 0 where namePart[..eq] == cookieName select namePart[(eq + 1)..]).FirstOrDefault();
     }
 
     /// <summary>The hidden <c>__RequestVerificationToken</c> value in <paramref name="html"/>; throws if there is none.</summary>
-    private static string ExtractAntiForgeryToken(string html)
+    internal static string ExtractAntiForgeryToken(string html)
     {
         Match match = Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
         return !match.Success ? throw new InvalidOperationException("Could not find __RequestVerificationToken in the response HTML.") : match.Groups[1].Value;

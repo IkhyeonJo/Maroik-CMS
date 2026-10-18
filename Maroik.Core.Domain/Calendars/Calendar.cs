@@ -121,6 +121,9 @@ public sealed class Calendar : AggregateRoot<long>
         var nameResult = ValidateName(name);
         if (nameResult.IsError) return nameResult.Errors;
 
+        var descriptionResult = ValidateDescription(description);
+        if (descriptionResult.IsError) return descriptionResult.Errors;
+
         var emailResult = Email.Create(accountEmailValue);
         if (emailResult.IsError) return emailResult.Errors;
 
@@ -151,6 +154,9 @@ public sealed class Calendar : AggregateRoot<long>
     {
         var nameResult = ValidateName(name);
         if (nameResult.IsError) return nameResult.Errors;
+
+        var descriptionResult = ValidateDescription(description);
+        if (descriptionResult.IsError) return descriptionResult.Errors;
 
         var tzResult = TimeZoneId.Create(timeZoneValue);
         if (tzResult.IsError) return tzResult.Errors;
@@ -189,6 +195,18 @@ public sealed class Calendar : AggregateRoot<long>
                 "Calendar name cannot contain angle brackets or control characters.");
 
         return name;
+    }
+
+    /// <summary>
+    /// Caps the optional description at <see cref="TitledContentPolicy.MaxBodyLength"/>, the limit of an event description: the
+    /// <c>text</c> column has none, so without it a direct POST could store any length past the forms' cap.
+    /// </summary>
+    private static ErrorOr<Success> ValidateDescription(string? description)
+    {
+        if (description?.Length > TitledContentPolicy.MaxBodyLength)
+            return DomainError.Validation("Calendar.DescriptionTooLong", "Calendar description must be {0} characters or fewer.", TitledContentPolicy.MaxBodyLength);
+
+        return Result.Success;
     }
 
 }

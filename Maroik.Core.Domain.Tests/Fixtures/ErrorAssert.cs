@@ -1,7 +1,7 @@
 using System.Globalization;
 using ErrorOr;
 using Maroik.Core.Domain.Errors;
-namespace Maroik.Core.Domain.Tests.Boundaries;
+namespace Maroik.Core.Domain.Tests.Fixtures;
 
 /// <summary>
 /// Asserts a domain error's full contract: its code, its type, and — because the Website resolves the

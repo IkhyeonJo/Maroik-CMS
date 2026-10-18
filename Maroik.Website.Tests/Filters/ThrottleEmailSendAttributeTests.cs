@@ -1,5 +1,6 @@
 using System.Globalization;
 using Maroik.Website.Attributes;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -224,6 +225,25 @@ public class ThrottleEmailSendAttributeTests
 
         cache.Verify(c => c.SetAsync(
             It.Is<string>(k => k.Contains("model@example.com", StringComparison.Ordinal)),
+            It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>A null bound argument (an optional parameter left unbound) is skipped, and the address is found in the next one.</summary>
+    [Fact]
+    public async Task OnActionExecutionAsync_SkipsANullArgument_AndFindsTheAddressAfterIt()
+    {
+        var cache = new Mock<IDistributedCache>();
+        cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((byte[]?)null);
+        cache.Setup(c => c.SetAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var (context, _) = BuildContext(boundArgument: null, cache.Object);
+        context.ActionArguments["returnUrl"] = null;
+        context.ActionArguments["email"] = "after-null@example.com";
+
+        await new ThrottleEmailSendAttribute().OnActionExecutionAsync(context, NextReturning(() => { }));
+
+        cache.Verify(c => c.SetAsync(
+            It.Is<string>(k => k.Contains("after-null@example.com", StringComparison.Ordinal)),
             It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 

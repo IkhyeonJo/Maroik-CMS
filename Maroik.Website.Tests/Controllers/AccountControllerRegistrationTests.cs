@@ -40,8 +40,8 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     {
         var response = await _client.GetAsync(getUrl, TestContext.Current.CancellationToken);
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        string token = ExtractAntiForgeryToken(html);
-        string? cookie = ExtractCookieValue(response, AntiForgeryCookieName);
+        string token = AuthenticatedSessionHelper.ExtractAntiForgeryToken(html);
+        string? cookie = AuthenticatedSessionHelper.ExtractCookieValue(response, AntiForgeryCookieName);
         Assert.False(string.IsNullOrEmpty(cookie));
         return (cookie, token);
     }
@@ -62,20 +62,6 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
     /// <summary>Name of the session cookie the site issues (see Program.cs).</summary>
     private const string SessionCookieName = "__Secure-.AspNetCore.Session";
-
-    /// <summary>The value of <paramref name="cookieName"/> from the response's <c>Set-Cookie</c> headers, or <see langword="null"/>.</summary>
-    private static string? ExtractCookieValue(HttpResponseMessage response, string cookieName)
-    {
-        return !response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders) ? null : (from header in setCookieHeaders select header.Split(';', 2)[0] into namePart let eq = namePart.IndexOf('=', StringComparison.Ordinal) where eq > 0 where namePart[..eq] == cookieName select namePart[(eq + 1)..]).FirstOrDefault();
-    }
-
-    /// <summary>The hidden <c>__RequestVerificationToken</c> value in <paramref name="html"/>; fails the test if there is none.</summary>
-    private static string ExtractAntiForgeryToken(string html)
-    {
-        Match match = Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
-        Assert.True(match.Success, "Could not find __RequestVerificationToken in the page HTML.");
-        return match.Groups[1].Value;
-    }
 
     /// <summary>Inserts a User account for <paramref name="email"/> directly into the database with the given confirmation state and tokens.</summary>
     private async Task SeedAccountAsync(string email, bool emailConfirmed, string? registrationToken = null, string? resetPasswordToken = null, string? nickname = null, bool agreedServiceTerms = true)
@@ -395,6 +381,27 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
     }
 
     /// <summary>
+    /// A password that fails the form's own validation (here: none) never reaches the service: the form comes back with the same
+    /// link token, so the user can retry, and nothing is activated.
+    /// </summary>
+    [Fact]
+    public async Task ConfirmEmail_Post_InvalidForm_ReShowsTheFormWithTheSameToken_AndDoesNotActivate()
+    {
+        string email = UniqueEmail();
+        string rawToken = GuidToken.Generate(DateTime.UtcNow);
+        await SeedAccountAsync(email, emailConfirmed: false, registrationToken: rawToken);
+        string encryptedToken = EncryptToken(rawToken);
+
+        var response = await SubmitConfirmationAsync(encryptedToken, "");
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("id=\"confirmEmailForm\"", html, StringComparison.Ordinal);
+        Assert.Contains($"name=\"RegistrationToken\" value=\"{encryptedToken}\"", html, StringComparison.Ordinal);
+        Assert.False(IsEmailConfirmed(email));
+    }
+
+    /// <summary>
     /// Pre-hijacking guard end to end: re-registering an unconfirmed address replaces the earlier
     /// registrant's password, so only the latest registrant's password can activate it.
     /// </summary>
@@ -562,7 +569,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
 
         Assert.Equal(System.Net.HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal("/", response.Headers.Location?.OriginalString); // the default route: Dashboard/AnonymousIndex, where Login sends a user too
-        string? session = ExtractCookieValue(response, SessionCookieName);
+        string? session = AuthenticatedSessionHelper.ExtractCookieValue(response, SessionCookieName);
         Assert.False(string.IsNullOrEmpty(session));
         Assert.NotEqual(plantedSessionId, session);
 
@@ -591,7 +598,7 @@ public class AccountControllerRegistrationTests(MaroikWebApplicationFactory fact
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        Assert.Null(ExtractCookieValue(response, SessionCookieName));
+        Assert.Null(AuthenticatedSessionHelper.ExtractCookieValue(response, SessionCookieName));
         Assert.Contains("Your account password has been successfully changed", html, StringComparison.Ordinal);
     }
 

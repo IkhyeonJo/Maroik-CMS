@@ -3,7 +3,7 @@ using Maroik.Worker.Workers;
 using RabbitMQ.Client;
 using Testcontainers.RabbitMq;
 
-namespace Maroik.Worker.Tests.Workers;
+namespace Maroik.Worker.Tests.Fixtures;
 
 /// <summary>One throwaway RabbitMQ 4 container for the class (xUnit class fixture); each test resets the two queues first.</summary>
 public sealed class WorkerBrokerFixture : IAsyncLifetime

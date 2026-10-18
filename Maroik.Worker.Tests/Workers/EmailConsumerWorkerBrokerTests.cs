@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Maroik.Core.Contract.Messages;
 using Maroik.Worker.Interfaces;
+using Maroik.Worker.Tests.Fixtures;
 using Maroik.Worker.Workers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
