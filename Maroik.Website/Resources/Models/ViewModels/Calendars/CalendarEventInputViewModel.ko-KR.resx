@@ -117,16 +117,4 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Please enter EndDateTimeZoneIanaId" xml:space="preserve">
-    <value>종료 시간대를 입력해주세요.</value>
-  </data>
-  <data name="Please enter StartDateTimeZoneIanaId" xml:space="preserve">
-    <value>시작 시간대를 입력해주세요.</value>
-  </data>
-  <data name="Please enter a valid EndDate" xml:space="preserve">
-    <value>올바른 종료일을 입력해주세요.</value>
-  </data>
-  <data name="Please enter a valid StartDate" xml:space="preserve">
-    <value>올바른 시작일을 입력해주세요.</value>
-  </data>
 </root>

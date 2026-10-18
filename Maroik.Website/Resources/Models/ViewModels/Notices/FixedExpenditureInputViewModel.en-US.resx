@@ -120,9 +120,6 @@
   <data name="Amount" xml:space="preserve">
     <value>Amount</value>
   </data>
-  <data name="Contents" xml:space="preserve">
-    <value>Contents</value>
-  </data>
   <data name="DepositDay" xml:space="preserve">
     <value>DepositDay</value>
   </data>
@@ -150,26 +147,17 @@
   <data name="Please enter Amount" xml:space="preserve">
     <value>Please enter Amount</value>
   </data>
-  <data name="Please enter Contents" xml:space="preserve">
-    <value>Please enter Contents</value>
-  </data>
   <data name="Please enter DepositDay" xml:space="preserve">
     <value>Please enter DepositDay</value>
   </data>
   <data name="Please enter DepositMonth" xml:space="preserve">
     <value>Please enter DepositMonth</value>
   </data>
-  <data name="Please enter Id" xml:space="preserve">
-    <value>Please enter Id</value>
-  </data>
   <data name="Please enter MainClass" xml:space="preserve">
     <value>Please enter MainClass</value>
   </data>
   <data name="Please enter MaturityDate" xml:space="preserve">
     <value>Please enter MaturityDate</value>
-  </data>
-  <data name="Please enter MyDepositAsset" xml:space="preserve">
-    <value>Please enter MyDepositAsset</value>
   </data>
   <data name="Please enter PaymentMethod" xml:space="preserve">
     <value>Please enter PaymentMethod</value>

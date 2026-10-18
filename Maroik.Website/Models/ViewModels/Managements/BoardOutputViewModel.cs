@@ -1,6 +1,5 @@
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable PropertyCanBeMadeInitOnly.Global
-using System.ComponentModel.DataAnnotations;
 
 namespace Maroik.Website.Models.ViewModels.Managements;
 
@@ -12,8 +11,6 @@ namespace Maroik.Website.Models.ViewModels.Managements;
 public class BoardOutputViewModel
 {
     /// <summary>Post title.</summary>
-    [Required(ErrorMessage = "Title is required.")]
-    [StringLength(100, ErrorMessage = "Must be between 1 and 100 characters.", MinimumLength = 1)]
     public string? Title { get; set; }
 
     /// <summary>HTML body of the post as saved from the Summernote editor.</summary>

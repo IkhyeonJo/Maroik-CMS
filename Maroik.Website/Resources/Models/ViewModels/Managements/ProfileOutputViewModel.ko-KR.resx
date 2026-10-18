@@ -156,8 +156,8 @@
   <data name="The new password do not match" xml:space="preserve">
     <value>새로운 비밀번호가 맞지 않습니다.</value>
   </data>
-  <data name="The {0} must be at least {2} characters long." xml:space="preserve">
-    <value>확인 비밀번호는 적어도 {2} 자리 이상이어야 합니다.</value>
+  <data name="The {0} must be between {2} and {1} characters long." xml:space="preserve">
+    <value>{2}자 이상 {1}자 이하여야 합니다.</value>
   </data>
   <data name="Please select time zone" xml:space="preserve">
     <value>시간대를 선택해 주세요</value>

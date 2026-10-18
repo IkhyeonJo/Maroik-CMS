@@ -123,23 +123,14 @@
   <data name="AccountBook" xml:space="preserve">
     <value>가계부</value>
   </data>
-  <data name="API" xml:space="preserve">
-    <value>API</value>
-  </data>
   <data name="Asset" xml:space="preserve">
     <value>자산</value>
   </data>
   <data name="Calendar" xml:space="preserve">
     <value>달력</value>
   </data>
-  <data name="Chart" xml:space="preserve">
-    <value>차트</value>
-  </data>
   <data name="Dashboard" xml:space="preserve">
     <value>대시보드</value>
-  </data>
-  <data name="Develop" xml:space="preserve">
-    <value>개발</value>
   </data>
   <data name="Expenditure" xml:space="preserve">
     <value>지출</value>
@@ -156,14 +147,8 @@
   <data name="Free Forum" xml:space="preserve">
     <value>자유게시판</value>
   </data>
-  <data name="Home" xml:space="preserve">
-    <value>홈</value>
-  </data>
   <data name="Income" xml:space="preserve">
     <value>수입</value>
-  </data>
-  <data name="Drive" xml:space="preserve">
-    <value>드라이브</value>
   </data>
   <data name="Management" xml:space="preserve">
     <value>관리</value>

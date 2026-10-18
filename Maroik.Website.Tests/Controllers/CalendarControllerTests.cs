@@ -23,6 +23,19 @@ public class CalendarControllerTests(MaroikWebApplicationFactory factory)
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>
+    /// The read-only page publishes the reminder lower bound from CalendarReminderPolicy: its script bounds the reminder rows it builds
+    /// with it, as the user and admin pages' scripts do.
+    /// </summary>
+    [Fact]
+    public async Task AnonymousIndex_PublishesTheReminderLowerBound()
+    {
+        var response = await _client.GetAsync("/Calendar/AnonymousIndex", TestContext.Current.CancellationToken);
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Matches($"id=\"minLeadTimeBeforeEvent\"[^>]*value=\"{Maroik.Core.Domain.Calendars.CalendarReminderPolicy.MinLeadTimeBeforeEvent}\"", html);
+    }
+
     // -- UploadImageFile: validation only ------------------------------------------------
     // Success requires a live Maroik.FileStorage instance, which isn't available in this test
     // environment — only the pre-upload validation branches are covered.

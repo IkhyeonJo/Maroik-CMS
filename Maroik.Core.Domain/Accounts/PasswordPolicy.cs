@@ -5,7 +5,7 @@ namespace Maroik.Core.Domain.Accounts;
 
 /// <summary>
 /// Centralizes the password-complexity rule used across the application.
-/// Rule: 8 to <see cref="MaxByteLength"/> bytes (UTF-8), meeting 3 of 4 criteria —
+/// Rule: <see cref="MinLength"/> characters to <see cref="MaxByteLength"/> bytes (UTF-8), meeting 3 of 4 criteria —
 /// uppercase (A-Z), lowercase (a-z), digit (0-9), special character.
 /// </summary>
 public static partial class PasswordPolicy
@@ -17,6 +17,13 @@ public static partial class PasswordPolicy
     /// </summary>
     public const string Pattern =
         "^((?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])|(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[^a-zA-Z0-9])|(?=.*?[A-Z])(?=.*?[0-9])(?=.*?[^a-zA-Z0-9])|(?=.*?[a-z])(?=.*?[0-9])(?=.*?[^a-zA-Z0-9])).{8,}$";
+
+    /// <summary>
+    /// Lower bound on the password length, in characters — the <c>{8,}</c> of <see cref="Pattern"/>, which cannot be built from
+    /// this constant (a <c>const</c> string interpolates only strings). Usable as a
+    /// <see cref="System.ComponentModel.DataAnnotations.StringLengthAttribute"/> minimum on ViewModels.
+    /// </summary>
+    public const int MinLength = 8;
 
     /// <summary>
     /// Upper bound on the password length, in UTF-8 bytes. BCrypt silently ignores everything past

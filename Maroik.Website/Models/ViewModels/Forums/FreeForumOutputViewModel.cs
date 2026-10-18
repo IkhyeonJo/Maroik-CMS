@@ -6,9 +6,10 @@ namespace Maroik.Website.Models.ViewModels.Forums;
 
 /// <summary>
 /// Aggregated output model for the FreeForum (public board) page.
-/// Contains the paginated post list, the currently viewed post's detail,
-/// search state, and all auxiliary data (accounts, comment counts, attachments)
-/// needed to render the list and detail panel in a single request.
+/// Contains the paginated post list, the currently viewed post's detail and comments, and the
+/// search state. Each list and comment row already carries what the controller decided for the
+/// viewer (title visibility, admin mark, comment count, attachment icon, delete link), so the view
+/// only renders flags.
 /// </summary>
 public class FreeForumOutputViewModel
 {

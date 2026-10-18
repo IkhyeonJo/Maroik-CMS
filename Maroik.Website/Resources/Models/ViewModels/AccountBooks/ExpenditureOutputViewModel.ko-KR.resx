@@ -120,9 +120,6 @@
   <data name="Amount" xml:space="preserve">
     <value>금액</value>
   </data>
-  <data name="Contents" xml:space="preserve">
-    <value>내용</value>
-  </data>
   <data name="Created" xml:space="preserve">
     <value>생성일</value>
   </data>
@@ -147,14 +144,8 @@
   <data name="Please enter Amount" xml:space="preserve">
     <value>금액을 입력해주세요.</value>
   </data>
-  <data name="Please enter Contents" xml:space="preserve">
-    <value>내용을 입력해주세요.</value>
-  </data>
   <data name="Please enter Created" xml:space="preserve">
     <value>생성일을 입력해주세요.</value>
-  </data>
-  <data name="Please enter Id" xml:space="preserve">
-    <value>ID를 입력해주세요.</value>
   </data>
   <data name="Please enter MainClass" xml:space="preserve">
     <value>대분류를 입력해주세요.</value>

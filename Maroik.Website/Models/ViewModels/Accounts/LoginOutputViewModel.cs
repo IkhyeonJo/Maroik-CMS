@@ -2,6 +2,7 @@
 // ReSharper disable PropertyCanBeMadeInitOnly.Global
 using System.ComponentModel.DataAnnotations;
 using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Primitives;
 using Maroik.Website.Constants;
 
 namespace Maroik.Website.Models.ViewModels.Accounts;
@@ -25,7 +26,7 @@ public class LoginOutputViewModel
     /// (uppercase, lowercase, digit, special character).
     /// </summary>
     [Required(ErrorMessage = "Password is required")]
-    [StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 8)]
+    [StringLength(PasswordPolicy.MaxByteLength, ErrorMessage = "The {0} must be between {2} and {1} characters long.", MinimumLength = PasswordPolicy.MinLength)]
     [DataType(DataType.Password)]
     [RegularExpression(PasswordPolicy.Pattern, ErrorMessage = ValidationMessages.PasswordComplexity)]
     public string? Password { get; set; }
@@ -36,14 +37,14 @@ public class LoginOutputViewModel
     /// Validated with a <see cref="CompareAttribute"/> against <see cref="Password"/>.
     /// </summary>
     [Required(ErrorMessage = "Confirm Password is required")]
-    [StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 8)]
+    [StringLength(PasswordPolicy.MaxByteLength, ErrorMessage = "The {0} must be between {2} and {1} characters long.", MinimumLength = PasswordPolicy.MinLength)]
     [DataType(DataType.Password)]
     [Compare(nameof(Password), ErrorMessage = "The password do not match")]
     public string? ConfirmPassword { get; set; }
 
     /// <summary>The display name (nickname) chosen by the registering user.</summary>
     [Required(ErrorMessage = "Nickname is required")]
-    [StringLength(255, ErrorMessage = "Must be between 1 and 255 characters", MinimumLength = 1)]
+    [StringLength(ShortTextPolicy.MaxLength, ErrorMessage = "Must be between {2} and {1} characters.", MinimumLength = 1)]
     public string? Nickname { get; set; }
 
     /// <summary>Whether the user agreed to the service terms of use — must be <see langword="true"/> for registration to succeed.</summary>

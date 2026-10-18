@@ -33,6 +33,26 @@ public class CalendarControllerCalendarTests(MaroikWebApplicationFactory factory
         }
     };
 
+    // -- Calendar forms ------------------------------------------------------------
+
+    /// <summary>The create / edit calendar forms cap the name at the domain's limit (ShortTextPolicy), like the event forms do.</summary>
+    [Theory]
+    [InlineData(Role.User, "/Calendar/UserIndex", "calendar-form-user@test.com")]
+    [InlineData(Role.Admin, "/Calendar/AdminIndex", "calendar-form-admin@test.com")]
+    public async Task IndexPage_CapsTheCalendarName_AtTheDomainLimit(string role, string url, string email)
+    {
+        var session = await AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", role, TestContext.Current.CancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("Cookie", session.CookieHeader);
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Matches($"id=\"createCalendarName\"[^>]*maxlength=\"{ShortTextPolicy.MaxLength}\"", html);
+        Assert.Matches($"id=\"editCalendarName\"[^>]*maxlength=\"{ShortTextPolicy.MaxLength}\"", html);
+    }
+
     // -- CreateCalendar: role gating ----------------------------------------------
 
     /// <summary>Create calendar anonymous session is forbidden.</summary>

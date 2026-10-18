@@ -156,9 +156,6 @@
   <data name="Please attach a file." xml:space="preserve">
     <value>파일 첨부하여 주십시오.</value>
   </data>
-  <data name="Profile Information" xml:space="preserve">
-    <value>프로필 정보</value>
-  </data>
   <data name="Profile picture" xml:space="preserve">
     <value>프로필 사진</value>
   </data>

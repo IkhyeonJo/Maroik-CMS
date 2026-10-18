@@ -162,9 +162,6 @@
   <data name="Nickname" xml:space="preserve">
     <value>Nickname</value>
   </data>
-  <data name="Nickname is must be between 1 and 255 characters" xml:space="preserve">
-    <value>Nickname is must be between 1 and 255 characters</value>
-  </data>
   <data name="'{0}' is a Nickname that already exists. Please enter another Nickname." xml:space="preserve">
     <value>'{0}' is a Nickname that already exists. Please enter another Nickname.</value>
   </data>
@@ -176,9 +173,6 @@
   </data>
   <data name="Input is invalid" xml:space="preserve">
     <value>Input is invalid</value>
-  </data>
-  <data name="Invalid email form" xml:space="preserve">
-    <value>Invalid email form</value>
   </data>
   <data name="Invalid password. Please check again." xml:space="preserve">
     <value>Invalid password. Please check again.</value>
@@ -255,9 +249,6 @@
   <data name="Please select time zone" xml:space="preserve">
     <value>Please select time zone</value>
   </data>
-  <data name="TimeZone" xml:space="preserve">
-    <value>TimeZone</value>
-  </data>
   <data name="TimeZoneIanaId" xml:space="preserve">
     <value>TimeZone</value>
   </data>
@@ -269,12 +260,6 @@
   </data>
   <data name="You cannot remove the Admin role from your own account." xml:space="preserve">
     <value>You cannot remove the Admin role from your own account.</value>
-  </data>
-  <data name="content length is must be between 0 and 16384 characters." xml:space="preserve">
-    <value>content length is must be between 0 and 16384 characters.</value>
-  </data>
-  <data name="No PrivateNoteBoard exists" xml:space="preserve">
-    <value>No PrivateNoteBoard exists</value>
   </data>
   <data name="Only .jpg or jpeg or .png file allowed." xml:space="preserve">
     <value>Only .jpg or jpeg or .png file allowed.</value>
@@ -305,9 +290,6 @@
   </data>
   <data name="The board has been successfully updated." xml:space="preserve">
     <value>The board has been successfully updated.</value>
-  </data>
-  <data name="Title length is must be between 1 and 100 characters." xml:space="preserve">
-    <value>Title length is must be between 1 and 100 characters.</value>
   </data>
   <data name="You do not have permission to delete." xml:space="preserve">
     <value>You do not have permission to delete.</value>

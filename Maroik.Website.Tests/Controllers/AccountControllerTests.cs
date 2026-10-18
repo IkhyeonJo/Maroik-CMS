@@ -38,6 +38,16 @@ public class AccountControllerTests(MaroikWebApplicationFactory factory)
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>The login form caps the password at the policy's ceiling (PasswordPolicy.MaxByteLength), not at a number of its own.</summary>
+    [Fact]
+    public async Task Login_Get_CapsThePasswordAtThePolicyLimit()
+    {
+        var response = await _client.GetAsync("/Account/Login", TestContext.Current.CancellationToken);
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Matches($"id=\"Password\"[^>]*maxlength=\"{PasswordPolicy.MaxByteLength}\"", html);
+    }
+
     /// <summary>
     /// Verifies the session-fixation fix end-to-end: the session cookie issued to an
     /// unauthenticated visitor must NOT still be valid as the session cookie after that same

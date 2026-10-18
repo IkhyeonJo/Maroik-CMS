@@ -117,16 +117,4 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Please enter EndDateTimeZoneIanaId" xml:space="preserve">
-    <value>Please enter EndDateTimeZoneIanaId</value>
-  </data>
-  <data name="Please enter StartDateTimeZoneIanaId" xml:space="preserve">
-    <value>Please enter StartDateTimeZoneIanaId</value>
-  </data>
-  <data name="Please enter a valid EndDate" xml:space="preserve">
-    <value>Please enter a valid EndDate</value>
-  </data>
-  <data name="Please enter a valid StartDate" xml:space="preserve">
-    <value>Please enter a valid StartDate</value>
-  </data>
 </root>

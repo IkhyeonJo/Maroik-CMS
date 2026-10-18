@@ -869,7 +869,7 @@
                                                 let selectedWeeks = reminder.WeeksBeforeEvent !== null ? "selected" : "";
 
                                                 const selNotificationTimeTypeAllDayChecked = `
-                                            <input type='number' class='form-control-sm editCalendarEventSelNotificationNumberAllDayChecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='0' max='${max}' value='${value}'>
+                                            <input type='number' class='form-control-sm editCalendarEventSelNotificationNumberAllDayChecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='${minLeadTimeBeforeEvent}' max='${max}' value='${value}'>
                                             <select class='form-control-sm editCalendarEventSelNotificationTimeTypeAllDayChecked' style='width:15%;text-overflow:ellipsis;'>
                                                 <option value='Days' ${selectedDays}>${localizer.Days}</option>
                                                 <option value='Weeks' ${selectedWeeks}>${localizer.Weeks}</option>
@@ -920,7 +920,7 @@
                                                 let selectedWeeks = reminder.WeeksBeforeEvent !== null ? "selected" : "";
 
                                                 const selNotificationTimeTypeAllDayUnchecked = `
-                                            <input type='number' class='form-control-sm editCalendarEventSelNotificationNumberAllDayUnchecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='0' max='${max}' value='${value}'>
+                                            <input type='number' class='form-control-sm editCalendarEventSelNotificationNumberAllDayUnchecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='${minLeadTimeBeforeEvent}' max='${max}' value='${value}'>
                                             <select class='form-control-sm editCalendarEventSelNotificationTimeTypeAllDayUnchecked' style='width:15%;text-overflow:ellipsis;'>
                                                 <option value='Minutes' ${selectedMinutes}>${localizer.Minutes}</option>
                                                 <option value='Hours' ${selectedHours}>${localizer.Hours}</option>
@@ -2202,7 +2202,7 @@
                 <option value='Notification'>${localizer.Notification}</option>
             </select>
 
-            <input type='number' class='form-control-sm createCalendarEventSelNotificationNumberAllDayChecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='0' max='${maxDaysBeforeEvent}'>
+            <input type='number' class='form-control-sm createCalendarEventSelNotificationNumberAllDayChecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='${minLeadTimeBeforeEvent}' max='${maxDaysBeforeEvent}'>
 
             <select class='form-control-sm createCalendarEventSelNotificationTimeTypeAllDayChecked' style='width:15%;text-overflow:ellipsis;'>
                 <option value='Days' selected>${localizer.Days}</option>
@@ -2232,7 +2232,7 @@
                 <option value='Notification'>${localizer.Notification}</option>
             </select>
 
-            <input type='number' class='form-control-sm createCalendarEventSelNotificationNumberAllDayUnchecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='0' max='${maxMinutesBeforeEvent}'>
+            <input type='number' class='form-control-sm createCalendarEventSelNotificationNumberAllDayUnchecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='${minLeadTimeBeforeEvent}' max='${maxMinutesBeforeEvent}'>
 
             <select class='form-control-sm createCalendarEventSelNotificationTimeTypeAllDayUnchecked' style='width:15%;text-overflow:ellipsis;'>
                 <option value='Minutes' selected>${localizer.Minutes}</option>
@@ -2260,7 +2260,7 @@
                 <option value='Notification'>${localizer.Notification}</option>
             </select>
 
-            <input type='number' class='form-control-sm editCalendarEventSelNotificationNumberAllDayChecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='0' max='${maxDaysBeforeEvent}'>
+            <input type='number' class='form-control-sm editCalendarEventSelNotificationNumberAllDayChecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='${minLeadTimeBeforeEvent}' max='${maxDaysBeforeEvent}'>
 
             <select class='form-control-sm editCalendarEventSelNotificationTimeTypeAllDayChecked' style='width:15%;text-overflow:ellipsis;'>
                 <option value='Days' selected>${localizer.Days}</option>
@@ -2291,7 +2291,7 @@
                 <option value='Notification'>${localizer.Notification}</option>
             </select>
 
-            <input type='number' class='form-control-sm editCalendarEventSelNotificationNumberAllDayUnchecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='0' max='${maxMinutesBeforeEvent}'>
+            <input type='number' class='form-control-sm editCalendarEventSelNotificationNumberAllDayUnchecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='${minLeadTimeBeforeEvent}' max='${maxMinutesBeforeEvent}'>
 
             <select class='form-control-sm editCalendarEventSelNotificationTimeTypeAllDayUnchecked' style='width:15%;text-overflow:ellipsis;'>
                 <option value='Minutes' selected>${localizer.Minutes}</option>

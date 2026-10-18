@@ -156,14 +156,8 @@
   <data name="Please enter IconPath" xml:space="preserve">
     <value>아이콘 경로를 입력해주세요.</value>
   </data>
-  <data name="Please enter Id" xml:space="preserve">
-    <value>ID를 입력해주세요.</value>
-  </data>
   <data name="Please enter Name" xml:space="preserve">
     <value>이름을 입력해주세요.</value>
-  </data>
-  <data name="Please enter Order" xml:space="preserve">
-    <value>순서를 입력해주세요.</value>
   </data>
   <data name="Please enter Role" xml:space="preserve">
     <value>역할을 입력해주세요.</value>

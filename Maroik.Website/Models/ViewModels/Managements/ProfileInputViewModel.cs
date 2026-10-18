@@ -27,7 +27,7 @@ public class ProfileInputViewModel
     /// an account whose password predates the rule must still be able to type it in order to change it.
     /// </summary>
     [Required(ErrorMessage = "Password is required")]
-    [StringLength(100)]
+    [StringLength(PasswordPolicy.MaxByteLength)]
     [DataType(DataType.Password)]
     public string? Password { get; set; }
 
@@ -36,7 +36,7 @@ public class ProfileInputViewModel
     /// Must satisfy the password complexity rule.
     /// </summary>
     [Required(ErrorMessage = "New password is required")]
-    [StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 8)]
+    [StringLength(PasswordPolicy.MaxByteLength, ErrorMessage = "The {0} must be between {2} and {1} characters long.", MinimumLength = PasswordPolicy.MinLength)]
     [DataType(DataType.Password)]
     [RegularExpression(PasswordPolicy.Pattern, ErrorMessage = ValidationMessages.PasswordComplexity)]
     [PasswordMaxBytes(ErrorMessage = "Password must be at most 72 bytes (one Korean character counts as 3 bytes).")]

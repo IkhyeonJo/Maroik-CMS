@@ -210,9 +210,6 @@
   <data name="OtherExpenses" xml:space="preserve">
     <value>기타지출</value>
   </data>
-  <data name="MyAssetTransfer" xml:space="preserve">
-    <value>내자산이체</value>
-  </data>
   <data name="UnknownExpenditure" xml:space="preserve">
     <value>미파악지출</value>
   </data>

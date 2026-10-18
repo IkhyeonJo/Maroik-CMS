@@ -24,7 +24,7 @@
                     <span class="info-box-icon bg-info elevation-1"><i class="fas fa-cog"></i></span>
 
                     <div class="info-box-content">
-                        <span class="info-box-text">CPU %</span>
+                        <span class="info-box-text">@Localizer["CPU %"]</span>
                         <span class="info-box-number">
                             @if (!string.IsNullOrEmpty(hostCpuInfo))
                             {
@@ -42,7 +42,7 @@
                     <span class="info-box-icon bg-success elevation-1"><i class="fas fa-memory"></i></span>
 
                     <div class="info-box-content">
-                        <span class="info-box-text">MEM Usage / LIMIT</span>
+                        <span class="info-box-text">@Localizer["MEM Usage / LIMIT"]</span>
                         @if (!string.IsNullOrEmpty(hostMemoryInfo))
                         {
                             <span class="info-box-number">@(memUsageLimit)</span>
@@ -57,7 +57,7 @@
                     <span class="info-box-icon bg-danger elevation-1"><i class="fas fa-hdd"></i></span>
 
                     <div class="info-box-content">
-                        <span class="info-box-text">Disk Usage / LIMIT</span>
+                        <span class="info-box-text">@Localizer["Disk Usage / LIMIT"]</span>
                         @if (!string.IsNullOrEmpty(hostDiskInfo))
                         {
                             <span class="info-box-number">@(diskUsageLimit)</span>
@@ -86,7 +86,7 @@
                                     <span class="info-box-icon"><i class="fas fa-cog"></i></span>
 
                                     <div class="info-box-content">
-                                        <span class="info-box-text">CPU %</span>
+                                        <span class="info-box-text">@Localizer["CPU %"]</span>
                                         <span class="info-box-number">@(container.CpuPercent)</span>
                                     </div>
                                 </div>
@@ -94,7 +94,7 @@
                                     <span class="info-box-icon"><i class="fas fa-memory"></i></span>
 
                                     <div class="info-box-content">
-                                        <span class="info-box-text">MEM Usage / LIMIT</span>
+                                        <span class="info-box-text">@Localizer["MEM Usage / LIMIT"]</span>
                                         <span class="info-box-number">@(container.MemUsageDisplay)</span>
                                     </div>
                                 </div>

@@ -1,5 +1,6 @@
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 using System.ComponentModel.DataAnnotations;
+using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Website.Models.ViewModels.Forums;
 
@@ -13,9 +14,9 @@ public class BoardInputViewModel
     /// <summary>Database row ID; 0 for a new post, positive for an edit.</summary>
     public int Id { get; set; }
 
-    /// <summary>Post title; must be 1–100 characters.</summary>
+    /// <summary>Post title; must be 1 to <see cref="TitledContentPolicy.MaxTitleLength"/> characters.</summary>
     [Required(ErrorMessage = "Title is required.")]
-    [StringLength(100, ErrorMessage = "Must be between 1 and 100 characters.", MinimumLength = 1)]
+    [StringLength(TitledContentPolicy.MaxTitleLength, ErrorMessage = "Must be between {2} and {1} characters.", MinimumLength = 1)]
     public string? Title { get; set; }
 
     /// <summary>HTML body of the post produced by the Summernote WYSIWYG editor.</summary>

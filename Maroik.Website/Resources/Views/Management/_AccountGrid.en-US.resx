@@ -165,32 +165,17 @@
   <data name="Success to reset password" xml:space="preserve">
     <value>Success to reset password</value>
   </data>
-  <data name="Error Found" xml:space="preserve">
-    <value>Error Found</value>
-  </data>
   <data name="User already created, please login" xml:space="preserve">
     <value>User already created, please login</value>
   </data>
   <data name="User already created, please verify your given mail Id" xml:space="preserve">
     <value>User already created, please verify your given mail Id</value>
   </data>
-  <data name="Invalid User, Please Create account" xml:space="preserve">
-    <value>Invalid User, Please Create account</value>
-  </data>
-  <data name="Mail Sent" xml:space="preserve">
-    <value>Mail Sent</value>
-  </data>
   <data name="Fail to mail sent" xml:space="preserve">
     <value>Fail to mail sent</value>
   </data>
   <data name="User created, Check email, click link and verify" xml:space="preserve">
     <value>User created, Check email, click link and verify</value>
-  </data>
-  <data name="Invalid Token" xml:space="preserve">
-    <value>Invalid Token</value>
-  </data>
-  <data name="Failed to resend email" xml:space="preserve">
-    <value>Failed to resend email</value>
   </data>
   <data name="Email has been sent to reset password" xml:space="preserve">
     <value>Email has been sent to reset password</value>

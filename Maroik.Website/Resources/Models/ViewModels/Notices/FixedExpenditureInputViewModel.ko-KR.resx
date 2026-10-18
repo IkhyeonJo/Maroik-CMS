@@ -120,9 +120,6 @@
   <data name="Amount" xml:space="preserve">
     <value>금액</value>
   </data>
-  <data name="Contents" xml:space="preserve">
-    <value>내용</value>
-  </data>
   <data name="DepositDay" xml:space="preserve">
     <value>입금일</value>
   </data>
@@ -150,26 +147,17 @@
   <data name="Please enter Amount" xml:space="preserve">
     <value>금액을 입력해주세요.</value>
   </data>
-  <data name="Please enter Contents" xml:space="preserve">
-    <value>내용을 입력해주세요.</value>
-  </data>
   <data name="Please enter DepositDay" xml:space="preserve">
     <value>입금일을 입력해주세요.</value>
   </data>
   <data name="Please enter DepositMonth" xml:space="preserve">
     <value>입금월을 입력해주세요.</value>
   </data>
-  <data name="Please enter Id" xml:space="preserve">
-    <value>ID를 입력해주세요.</value>
-  </data>
   <data name="Please enter MainClass" xml:space="preserve">
     <value>대분류를 입력해주세요.</value>
   </data>
   <data name="Please enter MaturityDate" xml:space="preserve">
     <value>만기일을 입력해주세요.</value>
-  </data>
-  <data name="Please enter MyDepositAsset" xml:space="preserve">
-    <value>내입금자산을 입력해주세요.</value>
   </data>
   <data name="Please enter PaymentMethod" xml:space="preserve">
     <value>결제수단을 입력해주세요.</value>

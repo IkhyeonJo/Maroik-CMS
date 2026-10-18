@@ -17,12 +17,12 @@
 @* Reminder lead-time bounds + the "notify at HH:MM" list — authoritative in CalendarReminderPolicy
    / the view model. This page only displays reminders (disabled inputs), but it reads the same
    values so it never drifts from the create/edit pages. *@
+@Html.Hidden("minLeadTimeBeforeEvent", CalendarReminderPolicy.MinLeadTimeBeforeEvent)
 @Html.Hidden("maxMinutesBeforeEvent", CalendarReminderPolicy.MaxMinutesBeforeEvent)
 @Html.Hidden("maxHoursBeforeEvent", CalendarReminderPolicy.MaxHoursBeforeEvent)
 @Html.Hidden("maxDaysBeforeEvent", CalendarReminderPolicy.MaxDaysBeforeEvent)
 @Html.Hidden("maxWeeksBeforeEvent", CalendarReminderPolicy.MaxWeeksBeforeEvent)
 @Html.Hidden("reminderTimeIntervals", ClientJsonSerializer.Serialize(Model.TimeIntervals))
-@Html.Hidden("defaultReminderTimeOfDay", CalendarReminderPolicy.DefaultReminderTimeOfDay)
 
 @Html.Hidden("localizerEmail", Localizer["Email"].Value)
 @Html.Hidden("localizerNotification", Localizer["Notification"].Value)
@@ -325,39 +325,6 @@
                                 <label for="viewCalendarEventNotificationAllDayChecked">@Localizer["Notification"].Value</label>
                                 <br />
 
-                                @*
-                                <div class="divViewEventNotificationAllDayCheckedRow">
-                                <select class='form-control-sm viewCalendarEventSelNotificationMethodAllDayChecked' style='width:20%;text-overflow:ellipsis;' disabled>
-                                <option value='Email'>@Localizer["Email"].Value</option>
-                                <option value='Notification'>@Localizer["Notification"].Value</option>
-                                </select>
-
-                                <input type='number' class='form-control-sm viewCalendarEventSelNotificationNumberAllDayChecked' style='width:30%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="0" max="@CalendarReminderPolicy.MaxDaysBeforeEvent" disabled>
-
-                                <select class='form-control-sm viewCalendarEventSelNotificationTimeTypeAllDayChecked' style='width:30%;text-overflow:ellipsis;' disabled>
-                                <option value='Days' selected>@Localizer["Days"].Value</option>
-                                <option value='Weeks'>@Localizer["Weeks"].Value</option>
-                                </select>
-                                <label style="padding-left:5px;padding-right:5px;">@Localizer["before at"].Value</label>
-                                <select class='form-control-sm viewCalendarEventSelNotificationTimeAllDayChecked' style='width:11%;text-overflow:ellipsis;' disabled>
-                                @foreach (var time in timeIntervals)
-                                {
-                                if (time == CalendarReminderPolicy.DefaultReminderTimeOfDay) // Default time
-                                {
-                                <option value="@time" selected>@time</option>
-                                }
-                                else
-                                {
-                                <option value="@time">@time</option>
-                                }
-                                }
-                                </select>
-
-                                <br />
-                                <div class="error-message" style="color: red; font-size: 0.9em; display: none;"></div>
-
-                                </div>
-                                *@
 
                                 <input style="margin-top:20px; display:none;" class="btn btn-primary" type="button" id="viewCalendarEventNotificationAllDayChecked" name="viewCalendarEventNotificationAllDayChecked" value="">
                             </div>
@@ -368,27 +335,6 @@
                                 <label for="viewCalendarEventNotificationAllDayUnchecked">@Localizer["Notification"].Value</label>
                                 <br />
 
-                                @*
-                                <div class="divViewEventNotificationAllDayUncheckedRow" style="padding-bottom:5px;">
-                                <select class='form-control-sm viewCalendarEventSelNotificationMethodAllDayUnchecked' style='width:20%;text-overflow:ellipsis;' disabled>
-                                <option value='Email'>@Localizer["Email"].Value</option>
-                                <option value='Notification'>@Localizer["Notification"].Value</option>
-                                </select>
-
-                                <input type='number' class='form-control-sm viewCalendarEventSelNotificationNumberAllDayUnchecked' style='width:30%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="0" max="@CalendarReminderPolicy.MaxMinutesBeforeEvent" disabled>
-
-                                <select class='form-control-sm viewCalendarEventSelNotificationTimeTypeAllDayUnchecked' style='width:30%;text-overflow:ellipsis;' disabled>
-                                <option value='Minutes' selected>@Localizer["Minutes"].Value</option>
-                                <option value='Hours'>@Localizer["Hours"].Value</option>
-                                <option value='Days'>@Localizer["Days"].Value</option>
-                                <option value='Weeks'>@Localizer["Weeks"].Value</option>
-                                </select>
-
-                                <br />
-                                <div class="error-message" style="color: red; font-size: 0.9em; display: none;"></div>
-
-                                </div>
-                                *@
                                 <input style="margin-top:20px; display:none;" class="btn btn-primary" type="button" id="viewCalendarEventNotificationAllDayUnchecked" name="viewCalendarEventNotificationAllDayUnchecked" value="">
                             </div>
                         </div>

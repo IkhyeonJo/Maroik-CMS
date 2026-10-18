@@ -126,8 +126,8 @@
   <data name="Invalid Email Address" xml:space="preserve">
     <value>유효하지 않은 이메일 형식입니다.</value>
   </data>
-  <data name="Must be between 1 and 255 characters" xml:space="preserve">
-    <value>1자리 또는 255자리 문자들이어야 합니다.</value>
+  <data name="Must be between {2} and {1} characters." xml:space="preserve">
+    <value>{2}자 이상 {1}자 이하로 입력해주세요.</value>
   </data>
   <data name="Password is required" xml:space="preserve">
     <value>비밀번호를 입력하여 주십시오.</value>
@@ -135,8 +135,8 @@
   <data name="Password must be at least 8 characters (and at most 72) and contain at least 3 of 4 of the following: upper case (A-Z), lower case (a-z), number (0-9) and special character (e.g. !@#$%^&amp;*)." xml:space="preserve">
     <value>비밀번호는 8자 이상 72자 이하여야 하며, 대문자(A-Z), 소문자(a-z), 숫자(0-9), 특수문자(예: !@#$%^&amp;*) 중 3가지 이상을 포함해야 합니다.</value>
   </data>
-  <data name="The {0} must be at least {2} characters long." xml:space="preserve">
-    <value>적어도 {2} 길이 이상이어야 합니다.</value>
+  <data name="The {0} must be between {2} and {1} characters long." xml:space="preserve">
+    <value>{2}자 이상 {1}자 이하여야 합니다.</value>
   </data>
   <data name="Password must be at most 72 bytes (one Korean character counts as 3 bytes)." xml:space="preserve">
     <value>비밀번호는 최대 72바이트까지 가능합니다 (한글 1자는 3바이트).</value>

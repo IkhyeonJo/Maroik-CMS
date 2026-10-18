@@ -147,29 +147,17 @@
   <data name="Message" xml:space="preserve">
     <value>Message</value>
   </data>
-  <data name="Please enter AgreedServiceTerms" xml:space="preserve">
-    <value>Please enter AgreedServiceTerms</value>
-  </data>
   <data name="Please enter AvatarImagePath" xml:space="preserve">
     <value>Please enter AvatarImagePath</value>
   </data>
   <data name="Please enter Created" xml:space="preserve">
     <value>Please enter Created</value>
   </data>
-  <data name="Please enter Deleted" xml:space="preserve">
-    <value>Please enter Deleted</value>
-  </data>
   <data name="Please enter Email" xml:space="preserve">
     <value>Please enter Email</value>
   </data>
-  <data name="Please enter EmailConfirmed" xml:space="preserve">
-    <value>Please enter EmailConfirmed</value>
-  </data>
   <data name="Please enter Nickname" xml:space="preserve">
     <value>Please enter Nickname</value>
-  </data>
-  <data name="Please enter Locked" xml:space="preserve">
-    <value>Please enter Locked</value>
   </data>
   <data name="Please enter LoginAttempt" xml:space="preserve">
     <value>Please enter LoginAttempt</value>

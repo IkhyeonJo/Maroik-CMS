@@ -222,12 +222,6 @@
   <data name="MyDepositAsset" xml:space="preserve">
     <value>내입금자산</value>
   </data>
-  <data name="No expenditure exists" xml:space="preserve">
-    <value>지출이 없습니다.</value>
-  </data>
-  <data name="No income exists" xml:space="preserve">
-    <value>수입이 없습니다.</value>
-  </data>
   <data name="NonConsumerSpending" xml:space="preserve">
     <value>비소비지출</value>
   </data>

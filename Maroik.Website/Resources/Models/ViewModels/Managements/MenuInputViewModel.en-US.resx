@@ -144,9 +144,6 @@
   <data name="Please enter Action" xml:space="preserve">
     <value>Please enter Action</value>
   </data>
-  <data name="Please enter CategoryId" xml:space="preserve">
-    <value>Please enter CategoryID</value>
-  </data>
   <data name="Please enter Controller" xml:space="preserve">
     <value>Please enter Controller</value>
   </data>
@@ -156,14 +153,8 @@
   <data name="Please enter IconPath" xml:space="preserve">
     <value>Please enter IconPath</value>
   </data>
-  <data name="Please enter Id" xml:space="preserve">
-    <value>Please enter ID</value>
-  </data>
   <data name="Please enter Name" xml:space="preserve">
     <value>Please enter Name</value>
-  </data>
-  <data name="Please enter Order" xml:space="preserve">
-    <value>Please enter Order</value>
   </data>
   <data name="Please enter Role" xml:space="preserve">
     <value>Please enter Role</value>
