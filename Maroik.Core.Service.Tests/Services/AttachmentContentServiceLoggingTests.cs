@@ -3,6 +3,7 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Settings;
 using Maroik.Core.Service.Services;
+using Maroik.Core.Service.Tests.Fixtures;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;

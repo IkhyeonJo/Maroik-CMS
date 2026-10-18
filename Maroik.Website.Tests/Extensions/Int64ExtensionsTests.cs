@@ -1,6 +1,6 @@
-using Maroik.Core.Contract.Extensions;
+using Maroik.Website.Extensions;
 
-namespace Maroik.Core.Contract.Tests.Extensions;
+namespace Maroik.Website.Tests.Extensions;
 
 /// <summary>
 /// Unit tests for <see cref="Int64Extensions"/> — byte-count formatting helpers

@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using MailKit.Security;
 using Maroik.Core.Client.Clients;
+using Maroik.Core.Client.Tests.Fixtures;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Settings;
 using Microsoft.Extensions.Logging.Abstractions;

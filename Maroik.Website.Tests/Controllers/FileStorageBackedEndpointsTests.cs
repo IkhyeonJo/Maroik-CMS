@@ -6,6 +6,7 @@ using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Accounts;
 using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Core.PostgreSQL.Models;
+using Maroik.Website.Extensions;
 using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -506,7 +507,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         MultipartForm.Of(("calendarEventId", calendarEventId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
     /// <summary>
-    /// Asserts an event detail reply describes the attachment by name, extension and size only: neither the file's bytes nor its storage
+    /// Asserts an event detail reply describes the attachment by name, extension and size label only: neither the file's bytes nor its storage
     /// path (as a <c>path</c> property or anywhere in the body — its GUID segment included, should the slashes be escaped) reach the client.
     /// </summary>
     private static void AssertDescribesTheAttachmentOnly(string body, string storagePath, byte[] bytes)
@@ -517,7 +518,8 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         JsonElement file = calendarEvent.GetProperty("calendarEventAttachedFile");
         Assert.Equal("payload", file.GetProperty("name").GetString());
         Assert.Equal(".zip", file.GetProperty("extension").GetString());
-        Assert.Equal(bytes.Length, file.GetProperty("size").GetInt64());
+        Assert.Equal(((long)bytes.Length).ToKilobytesLabel(), file.GetProperty("sizeLabel").GetString());
+        Assert.False(file.TryGetProperty("size", out _));
         Assert.False(file.TryGetProperty("path", out _));
         Assert.False(calendarEvent.TryGetProperty("calendarEventAttachedFileBase64Data", out _));
         Assert.DoesNotContain(storagePath, body, StringComparison.Ordinal);

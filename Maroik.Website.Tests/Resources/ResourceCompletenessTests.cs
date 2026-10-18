@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Maroik.Website.Tests.Fixtures;
 
 namespace Maroik.Website.Tests.Resources;
 
@@ -12,20 +13,12 @@ namespace Maroik.Website.Tests.Resources;
 public class ResourceCompletenessTests
 {
     /// <summary>The Maroik.Website project folder.</summary>
-    private static readonly string _websiteDir = FindWebsiteDirectory();
+    private static readonly string _websiteDir = RepositoryPaths.Website;
     /// <summary>The website's <c>Resources</c> folder.</summary>
     private static readonly string _resourcesDir = Path.Combine(_websiteDir, "Resources");
 
     /// <summary>Values that are legitimately empty in one culture (English has no year suffix in a date picker).</summary>
     private static readonly HashSet<(string Culture, string Key)> _allowedEmpty = [("en-US", "YearSuffix")];
-
-    /// <summary>Walks up to the directory holding <c>Maroik.sln</c> and returns its <c>Maroik.Website</c> subfolder.</summary>
-    private static string FindWebsiteDirectory()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Maroik.sln"))) dir = dir.Parent;
-        return Path.Combine(dir?.FullName ?? throw new InvalidOperationException("Could not locate Maroik.sln"), "Maroik.Website");
-    }
 
     /// <summary>Every <c>data</c> entry of the resx file at <paramref name="path"/>, name to value (missing values as empty).</summary>
     private static Dictionary<string, string> ReadResx(string path) =>

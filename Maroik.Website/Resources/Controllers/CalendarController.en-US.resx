@@ -126,6 +126,9 @@
   <data name="Calendar name must be {0} characters or fewer." xml:space="preserve">
     <value>Calendar name must be {0} characters or fewer.</value>
   </data>
+  <data name="Calendar description must be {0} characters or fewer." xml:space="preserve">
+    <value>Calendar description must be {0} characters or fewer.</value>
+  </data>
   <data name="Calendar name cannot contain angle brackets or control characters." xml:space="preserve">
     <value>Calendar name cannot contain angle brackets or control characters.</value>
   </data>

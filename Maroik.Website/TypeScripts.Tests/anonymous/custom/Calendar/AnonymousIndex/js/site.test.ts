@@ -400,15 +400,15 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
     it("an attachment stored without an extension shows its bare name", () => {
         const h = load();
         open(h);
-        successOf(h.lastAjax())(reply({ id: 77, calendarEventAttachedFile: { name: "report", extension: null, size: 10 } }));
+        successOf(h.lastAjax())(reply({ id: 77, calendarEventAttachedFile: { name: "report", extension: null, sizeLabel: "0" } }));
         expect(h.$("#aViewCalendarEventAttachedFile").text()).toBe("report");
         expect(h.$("#aViewCalendarEventAttachedFile").attr("data-name")).toBe("report");
     });
 
-    it("an attachment shows its name and a rounded KB size with thousands separators, and its link names the event — not the file's bytes", () => {
+    it("an attachment shows its name and the size label the server sent, in KB, and its link names the event — not the file's bytes", () => {
         const h = load();
         open(h);
-        successOf(h.lastAjax())(reply({ id: 77, calendarEventAttachedFile: { name: "report", extension: ".zip", size: 2_048_000 } }));
+        successOf(h.lastAjax())(reply({ id: 77, calendarEventAttachedFile: { name: "report", extension: ".zip", sizeLabel: "2,000" } }));
         expect(h.$("#aViewCalendarEventAttachedFile").text()).toBe("report.zip");
         expect(h.$("#aViewCalendarEventAttachedFile").attr("data-name")).toBe("report.zip");
         expect(h.$("#aViewCalendarEventAttachedFile").attr("data-calendareventid")).toBe("77");

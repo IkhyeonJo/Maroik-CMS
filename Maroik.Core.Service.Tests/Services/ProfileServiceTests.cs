@@ -5,6 +5,7 @@ using Maroik.Core.Contract.Settings;
 using Maroik.Core.Domain.Accounts;
 using Maroik.Core.Domain.Finances;
 using Maroik.Core.Service.Services;
+using Maroik.Core.Service.Tests.Fixtures;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;

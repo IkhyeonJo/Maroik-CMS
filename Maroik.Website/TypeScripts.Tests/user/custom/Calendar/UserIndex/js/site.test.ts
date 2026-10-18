@@ -638,7 +638,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
         return calendarEventClick(h, { el, event });
     };
     /** A stored attachment as the event reply describes it. */
-    const attachment = { name: "spec", extension: ".pdf", size: 2_500_000 };
+    const attachment = { name: "spec", extension: ".pdf", sizeLabel: "2,441" };
     /** An accepted event reply for event 55, with `over` merged into the event. */
     const payload = (over: Record<string, unknown> = {}) => ({
         result: true, calendarEvent: {

@@ -1,8 +1,9 @@
 using System.Text.Json;
-using Maroik.Core.Client.Tests.Clients;
+using Maroik.Core.Client.Tests.Fixtures;
 using Maroik.Core.Contract.Messages;
 using Maroik.Core.Contract.Settings;
 using Maroik.Worker.Handlers;
+using Maroik.Worker.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;

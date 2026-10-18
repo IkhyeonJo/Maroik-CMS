@@ -13,37 +13,15 @@ public class TimeZoneCatalogService : ITimeZoneCatalogService
     public IReadOnlyList<TimeZoneOptionDto> GetTimeZoneOptions() => _timeZoneOptions.Value;
 
     /// <summary>
-    /// Lists every system time zone under its IANA ID — the zone's own ID when it already is one, else
-    /// its Windows ID converted to IANA — skipping zones with no IANA equivalent.
+    /// Lists every system time zone under its ID. Maroik runs on Linux only (docker-compose on Ubuntu), where every system zone ID is
+    /// already an IANA ID, so no Windows-to-IANA conversion is needed.
     /// </summary>
-    private static List<TimeZoneOptionDto> BuildTimeZoneOptions()
-    {
-        var options = new List<TimeZoneOptionDto>();
-
-        foreach (var systemTimeZone in TimeZoneInfo.GetSystemTimeZones())
+    private static List<TimeZoneOptionDto> BuildTimeZoneOptions() =>
+    [
+        .. TimeZoneInfo.GetSystemTimeZones().Select(systemTimeZone => new TimeZoneOptionDto
         {
-            string systemTimeZoneIanaId = "";
-            if (systemTimeZone.HasIanaId)
-            {
-                systemTimeZoneIanaId = systemTimeZone.Id;
-            }
-            else if (TimeZoneInfo.TryConvertWindowsIdToIanaId(systemTimeZone.Id, out string? ianaId))
-            {
-                systemTimeZoneIanaId = ianaId;
-            }
-
-            if (string.IsNullOrEmpty(systemTimeZoneIanaId))
-            {
-                continue;
-            }
-
-            options.Add(new TimeZoneOptionDto
-            {
-                IanaId = systemTimeZoneIanaId,
-                DisplayName = systemTimeZone.DisplayName
-            });
-        }
-
-        return options;
-    }
+            IanaId = systemTimeZone.Id,
+            DisplayName = systemTimeZone.DisplayName
+        })
+    ];
 }

@@ -115,10 +115,6 @@ public class ViewBagPopulatorFilter(
             catch (Exception ex) { logger.LogWarning(ex, "Failed to load notice counts for {Email}", loggedInAccount.Email); }
         }
 
-        controller.ViewBag.FixedIncomesNoticedCount = fixedIncomesNoticedCount;
-        controller.ViewBag.FixedExpenditureNoticedCount = fixedExpenditureNoticedCount;
-        controller.ViewBag.FixedIncomesExpiredCount = fixedIncomesExpiredCount;
-        controller.ViewBag.FixedExpenditureExpiredCount = fixedExpenditureExpiredCount;
         controller.ViewBag.FixedIncomesTotalNoticeCount = fixedIncomesNoticedCount + fixedIncomesExpiredCount;
         controller.ViewBag.FixedExpenditureTotalNoticeCount = fixedExpenditureNoticedCount + fixedExpenditureExpiredCount;
         controller.ViewBag.TotalNoticeCount = fixedIncomesNoticedCount + fixedExpenditureNoticedCount +

@@ -230,7 +230,7 @@ public class CalendarEventViewModelExtensionsTests
         CalendarEventAttachedFileOutputViewModel file = Assert.IsType<CalendarEventAttachedFileOutputViewModel>(result.CalendarEventAttachedFile);
         Assert.Equal("report", file.Name);
         Assert.Equal(".zip", file.Extension);
-        Assert.Equal(3, file.Size);
+        Assert.Equal("0", file.SizeLabel);
     }
 
     /// <summary>Passes cancellation token through to the service.</summary>

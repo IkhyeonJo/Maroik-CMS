@@ -178,7 +178,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="viewCalendarEventName">@Localizer["Name"].Value</label>
-                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="viewCalendarEventName" name="viewCalendarEventName" value="" maxlength="100" disabled/>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="viewCalendarEventName" name="viewCalendarEventName" value="" maxlength="@TitledContentPolicy.MaxTitleLength" disabled/>
                                 <span class="field-validation-valid text-danger" data-valmsg-for="viewCalendarEventName" data-valmsg-replace="true"></span>
                             </div>
                         </div>
@@ -284,7 +284,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="viewCalendarEventDescription">@Localizer["Description"].Value</label>
-                                <textarea class="form-control form-control-sm" id="viewCalendarEventDescription" name="viewCalendarEventDescription" maxlength="16384" disabled></textarea> @*maxlength: 16KB*@
+                                <textarea class="form-control form-control-sm" id="viewCalendarEventDescription" name="viewCalendarEventDescription" maxlength="@TitledContentPolicy.MaxBodyLength" disabled></textarea>
                             </div>
                         </div>
 

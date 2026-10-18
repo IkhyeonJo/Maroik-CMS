@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Maroik.Core.Contract.Tests.Fixtures;
 
 namespace Maroik.Core.Contract.Tests.ArchitectureRules;
 
@@ -303,7 +304,7 @@ public class SolutionLayeringArchitectureTests
     [Fact]
     public void EveryProject_MustBeRegisteredInTheSolution()
     {
-        SolutionFile solution = SolutionFile.Load(Path.Combine(FindRepositoryRoot(), "Maroik.sln"));
+        SolutionFile solution = SolutionFile.Load(Path.Combine(RepositoryPaths.Root, "Maroik.sln"));
 
         string[] missing = [.. LoadAllProjects().Select(p => p.Name).Where(name => !solution.ProjectNames.Contains(name)).Order()];
 
@@ -315,7 +316,7 @@ public class SolutionLayeringArchitectureTests
     [Fact]
     public void EveryProject_MustBeNestedUnderTheMatchingSolutionFolder()
     {
-        SolutionFile solution = SolutionFile.Load(Path.Combine(FindRepositoryRoot(), "Maroik.sln"));
+        SolutionFile solution = SolutionFile.Load(Path.Combine(RepositoryPaths.Root, "Maroik.sln"));
         List<string> wrong =
         [
             .. from project in LoadAllProjects() let isTestSide = project.Name.EndsWith(".Tests", StringComparison.Ordinal) let expected = isTestSide ? "tests" : "src" let actual = solution.FolderOf(project.Name) where actual != expected select $"{project.Name}: in '{actual ?? "(solution root)"}', expected '{expected}'"
@@ -389,33 +390,16 @@ public class SolutionLayeringArchitectureTests
     /// <summary>Every <c>Maroik.*.csproj</c> under the repository root (outside <c>bin</c>/<c>obj</c>), parsed and sorted by name.</summary>
     private static IReadOnlyList<ProjectFile> LoadAllProjects()
     {
-        string root = FindRepositoryRoot();
+        string root = RepositoryPaths.Root;
 
         return
         [
             .. Directory.GetFiles(root, "*.csproj", SearchOption.AllDirectories)
-                .Where(path => !PathHasSegment(path, "bin") && !PathHasSegment(path, "obj"))
+                .Where(path => !RepositoryPaths.HasSegment(path, "bin") && !RepositoryPaths.HasSegment(path, "obj"))
                 .Where(path => Path.GetFileName(path).StartsWith("Maroik.", StringComparison.Ordinal))
                 .Select(ProjectFile.Load)
                 .OrderBy(p => p.Name, StringComparer.Ordinal)
         ];
-    }
-
-    /// <summary>True when <paramref name="path"/> has a directory segment equal to <paramref name="segment"/> (case-insensitive).</summary>
-    private static bool PathHasSegment(string path, string segment) =>
-        path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            .Contains(segment, StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>Walks up from the test binary's folder to the directory holding <c>Maroik.sln</c>.</summary>
-    private static string FindRepositoryRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Maroik.sln")))
-            dir = dir.Parent;
-        if (dir == null)
-            throw new InvalidOperationException(
-                "Could not locate the repository root (Maroik.sln) from " + AppContext.BaseDirectory);
-        return dir.FullName;
     }
 
     /// <summary>A parsed <c>.csproj</c>: its assembly name and its declared reference edges.</summary>

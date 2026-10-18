@@ -2,7 +2,7 @@ using Maroik.Core.Domain.Boards;
 using Maroik.Core.Domain.Calendars;
 using DomainBoard = Maroik.Core.Domain.Boards.Board;
 using DomainCalendar = Maroik.Core.Domain.Calendars.Calendar;
-namespace Maroik.Core.Domain.Tests.Boundaries;
+namespace Maroik.Core.Domain.Tests.Invariants;
 
 /// <summary>
 /// The domain never reads the clock: every factory stamps Created and Updated with the one instant

@@ -1,3 +1,4 @@
+using Maroik.Core.Contract.Tests.Fixtures;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -14,7 +15,8 @@ namespace Maroik.Core.Contract.Tests.ArchitectureRules;
 /// It reads the production sources with the Roslyn parser rather than reflecting over the assemblies, so one test covers
 /// every production project (the hosts included) without this project referencing them — which
 /// <see cref="SolutionLayeringArchitectureTests"/> forbids. <c>Maroik.Core.PostgreSQL</c> is EF Core scaffold output and
-/// is left out, and so are the <c>*.Tests</c> projects, whose <c>Extensions/</c> folders hold the tests of extensions.
+/// is left out. The <c>*.Tests</c> projects are judged by one rule of their own — their helpers live in <c>Fixtures/</c> — since
+/// their <c>Extensions/</c> folders hold the tests of extensions, not extensions.
 /// </para>
 /// </summary>
 public class FolderRoleArchitectureTests
@@ -28,8 +30,14 @@ public class FolderRoleArchitectureTests
     /// <summary>The folder of the <c>*Mapper</c> classes, which are extension classes too.</summary>
     private const string MappersFolder = "Mappers";
 
+    /// <summary>The folder every non-test type of a test project lives in.</summary>
+    private const string FixturesFolder = "Fixtures";
+
     /// <summary>Every top-level type of the production sources, parsed once on first use.</summary>
-    private static readonly Lazy<IReadOnlyList<SourceType>> _productionTypes = new(LoadProductionTypes);
+    private static readonly Lazy<IReadOnlyList<SourceType>> _productionTypes = new(() => LoadTypes(isTestProject: false));
+
+    /// <summary>Every top-level type of the test projects' sources, parsed once on first use.</summary>
+    private static readonly Lazy<IReadOnlyList<SourceType>> _testTypes = new(() => LoadTypes(isTestProject: true));
 
     /// <summary>An interface outside <c>Interfaces/</c> is one a reader cannot find where every other one is.</summary>
     [Fact]
@@ -90,6 +98,23 @@ public class FolderRoleArchitectureTests
     }
 
     /// <summary>
+    /// In a test project every type that is not a test class (<c>*Tests</c>) — a fake, a fixture, an assertion helper — lives in
+    /// <c>Fixtures/</c>, so the folders that mirror the production code hold only the tests of that code.
+    /// </summary>
+    [Fact]
+    public void EveryTestHelper_LivesInAFixturesFolder()
+    {
+        string[] violations =
+        [
+            .. _testTypes.Value
+                .Where(t => !t.Name.EndsWith("Tests", StringComparison.Ordinal) && t.Folder != FixturesFolder)
+                .Select(t => $"{t.Path}: {t.Name} is not a test class but sits outside {FixturesFolder}/"),
+        ];
+
+        Assert.True(violations.Length == 0, string.Join("\n", violations));
+    }
+
+    /// <summary>
     /// The parser sees what the rules above judge: an interface, an extension method (<c>this</c> parameter) and a C# 14
     /// <c>extension</c> block. Without this a parse that silently found nothing would pass every rule.
     /// </summary>
@@ -112,31 +137,31 @@ public class FolderRoleArchitectureTests
         Assert.Contains(_productionTypes.Value, t => t.Name == "IUnitOfWork" && t.IsInterface);
     }
 
-    /// <summary>Every top-level type declared in the production projects' <c>.cs</c> files.</summary>
-    private static IReadOnlyList<SourceType> LoadProductionTypes()
+    /// <summary>Every top-level type declared in the <c>.cs</c> files of the production projects, or of the test projects.</summary>
+    private static IReadOnlyList<SourceType> LoadTypes(bool isTestProject)
     {
-        string root = FindRepositoryRoot();
+        string root = RepositoryPaths.Root;
 
         return
         [
             .. Directory.GetFiles(root, "*.csproj", SearchOption.AllDirectories)
                 .Select(Path.GetDirectoryName)
                 .OfType<string>()
-                .Where(dir => !PathHasSegment(dir, "bin") && !PathHasSegment(dir, "obj"))
-                .Where(IsProductionProject)
+                .Where(dir => !RepositoryPaths.HasSegment(dir, "bin") && !RepositoryPaths.HasSegment(dir, "obj"))
+                .Where(dir => IsMaroikProject(dir) && IsTestProject(dir) == isTestProject)
                 .SelectMany(dir => Directory.GetFiles(dir, "*.cs", SearchOption.AllDirectories))
-                .Where(path => !PathHasSegment(path, "bin") && !PathHasSegment(path, "obj"))
+                .Where(path => !RepositoryPaths.HasSegment(path, "bin") && !RepositoryPaths.HasSegment(path, "obj"))
                 .OrderBy(path => path, StringComparer.Ordinal)
                 .SelectMany(path => ReadTypes(Path.GetRelativePath(root, path), File.ReadAllText(path))),
         ];
 
-        static bool IsProductionProject(string dir)
+        static bool IsMaroikProject(string dir)
         {
             string name = Path.GetFileName(dir);
-            return name.StartsWith("Maroik.", StringComparison.Ordinal)
-                   && !name.EndsWith(".Tests", StringComparison.Ordinal)
-                   && name != "Maroik.Core.PostgreSQL";
+            return name.StartsWith("Maroik.", StringComparison.Ordinal) && name != "Maroik.Core.PostgreSQL";
         }
+
+        static bool IsTestProject(string dir) => Path.GetFileName(dir).EndsWith(".Tests", StringComparison.Ordinal);
     }
 
     /// <summary>Parses one source file and returns its top-level types.</summary>
@@ -163,23 +188,6 @@ public class FolderRoleArchitectureTests
             member is ExtensionBlockDeclarationSyntax
             || member is MethodDeclarationSyntax { ParameterList.Parameters: [var first, ..] }
                && first.Modifiers.Any(SyntaxKind.ThisKeyword));
-
-    /// <summary>True when <paramref name="path"/> has a directory segment equal to <paramref name="segment"/> (case-insensitive).</summary>
-    private static bool PathHasSegment(string path, string segment) =>
-        path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            .Contains(segment, StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>Walks up from the test binary's folder to the directory holding <c>Maroik.sln</c>.</summary>
-    private static string FindRepositoryRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Maroik.sln")))
-            dir = dir.Parent;
-        if (dir == null)
-            throw new InvalidOperationException(
-                "Could not locate the repository root (Maroik.sln) from " + AppContext.BaseDirectory);
-        return dir.FullName;
-    }
 
     /// <summary>A top-level type as the folder-role rules see it.</summary>
     private sealed record SourceType(string Path, string Folder, string Name, bool IsInterface, bool HasExtensionMembers);

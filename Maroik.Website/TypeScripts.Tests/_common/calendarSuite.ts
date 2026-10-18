@@ -1229,7 +1229,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
         return calendarEventClick(h, { el, event: { id: "55", title: "T", allDay: false, extendedProps: eventProps({ calendarType: "My" }) } });
     };
     /** A stored attachment as the event reply describes it. */
-    const attachment = { name: "spec", extension: ".pdf", size: 2_500_000 };
+    const attachment = { name: "spec", extension: ".pdf", sizeLabel: "2,441" };
     /** An accepted IsCalendarEventExists reply for event 55, with `over` merged into the event. */
     const payload = (over: Record<string, unknown> = {}) => ({
         result: true, calendarEvent: {
@@ -1300,7 +1300,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             expect(h.$("#aEditCalendarEventAttachedFile").attr("data-name")).toBe("spec");
         });
 
-        it("an attached file shows its link, a comma-grouped size in KB and the event it is downloaded for — not the file's bytes", () => {
+        it("an attached file shows its link, the server's size label in KB and the event it is downloaded for — not the file's bytes", () => {
             const h = setup();
             openEdit(h, { calendarEventAttachedFile: attachment });
             expect(display(h, "#divEditCalendarEventAttachedFile")).not.toBe("none");

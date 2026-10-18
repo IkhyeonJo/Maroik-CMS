@@ -5,6 +5,7 @@ using Maroik.Core.Contract.Interfaces;
 using Maroik.Website.Attributes;
 using Maroik.Website.Filters;
 using Maroik.Website.Interfaces;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -308,7 +309,7 @@ public class WebsiteArchitectureTests
     [Fact]
     public void ControllerFiles_ShouldNot_BeDeclaredAsPartialClasses()
     {
-        string controllersDirectory = Path.Combine(FindRepositoryRoot(), "Maroik.Website", "Controllers");
+        string controllersDirectory = Path.Combine(RepositoryPaths.Root, "Maroik.Website", "Controllers");
 
         List<string> offendingFiles =
         [
@@ -446,15 +447,6 @@ public class WebsiteArchitectureTests
 
             return true;
         }
-    }
-
-    /// <summary>Walks up from the test assembly's output directory to find the repository root (identified by Maroik.sln).</summary>
-    private static string FindRepositoryRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Maroik.sln")))
-            dir = dir.Parent;
-        return dir == null ? throw new InvalidOperationException("Could not locate the repository root (Maroik.sln) from " + AppContext.BaseDirectory) : dir.FullName;
     }
 
     /// <summary>

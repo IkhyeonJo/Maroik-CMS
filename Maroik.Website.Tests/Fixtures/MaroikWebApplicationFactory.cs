@@ -47,19 +47,10 @@ public class MaroikWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         // FixedIncome_fk_0/FixedExpenditure_fk_0). Files under docker-entrypoint-initdb.d/ are
         // run automatically via psql on first container startup, which correctly understands
         // pg_dump's \restrict/\unrestrict meta-commands (a raw ADO.NET batch would not).
-        .WithResourceMapping(new FileInfo(FindInitSqlPath()), new FileInfo("/docker-entrypoint-initdb.d/init.sql"))
+        .WithResourceMapping(new FileInfo(Path.Combine(RepositoryPaths.Root, "Maroik.DB", "PostgreSQL", "SQL_Init_Script", "Debugging", "Init.sql")), new FileInfo("/docker-entrypoint-initdb.d/init.sql"))
         .Build();
     /// <summary>Connection string of <see cref="_postgres"/>; set once it has started.</summary>
     private string _connectionString = "";
-
-    /// <summary>Absolute path of the production <c>Init.sql</c>, found by walking up to the directory holding <c>Maroik.sln</c>.</summary>
-    private static string FindInitSqlPath()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Maroik.sln")))
-            dir = dir.Parent;
-        return dir == null ? throw new InvalidOperationException("Could not locate the repository root (Maroik.sln) from " + AppContext.BaseDirectory) : Path.Combine(dir.FullName, "Maroik.DB", "PostgreSQL", "SQL_Init_Script", "Debugging", "Init.sql");
-    }
 
     /// <summary>Starts the Testcontainers PostgreSQL instance before any test in the collection runs.</summary>
     public async ValueTask InitializeAsync()
