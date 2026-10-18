@@ -132,8 +132,8 @@
   <data name="Please enter Nickname" xml:space="preserve">
     <value>Please enter Nickname</value>
   </data>
-  <data name="The {0} must be at least {2} characters long." xml:space="preserve">
-    <value>The {0} must be at least {2} characters long.</value>
+  <data name="The {0} must be between {2} and {1} characters long." xml:space="preserve">
+    <value>The {0} must be between {2} and {1} characters long.</value>
   </data>
   <data name="Please select time zone" xml:space="preserve">
     <value>Please select time zone</value>

@@ -360,15 +360,6 @@
   <data name="FailedToLoadCalendars" xml:space="preserve">
     <value>캘린더를 불러오지 못했습니다. 다시 시도해 주세요.</value>
   </data>
-  <data name="Create" xml:space="preserve">
-    <value>생성</value>
-  </data>
-  <data name="Event" xml:space="preserve">
-    <value>이벤트</value>
-  </data>
-  <data name="My calendars" xml:space="preserve">
-    <value>나의 달력들</value>
-  </data>
   <data name="Other calendars" xml:space="preserve">
     <value>다른 달력들</value>
   </data>
@@ -377,15 +368,6 @@
   </data>
   <data name="EndDate" xml:space="preserve">
     <value>종료일</value>
-  </data>
-  <data name="Edit" xml:space="preserve">
-    <value>편집</value>
-  </data>
-  <data name="Delete" xml:space="preserve">
-    <value>삭제</value>
-  </data>
-  <data name="Add Calendar" xml:space="preserve">
-    <value>달력 추가</value>
   </data>
   <data name="Name" xml:space="preserve">
     <value>이름</value>
@@ -396,29 +378,8 @@
   <data name="Description" xml:space="preserve">
     <value>내용</value>
   </data>
-  <data name="Color" xml:space="preserve">
-    <value>색상</value>
-  </data>
-  <data name="Please select Color" xml:space="preserve">
-    <value>색상을 선택해주세요</value>
-  </data>
-  <data name="TimeZone" xml:space="preserve">
-    <value>시간대</value>
-  </data>
   <data name="Close" xml:space="preserve">
     <value>닫기</value>
-  </data>
-  <data name="Save" xml:space="preserve">
-    <value>저장</value>
-  </data>
-  <data name="Edit Calendar" xml:space="preserve">
-    <value>달력 편집</value>
-  </data>
-  <data name="Are you sure to delete?" xml:space="preserve">
-    <value>삭제하시겠습니까?</value>
-  </data>
-  <data name="Add Event" xml:space="preserve">
-    <value>이벤트 추가</value>
   </data>
   <data name="All day" xml:space="preserve">
     <value>종일</value>
@@ -453,12 +414,6 @@
   <data name="Please enter Location" xml:space="preserve">
     <value>위치를 입력해주세요</value>
   </data>
-  <data name="Attachment (Only zip extension allowed.)" xml:space="preserve">
-    <value>첨부파일 (zip 확장자만 가능합니다.)</value>
-  </data>
-  <data name="File size must be smaller than {0}MB." xml:space="preserve">
-    <value>파일 크기는 {0}MB 보다 작아야 합니다.</value>
-  </data>
   <data name="My Calendar" xml:space="preserve">
     <value>나의 달력</value>
   </data>
@@ -470,18 +425,6 @@
   </data>
   <data name="Free" xml:space="preserve">
     <value>자유</value>
-  </data>
-  <data name="Add notification" xml:space="preserve">
-    <value>알림 추가</value>
-  </data>
-  <data name="Edit Event" xml:space="preserve">
-    <value>이벤트 편집</value>
-  </data>
-  <data name="Create new calendar" xml:space="preserve">
-    <value>새 달력 생성</value>
-  </data>
-  <data name="Browse calendars of interest" xml:space="preserve">
-    <value>관심분야와 관련된 캘린더</value>
   </data>
   <data name="View Event" xml:space="preserve">
     <value>이벤트 보기</value>
@@ -503,8 +446,5 @@
   </data>
   <data name="Custom..." xml:space="preserve">
     <value>사용자 지정...</value>
-  </data>
-  <data name="before at" xml:space="preserve">
-    <value>전</value>
   </data>
 </root>

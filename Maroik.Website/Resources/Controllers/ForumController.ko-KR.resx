@@ -117,17 +117,11 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="content length is must be between 0 and 16384 characters." xml:space="preserve">
-    <value>내용 길이는 1~16384 글자여야 합니다.</value>
-  </data>
   <data name="File Size must be smaller than {0}MB." xml:space="preserve">
     <value>파일 크기는 {0}MB 보다 작아야 합니다.</value>
   </data>
   <data name="Input is invalid" xml:space="preserve">
     <value>입력값이 유효하지 않습니다.</value>
-  </data>
-  <data name="No freeBoard exists." xml:space="preserve">
-    <value>자유게시물이 존재하지 않습니다.</value>
   </data>
   <data name="Only .jpg or jpeg or .png file allowed." xml:space="preserve">
     <value>.jpg 또는 .jpeg 또는 .png 파일만 가능합니다.</value>
@@ -158,9 +152,6 @@
   </data>
   <data name="The board has been successfully updated." xml:space="preserve">
     <value>게시물이 성공적으로 수정되었습니다.</value>
-  </data>
-  <data name="Title length is must be between 1 and 100 characters." xml:space="preserve">
-    <value>제목 길이는 1~100 글자여야 합니다.</value>
   </data>
   <data name="You do not have permission to delete." xml:space="preserve">
     <value>삭제할 권한이 없습니다.</value>

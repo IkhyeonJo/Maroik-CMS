@@ -102,6 +102,7 @@
     // Authoritative in CalendarReminderPolicy (server); serialized into these hidden fields by
     // AnonymousIndex.cshtml and mirrored here for form UX only. No hardcoded fallback: the limit
     // is a Domain rule, not a client constant.
+    const minLeadTimeBeforeEvent = parseInt(optionalFieldValue($("#minLeadTimeBeforeEvent")) ?? "", 10);
     const maxMinutesBeforeEvent = parseInt(optionalFieldValue($("#maxMinutesBeforeEvent")) ?? "", 10);
     const maxHoursBeforeEvent = parseInt(optionalFieldValue($("#maxHoursBeforeEvent")) ?? "", 10);
     const maxDaysBeforeEvent = parseInt(optionalFieldValue($("#maxDaysBeforeEvent")) ?? "", 10);
@@ -425,7 +426,7 @@
                                                         let selectedWeeks = reminder.WeeksBeforeEvent !== null ? "selected" : "";
 
                                                         const selNotificationTimeTypeAllDayChecked = `
-                                                    <input type='number' class='form-control-sm viewCalendarEventSelNotificationNumberAllDayChecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="0" max="${max}" value="${value}" disabled>
+                                                    <input type='number' class='form-control-sm viewCalendarEventSelNotificationNumberAllDayChecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="${minLeadTimeBeforeEvent}" max="${max}" value="${value}" disabled>
                                                     <select class='form-control-sm viewCalendarEventSelNotificationTimeTypeAllDayChecked' style='width:15%;text-overflow:ellipsis;' disabled>
                                                         <option value='Days' ${selectedDays}>${localizer.Days}</option>
                                                         <option value='Weeks' ${selectedWeeks}>${localizer.Weeks}</option>
@@ -478,7 +479,7 @@
                                                         let selectedWeeks = reminder.WeeksBeforeEvent !== null ? "selected" : "";
 
                                                         const selNotificationTimeTypeAllDayUnchecked = `
-                                                    <input type='number' class='form-control-sm viewCalendarEventSelNotificationNumberAllDayUnchecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="0" max="${max}" value="${value}" disabled>
+                                                    <input type='number' class='form-control-sm viewCalendarEventSelNotificationNumberAllDayUnchecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="${minLeadTimeBeforeEvent}" max="${max}" value="${value}" disabled>
                                                     <select class='form-control-sm viewCalendarEventSelNotificationTimeTypeAllDayUnchecked' style='width:15%;text-overflow:ellipsis;' disabled>
                                                         <option value='Minutes' ${selectedMinutes}>${localizer.Minutes}</option>
                                                         <option value='Hours' ${selectedHours}>${localizer.Hours}</option>

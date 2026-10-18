@@ -32,6 +32,11 @@ public static class MenuFieldPolicy
     }
 
     /// <summary>
+    /// The lowest order a menu item may have: <c>*_Order_check</c> is <c>"Order" &gt;= 0</c>. Rendered as the menu forms' <c>min</c>.
+    /// </summary>
+    public const long MinOrder = 0;
+
+    /// <summary>
     /// Validates the length of each text field, the role (when given) and the order. The caller has
     /// already checked <c>Name</c> for emptiness with its own, type-specific error.
     /// </summary>
@@ -54,7 +59,7 @@ public static class MenuFieldPolicy
         if (role != null && !Roles.IsKnown(role))
             return DomainError.Validation("Menu.RoleInvalid", "Role must be Admin, User or Anonymous.");
 
-        if (order < 0)
+        if (order < MinOrder)
             return DomainError.Validation("Menu.OrderNegative", "Order cannot be negative.");
 
         return Result.Success;

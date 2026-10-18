@@ -5,6 +5,7 @@
     A toolbar provides Create/Edit/Delete buttons for CRUD operations on Category/SubCategory records.
     Changes to menu items take effect on the next page load for all users.
 *@
+@using Maroik.Core.Domain.Menus
 <section class="content">
     <div class="card card-primary">
         <div class="card-header">
@@ -91,7 +92,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createCategoryOrder">@Localizer["Order"].Value</label>
-                                <input class="form-control form-control-sm" min="0" type="number" id="createCategoryOrder" name="createCategoryOrder" value="0">
+                                <input class="form-control form-control-sm" min="@MenuFieldPolicy.MinOrder" type="number" id="createCategoryOrder" name="createCategoryOrder" value="0">
                             </div>
                         </div>
                         <div class="modal-footer justify-content-between">
@@ -145,7 +146,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createSubcategoryOrder">@Localizer["Order"].Value</label>
-                                <input class="form-control form-control-sm" min="0" type="number" id="createSubcategoryOrder" name="createSubcategoryOrder" value="0">
+                                <input class="form-control form-control-sm" min="@MenuFieldPolicy.MinOrder" type="number" id="createSubcategoryOrder" name="createSubcategoryOrder" value="0">
                             </div>
                         </div>
                         <div class="modal-footer justify-content-between">
@@ -214,7 +215,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editCategoryOrder">@Localizer["Order"].Value</label>
-                                <input class="form-control form-control-sm" min="0" type="number" id="editCategoryOrder" name="editCategoryOrder" value="0">
+                                <input class="form-control form-control-sm" min="@MenuFieldPolicy.MinOrder" type="number" id="editCategoryOrder" name="editCategoryOrder" value="0">
                             </div>
                         </div>
                         <div class="modal-footer justify-content-between">
@@ -283,7 +284,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editSubCategoryOrder">@Localizer["Order"].Value</label>
-                                <input class="form-control form-control-sm" min="0" type="number" id="editSubCategoryOrder" name="editSubCategoryOrder" value="0">
+                                <input class="form-control form-control-sm" min="@MenuFieldPolicy.MinOrder" type="number" id="editSubCategoryOrder" name="editSubCategoryOrder" value="0">
                             </div>
                         </div>
                         <div class="modal-footer justify-content-between">

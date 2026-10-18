@@ -15,9 +15,6 @@ public enum AccountMessage
     [Description("Success to reset password")]
     SuccessToResetPassword,
 
-    /// <summary>A generic error occurred during the operation.</summary>
-    [Description("Error Found")]
-    ErrorFound,
 
     /// <summary>The email is already registered and the account is active.</summary>
     [Description("User already created, please login")]
@@ -27,13 +24,7 @@ public enum AccountMessage
     [Description("User already created, please verify your given mail Id")]
     VerifyEmail,
 
-    /// <summary>No matching account was found for the supplied credentials.</summary>
-    [Description("Invalid User, Please Create account")]
-    InvalidUser,
 
-    /// <summary>The confirmation or reset email was sent successfully.</summary>
-    [Description("Mail Sent")]
-    MailSent,
 
     /// <summary>An error occurred while attempting to send the email.</summary>
     [Description("Fail to mail sent")]
@@ -43,19 +34,10 @@ public enum AccountMessage
     [Description("User created, Check email, click link and verify")]
     UserCreatedVerifyEmail,
 
-    /// <summary>The supplied token is invalid or has expired.</summary>
-    [Description("Invalid Token")]
-    InvalidToken,
 
-    /// <summary>Resending the confirmation email failed.</summary>
-    [Description("Failed to resend email")]
-    FailToResendEmail,
 
     /// <summary>A password-reset email has been dispatched to the supplied address.</summary>
     [Description("Email has been sent to reset password")]
-    ResetPasswordMail,
+    ResetPasswordMail
 
-    /// <summary>The account is locked after too many failed login attempts.</summary>
-    [Description("This account is locked")]
-    AccountLocked
 }

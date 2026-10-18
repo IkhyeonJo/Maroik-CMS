@@ -120,9 +120,6 @@
   <data name="Amount" xml:space="preserve">
     <value>Amount</value>
   </data>
-  <data name="Contents" xml:space="preserve">
-    <value>Contents</value>
-  </data>
   <data name="Created" xml:space="preserve">
     <value>Created</value>
   </data>
@@ -153,9 +150,6 @@
   <data name="Please enter Amount" xml:space="preserve">
     <value>Please enter Amount</value>
   </data>
-  <data name="Please enter Contents" xml:space="preserve">
-    <value>Please enter Contents</value>
-  </data>
   <data name="Please enter Created" xml:space="preserve">
     <value>Please enter Created</value>
   </data>
@@ -167,9 +161,6 @@
   </data>
   <data name="Please enter DepositMyAssetProductName" xml:space="preserve">
     <value>Please enter DepositMyAssetProductName</value>
-  </data>
-  <data name="Please enter Id" xml:space="preserve">
-    <value>Please enter Id</value>
   </data>
   <data name="Please enter MainClass" xml:space="preserve">
     <value>Please enter MainClass</value>

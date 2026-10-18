@@ -860,6 +860,17 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(display(h, `#div${cap}EventNotificationAllDayUnchecked`)).not.toBe("none");
         });
 
+        it.each([["create", true], ["create", false], ["edit", true], ["edit", false]])("the %s add-reminder button (all-day=%s) bounds the new row below by the server's minLeadTimeBeforeEvent", (which, allDay) => {
+            const suffix = allDay ? "AllDayChecked" : "AllDayUnchecked";
+            const block = `div${which === "create" ? "Create" : "Edit"}EventNotification${suffix}`;
+            const h = build({
+                body: (html) => html.replace(hidden("minLeadTimeBeforeEvent", "0"), hidden("minLeadTimeBeforeEvent", "2"))
+                    .replace(`<div id="${block}"></div>`, `<div id="${block}"><a id="${which}CalendarEventNotification${suffix}"></a></div>`)
+            });
+            h.$(`#${which}CalendarEventNotification${suffix}`).trigger("click");
+            expect(h.$(`#${block} .${which}CalendarEventSelNotificationNumber${suffix}`).last().attr("min")).toBe("2");
+        });
+
         it.each([["create", true], ["create", false], ["edit", true], ["edit", false]])("the %s add-reminder button (all-day=%s) inserts a fresh row with the right units and defaults", (which, allDay) => {
             const suffix = allDay ? "AllDayChecked" : "AllDayUnchecked";
             const h = build({
@@ -1272,6 +1283,20 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             expect(rows.eq(1).find(".editCalendarEventSelNotificationTimeTypeAllDayChecked").val()).toBe("Weeks");
             expect(h.$("#editCalendarEventAllDay").prop("checked")).toBe(true);
             expect(h.$("#editCalendarEventAllDayCheckedStartDate").val()).toBe("2024-05-01");
+        });
+
+        it("the rebuilt reminder rows take their lower bound from the server's minLeadTimeBeforeEvent", () => {
+            const withMin = () => build({
+                body: (html) => html.replace(hidden("minLeadTimeBeforeEvent", "0"), hidden("minLeadTimeBeforeEvent", "2"))
+                    .replace("<div id=\"divEditEventNotificationAllDayUnchecked\"></div>", "").replace("<div id=\"divEditEventNotificationAllDayChecked\"></div>", "") + editDom
+            });
+            const h = withMin();
+            openEdit(h, { allDay: true, displayStartDate: "2024-05-01", displayEndDate: "2024-05-03", serializedCalendarReminders: JSON.stringify([reminder({ DaysBeforeEvent: 3 })]) });
+            expect(h.$(".divEditEventNotificationAllDayCheckedRow .editCalendarEventSelNotificationNumberAllDayChecked").attr("min")).toBe("2");
+
+            const h2 = withMin();
+            openEdit(h2, { serializedCalendarReminders: JSON.stringify([reminder({ MinutesBeforeEvent: 15 })]) });
+            expect(h2.$(".divEditEventNotificationAllDayUncheckedRow .editCalendarEventSelNotificationNumberAllDayUnchecked").attr("min")).toBe("2");
         });
 
         it("a timed event rebuilds its minute/hour/day/week reminder rows with the stored unit", () => {

@@ -66,4 +66,23 @@ public class PasswordPolicyTests
         Assert.False(PasswordPolicy.IsValid("Aa1" + new string('가', 25))); // 78 bytes, 28 chars
         Assert.True(PasswordPolicy.IsValid("Aa1" + new string('가', 23))); // 72 bytes exactly
     }
+
+    /// <summary>
+    /// <see cref="PasswordPolicy.MinLength"/> is the shortest length <see cref="PasswordPolicy.Pattern"/> accepts, so the view
+    /// models' <c>StringLength</c> minimum (which reads the constant) and the pattern (which spells the number out) agree.
+    /// </summary>
+    [Fact]
+    public void MinLength_IsTheShortestLengthThePatternAccepts()
+    {
+        Assert.True(PasswordPolicy.IsValid("Aa1" + new string('a', PasswordPolicy.MinLength - 3)));
+        Assert.False(PasswordPolicy.IsValid("Aa1" + new string('a', PasswordPolicy.MinLength - 4)));
+    }
+
+    /// <summary>The violation message states the limits the rule actually applies.</summary>
+    [Fact]
+    public void ViolationMessage_StatesTheMinimumAndTheMaximum()
+    {
+        Assert.Contains($"at least {PasswordPolicy.MinLength} characters", PasswordPolicy.ViolationMessage, StringComparison.Ordinal);
+        Assert.Contains($"at most {PasswordPolicy.MaxByteLength})", PasswordPolicy.ViolationMessage, StringComparison.Ordinal);
+    }
 }

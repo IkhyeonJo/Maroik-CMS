@@ -138,12 +138,6 @@
   <data name="Input is invalid" xml:space="preserve">
     <value>입력값이 유효하지 않습니다.</value>
   </data>
-  <data name="Name length is must be between 1 and 100 characters." xml:space="preserve">
-    <value>이름 길이는 1~100자 사이여야 합니다.</value>
-  </data>
-  <data name="Description length is must be between 0 and 16384 characters." xml:space="preserve">
-    <value>내용 길이는 0~16,384자 사이여야 합니다.</value>
-  </data>
   <data name="Only zip extension allowed." xml:space="preserve">
     <value>zip 확장자만 가능합니다.</value>
   </data>

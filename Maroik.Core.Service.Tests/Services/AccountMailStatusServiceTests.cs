@@ -121,7 +121,7 @@ public class AccountMailStatusServiceTests
     [Fact]
     public async Task ClearMailSendFailedAsync_DoesNothing_WhenAccountMessageIsNotFailToMailSent()
     {
-        var account = ActiveAccount(message: AccountMessage.MailSent.GetDescription());
+        var account = ActiveAccount(message: AccountMessage.ResetPasswordMail.GetDescription());
         _accountRepo.Setup(r => r.FindByEmailAsync(account.Email.Value, It.IsAny<CancellationToken>())).ReturnsAsync(account);
         var sut = CreateSut();
 

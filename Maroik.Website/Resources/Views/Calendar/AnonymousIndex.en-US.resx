@@ -360,15 +360,6 @@
   <data name="FailedToLoadCalendars" xml:space="preserve">
     <value>Failed to load calendars. Please try again.</value>
   </data>
-  <data name="Create" xml:space="preserve">
-    <value>Create</value>
-  </data>
-  <data name="Event" xml:space="preserve">
-    <value>Event</value>
-  </data>
-  <data name="My calendars" xml:space="preserve">
-    <value>My calendars</value>
-  </data>
   <data name="Other calendars" xml:space="preserve">
     <value>Other calendars</value>
   </data>
@@ -377,15 +368,6 @@
   </data>
   <data name="EndDate" xml:space="preserve">
     <value>EndDate</value>
-  </data>
-  <data name="Edit" xml:space="preserve">
-    <value>Edit</value>
-  </data>
-  <data name="Delete" xml:space="preserve">
-    <value>Delete</value>
-  </data>
-  <data name="Add Calendar" xml:space="preserve">
-    <value>Add Calendar</value>
   </data>
   <data name="Name" xml:space="preserve">
     <value>Name</value>
@@ -396,29 +378,8 @@
   <data name="Description" xml:space="preserve">
     <value>Description</value>
   </data>
-  <data name="Color" xml:space="preserve">
-    <value>Color</value>
-  </data>
-  <data name="Please select Color" xml:space="preserve">
-    <value>Please select Color</value>
-  </data>
-  <data name="TimeZone" xml:space="preserve">
-    <value>TimeZone</value>
-  </data>
   <data name="Close" xml:space="preserve">
     <value>Close</value>
-  </data>
-  <data name="Save" xml:space="preserve">
-    <value>Save</value>
-  </data>
-  <data name="Edit Calendar" xml:space="preserve">
-    <value>Edit Calendar</value>
-  </data>
-  <data name="Are you sure to delete?" xml:space="preserve">
-    <value>Are you sure to delete?</value>
-  </data>
-  <data name="Add Event" xml:space="preserve">
-    <value>Add Event</value>
   </data>
   <data name="All day" xml:space="preserve">
     <value>All day</value>
@@ -453,12 +414,6 @@
   <data name="Please enter Location" xml:space="preserve">
     <value>Please enter Location</value>
   </data>
-  <data name="Attachment (Only zip extension allowed.)" xml:space="preserve">
-    <value>Attachment (Only zip extension allowed.)</value>
-  </data>
-  <data name="File size must be smaller than {0}MB." xml:space="preserve">
-    <value>File size must be smaller than {0}MB.</value>
-  </data>
   <data name="My Calendar" xml:space="preserve">
     <value>My Calendar</value>
   </data>
@@ -470,18 +425,6 @@
   </data>
   <data name="Free" xml:space="preserve">
     <value>Free</value>
-  </data>
-  <data name="Add notification" xml:space="preserve">
-    <value>Add notification</value>
-  </data>
-  <data name="Edit Event" xml:space="preserve">
-    <value>Edit Event</value>
-  </data>
-  <data name="Create new calendar" xml:space="preserve">
-    <value>Create new calendar</value>
-  </data>
-  <data name="Browse calendars of interest" xml:space="preserve">
-    <value>Browse calendars of interest</value>
   </data>
   <data name="View Event" xml:space="preserve">
     <value>View Event</value>
@@ -503,8 +446,5 @@
   </data>
   <data name="Custom..." xml:space="preserve">
     <value>Custom...</value>
-  </data>
-  <data name="before at" xml:space="preserve">
-    <value>before at</value>
   </data>
 </root>

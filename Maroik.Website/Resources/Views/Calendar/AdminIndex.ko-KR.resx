@@ -480,14 +480,8 @@
   <data name="Create new calendar" xml:space="preserve">
     <value>새 달력 생성</value>
   </data>
-  <data name="Browse calendars of interest" xml:space="preserve">
-    <value>관심분야와 관련된 캘린더</value>
-  </data>
   <data name="Set Calendar Shared" xml:space="preserve">
     <value>달력 공유 설정</value>
-  </data>
-  <data name="Admin" xml:space="preserve">
-    <value>관리자</value>
   </data>
   <data name="User" xml:space="preserve">
     <value>유저</value>
@@ -509,8 +503,5 @@
   </data>
   <data name="Custom..." xml:space="preserve">
     <value>사용자 지정...</value>
-  </data>
-  <data name="before at" xml:space="preserve">
-    <value>전</value>
   </data>
 </root>

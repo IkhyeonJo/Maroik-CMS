@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -117,13 +117,13 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Must be between 1 and 30 characters." xml:space="preserve">
-    <value>Must be between 1 and 30 characters.</value>
+  <data name="Error" xml:space="preserve">
+    <value>Error</value>
   </data>
-  <data name="Title is required." xml:space="preserve">
-    <value>Title is required.</value>
+  <data name="An error occurred while processing your request." xml:space="preserve">
+    <value>An error occurred while processing your request.</value>
   </data>
-  <data name="Must be between 1 and 100 characters." xml:space="preserve">
-    <value>Must be between 1 and 100 characters.</value>
+  <data name="Request ID:" xml:space="preserve">
+    <value>Request ID:</value>
   </data>
 </root>

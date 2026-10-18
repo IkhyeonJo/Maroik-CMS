@@ -68,6 +68,18 @@ public class MenuFieldPolicyTests
         Assert.Equal("Menu.OrderNegative", result.FirstError.Code);
     }
 
+    /// <summary>
+    /// <see cref="MenuFieldPolicy.MinOrder"/> is the lowest order accepted — the <c>"Order" &gt;= 0</c> of <c>*_Order_check</c> — so the
+    /// menu forms' <c>min</c> (which reads the constant) agrees with the rule.
+    /// </summary>
+    [Fact]
+    public void MinOrder_IsTheLowestOrderAccepted()
+    {
+        Assert.Equal(0, MenuFieldPolicy.MinOrder);
+        Assert.False(MenuFieldPolicy.Validate("n", "d", "i", "c", "a", "User", MenuFieldPolicy.MinOrder).IsError);
+        Assert.Equal("Menu.OrderNegative", MenuFieldPolicy.Validate("n", "d", "i", "c", "a", "User", MenuFieldPolicy.MinOrder - 1).FirstError.Code);
+    }
+
     /// <summary>The role values the database's CHECK constraint allows, in ordinal order.</summary>
     private static readonly string[] _databaseRoles = ["Admin", "Anonymous", "User"];
 

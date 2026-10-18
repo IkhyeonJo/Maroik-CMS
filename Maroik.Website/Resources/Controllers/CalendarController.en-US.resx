@@ -138,12 +138,6 @@
   <data name="Input is invalid" xml:space="preserve">
     <value>Input is invalid</value>
   </data>
-  <data name="Name length is must be between 1 and 100 characters." xml:space="preserve">
-    <value>Name length is must be between 1 and 100 characters.</value>
-  </data>
-  <data name="Description length is must be between 0 and 16384 characters." xml:space="preserve">
-    <value>Description length is must be between 0 and 16384 characters.</value>
-  </data>
   <data name="Only zip extension allowed." xml:space="preserve">
     <value>Only zip extension allowed.</value>
   </data>

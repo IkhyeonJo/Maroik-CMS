@@ -175,26 +175,12 @@
                     </div>
 
                     <div class="card-footer">
-                        @if (loggedInAccount.Role == Role.Anonymous)
-                        {
-                            <form id="formWritePrivateNoteComment">
-                                @* ReSharper disable Html.PathError *@
-                                <img alt="" class="img-fluid img-circle img-sm" src="~/upload/Management/Profile/default-avatar.jpg">
-                                @* ReSharper restore Html.PathError *@
-                                <div class="img-push">
-                                    <input id="writePrivateNoteCommentContent" type="text" class="form-control form-control-sm" placeholder="@Localizer["Only logged in users can write comments."].Value">
-                                </div>
-                            </form>
-                        }
-                        else
-                        {
-                            <form id="formWritePrivateNoteComment" data-detailBoardId="@Model.DetailBoardId" data-detailCurrentPage="@Model.DetailCurrentPage" data-errorMessage="@Localizer["Please write the content."].Value">
-                                <img alt="" class="img-fluid img-circle img-sm" src="@loggedInAccount.AvatarImagePath">
-                                <div class="img-push">
-                                    <input id="writePrivateNoteCommentContent" type="text" class="form-control form-control-sm" placeholder="@Localizer["Press enter to post comment."].Value">
-                                </div>
-                            </form>
-                        }
+                        <form id="formWritePrivateNoteComment" data-detailBoardId="@Model.DetailBoardId" data-detailCurrentPage="@Model.DetailCurrentPage" data-errorMessage="@Localizer["Please write the content."].Value">
+                            <img alt="" class="img-fluid img-circle img-sm" src="@loggedInAccount.AvatarImagePath">
+                            <div class="img-push">
+                                <input id="writePrivateNoteCommentContent" type="text" class="form-control form-control-sm" placeholder="@Localizer["Press enter to post comment."].Value">
+                            </div>
+                        </form>
                     </div>
                     break;
                 case "edit":
@@ -325,7 +311,7 @@
                     </div>
                     <hr />
 
-                    <nav aria-label="Page navigation example">
+                    <nav aria-label="@Localizer["Page navigation"].Value">
                         @if (Model.Pager!.TotalPages > 0)
                         {
                             <ul class="pagination justify-content-center">
@@ -379,9 +365,6 @@
         case Role.User:
             <img alt="" src="~/user/dist/img/ajax-loader.gif" asp-append-version="true" />
             break;
-        case Role.Anonymous:
-            <img alt="" src="~/anonymous/dist/img/ajax-loader.gif" asp-append-version="true" />
-            break;
     }
     @* ReSharper restore Html.PathError *@
 </div>
@@ -409,8 +392,6 @@
             break;
         case Role.User:
             <script src="~/user/custom/Management/PrivateNote/js/site.js" asp-append-version="true"></script>
-            break;
-        case Role.Anonymous:
             break;
     }
 }

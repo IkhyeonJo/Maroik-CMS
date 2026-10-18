@@ -132,9 +132,6 @@
   <data name="Email or Password is wrong" xml:space="preserve">
     <value>이메일이나 비밀번호가 틀렸습니다.</value>
   </data>
-  <data name="Email verification was not completed and Agreed Service Terms was not checked. Please try sign up again." xml:space="preserve">
-    <value>이메일 인증 및 약관에 동의하지 않으셨습니다. 회원가입을 다시 진행해주십시오.</value>
-  </data>
   <data name="Email verification was not completed. Please try sign up again." xml:space="preserve">
     <value>이메일 인증이 완료되지 않았습니다. 다시 회원가입을 진행해주시길 바랍니다.</value>
   </data>
@@ -147,14 +144,8 @@
   <data name="Error occurred while processing about confirm email account status" xml:space="preserve">
     <value>이메일 확인 계정 상태 처리 중 에러가 발생하였습니다.</value>
   </data>
-  <data name="Error occurred while processing about mail send account status" xml:space="preserve">
-    <value>메일 전송 계정 상태 처리 중 에러가 발생하였습니다.</value>
-  </data>
   <data name="Error occurred while processing about reset password" xml:space="preserve">
     <value>비밀번호 초기화 중 에러가 발생하였습니다.</value>
-  </data>
-  <data name="Error occurred while processing about send mail fail account status" xml:space="preserve">
-    <value>메일 전송 실패 계정 상태 업데이트 중 에러가 발생하였습니다.</value>
   </data>
   <data name="Error occurred while processing about sending account authentication mail" xml:space="preserve">
     <value>계정 인증 메일 전송 중 에러가 발생하였습니다.</value>
@@ -168,9 +159,6 @@
   <data name="Input is invalid" xml:space="preserve">
     <value>입력값이 유효하지 않습니다.</value>
   </data>
-  <data name="is a Nickname that already exists." xml:space="preserve">
-    <value>은(는) 이미 존재하는 닉네임입니다.</value>
-  </data>
   <data name="Maroik Email Confirmation" xml:space="preserve">
     <value>Maroik 이메일 확인</value>
   </data>
@@ -179,9 +167,6 @@
   </data>
   <data name="Please check the consent form" xml:space="preserve">
     <value>동의서에 체크해주세요.</value>
-  </data>
-  <data name="Please enter another Nickname." xml:space="preserve">
-    <value>다른 닉네임을 입력해주세요.</value>
   </data>
   <data name="Please select time zone" xml:space="preserve">
     <value>시간대를 선택해 주세요</value>

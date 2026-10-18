@@ -141,9 +141,6 @@
   <data name="Please enter Created" xml:space="preserve">
     <value>생성일을 입력해주세요.</value>
   </data>
-  <data name="Please enter Deleted" xml:space="preserve">
-    <value>삭제여부를 입력해주세요.</value>
-  </data>
   <data name="Please enter Item" xml:space="preserve">
     <value>항목을 입력해주세요.</value>
   </data>

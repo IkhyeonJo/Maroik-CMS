@@ -123,9 +123,6 @@
   <data name="AvatarImagePath" xml:space="preserve">
     <value>AvatarImagePath</value>
   </data>
-  <data name="Created" xml:space="preserve">
-    <value>Created</value>
-  </data>
   <data name="Deleted" xml:space="preserve">
     <value>Deleted</value>
   </data>
@@ -141,41 +138,20 @@
   <data name="Locked" xml:space="preserve">
     <value>Locked</value>
   </data>
-  <data name="LoginAttempt" xml:space="preserve">
-    <value>LoginAttempt</value>
-  </data>
   <data name="Message" xml:space="preserve">
     <value>Message</value>
   </data>
   <data name="Password" xml:space="preserve">
     <value>Password</value>
   </data>
-  <data name="Please enter AgreedServiceTerms" xml:space="preserve">
-    <value>Please enter AgreedServiceTerms</value>
-  </data>
   <data name="Please enter AvatarImagePath" xml:space="preserve">
     <value>Please enter AvatarImagePath</value>
-  </data>
-  <data name="Please enter Created" xml:space="preserve">
-    <value>Please enter Created</value>
-  </data>
-  <data name="Please enter Deleted" xml:space="preserve">
-    <value>Please enter Deleted</value>
   </data>
   <data name="Please enter Email" xml:space="preserve">
     <value>Please enter Email</value>
   </data>
-  <data name="Please enter EmailConfirmed" xml:space="preserve">
-    <value>Please enter EmailConfirmed</value>
-  </data>
   <data name="Please enter Nickname" xml:space="preserve">
     <value>Please enter Nickname</value>
-  </data>
-  <data name="Please enter Locked" xml:space="preserve">
-    <value>Please enter Locked</value>
-  </data>
-  <data name="Please enter LoginAttempt" xml:space="preserve">
-    <value>Please enter LoginAttempt</value>
   </data>
   <data name="Please enter Message" xml:space="preserve">
     <value>Please enter Message</value>
@@ -192,9 +168,6 @@
   <data name="Please enter Role" xml:space="preserve">
     <value>Please enter Role</value>
   </data>
-  <data name="Please enter Updated" xml:space="preserve">
-    <value>Please enter Updated</value>
-  </data>
   <data name="RegistrationToken" xml:space="preserve">
     <value>RegistrationToken</value>
   </data>
@@ -203,9 +176,6 @@
   </data>
   <data name="Role" xml:space="preserve">
     <value>Role</value>
-  </data>
-  <data name="Updated" xml:space="preserve">
-    <value>Updated</value>
   </data>
   <data name="Please select time zone" xml:space="preserve">
     <value>Please select time zone</value>

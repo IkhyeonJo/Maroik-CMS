@@ -69,6 +69,24 @@ public class ManagementControllerPrivateNoteTests(MaroikWebApplicationFactory fa
         return board.Id;
     }
 
+    // -- PrivateNote page: no anonymous view ------------------------------------------
+
+    /// <summary>
+    /// The page has no Anonymous menu row, so a signed-out visitor is sent away in every mode and the view never renders for the
+    /// Anonymous role (it keeps no branch for one).
+    /// </summary>
+    [Theory]
+    [InlineData("/Management/PrivateNote")]
+    [InlineData("/Management/PrivateNote?method=detail&boardId=1")]
+    [InlineData("/Management/PrivateNote?method=write")]
+    public async Task PrivateNote_AnonymousVisitor_IsSentAway(string url)
+    {
+        var response = await _client.GetAsync(url, TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.Redirect, response.StatusCode);
+        Assert.DoesNotContain("PrivateNote", response.Headers.Location?.ToString() ?? "", StringComparison.Ordinal);
+    }
+
     // -- WritePrivateNoteBoard: success path ----------------------------------------
 
     /// <summary>Write private note board valid payload persists board.</summary>

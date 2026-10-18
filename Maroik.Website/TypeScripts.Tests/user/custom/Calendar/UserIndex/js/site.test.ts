@@ -691,6 +691,19 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
             expect(display(h, "#divViewEventAllDayUnchecked")).toBe("none");
         });
 
+        it("the shared event's reminder rows take their lower bound from the server's minLeadTimeBeforeEvent, not a number of their own", () => {
+            const h = build({ body: (html) => html.replace(hidden("minLeadTimeBeforeEvent", "0"), hidden("minLeadTimeBeforeEvent", "2")) + detailDom });
+            openView(h, {
+                allDay: true, displayStartDate: "2024-05-01", displayEndDate: "2024-05-03",
+                serializedCalendarReminders: JSON.stringify([reminder({ DaysBeforeEvent: 5 })])
+            });
+            expect(h.$("#divViewEventNotificationAllDayChecked input[type='number']").attr("min")).toBe("2");
+
+            const h2 = build({ body: (html) => html.replace(hidden("minLeadTimeBeforeEvent", "0"), hidden("minLeadTimeBeforeEvent", "2")) + detailDom });
+            openView(h2, { serializedCalendarReminders: JSON.stringify([reminder({ MinutesBeforeEvent: 10 })]) });
+            expect(h2.$("#divViewEventNotificationAllDayUnchecked input[type='number']").attr("min")).toBe("2");
+        });
+
         it("renders the shared event's reminders — day/week rows for all-day, minute..week rows for timed", () => {
             const h = setup();
             openView(h, {
