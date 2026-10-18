@@ -60,10 +60,6 @@ public class CalendarService(
         ];
 
     /// <inheritdoc />
-    public async Task<List<CalendarResponse>> GetAllCalendarsAsync(CancellationToken ct = default)
-        => [.. (await calendarRepository.GetAllOrderedByNameAsync(ct)).Select(CalendarMapper.ToResponse)];
-
-    /// <inheritdoc />
     public async Task<IReadOnlyDictionary<long, List<CalendarEventResponse>>> GetCalendarEventsAsync(IEnumerable<long> calendarIds, CancellationToken ct = default)
         => (await calendarEventRepository.GetByCalendarIdsAsync(calendarIds, ct))
             .Select(CalendarEventMapper.ToResponse)
@@ -99,39 +95,24 @@ public class CalendarService(
         // calendar that was turned private stops showing up here even if the subscription-cleanup
         // in UpdateCalendarSharedAsync failed to remove the stale OtherCalendar row.
         HashSet<long> currentlySharedCalendarIds =
-            [.. (await calendarSharedRepository.GetAllAsync(ct)).Where(s => s.User).Select(s => s.Id)];
+            [.. (await calendarSharedRepository.GetByIdsAsync(subscriptions.Select(s => s.CalendarId), ct)).Where(s => s.User).Select(s => s.Id)];
 
         return [.. subscriptions.Where(s => currentlySharedCalendarIds.Contains(s.CalendarId))];
     }
 
     /// <inheritdoc />
-    public async Task<List<CalendarSharedResponse>> GetCalendarSharedAsync(CancellationToken ct = default)
-        => [.. (await calendarSharedRepository.GetAllAsync(ct)).Select(CalendarSharedMapper.ToResponse)];
-
-    /// <inheritdoc />
     public async Task<List<CalendarResponse>> GetVisibleOtherCalendarsAsync(AccountResponse? loggedInAccount, CancellationToken ct = default)
     {
-        List<CalendarResponse> allCalendars = await GetAllCalendarsAsync(ct);
+        // A signed-in account sees the shared calendars it subscribes to; a signed-out visitor the ones shared with guests.
+        // Each is one query over the rows that qualify, not a scan of every account's calendars.
+        List<Calendar> calendars = loggedInAccount != null
+            ? await calendarRepository.GetSubscribedByAsync(loggedInAccount.Email!, ct)
+            : await calendarRepository.GetSharedWithGuestsAsync(ct);
 
-        if (loggedInAccount != null)
-        {
-            List<OtherCalendarResponse> subscriptions = await GetOtherCalendarsAsync(loggedInAccount.Email!, ct);
-            return
-            [
-                .. (from c in allCalendars
-                    join oc in subscriptions on c.Id equals oc.CalendarId
-                    select new CalendarResponse { Id = c.Id, Name = c.Name, HtmlColorCode = c.HtmlColorCode })
-                .OrderBy(x => x.Name)
-            ];
-        }
-
-        List<CalendarShared> guestShares = [.. (await calendarSharedRepository.GetAllAsync(ct)).Where(s => s.Anonymous)];
         return
         [
-            .. (from c in allCalendars
-                join cs in guestShares on c.Id equals cs.Id
-                select new CalendarResponse { Id = c.Id, Name = c.Name, HtmlColorCode = c.HtmlColorCode })
-            .OrderBy(x => x.Name)
+            .. calendars.Select(c => new CalendarResponse { Id = c.Id, Name = c.Name, HtmlColorCode = c.ColorCode.Value })
+                .OrderBy(x => x.Name)
         ];
     }
 
@@ -153,8 +134,7 @@ public class CalendarService(
             try
             {
                 // Single fetch of the whole table, reused for every ID instead of one full scan per calendar.
-                List<CalendarShared> shares = await calendarSharedRepository.GetAllAsync(ct);
-                HashSet<long> existingIds = [.. shares.Select(s => s.Id)];
+                HashSet<long> existingIds = [.. (await calendarSharedRepository.GetByIdsAsync(ids, ct)).Select(s => s.Id)];
 
                 foreach (long id in ids.Where(id => !existingIds.Contains(id)))
                     await calendarSharedRepository.CreateAsync(CalendarShared.CreatePrivate(id), ct);
@@ -188,15 +168,15 @@ public class CalendarService(
         // configured, so backfill any missing ones (single query) before reading the list below.
         await EnsureCalendarSharedAsync(calendars.Select(c => c.Id), ct);
 
-        List<CalendarSharedResponse> allShared = await GetCalendarSharedAsync(ct);
+        List<CalendarShared> shares = await calendarSharedRepository.GetByIdsAsync(calendars.Select(c => c.Id), ct);
 
         return
         [
             .. (from calendar in calendars
-                join sharedCalendar in allShared on calendar.Id equals sharedCalendar.CalendarId
+                join sharedCalendar in shares on calendar.Id equals sharedCalendar.Id
                 select new CalendarSharedSummaryResponse
                 {
-                    Id = sharedCalendar.CalendarId,
+                    Id = sharedCalendar.Id,
                     Name = calendar.Name,
                     User = sharedCalendar.User,
                     Guest = sharedCalendar.Anonymous
@@ -208,14 +188,12 @@ public class CalendarService(
     /// <inheritdoc />
     public async Task<List<CalendarBrowseSummaryResponse>> GetBrowseCalendarsOfInterestAsync(string accountEmail, CancellationToken ct = default)
     {
-        List<CalendarResponse> allCalendars = await GetAllCalendarsAsync(ct);
-        List<CalendarShared> userSharedCalendars = [.. (await calendarSharedRepository.GetAllAsync(ct)).Where(s => s.User)];
+        List<Calendar> sharedWithUsers = await calendarRepository.GetSharedWithUsersAsync(ct);
         List<OtherCalendarResponse> subscriptions = await GetOtherCalendarsAsync(accountEmail, ct);
 
         return
         [
-            .. (from calendar in allCalendars
-                join calendarShared in userSharedCalendars on calendar.Id equals calendarShared.Id
+            .. (from calendar in sharedWithUsers
                 join subscription in subscriptions on calendar.Id equals subscription.CalendarId into subscriptionGroup
                 from subscription in subscriptionGroup.DefaultIfEmpty()
                 select new CalendarBrowseSummaryResponse
@@ -457,7 +435,8 @@ public class CalendarService(
                 // Upsert: a CalendarShared row may not exist yet for a calendar being shared for the
                 // first time (EnsureCalendarSharedAsync is not guaranteed to have run). UpdateEntityAsync
                 // throws when the row is missing, which would fail the whole request.
-                HashSet<long> existingShareIds = [.. (await calendarSharedRepository.GetAllAsync(ct)).Select(s => s.Id)];
+                HashSet<long> existingShareIds =
+                    [.. (await calendarSharedRepository.GetByIdsAsync(calendarSharedRequests.Select(req => req.CalendarId), ct)).Select(s => s.Id)];
 
                 List<CalendarShared> shares =
                     [.. calendarSharedRequests.Select(req => CalendarShared.CreatePrivate(req.CalendarId).Update(req.User, req.Anonymous))];

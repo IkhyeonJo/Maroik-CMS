@@ -29,8 +29,11 @@ public class CalendarSharedRepository(ApplicationDbContext context)
     };
 
     /// <inheritdoc />
-    public Task<List<CalendarShared>> GetAllAsync(CancellationToken ct = default)
-        => QueryAllAsync(ct: ct);
+    public async Task<List<CalendarShared>> GetByIdsAsync(IEnumerable<long> calendarIds, CancellationToken ct = default)
+    {
+        long[] ids = [.. calendarIds.Distinct()];
+        return ids.Length == 0 ? [] : await QueryAsync(e => ids.Contains(e.CalendarId), ct: ct);
+    }
 
     /// <inheritdoc />
     public async Task<List<CalendarShared>> GetByIdsForUpdateAsync(IEnumerable<long> calendarIds, CancellationToken ct = default)

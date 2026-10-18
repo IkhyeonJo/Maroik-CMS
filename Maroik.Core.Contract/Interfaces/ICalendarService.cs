@@ -11,9 +11,6 @@ public interface ICalendarService
     /// <summary>Returns calendars owned by the given account.</summary>
     Task<List<CalendarResponse>> GetCalendarsAsync(string email, CancellationToken ct = default);
 
-    /// <summary>Returns every calendar in the system (used for shared-calendar discovery).</summary>
-    Task<List<CalendarResponse>> GetAllCalendarsAsync(CancellationToken ct = default);
-
     /// <summary>
     /// Returns all events belonging to any of the given calendars, fetched in a single query
     /// and grouped by calendar ID for per-calendar lookup. A calendar ID with no events is not
@@ -33,8 +30,6 @@ public interface ICalendarService
     /// <summary>Returns calendars that the given account has subscribed to from other users.</summary>
     Task<List<OtherCalendarResponse>> GetOtherCalendarsAsync(string email, CancellationToken ct = default);
 
-    /// <summary>Returns the sharing-permission rows for all calendars.</summary>
-    Task<List<CalendarSharedResponse>> GetCalendarSharedAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Returns the calendars the caller can see beyond ones they own: calendars they subscribe

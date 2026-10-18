@@ -10,8 +10,7 @@ namespace Maroik.Core.Repository.Tests.Repositories;
 /// Tests for <see cref="CalendarSharedRepository"/> against a real PostgreSQL database
 /// (Testcontainers) preloaded with the <c>Init.sql</c> schema and seed data. <c>CalendarShared.CalendarId</c> is both the primary key and the FK
 /// <c>CalendarShared_fk_0</c> to <c>Calendar.ID</c> (unenforced by InMemory), so every test creates
-/// a real parent calendar; the global <c>GetAllAsync</c> assertions are scoped to the ids this test
-/// created.
+/// a real parent calendar.
 /// </summary>
 public sealed class CalendarSharedRepositoryTests(DatabaseFixture database) : RepositoryTestBase(database)
 {
@@ -33,22 +32,26 @@ public sealed class CalendarSharedRepositoryTests(DatabaseFixture database) : Re
         Context.ChangeTracker.Clear();
     }
 
-    // -- GetAllAsync ------------------------------------------------------
+    // -- GetByIdsAsync ----------------------------------------------------
 
-    /// <summary>Verifies that <c>GetAllAsync</c> includes every entry this test inserted.</summary>
+    /// <summary>Only the sharing rows of the requested calendars come back, with their flags.</summary>
     [Fact]
-    public async Task GetAllAsync_ReturnsInsertedEntries()
+    public async Task GetByIdsAsync_ReturnsOnlyTheRequestedEntries()
     {
         long c1 = await InsertCalendarAsync();
         long c2 = await InsertCalendarAsync();
         long c3 = await InsertCalendarAsync();
         await SeedAsync(MakeShared(c1, user: true), MakeShared(c2, anonymous: true), MakeShared(c3));
 
-        List<CalendarShared> result = await Sut.GetAllAsync(TestContext.Current.CancellationToken);
+        List<CalendarShared> result = await Sut.GetByIdsAsync([c1, c2], TestContext.Current.CancellationToken);
 
-        long[] mine = [c1, c2, c3];
-        Assert.Equal(3, result.Count(s => mine.Contains(s.Id)));
+        Assert.Equal([(c1, true, false), (c2, false, true)], result.OrderBy(s => s.Id).Select(s => (s.Id, s.User, s.Anonymous)));
     }
+
+    /// <summary>No ids, no rows (and no query over the whole table).</summary>
+    [Fact]
+    public async Task GetByIdsAsync_ReturnsEmptyList_ForEmptyIdSet()
+        => Assert.Empty(await Sut.GetByIdsAsync([], TestContext.Current.CancellationToken));
 
     // -- CreateAsync --------------------------------------------------
 

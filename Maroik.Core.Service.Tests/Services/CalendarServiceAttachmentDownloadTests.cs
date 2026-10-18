@@ -49,18 +49,19 @@ public class CalendarServiceAttachmentDownloadTests
     private static AccountResponse Viewer(string email = "alice@example.com") =>
         new() { Email = email, Nickname = "Alice", Role = Role.User };
 
+    /// <summary>Calendar 3, owned by alice@example.com, holding event 7.</summary>
+    private static readonly Calendar _calendar = Calendar.Reconstitute(3, "alice@example.com", "Mine", null, "UTC", "#3788d8", DateTime.UtcNow, DateTime.UtcNow);
+
     /// <summary>
-    /// Arranges calendar 3 owned by alice@example.com (also the only calendar in the site) holding event 7,
-    /// which has a stored attachment "report.zip"; nothing is shared or subscribed.
+    /// Arranges calendar 3 owned by alice@example.com holding event 7, which has a stored attachment "report.zip"; nothing is
+    /// shared or subscribed (the repository's guest-shared and subscribed queries return nothing).
     /// </summary>
     private void GivenAnEventWithAnAttachment()
     {
-        Calendar calendar = Calendar.Reconstitute(3, "alice@example.com", "Mine", null, "UTC", "#3788d8", DateTime.UtcNow, DateTime.UtcNow);
         _calendarRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        _calendarRepo.Setup(r => r.GetByAccountEmailAsync("alice@example.com", It.IsAny<CancellationToken>())).ReturnsAsync([calendar]);
-        _calendarRepo.Setup(r => r.GetAllOrderedByNameAsync(It.IsAny<CancellationToken>())).ReturnsAsync([calendar]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        _otherCalendarRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _calendarRepo.Setup(r => r.GetByAccountEmailAsync("alice@example.com", It.IsAny<CancellationToken>())).ReturnsAsync([_calendar]);
+        _calendarRepo.Setup(r => r.GetSharedWithGuestsAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _calendarRepo.Setup(r => r.GetSubscribedByAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
         _eventRepo.Setup(r => r.FindByIdAsync(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync(CalendarEvent.Reconstitute(7, 3, "t", null, false, DateTime.UtcNow, DateTime.UtcNow.AddHours(1),
                 null, null, null, null, null, DateTime.UtcNow, DateTime.UtcNow));
@@ -68,9 +69,13 @@ public class CalendarServiceAttachmentDownloadTests
             .ReturnsAsync(CalendarEventAttachedFile.Reconstitute(1, 7, 4, "report", ".zip", StoredPath));
     }
 
-    /// <summary>Calendar 3 is shared with the given audiences.</summary>
-    private void GivenTheCalendarIsShared(bool user, bool anonymous) =>
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([CalendarShared.Reconstitute(3, user, anonymous)]);
+    /// <summary>Calendar 3 is shared with guests: the repository's guest query returns it.</summary>
+    private void GivenSharedWithGuests() =>
+        _calendarRepo.Setup(r => r.GetSharedWithGuestsAsync(It.IsAny<CancellationToken>())).ReturnsAsync([_calendar]);
+
+    /// <summary><paramref name="email"/> subscribes to calendar 3 while it is shared with users: the repository's subscribed query returns it.</summary>
+    private void GivenSubscribed(string email) =>
+        _calendarRepo.Setup(r => r.GetSubscribedByAsync(email, It.IsAny<CancellationToken>())).ReturnsAsync([_calendar]);
 
     /// <summary>Asserts the call was refused as a missing event, nothing was opened, and the denial was logged.</summary>
     private void AssertRefusedAndLogged(ServiceResult result, AttachmentDownload? file)
@@ -106,7 +111,6 @@ public class CalendarServiceAttachmentDownloadTests
     public async Task OpenCalendarEventAttachedFileAsync_RefusesAndLogs_AnAccountThatMayNotSeeTheCalendar()
     {
         GivenAnEventWithAnAttachment();
-        GivenTheCalendarIsShared(user: true, anonymous: false);
 
         var (result, file) = await CreateSut().OpenCalendarEventAttachedFileAsync(7, Viewer("mallory@example.com"), TestContext.Current.CancellationToken);
 
@@ -118,9 +122,7 @@ public class CalendarServiceAttachmentDownloadTests
     public async Task OpenCalendarEventAttachedFileAsync_ReturnsTheStream_ToASubscriberOfASharedCalendar()
     {
         GivenAnEventWithAnAttachment();
-        GivenTheCalendarIsShared(user: true, anonymous: false);
-        _otherCalendarRepo.Setup(r => r.GetByAccountEmailAsync("bob@example.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([OtherCalendar.Reconstitute("bob@example.com", 3)]);
+        GivenSubscribed("bob@example.com");
         _attachmentContent.Setup(a => a.OpenFileAsync(StoredPath, It.IsAny<CancellationToken>())).ReturnsAsync(new MemoryStream([1]));
 
         var (result, file) = await CreateSut().OpenCalendarEventAttachedFileAsync(7, Viewer("bob@example.com"), TestContext.Current.CancellationToken);
@@ -134,7 +136,7 @@ public class CalendarServiceAttachmentDownloadTests
     public async Task OpenCalendarEventAttachedFileAsync_ReturnsTheStream_ToAnAnonymousVisitor_OnAnAnonymouslySharedCalendar()
     {
         GivenAnEventWithAnAttachment();
-        GivenTheCalendarIsShared(user: false, anonymous: true);
+        GivenSharedWithGuests();
         _attachmentContent.Setup(a => a.OpenFileAsync(StoredPath, It.IsAny<CancellationToken>())).ReturnsAsync(new MemoryStream([1]));
 
         var (result, _) = await CreateSut().OpenCalendarEventAttachedFileAsync(7, null, TestContext.Current.CancellationToken);
@@ -147,7 +149,6 @@ public class CalendarServiceAttachmentDownloadTests
     public async Task OpenCalendarEventAttachedFileAsync_RefusesAndLogs_AnAnonymousVisitor_OnACalendarNotSharedWithThem()
     {
         GivenAnEventWithAnAttachment();
-        GivenTheCalendarIsShared(user: true, anonymous: false);
 
         var (result, file) = await CreateSut().OpenCalendarEventAttachedFileAsync(7, null, TestContext.Current.CancellationToken);
 

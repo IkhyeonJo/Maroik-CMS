@@ -75,6 +75,11 @@ public class CalendarServiceTests
 
     // -- Helpers --------------------------------------------------------------
 
+    /// <summary>The sharing rows the repository holds: <c>GetByIdsAsync</c> returns those of the requested calendars, as the real query does.</summary>
+    private void GivenShares(IReadOnlyList<CalendarShared> rows) =>
+        _sharedRepo.Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<long>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<long> ids, CancellationToken _) => [.. rows.Where(s => ids.Contains(s.Id))]);
+
     /// <summary>A persisted calendar owned by <paramref name="email"/>.</summary>
     private static Calendar MakeCalendar(long id = 1, string name = "MyCalendar", string email = "user@example.com") =>
         Calendar.Reconstitute(
@@ -417,7 +422,7 @@ public class CalendarServiceTests
     [Fact]
     public async Task EnsureCalendarSharedAsync_CreatesShared_WhenNotAlreadyShared()
     {
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        GivenShares([]);
         _sharedRepo.Setup(r => r.CreateAsync(It.IsAny<CalendarShared>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
@@ -431,8 +436,7 @@ public class CalendarServiceTests
     [Fact]
     public async Task EnsureCalendarSharedAsync_DoesNotCreate_WhenAlreadyShared()
     {
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CalendarShared.Reconstitute(1, false, false)]);
+        GivenShares([CalendarShared.Reconstitute(1, false, false)]);
         var sut = CreateSut();
 
         ServiceResult result = await sut.EnsureCalendarSharedAsync([1L], TestContext.Current.CancellationToken);
@@ -446,15 +450,14 @@ public class CalendarServiceTests
     [Fact]
     public async Task EnsureCalendarSharedAsync_Batch_OnlyCreatesMissingIds_WithSingleFetch()
     {
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CalendarShared.Reconstitute(2, false, false)]);
+        GivenShares([CalendarShared.Reconstitute(2, false, false)]);
         _sharedRepo.Setup(r => r.CreateAsync(It.IsAny<CalendarShared>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var sut = CreateSut();
 
         ServiceResult result = await sut.EnsureCalendarSharedAsync([1L, 2L, 3L], TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
-        _sharedRepo.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _sharedRepo.Verify(r => r.GetByIdsAsync(It.IsAny<IEnumerable<long>>(), It.IsAny<CancellationToken>()), Times.Once);
         _sharedRepo.Verify(r => r.CreateAsync(It.Is<CalendarShared>(s => s.Id == 1), It.IsAny<CancellationToken>()), Times.Once);
         _sharedRepo.Verify(r => r.CreateAsync(It.Is<CalendarShared>(s => s.Id == 2), It.IsAny<CancellationToken>()), Times.Never);
         _sharedRepo.Verify(r => r.CreateAsync(It.Is<CalendarShared>(s => s.Id == 3), It.IsAny<CancellationToken>()), Times.Once);
@@ -472,8 +475,7 @@ public class CalendarServiceTests
         const string email = "user@example.com";
         _calendarRepo.Setup(r => r.GetByAccountEmailAsync(email, It.IsAny<CancellationToken>()))
             .ReturnsAsync([MakeCalendar(id: 1, name: "Personal", email: email)]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CalendarShared.Reconstitute(1, true, false)]);
+        GivenShares([CalendarShared.Reconstitute(1, true, false)]);
         var sut = CreateSut();
 
         List<CalendarSharedSummaryResponse> result =
@@ -496,8 +498,7 @@ public class CalendarServiceTests
     {
         const string email = "user@example.com";
         _calendarRepo.Setup(r => r.GetByAccountEmailAsync(email, It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CalendarShared.Reconstitute(99, true, true)]);
+        GivenShares([CalendarShared.Reconstitute(99, true, true)]);
         var sut = CreateSut();
 
         List<CalendarSharedSummaryResponse> result =
@@ -516,10 +517,9 @@ public class CalendarServiceTests
     public async Task GetBrowseCalendarsOfInterestAsync_FlagsAlreadySubscribedCalendar()
     {
         const string email = "user@example.com";
-        _calendarRepo.Setup(r => r.GetAllOrderedByNameAsync(It.IsAny<CancellationToken>()))
+        _calendarRepo.Setup(r => r.GetSharedWithUsersAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([MakeCalendar(id: 1, name: "Shared A"), MakeCalendar(id: 2, name: "Shared B")]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CalendarShared.Reconstitute(1, true, false), CalendarShared.Reconstitute(2, true, false)]);
+        GivenShares([CalendarShared.Reconstitute(1, true, false), CalendarShared.Reconstitute(2, true, false)]);
         _otherCalendarRepo.Setup(r => r.GetByAccountEmailAsync(email, It.IsAny<CancellationToken>()))
             .ReturnsAsync([OtherCalendar.Reconstitute(email, 1)]);
         var sut = CreateSut();
@@ -532,26 +532,17 @@ public class CalendarServiceTests
         Assert.False(result.Single(x => x.Id == 2).Checked);
     }
 
-    /// <summary>
-    /// Verifies that <c>GetBrowseCalendarsOfInterestAsync</c> excludes a calendar shared only with
-    /// anonymous visitors (User = false), matching the controller's prior <c>.Where(x =&gt; x.User)</c>
-    /// pre-filter.
-    /// </summary>
+    /// <summary>The browse list is the repository's calendars shared with users; which ones qualify is that query's job.</summary>
     [Fact]
-    public async Task GetBrowseCalendarsOfInterestAsync_ExcludesCalendarSharedOnlyWithAnonymousVisitors()
+    public async Task GetBrowseCalendarsOfInterestAsync_ListsTheCalendarsSharedWithUsers()
     {
         const string email = "user@example.com";
-        _calendarRepo.Setup(r => r.GetAllOrderedByNameAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([MakeCalendar(id: 1, name: "GuestOnly")]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CalendarShared.Reconstitute(1, false, true)]);
+        _calendarRepo.Setup(r => r.GetSharedWithUsersAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         _otherCalendarRepo.Setup(r => r.GetByAccountEmailAsync(email, It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var sut = CreateSut();
+        GivenShares([]);
 
-        List<CalendarBrowseSummaryResponse> result =
-            await sut.GetBrowseCalendarsOfInterestAsync(email, TestContext.Current.CancellationToken);
-
-        Assert.Empty(result);
+        Assert.Empty(await CreateSut().GetBrowseCalendarsOfInterestAsync(email, TestContext.Current.CancellationToken));
+        _calendarRepo.Verify(r => r.GetSharedWithUsersAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // -- CreateCalendarEventAsync ---------------------------------------------
@@ -1157,11 +1148,9 @@ public class CalendarServiceTests
         const string email = "admin-a@example.com";
         _calendarRepo.Setup(r => r.GetByAccountEmailAsync(email, It.IsAny<CancellationToken>()))
             .ReturnsAsync([MakeCalendar(id: 1, email: email)]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CalendarShared.Reconstitute(1, false, false)]);
+        GivenShares([CalendarShared.Reconstitute(1, false, false)]);
         _sharedRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<CalendarShared>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _sharedRepo.Setup(r => r.CreateAsync(It.IsAny<CalendarShared>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        _otherCalendarRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         var sut = CreateSut();
 
         var requests = new List<CalendarSharedRequest> { new() { CalendarId = 1, User = true, Anonymous = false } };
@@ -1183,10 +1172,9 @@ public class CalendarServiceTests
         const string email = "admin-a@example.com";
         _calendarRepo.Setup(r => r.GetByAccountEmailAsync(email, It.IsAny<CancellationToken>()))
             .ReturnsAsync([MakeCalendar(id: 1, email: email)]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        GivenShares([]);
         _sharedRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<CalendarShared>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         _sharedRepo.Setup(r => r.CreateAsync(It.IsAny<CalendarShared>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        _otherCalendarRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         var sut = CreateSut();
 
         var requests = new List<CalendarSharedRequest> { new() { CalendarId = 1, User = true, Anonymous = false } };
@@ -1209,8 +1197,7 @@ public class CalendarServiceTests
     {
         _otherCalendarRepo.Setup(r => r.GetByAccountEmailAsync("user@example.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync([OtherCalendar.Reconstitute("user@example.com", 1), OtherCalendar.Reconstitute("user@example.com", 2)]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CalendarShared.Reconstitute(1, user: true, anonymous: false), CalendarShared.Reconstitute(2, user: false, anonymous: true)]);
+        GivenShares([CalendarShared.Reconstitute(1, user: true, anonymous: false), CalendarShared.Reconstitute(2, user: false, anonymous: true)]);
 
         List<OtherCalendarResponse> result = await CreateSut().GetOtherCalendarsAsync("user@example.com", TestContext.Current.CancellationToken);
 
@@ -1221,32 +1208,27 @@ public class CalendarServiceTests
     [Fact]
     public async Task GetVisibleOtherCalendarsAsync_ForASignedInAccount_ReturnsSubscribedCalendarsSortedByName()
     {
-        _calendarRepo.Setup(r => r.GetAllOrderedByNameAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([MakeCalendar(1, "Zeta"), MakeCalendar(2, "Alpha"), MakeCalendar(3, "Unsubscribed")]);
-        _otherCalendarRepo.Setup(r => r.GetByAccountEmailAsync("user@example.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([OtherCalendar.Reconstitute("user@example.com", 1), OtherCalendar.Reconstitute("user@example.com", 2)]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CalendarShared.Reconstitute(1, true, false), CalendarShared.Reconstitute(2, true, false), CalendarShared.Reconstitute(3, true, false)]);
+        _calendarRepo.Setup(r => r.GetSubscribedByAsync("user@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([MakeCalendar(1, "Zeta"), MakeCalendar(2, "Alpha")]);
 
         List<CalendarResponse> result = await CreateSut().GetVisibleOtherCalendarsAsync(
             new AccountResponse { Email = "user@example.com" }, TestContext.Current.CancellationToken);
 
         Assert.Equal(["Alpha", "Zeta"], result.Select(c => c.Name));
+        _calendarRepo.Verify(r => r.GetSharedWithGuestsAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     /// <summary>An anonymous visitor sees only calendars an admin shared with guests, sorted by name.</summary>
     [Fact]
     public async Task GetVisibleOtherCalendarsAsync_ForAnAnonymousVisitor_ReturnsOnlyGuestSharedCalendars()
     {
-        _calendarRepo.Setup(r => r.GetAllOrderedByNameAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([MakeCalendar(1, "Zeta"), MakeCalendar(2, "Alpha"), MakeCalendar(3, "UsersOnly")]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CalendarShared.Reconstitute(1, false, true), CalendarShared.Reconstitute(2, false, true), CalendarShared.Reconstitute(3, true, false)]);
+        _calendarRepo.Setup(r => r.GetSharedWithGuestsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([MakeCalendar(1, "Zeta"), MakeCalendar(2, "Alpha")]);
 
         List<CalendarResponse> result = await CreateSut().GetVisibleOtherCalendarsAsync(null, TestContext.Current.CancellationToken);
 
         Assert.Equal(["Alpha", "Zeta"], result.Select(c => c.Name));
-        _otherCalendarRepo.Verify(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _calendarRepo.Verify(r => r.GetSubscribedByAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // -- EnsureCalendarSharedAsync: races and failures ---------------------------
@@ -1259,7 +1241,7 @@ public class CalendarServiceTests
     [Fact]
     public async Task EnsureCalendarSharedAsync_RetriesInAFreshTransaction_AfterLosingThePrimaryKeyRace()
     {
-        _sharedRepo.SetupSequence(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _sharedRepo.SetupSequence(r => r.GetByIdsAsync(It.IsAny<IEnumerable<long>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([])
             .ReturnsAsync([CalendarShared.Reconstitute(5, false, false)]);
         _sharedRepo.SetupSequence(r => r.CreateAsync(It.IsAny<CalendarShared>(), It.IsAny<CancellationToken>()))
@@ -1277,7 +1259,7 @@ public class CalendarServiceTests
     [Fact]
     public async Task EnsureCalendarSharedAsync_GivesUp_WhenThePrimaryKeyRaceNeverResolves()
     {
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        GivenShares([]);
         _sharedRepo.Setup(r => r.CreateAsync(It.IsAny<CalendarShared>(), It.IsAny<CancellationToken>())).ThrowsAsync(SharedPkViolation());
 
         ServiceResult result = await CreateSut().EnsureCalendarSharedAsync([5], TestContext.Current.CancellationToken);
@@ -1294,7 +1276,7 @@ public class CalendarServiceTests
     [Fact]
     public async Task EnsureCalendarSharedAsync_DoesNotRetry_WhenTheFailureIsNotThePrimaryKeyRace()
     {
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("db down"));
+        _sharedRepo.Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<long>>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("db down"));
 
         ServiceResult result = await CreateSut().EnsureCalendarSharedAsync([5], TestContext.Current.CancellationToken);
 
@@ -1446,8 +1428,7 @@ public class CalendarServiceTests
         const string email = "admin@example.com";
         _calendarRepo.Setup(r => r.GetByAccountEmailAsync(email, It.IsAny<CancellationToken>()))
             .ReturnsAsync([MakeCalendar(1, "A", email), MakeCalendar(2, "B", email)]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CalendarShared.Reconstitute(1, true, false), CalendarShared.Reconstitute(2, true, false)]);
+        GivenShares([CalendarShared.Reconstitute(1, true, false), CalendarShared.Reconstitute(2, true, false)]);
 
         ServiceResult result = await CreateSut().UpdateCalendarSharedAsync(email,
         [
@@ -1466,7 +1447,7 @@ public class CalendarServiceTests
     {
         const string email = "admin@example.com";
         _calendarRepo.Setup(r => r.GetByAccountEmailAsync(email, It.IsAny<CancellationToken>())).ReturnsAsync([MakeCalendar(1, "A", email)]);
-        _sharedRepo.SetupSequence(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _sharedRepo.SetupSequence(r => r.GetByIdsAsync(It.IsAny<IEnumerable<long>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([])
             .ReturnsAsync([CalendarShared.Reconstitute(1, false, false)]);
         _sharedRepo.Setup(r => r.CreateAsync(It.IsAny<CalendarShared>(), It.IsAny<CancellationToken>())).ThrowsAsync(SharedPkViolation());
@@ -1485,7 +1466,7 @@ public class CalendarServiceTests
     {
         const string email = "admin@example.com";
         _calendarRepo.Setup(r => r.GetByAccountEmailAsync(email, It.IsAny<CancellationToken>())).ReturnsAsync([MakeCalendar(1, "A", email)]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        GivenShares([]);
         _sharedRepo.Setup(r => r.CreateAsync(It.IsAny<CalendarShared>(), It.IsAny<CancellationToken>())).ThrowsAsync(SharedPkViolation());
 
         ServiceResult result = await CreateSut().UpdateCalendarSharedAsync(email,
@@ -1504,7 +1485,7 @@ public class CalendarServiceTests
     {
         const string email = "admin@example.com";
         _calendarRepo.Setup(r => r.GetByAccountEmailAsync(email, It.IsAny<CancellationToken>())).ReturnsAsync([MakeCalendar(1, "A", email)]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("db down"));
+        _sharedRepo.Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<long>>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("db down"));
 
         ServiceResult result = await CreateSut().UpdateCalendarSharedAsync(email,
             [new CalendarSharedRequest { CalendarId = 1, User = true, Anonymous = false }], TestContext.Current.CancellationToken);
@@ -1693,7 +1674,7 @@ public class CalendarServiceTests
     public async Task EnsureCalendarSharedAsync_LogsAnUnexpectedFailure_WithTheCalendarIds()
     {
         var thrown = new InvalidOperationException("db down");
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+        _sharedRepo.Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<long>>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
 
         await CreateSut().EnsureCalendarSharedAsync([5, 6], TestContext.Current.CancellationToken);
 
@@ -1704,7 +1685,7 @@ public class CalendarServiceTests
     [Fact]
     public async Task EnsureCalendarSharedAsync_LogsGivingUp_WithTheIdsAndTheRetryCount()
     {
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        GivenShares([]);
         _sharedRepo.Setup(r => r.CreateAsync(It.IsAny<CalendarShared>(), It.IsAny<CancellationToken>())).ThrowsAsync(SharedPkViolation());
 
         await CreateSut().EnsureCalendarSharedAsync([5, 6], TestContext.Current.CancellationToken);
@@ -1717,7 +1698,7 @@ public class CalendarServiceTests
     public async Task GetCalendarSharedSummariesAsync_BackfillsMissingRows_AndSortsByName()
     {
         GivenOwnedCalendars(MakeCalendar(1, "Work"), MakeCalendar(2, "Home"));
-        _sharedRepo.SetupSequence(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _sharedRepo.SetupSequence(r => r.GetByIdsAsync(It.IsAny<IEnumerable<long>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([CalendarShared.Reconstitute(1, false, false)])
             .ReturnsAsync([CalendarShared.Reconstitute(1, false, false), CalendarShared.Reconstitute(2, false, false)]);
 
@@ -1731,10 +1712,9 @@ public class CalendarServiceTests
     [Fact]
     public async Task GetBrowseCalendarsOfInterestAsync_SortsByName()
     {
-        _calendarRepo.Setup(r => r.GetAllOrderedByNameAsync(It.IsAny<CancellationToken>()))
+        _calendarRepo.Setup(r => r.GetSharedWithUsersAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([MakeCalendar(1, "Work", "a@example.com"), MakeCalendar(2, "Home", "b@example.com")]);
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CalendarShared.Reconstitute(1, true, false), CalendarShared.Reconstitute(2, true, false)]);
+        GivenShares([CalendarShared.Reconstitute(1, true, false), CalendarShared.Reconstitute(2, true, false)]);
         _otherCalendarRepo.Setup(r => r.GetByAccountEmailAsync(Owner, It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
         List<CalendarBrowseSummaryResponse> result = await CreateSut().GetBrowseCalendarsOfInterestAsync(Owner, TestContext.Current.CancellationToken);
@@ -1962,7 +1942,7 @@ public class CalendarServiceTests
     public async Task UpdateCalendarSharedAsync_RollsBackEveryLostRace_AndLogsGivingUp()
     {
         GivenOwnedCalendars(MakeCalendar(1));
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        GivenShares([]);
         _sharedRepo.Setup(r => r.CreateAsync(It.IsAny<CalendarShared>(), It.IsAny<CancellationToken>())).ThrowsAsync(SharedPkViolation());
 
         await CreateSut().UpdateCalendarSharedAsync(Owner, [new CalendarSharedRequest { CalendarId = 1, User = true }], TestContext.Current.CancellationToken);
@@ -1977,7 +1957,7 @@ public class CalendarServiceTests
     {
         GivenOwnedCalendars(MakeCalendar(1));
         var thrown = new InvalidOperationException("db down");
-        _sharedRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
+        _sharedRepo.Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<long>>(), It.IsAny<CancellationToken>())).ThrowsAsync(thrown);
 
         await CreateSut().UpdateCalendarSharedAsync(Owner, [new CalendarSharedRequest { CalendarId = 1, User = true }], TestContext.Current.CancellationToken);
 

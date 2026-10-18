@@ -39,9 +39,26 @@ public class CalendarRepository(ApplicationDbContext context)
     public Task<List<Calendar>> GetByAccountEmailAsync(string accountEmail, CancellationToken ct = default)
         => QueryAsync(e => e.AccountEmail == accountEmail, ct: ct);
 
+    // The three sharing reads below are display reads (never saved back): one query each over the rows that qualify, untracked,
+    // so a page that lists shared calendars no longer loads every account's calendars and every sharing row to filter in memory.
+
     /// <inheritdoc />
-    public Task<List<Calendar>> GetAllOrderedByNameAsync(CancellationToken ct = default)
-        => QueryAllAsync(q => q.OrderBy(e => e.Name), ct: ct);
+    public Task<List<Calendar>> GetSharedWithGuestsAsync(CancellationToken ct = default)
+        => ReadAsync(Set.Where(c => Context.CalendarShareds.Any(s => s.CalendarId == c.Id && s.Anonymous)), ct);
+
+    /// <inheritdoc />
+    public Task<List<Calendar>> GetSharedWithUsersAsync(CancellationToken ct = default)
+        => ReadAsync(Set.Where(c => Context.CalendarShareds.Any(s => s.CalendarId == c.Id && s.User)), ct);
+
+    /// <inheritdoc />
+    public Task<List<Calendar>> GetSubscribedByAsync(string accountEmail, CancellationToken ct = default)
+        => ReadAsync(Set.Where(c =>
+            Context.OtherCalendars.Any(o => o.CalendarId == c.Id && o.AccountEmail == accountEmail)
+            && Context.CalendarShareds.Any(s => s.CalendarId == c.Id && s.User)), ct);
+
+    /// <summary>Runs <paramref name="query"/> untracked and maps the rows to <see cref="Calendar"/>s.</summary>
+    private async Task<List<Calendar>> ReadAsync(IQueryable<OrmCalendar> query, CancellationToken ct)
+        => [.. (await query.AsNoTracking().ToListAsync(ct)).Select(ToDomain)];
 
     /// <inheritdoc />
     public async Task<Calendar?> FindByIdForUpdateAsync(long id, CancellationToken ct = default)

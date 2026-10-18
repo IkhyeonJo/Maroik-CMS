@@ -2,6 +2,8 @@ using Maroik.Core.Domain.Calendars;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
 using OrmCalendar = Maroik.Core.PostgreSQL.Models.Calendar;
+using OrmCalendarShared = Maroik.Core.PostgreSQL.Models.CalendarShared;
+using OrmOtherCalendar = Maroik.Core.PostgreSQL.Models.OtherCalendar;
 
 namespace Maroik.Core.Repository.Tests.Repositories;
 
@@ -10,8 +12,7 @@ namespace Maroik.Core.Repository.Tests.Repositories;
 /// preloaded with the <c>Init.sql</c> schema and seed data (the demo account's calendar). <c>Calendar</c>
 /// has the FK <c>Calendar_fk_0</c> to <c>Account.Email</c> and the checks
 /// <c>Calendar_HtmlColorCode_check</c> (<c>^#[0-9A-Fa-f]{6}$</c>) and <c>Calendar_Name_check</c>.
-/// The global <c>GetAllOrderedByNameAsync</c> also returns the seed rows, so its assertions are
-/// scoped to this test's own account.
+/// The sharing queries also see the seed rows, so their assertions are scoped to the calendars this test created.
 /// </summary>
 public sealed class CalendarRepositoryTests(DatabaseFixture database) : RepositoryTestBase(database)
 {
@@ -38,36 +39,84 @@ public sealed class CalendarRepositoryTests(DatabaseFixture database) : Reposito
         Context.ChangeTracker.Clear();
     }
 
-    // -- GetAllOrderedByNameAsync -----------------------------------------------
+    // -- Shared and subscribed calendars ------------------------------------------
 
-    /// <summary>Verifies that <c>GetAllOrderedByNameAsync</c> includes every calendar this test inserted.</summary>
-    [Fact]
-    public async Task GetAllOrderedByNameAsync_ReturnsInsertedCalendars()
+    /// <summary>Inserts a calendar owned by a fresh account with the given sharing row (none when both flags are null) and returns its id.</summary>
+    private async Task<long> SharedCalendarAsync(bool? user, bool? anonymous)
     {
-        string alice = UniqueEmail("alice");
-        await SeedAsync(MakeCalendar(alice, Unique("Work")), MakeCalendar(alice, Unique("Personal")));
-
-        List<Calendar> result = await Sut.GetAllOrderedByNameAsync(TestContext.Current.CancellationToken);
-
-        Assert.Equal(2, result.Count(c => c.AccountEmail.Value == alice));
+        long id = await InsertCalendarAsync();
+        if (user is { } u && anonymous is { } a)
+        {
+            await Context.CalendarShareds.AddAsync(new OrmCalendarShared { CalendarId = id, User = u, Anonymous = a });
+            await Context.SaveChangesAsync();
+            Context.ChangeTracker.Clear();
+        }
+        return id;
     }
 
-    /// <summary>Verifies that <c>GetAllOrderedByNameAsync</c> returns rows in <c>Name</c> order.</summary>
+    /// <summary>Subscribes <paramref name="email"/> to each of <paramref name="calendarIds"/>.</summary>
+    private async Task SubscribeAsync(string email, params long[] calendarIds)
+    {
+        await EnsureAccountsAsync(email);
+        await Context.OtherCalendars.AddRangeAsync(calendarIds.Select(id => new OrmOtherCalendar { AccountEmail = email, CalendarId = id }));
+        await Context.SaveChangesAsync();
+        Context.ChangeTracker.Clear();
+    }
+
+    /// <summary>Only the calendars shared with guests (CalendarShared.Anonymous) come back — not the user-only, private or unconfigured ones.</summary>
     [Fact]
-    public async Task GetAllOrderedByNameAsync_ReturnsOrderedByName()
+    public async Task GetSharedWithGuestsAsync_ReturnsOnlyCalendarsSharedWithGuests()
+    {
+        long guests = await SharedCalendarAsync(user: false, anonymous: true);
+        long both = await SharedCalendarAsync(user: true, anonymous: true);
+        long usersOnly = await SharedCalendarAsync(user: true, anonymous: false);
+        long privateOne = await SharedCalendarAsync(user: false, anonymous: false);
+        long unconfigured = await SharedCalendarAsync(user: null, anonymous: null);
+
+        HashSet<long> ids = [.. (await Sut.GetSharedWithGuestsAsync(TestContext.Current.CancellationToken)).Select(c => c.Id)];
+
+        Assert.Contains(guests, ids);
+        Assert.Contains(both, ids);
+        Assert.DoesNotContain(usersOnly, ids);
+        Assert.DoesNotContain(privateOne, ids);
+        Assert.DoesNotContain(unconfigured, ids);
+    }
+
+    /// <summary>Only the calendars shared with registered users (CalendarShared.User) come back.</summary>
+    [Fact]
+    public async Task GetSharedWithUsersAsync_ReturnsOnlyCalendarsSharedWithUsers()
+    {
+        long usersOnly = await SharedCalendarAsync(user: true, anonymous: false);
+        long both = await SharedCalendarAsync(user: true, anonymous: true);
+        long guestsOnly = await SharedCalendarAsync(user: false, anonymous: true);
+        long unconfigured = await SharedCalendarAsync(user: null, anonymous: null);
+
+        HashSet<long> ids = [.. (await Sut.GetSharedWithUsersAsync(TestContext.Current.CancellationToken)).Select(c => c.Id)];
+
+        Assert.Contains(usersOnly, ids);
+        Assert.Contains(both, ids);
+        Assert.DoesNotContain(guestsOnly, ids);
+        Assert.DoesNotContain(unconfigured, ids);
+    }
+
+    /// <summary>
+    /// The calendars an account subscribes to that are still shared with users: another account's subscriptions, and a
+    /// subscription to a calendar since turned private, are left out.
+    /// </summary>
+    [Fact]
+    public async Task GetSubscribedByAsync_ReturnsTheAccountsStillSharedSubscriptions()
     {
         string alice = UniqueEmail("alice");
-        // Prefix with the token so the pair sorts adjacently regardless of seed names.
-        await SeedAsync(MakeCalendar(alice, Token + "-Work"), MakeCalendar(alice, Token + "-Personal"));
+        string bob = UniqueEmail("bob");
+        long shared = await SharedCalendarAsync(user: true, anonymous: false);
+        long turnedPrivate = await SharedCalendarAsync(user: false, anonymous: false);
+        long bobs = await SharedCalendarAsync(user: true, anonymous: false);
+        await SubscribeAsync(alice, shared, turnedPrivate);
+        await SubscribeAsync(bob, bobs);
 
-        List<string> mine =
-        [
-            .. (await Sut.GetAllOrderedByNameAsync(TestContext.Current.CancellationToken))
-            .Where(c => c.AccountEmail.Value == alice)
-            .Select(c => c.Name)
-        ];
+        List<Calendar> result = await Sut.GetSubscribedByAsync(alice, TestContext.Current.CancellationToken);
 
-        Assert.Equal([Token + "-Personal", Token + "-Work"], mine);
+        Assert.Equal([shared], result.Select(c => c.Id));
     }
 
     // -- GetByAccountEmailAsync ------------------------------------------------
