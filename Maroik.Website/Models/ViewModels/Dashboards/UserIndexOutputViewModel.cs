@@ -10,18 +10,6 @@ namespace Maroik.Website.Models.ViewModels.Dashboards;
 /// </summary>
 public class UserIndexOutputViewModel
 {
-    /// <summary>All income records for the selected year (used in the yearly breakdown table).</summary>
-    public List<IncomeOutputViewModel> IncomeYearOutputViewModels { get; set; } = [];
-
-    /// <summary>All expenditure records for the selected year.</summary>
-    public List<ExpenditureOutputViewModel> ExpenditureYearOutputViewModels { get; set; } = [];
-
-    /// <summary>All income records for the selected year-month (used in the monthly breakdown table).</summary>
-    public List<IncomeOutputViewModel> IncomeYearMonthOutputViewModels { get; set; } = [];
-
-    /// <summary>All expenditure records for the selected year-month.</summary>
-    public List<ExpenditureOutputViewModel> ExpenditureYearMonthOutputViewModels { get; set; } = [];
-
     /// <summary>Distinct currency codes present in the user's assets, for the currency-selector dropdown.</summary>
     public IEnumerable<string> MonetaryUnits { get; set; } = [];
 

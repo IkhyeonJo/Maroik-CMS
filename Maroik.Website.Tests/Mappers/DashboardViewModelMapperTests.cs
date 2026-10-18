@@ -1,5 +1,4 @@
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Domain.Extensions;
 using Maroik.Website.Mappers;
 
 namespace Maroik.Website.Tests.Mappers;
@@ -14,33 +13,6 @@ namespace Maroik.Website.Tests.Mappers;
 /// </summary>
 public class DashboardViewModelMapperTests
 {
-    /// <summary>The viewer time zone used by the mapping tests.</summary>
-    private const string Utc = "UTC";
-
-    /// <summary>An income of <paramref name="amount"/> in the given classes, deposited into <paramref name="asset"/>.</summary>
-    private static IncomeResponse Income(string mainClass, string subClass, decimal amount, string? asset = "Bank") => new()
-    {
-        Id = 1,
-        MainClass = mainClass,
-        SubClass = subClass,
-        Amount = amount,
-        DepositMyAssetProductName = asset,
-        Created = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-        Updated = new DateTime(2025, 1, 2, 0, 0, 0, DateTimeKind.Utc)
-    };
-
-    /// <summary>An expenditure of <paramref name="amount"/> in the given classes, paid by <paramref name="paymentMethod"/>.</summary>
-    private static ExpenditureResponse Expenditure(string mainClass, string subClass, decimal amount, string? paymentMethod = "Card") => new()
-    {
-        Id = 1,
-        MainClass = mainClass,
-        SubClass = subClass,
-        Amount = amount,
-        PaymentMethod = paymentMethod,
-        Created = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-        Updated = new DateTime(2025, 1, 2, 0, 0, 0, DateTimeKind.Utc)
-    };
-
     /// <summary>A breakdown with the given total and per-sub-class amounts and percentages.</summary>
     private static FinanceBreakdownDto Breakdown(decimal total, params (string SubClass, decimal Amount, double Percentage)[] entries) => new()
     {
@@ -71,9 +43,8 @@ public class DashboardViewModelMapperTests
         dto.DefaultMonetaryUnit = null;
         dto.YearIncomeBreakdown = new Dictionary<string, FinanceBreakdownDto> { ["RegularIncome"] = Breakdown(100m, ("LaborIncome", 100m, 100.0)) };
 
-        var vm = dto.ToViewModel(Utc);
+        var vm = dto.ToViewModel();
 
-        Assert.Empty(vm.IncomeYearOutputViewModels);
         Assert.Equal(0m, vm.RegularIncomeLaborIncomeYear);
     }
 
@@ -83,7 +54,7 @@ public class DashboardViewModelMapperTests
     {
         var dto = BaseDto();
 
-        var vm = dto.ToViewModel(Utc);
+        var vm = dto.ToViewModel();
 
         Assert.Equal(2020, vm.StartYear);
         Assert.Equal(2025, vm.EndYear);
@@ -98,68 +69,9 @@ public class DashboardViewModelMapperTests
     {
         var dto = BaseDto();
 
-        var vm = dto.ToViewModel(Utc);
+        var vm = dto.ToViewModel();
 
         Assert.Equal(["KRW", "USD"], vm.MonetaryUnits);
-    }
-
-    // -- Currency lookup + timezone conversion --------------------------------
-
-    /// <summary>To view model maps income monetary unit from asset lookup by deposit product name.</summary>
-    [Fact]
-    public void ToViewModel_MapsIncomeMonetaryUnit_FromAssetLookupByDepositProductName()
-    {
-        var dto = BaseDto();
-        dto.CurrencyByProduct = new Dictionary<string, string> { ["Bank"] = "USD" };
-        dto.YearIncomes = [Income("RegularIncome", "LaborIncome", 100)];
-
-        var vm = dto.ToViewModel(Utc);
-
-        Assert.Equal("USD", vm.IncomeYearOutputViewModels[0].MonetaryUnit);
-    }
-
-    /// <summary>
-    /// Regression: a row tied to a since-deleted asset (absent from <c>Assets</c>, present in
-    /// <c>CurrencyByProduct</c>) still shows its currency — the totals count it, so the row must not go blank.
-    /// </summary>
-    [Fact]
-    public void ToViewModel_KeepsTheCurrencyOfARowTiedToADeletedAsset()
-    {
-        var dto = BaseDto();
-        dto.Assets = [];
-        dto.CurrencyByProduct = new Dictionary<string, string> { ["OldBank"] = "KRW" };
-        dto.YearIncomes = [Income("RegularIncome", "LaborIncome", 100, "OldBank")];
-
-        var vm = dto.ToViewModel(Utc);
-
-        Assert.Equal("KRW", vm.IncomeYearOutputViewModels[0].MonetaryUnit);
-    }
-
-    /// <summary>To view model maps expenditure monetary unit from asset lookup by payment method.</summary>
-    [Fact]
-    public void ToViewModel_MapsExpenditureMonetaryUnit_FromAssetLookupByPaymentMethod()
-    {
-        var dto = BaseDto();
-        dto.CurrencyByProduct = new Dictionary<string, string> { ["Card"] = "USD" };
-        dto.YearExpenditures = [Expenditure("ConsumerSpending", "MealOrEatOutExpenses", 50)];
-
-        var vm = dto.ToViewModel(Utc);
-
-        Assert.Equal("USD", vm.ExpenditureYearOutputViewModels[0].MonetaryUnit);
-    }
-
-    /// <summary>To view model converts income created and updated to target time zone.</summary>
-    [Fact]
-    public void ToViewModel_ConvertsIncomeCreatedAndUpdated_ToTargetTimeZone()
-    {
-        var dto = BaseDto();
-        var income = Income("RegularIncome", "LaborIncome", 100);
-        dto.YearIncomes = [income];
-
-        var vm = dto.ToViewModel("Asia/Seoul");
-
-        Assert.Equal(income.Created.ConvertTimeByTimeZoneIanaId("Asia/Seoul"), vm.IncomeYearOutputViewModels[0].Created);
-        Assert.Equal(income.Updated.ConvertTimeByTimeZoneIanaId("Asia/Seoul"), vm.IncomeYearOutputViewModels[0].Updated);
     }
 
     // -- Income breakdown copy: RegularIncome / IrregularIncome ----------------
@@ -175,7 +87,7 @@ public class DashboardViewModelMapperTests
                 ("LaborIncome", 600m, 60.0), ("BusinessIncome", 300m, 30.0), ("PensionIncome", 100m, 10.0))
         };
 
-        var vm = dto.ToViewModel(Utc);
+        var vm = dto.ToViewModel();
 
         Assert.Equal(600m, vm.RegularIncomeLaborIncomeYear);
         Assert.Equal(300m, vm.RegularIncomeBusinessIncomeYear);
@@ -197,7 +109,7 @@ public class DashboardViewModelMapperTests
             ["IrregularIncome"] = Breakdown(1000m, ("LaborIncome", 750m, 75.0), ("OtherIncome", 250m, 25.0))
         };
 
-        var vm = dto.ToViewModel(Utc);
+        var vm = dto.ToViewModel();
 
         Assert.Equal(750m, vm.IrregularIncomeLaborIncomeYear);
         Assert.Equal(250m, vm.IrregularIncomeOtherIncomeYear);
@@ -211,7 +123,7 @@ public class DashboardViewModelMapperTests
     {
         var dto = BaseDto(); // YearIncomeBreakdown left empty
 
-        var vm = dto.ToViewModel(Utc);
+        var vm = dto.ToViewModel();
 
         Assert.Equal(0m, vm.RegularIncomeLaborIncomeYear);
         Assert.Equal(0.0, vm.PercentageOfRegularIncomeLaborIncomeYear);
@@ -229,7 +141,7 @@ public class DashboardViewModelMapperTests
             ["RegularIncome"] = Breakdown(500m, ("LaborIncome", 400m, 80.0), ("BusinessIncome", 100m, 20.0))
         };
 
-        var vm = dto.ToViewModel(Utc);
+        var vm = dto.ToViewModel();
 
         Assert.Equal(1000m, vm.RegularIncomeLaborIncomeYear);
         Assert.Equal(400m, vm.RegularIncomeLaborIncomeYearMonth);
@@ -249,7 +161,7 @@ public class DashboardViewModelMapperTests
             ["RegularSavings"] = Breakdown(1000m, ("Deposit", 700m, 70.0), ("Investment", 300m, 30.0))
         };
 
-        var vm = dto.ToViewModel(Utc);
+        var vm = dto.ToViewModel();
 
         Assert.Equal(700m, vm.RegularSavingsDepositYear);
         Assert.Equal(300m, vm.RegularSavingsInvestmentYear);
@@ -272,7 +184,7 @@ public class DashboardViewModelMapperTests
                 ("NonProfitOrganizationTransfer", 100m, 10.0))
         };
 
-        var vm = dto.ToViewModel(Utc);
+        var vm = dto.ToViewModel();
 
         Assert.Equal(200m, vm.NonConsumerSpendingPublicPensionYear);
         Assert.Equal(200m, vm.NonConsumerSpendingDebtRepaymentYear);
@@ -303,7 +215,7 @@ public class DashboardViewModelMapperTests
                 ("OtherExpenses", 100m, eachPct), ("UnknownExpenditure", 100m, eachPct))
         };
 
-        var vm = dto.ToViewModel(Utc);
+        var vm = dto.ToViewModel();
 
         Assert.Equal(100m, vm.ConsumerSpendingMealOrEatOutExpensesYear);
         Assert.Equal(100m, vm.ConsumerSpendingUnknownExpenditureYear);
@@ -325,7 +237,7 @@ public class DashboardViewModelMapperTests
                 ("UnknownExpenditure", 100m, eachPct))
         };
 
-        var vm = dto.ToViewModel(Utc);
+        var vm = dto.ToViewModel();
 
         Assert.Equal(100m, vm.ConsumerSpendingMealOrEatOutExpensesYearMonth);
         Assert.Equal(100m, vm.ConsumerSpendingCommunicationCostYearMonth);
@@ -341,7 +253,7 @@ public class DashboardViewModelMapperTests
     {
         var dto = BaseDto(); // YearExpenditureBreakdown left empty
 
-        var vm = dto.ToViewModel(Utc);
+        var vm = dto.ToViewModel();
 
         Assert.Equal(0.0, vm.PercentageOfRegularSavingsDepositYear);
         Assert.Equal(0.0, vm.PercentageOfConsumerSpendingMealOrEatOutExpensesYear);
