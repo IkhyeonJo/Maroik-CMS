@@ -56,8 +56,6 @@ public class ClockTests
         Assert.Equal(Later.AddMinutes(1), board.Updated);
         board.Pin(Later.AddMinutes(2));
         Assert.Equal(Later.AddMinutes(2), board.Updated);
-        board.Unpin(Later.AddMinutes(3));
-        Assert.Equal(Later.AddMinutes(3), board.Updated);
         Assert.False(board.Update("t2", "c2", Later.AddMinutes(4)).IsError);
         Assert.Equal(Later.AddMinutes(4), board.Updated);
         Assert.False(board.SoftDelete(Later.AddMinutes(5)).IsError);

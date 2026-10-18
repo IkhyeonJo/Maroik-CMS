@@ -75,6 +75,13 @@ public class FixedSchedulePolicyTests
         Assert.Equal(expected, FixedSchedulePolicy.IsNoticed(depositMonth, depositDay, today, window, unpunctuality: false));
     }
 
+    /// <summary>A December deposit is a real date like any other month's: noticed inside the window, not outside it.</summary>
+    [Theory]
+    [InlineData(20, 5, true)]  // the 25th, 5 days ahead
+    [InlineData(19, 5, false)] // 6 days ahead, one beyond the window
+    public void IsNoticed_NoticesADecemberDeposit(int todayDay, int window, bool expected)
+        => Assert.Equal(expected, FixedSchedulePolicy.IsNoticed(depositMonth: 12, depositDay: 25, new DateTime(2026, 12, todayDay), window, unpunctuality: false));
+
     /// <summary>The window edges on the deposit's own year: 0 days (the day itself), N days, and N+1 days.</summary>
     [Theory]
     [InlineData(0, 0, true)]

@@ -271,7 +271,7 @@ public class BoardTests
         Assert.False(board.Locked);
     }
 
-    // -- Pin / Unpin -----------------------------------------------------------
+    // -- Pin -------------------------------------------------------------------
 
     /// <summary>Pin sets noticed true.</summary>
     [Fact]
@@ -282,18 +282,6 @@ public class BoardTests
         board.Pin(Now);
 
         Assert.True(board.Noticed);
-    }
-
-    /// <summary>Unpin sets noticed false.</summary>
-    [Fact]
-    public void Unpin_SetsNoticedFalse()
-    {
-        var board = ValidBoard();
-        board.Pin(Now);
-
-        board.Unpin(Now);
-
-        Assert.False(board.Noticed);
     }
 
     // -- SoftDelete ------------------------------------------------------------

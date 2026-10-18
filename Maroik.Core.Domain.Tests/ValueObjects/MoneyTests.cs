@@ -116,31 +116,6 @@ public class MoneyTests
         Assert.NotEqual(a, b);
     }
 
-    // -- WithAmount -------------------------------------------------------------
-
-    /// <summary>WithAmount keeps the same currency but replaces the amount.</summary>
-    [Fact]
-    public void WithAmount_KeepsCurrency_ReplacesAmount()
-    {
-        var money = Money.Create(100m, "KRW").Value;
-
-        Money result = money.WithAmount(9999m);
-
-        Assert.Equal(9999m, result.Amount);
-        Assert.Equal("KRW", result.Currency.Value);
-    }
-
-    /// <summary>WithAmount does not mutate the original instance.</summary>
-    [Fact]
-    public void WithAmount_DoesNotMutateOriginalInstance()
-    {
-        var money = Money.Create(100m, "KRW").Value;
-
-        money.WithAmount(9999m);
-
-        Assert.Equal(100m, money.Amount);
-    }
-
     // -- Create: currency length; ToString ------------------------------------------------
 
     /// <summary>Create refuses a currency code longer than the column holds.</summary>

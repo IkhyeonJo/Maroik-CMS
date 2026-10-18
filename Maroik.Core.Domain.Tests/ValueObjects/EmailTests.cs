@@ -131,6 +131,8 @@ public class EmailTests
     /// <summary>A host with an empty label, a one-letter top-level domain, or a quoted local part with a space is refused.</summary>
     [Theory]
     [InlineData("user@example.com.")]
+    [InlineData("user@example..com")]
+    [InlineData("user@.example.com")]
     [InlineData("user@example.c")]
     [InlineData("\"a b\"@example.com")]
     [InlineData("user..name@example.com")]
