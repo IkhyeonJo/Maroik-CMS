@@ -27,7 +27,7 @@
 @Html.Hidden("maxDaysBeforeEvent", CalendarReminderPolicy.MaxDaysBeforeEvent)
 @Html.Hidden("maxWeeksBeforeEvent", CalendarReminderPolicy.MaxWeeksBeforeEvent)
 @* "Notify at HH:MM" options + default, from CalendarReminderPolicy / the view model, so the client stops regenerating the 15-minute list. *@
-@Html.Hidden("reminderTimeIntervals", JsonSerialization.ToClientJson(Model.TimeIntervals))
+@Html.Hidden("reminderTimeIntervals", ClientJsonSerializer.Serialize(Model.TimeIntervals))
 @Html.Hidden("defaultReminderTimeOfDay", CalendarReminderPolicy.DefaultReminderTimeOfDay)
 @* The culture CalendarService orders the "my calendars" list under, so the client re-sorts it the same way. *@
 @Html.Hidden("calendarNameCulture", System.Globalization.CultureInfo.CurrentCulture.Name)
@@ -112,7 +112,7 @@
 @Html.Hidden("localizerErrorRangeDay", Localizer["ErrorRangeDay"].Value)
 @Html.Hidden("localizerErrorRangeWeek", Localizer["ErrorRangeWeek"].Value)
 @Html.Hidden("localizerFailedToLoadCalendars", Localizer["FailedToLoadCalendars"].Value)
-@Html.Hidden("calendarEventOutputViewModels", JsonSerialization.ToClientJson(Model.CalendarEventOutputViewModels))
+@Html.Hidden("calendarEventOutputViewModels", ClientJsonSerializer.Serialize(Model.CalendarEventOutputViewModels))
 
 <section class="content">
     <div class="container-fluid">

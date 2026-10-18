@@ -68,8 +68,8 @@
 @* Income main→sub-class taxonomy, the deposit month→max-day rule, and the "no maturity date"
    sentinel — authoritative in IncomeClassPolicy / FixedSchedulePolicy; the form reads these
    instead of hardcoding them. *@
-@Html.Hidden("incomeSubClassMap", JsonSerialization.ToClientJson(IncomeClassPolicy.SubClassesByMainClass))
-@Html.Hidden("maxDepositDayByMonth", JsonSerialization.ToClientJson(FixedSchedulePolicy.MaxDepositDayByMonth))
+@Html.Hidden("incomeSubClassMap", ClientJsonSerializer.Serialize(IncomeClassPolicy.SubClassesByMainClass))
+@Html.Hidden("maxDepositDayByMonth", ClientJsonSerializer.Serialize(FixedSchedulePolicy.MaxDepositDayByMonth))
 @Html.Hidden("noMaturityDate", FixedSchedulePolicy.NoMaturityDateIso)
 @Html.Hidden("localizerFailedToLoadAmountLabel", Localizer["Failed to load the amount label."].Value)
 

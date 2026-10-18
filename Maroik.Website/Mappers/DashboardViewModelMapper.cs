@@ -1,6 +1,6 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Domain.Finances;
-using Maroik.Core.Domain.TimeZones;
+using Maroik.Core.Domain.Extensions;
 using Maroik.Website.Models.ViewModels.Dashboards;
 
 namespace Maroik.Website.Mappers;

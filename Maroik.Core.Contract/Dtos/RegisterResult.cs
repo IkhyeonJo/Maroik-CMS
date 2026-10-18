@@ -1,4 +1,5 @@
 using ErrorOr;
+using Maroik.Core.Contract.Extensions;
 
 // ReSharper disable PropertyCanBeMadeInitOnly.Global
 // ReSharper disable UnusedAutoPropertyAccessor.Global

@@ -71,8 +71,8 @@
 
 @* Expenditure main→sub-class taxonomy and the deposit-asset sub-class set — authoritative in
    ExpenditureClassPolicy; the form reads these instead of hardcoding the lists. *@
-@Html.Hidden("expenditureSubClassMap", JsonSerialization.ToClientJson(ExpenditureClassPolicy.SubClassesByMainClass))
-@Html.Hidden("expenditureDepositAssetSubClasses", JsonSerialization.ToClientJson(ExpenditureClassPolicy.DepositAssetSubClasses))
+@Html.Hidden("expenditureSubClassMap", ClientJsonSerializer.Serialize(ExpenditureClassPolicy.SubClassesByMainClass))
+@Html.Hidden("expenditureDepositAssetSubClasses", ClientJsonSerializer.Serialize(ExpenditureClassPolicy.DepositAssetSubClasses))
 @Html.Hidden("localizerFailedToLoadAmountLabel", Localizer["Failed to load the amount label."].Value)
 
 <section class="content">

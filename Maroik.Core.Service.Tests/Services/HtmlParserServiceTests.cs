@@ -1,4 +1,4 @@
-using Maroik.Core.Contract.Interfaces;
+using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Service.Services;
 
 namespace Maroik.Core.Service.Tests.Services;

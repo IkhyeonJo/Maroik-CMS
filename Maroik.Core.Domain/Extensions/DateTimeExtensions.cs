@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Maroik.Core.Domain.TimeZones;
+namespace Maroik.Core.Domain.Extensions;
 
 /// <summary>
 /// Extension methods for <see cref="DateTime"/> to simplify time-zone conversions.
