@@ -22,9 +22,9 @@ public sealed class RabbitMqEmailPublisher(
     /// Bound on how long <see cref="DisposeAsync"/> waits for an in-flight <see cref="PublishAsync"/>
     /// to release <see cref="_publishLock"/>. Without a bound, one publish wedged on a broker that
     /// never confirms (e.g. a caller that passed <see cref="CancellationToken.None"/>) would make
-    /// graceful application shutdown hang forever.
+    /// graceful application shutdown hang forever. Internal so tests can shorten it.
     /// </summary>
-    private static readonly TimeSpan _disposeLockTimeout = TimeSpan.FromSeconds(5);
+    internal TimeSpan DisposeLockTimeout { get; init; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// How long <see cref="GetChannelAsync"/> waits for a dropped connection to recover on its own
@@ -187,9 +187,9 @@ public sealed class RabbitMqEmailPublisher(
         if (Interlocked.CompareExchange(ref _disposed, 1, 0) != 0)
             return;
 
-        // Waits (bounded -- see _disposeLockTimeout) for any in-flight PublishAsync to release the
+        // Waits (bounded -- see DisposeLockTimeout) for any in-flight PublishAsync to release the
         // lock first, so the channel/connection it's using is never disposed out from under it.
-        bool acquired = await _publishLock.WaitAsync(_disposeLockTimeout);
+        bool acquired = await _publishLock.WaitAsync(DisposeLockTimeout);
         if (!acquired)
         {
             // The in-flight publishing still owns _channel/_connection and will Release() the lock
@@ -197,7 +197,7 @@ public sealed class RabbitMqEmailPublisher(
             // that still-running call, so leave cleanup to the process exit instead.
             logger.LogWarning(
                 "Timed out after {Timeout} waiting for an in-flight publish to finish; skipping disposal of the channel/connection",
-                _disposeLockTimeout);
+                DisposeLockTimeout);
             Volatile.Write(ref _disposed, 0);
             return;
         }

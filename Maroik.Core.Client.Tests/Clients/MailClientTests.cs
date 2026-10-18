@@ -324,11 +324,35 @@ public class MailClientTests
         int closedPort;
         await using (var probe = new FakeSmtpServer()) closedPort = probe.Port;
 
-        ServiceResult result = await _sut.SendMailAsync(
+        var logger = new RecordingLogger();
+
+        ServiceResult result = await new MailClient(logger).SendMailAsync(
             "bob@example.com", "Hello", "<p>hi</p>", SettingsFor(closedPort), TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Equal("Mail.SendFailed", result.ErrorCode);
+        Assert.Equal("Failed to send the email.", result.ErrorKey); // generic: no server or exception text for the caller
+        var error = Assert.Single(logger.Entries, e => e.Level == Microsoft.Extensions.Logging.LogLevel.Error);
+        Assert.Equal("Failed to send mail to bob@example.com", error.Message);
+        Assert.NotNull(error.Exception);
+    }
+
+    /// <summary>
+    /// With SmtpSsl off, a certificate problem is logged either way: an untrusted chain is accepted with a warning, a name
+    /// mismatch refused with one naming the errors, and a clean certificate passes silently.
+    /// </summary>
+    [Theory]
+    [InlineData(System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors, true, "Accepting an untrusted SMTP server certificate for relay.example because SmtpSsl is disabled for this relay")]
+    [InlineData(System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch, false, "Rejecting the SMTP server certificate for relay.example: RemoteCertificateNameMismatch")]
+    [InlineData(System.Net.Security.SslPolicyErrors.None, true, null)]
+    public void AcceptRelaxedCertificate_DecidesAndLogsTheCertificateProblem(System.Net.Security.SslPolicyErrors errors, bool accepted, string? warning)
+    {
+        var logger = new RecordingLogger();
+
+        bool result = new MailClient(logger).AcceptRelaxedCertificate(errors, "relay.example");
+
+        Assert.Equal(accepted, result);
+        Assert.Equal(warning is null ? [] : [warning], logger.Entries.Where(e => e.Level == Microsoft.Extensions.Logging.LogLevel.Warning).Select(e => e.Message));
     }
 
     /// <summary>A malformed recipient address is a failed send, not an exception.</summary>
