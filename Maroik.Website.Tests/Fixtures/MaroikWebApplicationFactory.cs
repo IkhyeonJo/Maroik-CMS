@@ -102,7 +102,6 @@ public class MaroikWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 ["ServerSetting:SmtpOptions:smtpSsl"] = "false",
                 ["ServerSetting:SmtpOptions:fromEmail"] = "test@localhost",
                 ["ServerSetting:SmtpOptions:fromFullName"] = "Test",
-                ["ServerSetting:SmtpOptions:IsDefault"] = "true",
 
                 // FileStorage
                 ["FileStorage:BaseUrl"] = "http://localhost:5001",

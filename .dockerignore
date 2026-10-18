@@ -27,3 +27,10 @@
 **/values.dev.yaml
 LICENSE
 README.md
+# Runtime data and local artefacts: never part of an image. Uploaded files and logs are bind-mounted at run time
+# (docker-compose), the env files are read by compose, not by a build, and test / mutation output is local only.
+Maroik.FileStorage/upload
+Maroik.Log
+.env.*
+**/TestResults
+**/StrykerOutput

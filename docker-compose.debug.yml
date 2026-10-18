@@ -15,7 +15,6 @@
 # Named volumes — Docker-managed, survive `down`; wiped only by `down -v`.
 volumes:
       datasource:            # PostgreSQL data directory (/var/lib/postgresql/data)
-      dataprotection-keys:   # ASP.NET Core default Data Protection key-ring location (/root/.aspnet/DataProtection-Keys). The website does NOT use it: Program.cs persists the ring to Valkey (ConnectionStrings__Valkey, set in the env file) and, only without Valkey, to <ContentRoot>/dataprotection-keys (not this volume). FileStorage uses no Data Protection at all.
       valkey-data:           # Valkey (Redis-compatible) append-only file persistence
       rabbitmq-data:         # RabbitMQ node data (durable queues, definitions)
 
@@ -70,7 +69,7 @@ services:
     # No health check / restart policy here — the DB signature load makes first
     # readiness slow, and nothing uses `depends_on` on it.
     clamav:
-      image: clamav/clamav:latest
+      image: clamav/clamav:1.5         # pinned like the other images (major.minor; patch releases still arrive)
       container_name: Maroik.Clamav
       expose:
         - "3310"                       # clamd TCP socket
@@ -132,7 +131,6 @@ services:
           - ./Maroik.SSL/localhost1.pem:/etc/ssl/localhost1.pem:ro                 # self-signed cert (read-only)
           - ./Maroik.SSL/localhostprivkey1.pem:/etc/ssl/localhostprivkey1.pem:ro   # its private key (read-only)
           - ./Maroik.Log/:/app/Maroik.Log:rw                                       # app writes logs to the host tree
-          - dataprotection-keys:/root/.aspnet/DataProtection-Keys                  # default key-ring path; unused while Valkey is configured (see the volume note above)
         depends_on:                    # wait for each dependency's health check to pass before starting
           postgresql:
             condition: service_healthy
@@ -159,7 +157,6 @@ services:
           - ASPNETCORE_URLS=http://+:80   # bind HTTP only; TLS is not used on the private network
         volumes:
           - ./Maroik.FileStorage/upload/:/app/upload:rw            # uploaded files persisted to the host tree
-          - dataprotection-keys:/root/.aspnet/DataProtection-Keys  # unused: FileStorage does not use Data Protection
 
     # ── Maroik.Worker ────────────────────────────────────────────────────────
     # Headless background service: consumes RabbitMQ messages (e.g. sends email).

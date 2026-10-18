@@ -66,7 +66,6 @@ public sealed class PlaywrightWebApplicationFactory : WebApplicationFactory<Prog
             ["ServerSetting:SmtpOptions:smtpSsl"] = "false",
             ["ServerSetting:SmtpOptions:fromEmail"] = "test@localhost",
             ["ServerSetting:SmtpOptions:fromFullName"] = "Test",
-            ["ServerSetting:SmtpOptions:IsDefault"] = "true",
             ["Clamav:Host"] = "localhost",
             ["Clamav:Port"] = "3310",
             ["FileStorage:BaseUrl"] = "http://localhost:5001",
