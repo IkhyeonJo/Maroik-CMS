@@ -1,5 +1,5 @@
-using Maroik.Core.Domain.Account;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Website.Tests.Fixtures;
 
 namespace Maroik.Website.Tests.Controllers;
 
@@ -99,6 +99,22 @@ public class DashboardControllerTests
     }
 
     // -- AdminIndex -------------------------------------------------------------
+
+    /// <summary>The server-resource headings of the admin dashboard are translated for a Korean administrator.</summary>
+    [Fact]
+    public async Task AdminIndex_RendersTheResourceHeadings_InKorean()
+    {
+        var admin = await LoginAsAdminAsync();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/Dashboard/AdminIndex");
+        request.Headers.Add("Cookie", $"{admin.CookieHeader}; .AspNetCore.Culture=c=ko-KR|uic=ko-KR");
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        string html = System.Net.WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains("메모리 사용량 / 한도", html, StringComparison.Ordinal);
+        Assert.Contains("디스크 사용량 / 한도", html, StringComparison.Ordinal);
+        Assert.Contains("CPU 사용률", html, StringComparison.Ordinal);
+    }
 
     /// <summary>Admin index logged in admin returns200.</summary>
     [Fact]

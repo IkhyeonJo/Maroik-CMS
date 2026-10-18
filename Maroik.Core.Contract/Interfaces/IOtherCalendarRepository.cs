@@ -1,4 +1,4 @@
-using Maroik.Core.Domain.Calendar;
+using Maroik.Core.Domain.Calendars;
 namespace Maroik.Core.Contract.Interfaces;
 
 /// <summary>
@@ -8,9 +8,6 @@ public interface IOtherCalendarRepository : IGenericRepository<OtherCalendar>
 {
     /// <summary>Returns the calendars that the given account subscribes to from other users.</summary>
     Task<List<OtherCalendar>> GetByAccountEmailAsync(string email, CancellationToken ct = default);
-
-    /// <summary>Returns all other-calendar subscription rows.</summary>
-    Task<List<OtherCalendar>> GetAllAsync(CancellationToken ct = default);
 
     /// <summary>Deletes all subscription rows for the given account.</summary>
     Task DeleteByAccountEmailAsync(string email, CancellationToken ct = default);

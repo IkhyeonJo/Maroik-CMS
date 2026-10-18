@@ -1,6 +1,7 @@
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Primitives;
+using Maroik.Core.PostgreSQL.Contexts;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Maroik.Website.Tests.Controllers;
@@ -31,6 +32,26 @@ public class CalendarControllerCalendarTests(MaroikWebApplicationFactory factory
             new { Id = 0, Name = name, Description = "", TimeZoneIanaId = "UTC", HtmlColorCode = "#3788d8" }
         }
     };
+
+    // -- Calendar forms ------------------------------------------------------------
+
+    /// <summary>The create / edit calendar forms cap the name at the domain's limit (ShortTextPolicy), like the event forms do.</summary>
+    [Theory]
+    [InlineData(Role.User, "/Calendar/UserIndex", "calendar-form-user@test.com")]
+    [InlineData(Role.Admin, "/Calendar/AdminIndex", "calendar-form-admin@test.com")]
+    public async Task IndexPage_CapsTheCalendarName_AtTheDomainLimit(string role, string url, string email)
+    {
+        var session = await AuthenticatedSessionHelper.LoginAsync(factory, _client, email, "UserPassword1!", role, TestContext.Current.CancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("Cookie", session.CookieHeader);
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Matches($"id=\"createCalendarName\"[^>]*maxlength=\"{ShortTextPolicy.MaxLength}\"", html);
+        Assert.Matches($"id=\"editCalendarName\"[^>]*maxlength=\"{ShortTextPolicy.MaxLength}\"", html);
+    }
 
     // -- CreateCalendar: role gating ----------------------------------------------
 
@@ -99,6 +120,29 @@ public class CalendarControllerCalendarTests(MaroikWebApplicationFactory factory
         string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Contains("The calendar already exists.", json, StringComparison.Ordinal);
+    }
+
+    /// <summary>A description past the body limit is refused with the localized domain message, not stored.</summary>
+    [Fact]
+    public async Task CreateCalendar_OverLongDescription_IsRefusedWithTheLimit()
+    {
+        var session = await LoginAsUserAsync("calendar-longdesc@test.com");
+        object payload = new
+        {
+            Calendars = new[]
+            {
+                new { Id = 0, Name = "LongDescription", Description = new string('x', TitledContentPolicy.MaxBodyLength + 1), TimeZoneIanaId = "UTC", HtmlColorCode = "#3788d8" }
+            }
+        };
+        using var request = session.BuildJsonPostRequest("/Calendar/CreateCalendar", payload);
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        string json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"result\":false", json, StringComparison.Ordinal);
+        Assert.Contains($"Calendar description must be {TitledContentPolicy.MaxBodyLength} characters or fewer.", json, StringComparison.Ordinal);
+        using var scope = factory.Services.CreateScope();
+        Assert.False(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Calendars.Any(c => c.Name == "LongDescription"));
     }
 
     /// <summary>Is calendar exists unknown id returns failure result.</summary>

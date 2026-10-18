@@ -1,5 +1,5 @@
-using Maroik.Core.Domain.Finance;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Finances;
+using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -340,7 +340,7 @@ public sealed class AssetRepositoryTests(DatabaseFixture database) : RepositoryT
 
             await Task.Delay(300, TestContext.Current.CancellationToken);
 
-            asset.Withdraw(asset.Balance.WithAmount(amount), DateTime.UtcNow);
+            asset.Withdraw(Maroik.Core.Domain.ValueObjects.Money.Create(amount, asset.Balance.Currency.Value).Value, DateTime.UtcNow);
             await repo.UpdateEntityAsync(asset, TestContext.Current.CancellationToken);
             // The repository defers its flush while a transaction is open on the context; this test
             // drives the transaction directly (not through UnitOfWork, which would flush on commit),

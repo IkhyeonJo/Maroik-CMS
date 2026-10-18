@@ -222,9 +222,6 @@
   <data name="OtherExpenses" xml:space="preserve">
     <value>Other expenses</value>
   </data>
-  <data name="MyAssetTransfer" xml:space="preserve">
-    <value>My asset transfer</value>
-  </data>
   <data name="UnknownExpenditure" xml:space="preserve">
     <value>Unknown expenditure</value>
   </data>

@@ -1,7 +1,7 @@
 using System.Globalization;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Menu;
+using Maroik.Core.Domain.Menus;
 using Maroik.Core.Service.Extensions;
 using Maroik.Core.Service.Mappers;
 using Microsoft.Extensions.Logging;

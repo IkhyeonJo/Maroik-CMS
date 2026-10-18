@@ -199,7 +199,7 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
     // -- A transaction the database has already ended ----------------------------------
 
     /// <summary>Begins a unit of work and then kills its database session, so the transaction can no longer be rolled back normally.</summary>
-    private async Task<(UnitOfWork Uow, PostgreSQL.Data.ApplicationDbContext Context)> BeginAndKillTheSessionAsync()
+    private async Task<(UnitOfWork Uow, PostgreSQL.Contexts.ApplicationDbContext Context)> BeginAndKillTheSessionAsync()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         var context = NewDbContext();
@@ -251,7 +251,7 @@ public sealed class UnitOfWorkTests(DatabaseFixture database) : RepositoryTestBa
     }
 
     /// <summary>Begins a unit of work over a context whose rollbacks fail with <see cref="FailingRollbackInterceptor.Failure"/>, with one entity tracked.</summary>
-    private async Task<(UnitOfWork Uow, PostgreSQL.Data.ApplicationDbContext Context, Exception Failure)> BeginWithAFailingRollbackAsync()
+    private async Task<(UnitOfWork Uow, PostgreSQL.Contexts.ApplicationDbContext Context, Exception Failure)> BeginWithAFailingRollbackAsync()
     {
         var interceptor = new FailingRollbackInterceptor();
         var context = NewDbContext(interceptor);

@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
-using Maroik.Core.Contract.Misc.Messaging;
-using Maroik.Worker.Contracts;
+using Maroik.Core.Contract.Messages;
+using Maroik.Worker.Interfaces;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Serilog.Context;

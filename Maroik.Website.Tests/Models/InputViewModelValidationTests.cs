@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using Maroik.Core.Domain.Finance;
-using Maroik.Website.Models.ViewModels.AccountBook;
-using Maroik.Website.Models.ViewModels.Notice;
+using Maroik.Core.Domain.Finances;
+using Maroik.Website.Models.ViewModels.AccountBooks;
+using Maroik.Website.Models.ViewModels.Notices;
 
 namespace Maroik.Website.Tests.Models;
 

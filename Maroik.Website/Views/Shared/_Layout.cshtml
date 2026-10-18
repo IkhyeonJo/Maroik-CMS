@@ -19,11 +19,6 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    @*Prevent Web Cache*@
-    @*<meta http-equiv="Expires" content="-1">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Cache-Control" content="No-Cache">*@
-    @*Prevent Web Cache*@
     <title>Maroik</title>
 
     @switch (loggedInAccount.Role)
@@ -150,7 +145,6 @@ to get the desired effect
 * sidebar-mini
 -->
 *@
-@*<body class="hold-transition dark-mode sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed">*@
 
 <body class="hold-transition dark-mode sidebar-mini">
     @*Validation of form*@
@@ -183,25 +177,6 @@ to get the desired effect
     <div class="wrapper">
 
 
-        @*<!-- Preloader -->*@
-        @*
-        <div class="preloader flex-column justify-content-center align-items-center">
-        @if (loggedInAccount.Role == Role.Admin)
-        {
-        <img class="animation__wobble" src="~/admin/dist/img/MaroikLogo.png" alt="MaroikLogo" height="60"
-        width="60">
-        }
-        else if (loggedInAccount.Role == Role.User)
-        {
-        <img class="animation__wobble" src="~/user/dist/img/MaroikLogo.png" alt="MaroikLogo" height="60" width="60">
-        }
-        else if (loggedInAccount.Role == Role.Anonymous)
-        {
-        <img class="animation__wobble" src="~/anonymous/dist/img/MaroikLogo.png" alt="MaroikLogo" height="60"
-        width="60">
-        }
-        </div>
-        *@
 
         @(await Html.PartialAsync("_MainTopBar", loggedInAccount))
         @(await Html.PartialAsync("_MainLeftSideBar", loggedInAccount))

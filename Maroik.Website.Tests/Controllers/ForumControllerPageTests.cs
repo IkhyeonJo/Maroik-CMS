@@ -1,7 +1,8 @@
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Primitives;
+using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Core.PostgreSQL.Models;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -228,6 +229,18 @@ public class ForumControllerPageTests(MaroikWebApplicationFactory factory)
         var response = await GetAsync("/Forum/FreeForum?method=write", user);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>The write form caps the title and the content at the domain's limits (TitledContentPolicy), not at numbers of its own.</summary>
+    [Fact]
+    public async Task Write_CapsTheTitleAndTheContent_AtTheDomainLimits()
+    {
+        var user = await LoginAsync("forum-page-writer8@test.com");
+
+        string html = await BodyAsync(await GetAsync("/Forum/FreeForum?method=write", user));
+
+        Assert.Matches($"id=\"writeBoardTitle\"[^>]*maxlength=\"{TitledContentPolicy.MaxTitleLength}\"", html);
+        Assert.Matches($"id=\"writeBoardContent\"[^>]*maxlength=\"{TitledContentPolicy.MaxBodyLength}\"", html);
     }
 
     // -- List -----------------------------------------------------------------------------------------

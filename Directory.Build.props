@@ -31,4 +31,46 @@
     <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
   </ItemGroup>
+  <!--
+    One type per file, named after it (StyleCop SA1402 / SA1649), for every project, test projects included. A
+    build-time analyzer only, like BannedApiAnalyzers above. stylecop.globalconfig turns every other StyleCop rule off;
+    stylecop.json makes SA1402 count every kind of top-level type, not only classes.
+  -->
+  <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <PackageReference Include="StyleCop.Analyzers" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" />
+    <GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)stylecop.globalconfig" />
+  </ItemGroup>
+  <!--
+    Plural folder names: the folder that directly holds a .cs file is named with a plural noun (Accounts, Fixtures,
+    ArchitectureRules, Mappers), never a singular noun, an adjective or a mass/concept word (Account, Shared,
+    Infrastructure, Misc). A concept word is replaced by a noun that has a plural, then pluralized (Time -> TimeZones,
+    Media -> Uploads). The check is "ends in s", so an irregular plural would need its own entry here.
+    .editorconfig cannot see folder names, so this is an MSBuild warning (MAROIK0001); TreatWarningsAsErrors covers
+    compiler warnings only, so it stays a warning, and the zero-warning build rule keeps it from accumulating.
+    Maroik.Core.PostgreSQL is held to it too: its scaffold puts the context in Contexts and the entities in Models.
+  -->
+  <Target Name="CheckPluralFolderNames" BeforeTargets="CoreCompile" Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <PropertyGroup>
+      <_PluralCheckProjectDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)'))</_PluralCheckProjectDir>
+      <_PluralCheckObjDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(BaseIntermediateOutputPath)'))</_PluralCheckObjDir>
+      <_PluralCheckBinDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(BaseOutputPath)'))</_PluralCheckBinDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_PluralCheckFolder Include="@(Compile->'%(RootDir)%(Directory)')"
+                          Condition="$([System.String]::Copy('%(Compile.FullPath)').StartsWith('$(_PluralCheckProjectDir)'))
+                                     And !$([System.String]::Copy('%(Compile.FullPath)').StartsWith('$(_PluralCheckObjDir)'))
+                                     And !$([System.String]::Copy('%(Compile.FullPath)').StartsWith('$(_PluralCheckBinDir)'))" />
+      <_PluralCheckFolder Remove="$(_PluralCheckProjectDir)" />
+    </ItemGroup>
+    <ItemGroup>
+      <_PluralCheckFolder>
+        <Leaf>$([System.IO.Path]::GetFileName($([System.String]::Copy('%(Identity)').TrimEnd('/').TrimEnd('\'))))</Leaf>
+      </_PluralCheckFolder>
+    </ItemGroup>
+    <Warning Code="MAROIK0001"
+             Condition="!$([System.String]::Copy('%(_PluralCheckFolder.Leaf)').EndsWith('s', System.StringComparison.Ordinal))"
+             File="%(_PluralCheckFolder.Identity)"
+             Text="Folder '%(_PluralCheckFolder.Leaf)' holds .cs files but is not a plural noun. Rename it to a plural (Account -&gt; Accounts); replace an adjective or concept word with a noun that has a plural (Shared -&gt; Layouts, Time -&gt; TimeZones), and rename its namespace to match." />
+  </Target>
 </Project>

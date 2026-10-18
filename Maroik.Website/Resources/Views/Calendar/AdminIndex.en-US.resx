@@ -480,14 +480,8 @@
   <data name="Create new calendar" xml:space="preserve">
     <value>Create new calendar</value>
   </data>
-  <data name="Browse calendars of interest" xml:space="preserve">
-    <value>Browse calendars of interest</value>
-  </data>
   <data name="Set Calendar Shared" xml:space="preserve">
     <value>Set Calendar Shared</value>
-  </data>
-  <data name="Admin" xml:space="preserve">
-    <value>Admin</value>
   </data>
   <data name="User" xml:space="preserve">
     <value>User</value>
@@ -509,8 +503,5 @@
   </data>
   <data name="Custom..." xml:space="preserve">
     <value>Custom...</value>
-  </data>
-  <data name="before at" xml:space="preserve">
-    <value>before at</value>
   </data>
 </root>

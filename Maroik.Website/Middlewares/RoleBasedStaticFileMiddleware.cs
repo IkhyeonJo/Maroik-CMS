@@ -1,6 +1,6 @@
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Account;
-using Maroik.Website.Contracts;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Website.Interfaces;
 
 namespace Maroik.Website.Middlewares;
 

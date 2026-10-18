@@ -38,7 +38,7 @@ Deployment and schema
 - Judge code against the schema, the seed scripts and the tests only. The production data is the owner's
   responsibility: do not raise checks against existing production rows, ask for queries to be run against it, or
   add safeguards for hypothetical legacy rows.
-- `Maroik.Core.PostgreSQL` (`ApplicationDbContext`, `Models/*`) is EF Core scaffold output. Leave it out of
+- `Maroik.Core.PostgreSQL` (`Contexts/ApplicationDbContext`, `Models/*`) is EF Core scaffold output. Leave it out of
   repo-wide comment / style passes; touch it only when the schema mapping itself changes.
 
 Operations and hosting
@@ -119,8 +119,12 @@ Accounts
   as it. Anyone can also lock any account with `MaxLoginAttempt` wrong guesses. Both are accepted.
 
 Data access and transactions
-- Every service write spells out its own `BeginAsync` / `CommitAsync` / `RollbackAsync` (and the service tests
-  assert them). Do not fold them into a decorator, filter or "unit of work per request" helper.
+- Every service write that runs in a transaction (several statements that must succeed together, or a `FOR UPDATE`
+  lock) spells out its own `BeginAsync` / `CommitAsync` / `RollbackAsync` (and the service tests assert them). Do not
+  fold them into a decorator, filter or "unit of work per request" helper. A single column-scoped write runs on its own
+  (`ProfileService.UpdateTimeZoneAsync`, the fixed income / expenditure CRUD), and so do the mail flows that persist a
+  token, send, then record the outcome (`AccountService.ForgotPasswordAsync`): a transaction around the send would hold
+  a row lock across the network call.
 - Several rows are locked in one statement, `... ORDER BY <column> FOR UPDATE` without `LIMIT` (e.g. the asset
   balance lock). This is the pattern that fixed a lost-update bug; do not report it as a deadlock-ordering
   risk. (`LIMIT` combined with `ORDER BY ... FOR UPDATE` would be a different, documented caveat.)
@@ -285,7 +289,7 @@ How:
 
 - **Structured templates with named placeholders** (`"Locked account {Email} after {Attempts} attempts"`), never string
   interpolation or concatenation, so the values stay queryable and cannot forge extra log lines. The console output templates
-  (`Maroik.Website/Constants/LogTemplates.cs`, `Maroik.FileStorage/Helpers/LogTemplates.cs`, `WorkerHost.ConsoleOutputTemplate`)
+  (`Maroik.Website/Constants/LogTemplates.cs`, `Maroik.FileStorage/Constants/LogTemplates.cs`, `WorkerHost.ConsoleOutputTemplate`)
   render `{Message:j}`, not Serilog's usual `:lj` — `:l` writes a string value raw, so a line break inside it would start a
   forged line. Keep `:j`; each host has a test that fails if a value can break the line.
 - **Never log secrets or content:** passwords, password hashes, registration / reset tokens or their protected (Data Protection) form, session
@@ -374,11 +378,51 @@ sanitizer entry must be proven to matter: rename its method in the file and the 
   not only on a happy-path method such as `StopAsync`.
 - A client from `IHttpClientFactory` is disposed after use (`using HttpClient`); it does not own its pooled handler, and a
   response it already returned (the streaming `OpenReadAsync`) keeps working.
-- Tests: multipart bodies are built with the per-project `Infrastructure/MultipartForm` helper (`Of`, `AddText`, `AddFile`),
+- Tests: multipart bodies are built with the per-project `Fixtures/MultipartForm` helper (`Of`, `AddText`, `AddFile`),
   never `new StringContent(...)` / `new ByteArrayContent(...)` added inline; a helper that sends a request takes a
   `Func<...>` and disposes what it builds (`ErrorOf`, `Send`).
 - A leak fix with observable behaviour gets a regression test like any bug fix (`FileClientTests.EveryCall_DisposesTheHttpClientItCreated`,
   `FileControllerTests.Download_ClosesTheFile_WhenItFailsAfterOpeningIt`); where nothing is observable, the build error is the red step.
+
+## Folder names are plural nouns
+
+The folder that directly holds a `.cs` file is a plural noun (`Accounts`, `Calendars`, `Fixtures`, `ArchitectureRules`,
+`Mappers`), and its namespace matches it. A singular noun is pluralized (`Account` → `Accounts`); an adjective or a
+mass / concept word is first replaced by a noun that has a plural (`Shared` → `Layouts`, `Infrastructure` → `Fixtures`,
+`Architecture` → `ArchitectureRules`, `Messaging` → `Messages`, `Time` → `TimeZones`, `Media` → `Uploads`).
+A `Resources/...` resx folder mirrors its class's folder, so it follows. Razor `Views/{Controller}` folders hold no `.cs` and
+keep the controller name.
+
+`.editorconfig` cannot see folder names, so the `CheckPluralFolderNames` target in `Directory.Build.props` warns at build
+time (`MAROIK0001`) for a folder whose name does not end in `s`; the zero-warning rule makes it a gate. It covers
+`Maroik.Core.PostgreSQL` too: EF Core's scaffold puts everything at the project root by default, and this project's folders
+are the scaffold options, so re-scaffold with `--context-dir Contexts --output-dir Models`.
+The namespace follows the folder path; `.editorconfig` makes a mismatch a build error (`IDE0130`), so a folder rename
+cannot leave its namespace behind.
+
+Interfaces a project defines live in `Interfaces/` (`Maroik.Core.Contract`, and the hosts' own: `Maroik.Website/Interfaces`,
+`Maroik.Worker/Interfaces`, `Maroik.FileStorage/Interfaces`), constants such as the console `LogTemplates` in `Constants/`,
+extension methods in `Extensions/` (`EnumExtensions.GetDescription`, the Domain's `DateTimeExtensions` too), and `*Mapper`
+classes in `Mappers/`. `Interfaces/` holds only interfaces (a record a contract carries, such as `HtmlImgPatch`, is a `Dtos/`
+type) and `Extensions/` only classes of extension members (a plain static helper is named for its job, e.g.
+`Maroik.Website/Serializers/ClientJsonSerializer`). Enforced for every production project except the
+`Maroik.Core.PostgreSQL` scaffold by `FolderRoleArchitectureTests` (`Maroik.Core.Contract.Tests`), which reads the sources
+with the Roslyn parser. The same test holds the `*.Tests` projects to one rule: every type that is not a `*Tests` class (a
+fake, a fixture, an assertion helper such as `ErrorAssert` or `RepositoryPaths`) lives in `Fixtures/`, so the folders that
+mirror the production code hold only its tests. A test class covers one area and sits in that area's folder
+(`Calendars/CalendarBoundaryTests`); only the cross-aggregate checks of `Maroik.Core.Domain.Tests/Invariants` (the clock, the
+error contract) have no production folder of their own.
+
+## One type per file, named after it
+
+Every `.cs` file holds one top-level type (class, record, struct, interface, enum, delegate) and is named after it
+(`AdminStanding.cs`, `MenuSnapshot.cs`, `SeededAccount.cs`). StyleCop.Analyzers is referenced for that alone: `.editorconfig`
+sets SA1402 (one type per file; `stylecop.json` counts every kind of type, not only classes) and SA1649 (file name = first
+type) to `error` by rule ID, and `stylecop.globalconfig` turns every other StyleCop rule off. That file uses category lines —
+the one exception to "configure analyzers by rule ID only" below, which holds only while no `AnalysisLevel=latest-all` /
+`AnalysisMode` is set — plus a rule-ID line for SA1201, which 1.2.0-beta.556 reports with no source location for C# 14
+`extension` blocks (a location-less diagnostic follows only a rule-ID line in a global config). Nested types are fine, and
+SA1649 does not judge a `partial` type, so `ProgramAccessor.cs` (`public partial class Program`) keeps its name.
 
 ## Always write resx + unit tests alongside code
 
@@ -420,7 +464,7 @@ are plain IDs, not object references), the same criterion applied to
 
 `Maroik.Core.Repository.Tests` runs entirely against a real PostgreSQL 17 database
 (Testcontainers) — there is no EF Core InMemory provider. One container is shared by
-the whole assembly (`Infrastructure/PostgresContainerFixture`, an xUnit v3 assembly
+the whole assembly (`Fixtures/PostgresContainerFixture`, an xUnit v3 assembly
 fixture); it loads the real schema **and seed data** from
 `Maroik.DB/PostgreSQL/SQL_Init_Script/Debugging/Init.sql` into a template database,
 and each test class gets its own throwaway DB cloned from that template
@@ -471,7 +515,7 @@ keep new Service tests to that standard.
 ## Architecture validation tests
 
 The layering / ArchNet rules are enforced by NetArchTest-based `*ArchitectureTests`
-classes in each `*.Tests` project's `Architecture/` folder, plus the solution-wide
+classes in each `*.Tests` project's `ArchitectureRules/` folder, plus the solution-wide
 `SolutionLayeringArchitectureTests` (in `Maroik.Core.Contract.Tests`) that validates
 the `.csproj` project- and package-reference graph itself. They run under
 `dotnet test`, so a violation fails the test run. Keep them green; extend them
@@ -500,7 +544,7 @@ falls back to the baked (often English, sometimes value-specific) string instead
 code was interpolated straight into the message, so no resx key could ever match it.
 
 Enforced by `DomainArchitectureTests.Domain_ErrorMessages_MustGoThrough_DomainError`
-(`Maroik.Core.Domain.Tests/Architecture/DomainArchitectureTests.cs`) — a NetArchTest custom rule that
+(`Maroik.Core.Domain.Tests/ArchitectureRules/DomainArchitectureTests.cs`) — a NetArchTest custom rule that
 inspects each type's IL for a direct call to a raw `ErrorOr.Error` factory method (a type-dependency
 check doesn't work here since every Domain type legitimately depends on the unrelated `ErrorOr<T>`
 return type). Keep it green; when a new error is added, add it via `DomainError`, and add the
@@ -508,7 +552,7 @@ matching resx entry — with a `{0}`/`{1}` composite-format key, not a baked val
 resx pair (`en-US` + `ko-KR`) that can surface it.
 
 Cultures are a Website concern: the supported UI cultures and the culture → default time-zone pre-select
-live in `Maroik.Website/Constants/CulturePolicy.cs`, not in the domain. `Maroik.Core.Domain.Time.DateTimeExtensions`
+live in `Maroik.Website/Constants/CulturePolicy.cs`, not in the domain. `Maroik.Core.Domain.Extensions.DateTimeExtensions`
 is time-zone conversion, not language handling.
 
 ## Service error keys must come from ServiceErrorKeys

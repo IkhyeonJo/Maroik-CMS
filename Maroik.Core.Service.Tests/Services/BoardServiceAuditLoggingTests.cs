@@ -1,8 +1,8 @@
 using System.Data;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Board;
+using Maroik.Core.Contract.Settings;
+using Maroik.Core.Domain.Boards;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;

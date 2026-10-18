@@ -6,9 +6,10 @@ import { loadSite, antiForgery, hidden, stubPlugin, eventProps, lastOf, successO
 function fixture(): string {
     return (
         antiForgery +
+        hidden("minLeadTimeBeforeEvent", "0") +
         hidden("maxMinutesBeforeEvent", "40320") + hidden("maxHoursBeforeEvent", "672") +
         hidden("maxDaysBeforeEvent", "28") + hidden("maxWeeksBeforeEvent", "4") +
-        hidden("reminderTimeIntervals", "[&quot;09:00&quot;,&quot;18:30&quot;]") + hidden("defaultReminderTimeOfDay", "09:00") +
+        hidden("reminderTimeIntervals", "[&quot;09:00&quot;,&quot;18:30&quot;]") +
         hidden("otherCalendarEventOutputViewModels", "[]") +
         ["localizerIETFLanguageTag", "localizerToday", "localizerMonth", "localizerEmail", "localizerNotification",
             "localizerFailedToLoadCalendars"]
@@ -400,15 +401,15 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
     it("an attachment stored without an extension shows its bare name", () => {
         const h = load();
         open(h);
-        successOf(h.lastAjax())(reply({ id: 77, calendarEventAttachedFile: { name: "report", extension: null, size: 10 } }));
+        successOf(h.lastAjax())(reply({ id: 77, calendarEventAttachedFile: { name: "report", extension: null, sizeLabel: "0" } }));
         expect(h.$("#aViewCalendarEventAttachedFile").text()).toBe("report");
         expect(h.$("#aViewCalendarEventAttachedFile").attr("data-name")).toBe("report");
     });
 
-    it("an attachment shows its name and a rounded KB size with thousands separators, and its link names the event — not the file's bytes", () => {
+    it("an attachment shows its name and the size label the server sent, in KB, and its link names the event — not the file's bytes", () => {
         const h = load();
         open(h);
-        successOf(h.lastAjax())(reply({ id: 77, calendarEventAttachedFile: { name: "report", extension: ".zip", size: 2_048_000 } }));
+        successOf(h.lastAjax())(reply({ id: 77, calendarEventAttachedFile: { name: "report", extension: ".zip", sizeLabel: "2,000" } }));
         expect(h.$("#aViewCalendarEventAttachedFile").text()).toBe("report.zip");
         expect(h.$("#aViewCalendarEventAttachedFile").attr("data-name")).toBe("report.zip");
         expect(h.$("#aViewCalendarEventAttachedFile").attr("data-calendareventid")).toBe("77");
@@ -524,6 +525,24 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         expect(rows.find("input").map((_, i) => (instanceOfType(i, HTMLInputElement)).value).get()).toEqual(["2", "3", "1", "15"]);
         expect(rows.find("input").map((_, i) => (instanceOfType(i, HTMLInputElement)).max).get()).toEqual(["672", "28", "4", "40320"]);
         expect(rows.find("select, input").toArray().every((e) => e.matches(":disabled"))).toBe(true);
+    });
+
+    it("reminder rows take their lower bound from the server's minLeadTimeBeforeEvent, not a number of their own", () => {
+        const notification = { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 2, WeeksBeforeEvent: null, TimesBeforeEvent: "09:00:00" };
+        const withMin = () => loadSite("anonymous", "Calendar", "AnonymousIndex",
+            fixtureWith().replace(hidden("minLeadTimeBeforeEvent", "0"), hidden("minLeadTimeBeforeEvent", "2")));
+
+        const h = withMin();
+        open(h);
+        successOf(h.lastAjax())(reply({ allDay: true, displayStartDate: "2024-05-01", displayEndDate: "2024-05-02", serializedCalendarReminders: JSON.stringify([notification]) }));
+        finish(h);
+        expect(h.$(".divViewEventNotificationAllDayCheckedRow input").attr("min")).toBe("2");
+
+        const h2 = withMin();
+        open(h2);
+        successOf(h2.lastAjax())(reply({ serializedCalendarReminders: JSON.stringify([notification]) }));
+        finish(h2);
+        expect(h2.$(".divViewEventNotificationAllDayUncheckedRow input").attr("min")).toBe("2");
     });
 
     it("all-day reminders show days/weeks lead time and the chosen HH:mm; Email ones are skipped", () => {

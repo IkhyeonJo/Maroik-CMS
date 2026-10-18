@@ -1,9 +1,10 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Account;
+using Maroik.Core.Contract.Settings;
+using Maroik.Core.Domain.Accounts;
 using Maroik.Website.Extensions;
 using Maroik.Website.Filters;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
@@ -189,10 +190,9 @@ public class ViewBagPopulatorFilterTests
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
 
-        Assert.Equal(0, controller.ViewBag.FixedIncomesNoticedCount);
-        Assert.Equal(0, controller.ViewBag.FixedExpenditureNoticedCount);
-        Assert.Equal(0, controller.ViewBag.FixedIncomesExpiredCount);
-        Assert.Equal(0, controller.ViewBag.FixedExpenditureExpiredCount);
+        Assert.Equal(0, controller.ViewBag.FixedIncomesTotalNoticeCount);
+        Assert.Equal(0, controller.ViewBag.FixedExpenditureTotalNoticeCount);
+        Assert.Equal(0, controller.ViewBag.TotalNoticeCount);
         _dashboardService.Verify(
             d => d.GetNoticeCountsAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -269,10 +269,9 @@ public class ViewBagPopulatorFilterTests
 
         await CreateSut().OnActionExecutionAsync(context, EmptyNext());
 
-        Assert.Equal(2, controller.ViewBag.FixedIncomesNoticedCount);
-        Assert.Equal(3, controller.ViewBag.FixedExpenditureNoticedCount);
-        Assert.Equal(1, controller.ViewBag.FixedIncomesExpiredCount);
-        Assert.Equal(4, controller.ViewBag.FixedExpenditureExpiredCount);
+        Assert.Equal(3, controller.ViewBag.FixedIncomesTotalNoticeCount);
+        Assert.Equal(7, controller.ViewBag.FixedExpenditureTotalNoticeCount);
+        Assert.Equal(10, controller.ViewBag.TotalNoticeCount);
     }
 
     /// <summary>Notice counts are a User-only feature: a signed-in Admin gets zeros and no query.</summary>
@@ -462,13 +461,6 @@ public class ViewBagPopulatorFilterTests
         var ex = await Record.ExceptionAsync(() => CreateSut().OnActionExecutionAsync(context, EmptyNext()));
 
         Assert.Null(ex);
-        Assert.Equal(0, controller.ViewBag.FixedIncomesNoticedCount);
+        Assert.Equal(0, controller.ViewBag.TotalNoticeCount);
     }
-}
-
-/// <summary>Minimal <see cref="Controller"/> subclass used as the action target in filter tests.</summary>
-internal class FakeController : Controller
-{
-    /// <summary>No-op action used only as a target for the filter pipeline under test.</summary>
-    public IActionResult Index() => Ok();
 }

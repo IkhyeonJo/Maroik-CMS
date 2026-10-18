@@ -7,7 +7,7 @@
       - "Edit"   : Summernote-powered post editor for creating or editing a private note.
     Structurally identical to Forum/FreeForum.cshtml but scoped to admin-only access.
 *@
-@using Maroik.Website.Models.ViewModels.Management
+@using Maroik.Website.Models.ViewModels.Managements
 @using System.Web
 
 @model PrivateNoteOutputViewModel
@@ -36,12 +36,12 @@
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                         <div class="form-group">
                             <label for="writeBoardTitle">@Localizer["Title"].Value</label>
-                            <input class="form-control" type="text" data-val="true" data-val-required="@Localizer["Title is required"].Value" id="writeBoardTitle" name="writeBoardTitle" value="" required maxlength="100">
+                            <input class="form-control" type="text" data-val="true" data-val-required="@Localizer["Title is required"].Value" id="writeBoardTitle" name="writeBoardTitle" value="" required maxlength="@TitledContentPolicy.MaxTitleLength">
                             <span class="field-validation-valid text-danger" data-valmsg-for="writeBoardTitle" data-valmsg-replace="true"></span>
                         </div>
                         <div class="form-group">
                             <label for="writeBoardContent" class="control-label">@Localizer["Content"].Value</label>
-                            <textarea name="writeBoardContent" id="writeBoardContent" maxlength="16384"></textarea> @*maxlength: 16KB*@
+                            <textarea name="writeBoardContent" id="writeBoardContent" maxlength="@TitledContentPolicy.MaxBodyLength"></textarea>
                         </div>
 
                         <div class="form-group">
@@ -66,7 +66,7 @@
                         <span class="mailbox-read-time float-left">@Localizer["Views"].Value: @Model.BoardOutputViewModel!.Views</span>
 
                         <span class="mailbox-read-time float-right">
-                            @Localizer["Updated"].Value: [<span id="private_note_detail_updated">@Model.BoardOutputViewModel.Updated.ToViewerFormattedString(loggedInAccount.SeesLocalTime(), loggedInAccountTimeZoneIanaId)</span>]
+                            @Localizer["Updated"].Value: [<span id="private_note_detail_updated">@Model.BoardOutputViewModel.Updated.ToViewerFormattedString(Model.ViewerSeesLocalTime, loggedInAccountTimeZoneIanaId)</span>]
                         </span>
                         <br />
                     </div>
@@ -113,15 +113,14 @@
                     <div class="card-footer card-comments">
                         @foreach (var comment in Model.DetailBoardComments)
                         {
-                            bool isCommentWriterAdmin = comment.Writer.IsAdmin(Model.AdminNicknames);
-                            if (Model.BoardOutputViewModel.Writer == comment.Writer) /*Change background color if the commenter is the post author*/
+                            if (comment.IsByPostWriter) /*Change background color if the commenter is the post author*/
                             {
                                 <div class="card-comment" style="background-color:#003366;">
                                     <img class="img-circle img-sm" src="@comment.AvatarImagePath" alt="">
 
                                     <div class="comment-text">
                                         <span class="username">
-                                            @if (isCommentWriterAdmin)
+                                            @if (comment.IsWriterAdmin)
                                             {
                                                 <span style="font-weight:bold;">@comment.Writer</span>
                                             }
@@ -130,10 +129,10 @@
                                                 <span>@comment.Writer</span>
                                             }
                                             <span class="text-muted float-middle">
-                                                @Localizer["Created"].Value: [<span class="private_note_detail_comment_created">@comment.Created.ToViewerFormattedString(loggedInAccount.SeesLocalTime(), loggedInAccountTimeZoneIanaId)</span>]
+                                                @Localizer["Created"].Value: [<span class="private_note_detail_comment_created">@comment.Created.ToViewerFormattedString(Model.ViewerSeesLocalTime, loggedInAccountTimeZoneIanaId)</span>]
                                             </span>
                                             @{
-                                                if (loggedInAccount.IsOwner(comment.Writer))/*If the visitor is the author*/
+                                                if (comment.CanDelete)/*If the visitor is the author*/
                                                 {
                                                     <span class="text-muted float-right" style="margin: 0 0 0 3px"><a class="hover aPrivateNoteDeleteComment" href="#" data-commentId="@comment.Id" data-detailBoardId="@Model.DetailBoardId" data-detailCurrentPage="@Model.DetailCurrentPage">@Localizer["Delete"].Value</a></span>
                                                 }
@@ -150,7 +149,7 @@
 
                                     <div class="comment-text">
                                         <span class="username">
-                                            @if (isCommentWriterAdmin)
+                                            @if (comment.IsWriterAdmin)
                                             {
                                                 <span style="font-weight:bold;">@comment.Writer</span>
                                             }
@@ -159,10 +158,10 @@
                                                 <span>@comment.Writer</span>
                                             }
                                             <span class="text-muted float-middle">
-                                                @Localizer["Created"].Value: [<span class="private_note_detail_comment_created">@comment.Created.ToViewerFormattedString(loggedInAccount.SeesLocalTime(), loggedInAccountTimeZoneIanaId)</span>]
+                                                @Localizer["Created"].Value: [<span class="private_note_detail_comment_created">@comment.Created.ToViewerFormattedString(Model.ViewerSeesLocalTime, loggedInAccountTimeZoneIanaId)</span>]
                                             </span>
                                             @{
-                                                if (loggedInAccount.IsOwner(comment.Writer))/*If the visitor is the author*/
+                                                if (comment.CanDelete)/*If the visitor is the author*/
                                                 {
                                                     <span class="text-muted float-right" style="margin: 0 0 0 3px"><a class="hover aPrivateNoteDeleteComment" href="#" data-commentId="@comment.Id" data-detailBoardId="@Model.DetailBoardId" data-detailCurrentPage="@Model.DetailCurrentPage">@Localizer["Delete"].Value</a></span>
                                                 }
@@ -176,26 +175,12 @@
                     </div>
 
                     <div class="card-footer">
-                        @if (loggedInAccount.Role == Role.Anonymous)
-                        {
-                            <form id="formWritePrivateNoteComment">
-                                @* ReSharper disable Html.PathError *@
-                                <img alt="" class="img-fluid img-circle img-sm" src="~/upload/Management/Profile/default-avatar.jpg">
-                                @* ReSharper restore Html.PathError *@
-                                <div class="img-push">
-                                    <input id="writePrivateNoteCommentContent" type="text" class="form-control form-control-sm" placeholder="@Localizer["Only logged in users can write comments."].Value">
-                                </div>
-                            </form>
-                        }
-                        else
-                        {
-                            <form id="formWritePrivateNoteComment" data-detailBoardId="@Model.DetailBoardId" data-detailCurrentPage="@Model.DetailCurrentPage" data-errorMessage="@Localizer["Please write the content."].Value">
-                                <img alt="" class="img-fluid img-circle img-sm" src="@loggedInAccount.AvatarImagePath">
-                                <div class="img-push">
-                                    <input id="writePrivateNoteCommentContent" type="text" class="form-control form-control-sm" placeholder="@Localizer["Press enter to post comment."].Value">
-                                </div>
-                            </form>
-                        }
+                        <form id="formWritePrivateNoteComment" data-detailBoardId="@Model.DetailBoardId" data-detailCurrentPage="@Model.DetailCurrentPage" data-errorMessage="@Localizer["Please write the content."].Value">
+                            <img alt="" class="img-fluid img-circle img-sm" src="@loggedInAccount.AvatarImagePath">
+                            <div class="img-push">
+                                <input id="writePrivateNoteCommentContent" type="text" class="form-control form-control-sm" placeholder="@Localizer["Press enter to post comment."].Value">
+                            </div>
+                        </form>
                     </div>
                     break;
                 case "edit":
@@ -203,12 +188,12 @@
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                         <div class="form-group">
                             <label for="editBoardTitle">@Localizer["Title"].Value</label>
-                            <input class="form-control" type="text" data-val="true" data-val-required="@Localizer["Title is required"].Value" id="editBoardTitle" name="editBoardTitle" value="@Model.BoardOutputViewModel!.Title" required maxlength="100">
+                            <input class="form-control" type="text" data-val="true" data-val-required="@Localizer["Title is required"].Value" id="editBoardTitle" name="editBoardTitle" value="@Model.BoardOutputViewModel!.Title" required maxlength="@TitledContentPolicy.MaxTitleLength">
                             <span class="field-validation-valid text-danger" data-valmsg-for="editBoardTitle" data-valmsg-replace="true"></span>
                         </div>
                         <div id="divEditBoardContent" class="form-group" style="@(Model.BoardOutputViewModel!.IsImgTagIncluded ? "display:none;" : "")">
                             <label for="editBoardContent" class="control-label"></label>
-                            <textarea name="editBoardContent" id="editBoardContent" maxlength="16384">@Model.BoardOutputViewModel!.Content</textarea> @*maxlength: 16KB*@
+                            <textarea name="editBoardContent" id="editBoardContent" maxlength="@TitledContentPolicy.MaxBodyLength">@Model.BoardOutputViewModel!.Content</textarea>
                         </div>
 
                         <div class="card-footer bg-dark">
@@ -287,24 +272,20 @@
                             <tbody>
                             @foreach (var board in Model.Boards)
                             {
-                                int commentsOfUndeletedSelectedBoardCount = Model.CommentCountByBoardId.GetValueOrDefault(board.Id, 0);
-                                var attachedFilesWithName = Model.AttachedFilesByBoardId.GetValueOrDefault(board.Id, []);
-                                bool boardTitleVisible = board.IsTitleVisibleToOwner(loggedInAccount);
-                                bool isBoardWriterAdmin = board.Writer.IsAdmin(Model.AdminNicknames);
 
                                 <tr>
                                     <td>@Localizer["Private Note"]</td>
                                     <td>
-                                        @if (boardTitleVisible)
+                                        @if (board.TitleVisible)
                                         {
-                                            @Html!.ActionLink($"{board.Title} [{commentsOfUndeletedSelectedBoardCount}]", "PrivateNote", new {method = "detail", boardId = (int)board.Id, page = Model.Pager!.CurrentPage})
+                                            @Html!.ActionLink($"{board.Title} [{board.CommentCount}]", "PrivateNote", new {method = "detail", boardId = (int)board.Id, page = Model.Pager!.CurrentPage})
                                         }
                                         else
                                         {
                                             @Localizer["Only a writer can see it."].Value
                                         }
                                     </td>
-                                    @if (isBoardWriterAdmin)
+                                    @if (board.IsWriterAdmin)
                                     {
                                         <td><span style="font-weight:bold;">@board.Writer</span></td>
                                     }
@@ -312,10 +293,10 @@
                                     {
                                         <td><span>@board.Writer</span></td>
                                     }
-                                    <td class="private_note_board_created">@board.Created.ToViewerFormattedString(loggedInAccount.SeesLocalTime(), loggedInAccountTimeZoneIanaId)</td>
+                                    <td class="private_note_board_created">@board.Created.ToViewerFormattedString(Model.ViewerSeesLocalTime, loggedInAccountTimeZoneIanaId)</td>
 
                                     <td>@board.View</td>
-                                    @if (attachedFilesWithName.Count != 0)
+                                    @if (board.HasAttachment)
                                     {
                                         <td><i class="fas fa-paperclip"></i></td>
                                     }
@@ -330,7 +311,7 @@
                     </div>
                     <hr />
 
-                    <nav aria-label="Page navigation example">
+                    <nav aria-label="@Localizer["Page navigation"].Value">
                         @if (Model.Pager!.TotalPages > 0)
                         {
                             <ul class="pagination justify-content-center">
@@ -384,9 +365,6 @@
         case Role.User:
             <img alt="" src="~/user/dist/img/ajax-loader.gif" asp-append-version="true" />
             break;
-        case Role.Anonymous:
-            <img alt="" src="~/anonymous/dist/img/ajax-loader.gif" asp-append-version="true" />
-            break;
     }
     @* ReSharper restore Html.PathError *@
 </div>
@@ -414,8 +392,6 @@
             break;
         case Role.User:
             <script src="~/user/custom/Management/PrivateNote/js/site.js" asp-append-version="true"></script>
-            break;
-        case Role.Anonymous:
             break;
     }
 }

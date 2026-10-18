@@ -1,4 +1,5 @@
 using HtmlAgilityPack;
+using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 
 namespace Maroik.Core.Service.Services;

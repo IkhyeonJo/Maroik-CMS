@@ -1,6 +1,6 @@
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Finance;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Finances;
+using Maroik.Core.PostgreSQL.Contexts;
 using Microsoft.EntityFrameworkCore;
 using OrmFixedIncome = Maroik.Core.PostgreSQL.Models.FixedIncome;
 

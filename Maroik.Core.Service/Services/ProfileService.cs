@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using Maroik.Core.Contract.Dtos;
+using Maroik.Core.Contract.Enums;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
-using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Finance;
-using Maroik.Core.Domain.Media;
+using Maroik.Core.Contract.Settings;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Finances;
+using Maroik.Core.Domain.Uploads;
 using Maroik.Core.Domain.ValueObjects;
 using Maroik.Core.Service.Extensions;
 using Maroik.Core.Service.Mappers;

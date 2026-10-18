@@ -1,4 +1,4 @@
-using Maroik.Core.Contract.Misc.Messaging;
+using Maroik.Core.Contract.Messages;
 using RabbitMQ.Client;
 
 namespace Maroik.Worker.Workers;

@@ -1,5 +1,5 @@
 using Maroik.Core.Client.Clients;
-using Maroik.Core.Contract.Misc.Messaging;
+using Maroik.Core.Contract.Messages;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using RabbitMQ.Client;
@@ -284,6 +284,39 @@ public class RabbitMqEmailPublisherTests
         var field = typeof(RabbitMqEmailPublisher).GetField(
             "_connectionRecoveryGraceWindow", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         Assert.Equal(TimeSpan.FromSeconds(42), (TimeSpan)field!.GetValue(sut)!);
+    }
+
+    /// <summary>
+    /// A publish wedged on the broker keeps the lock past the dispose timeout: disposal is skipped and logged (the channel and
+    /// connection stay with the call still using them), and a later dispose, once the publish has finished, cleans up.
+    /// </summary>
+    [Fact]
+    public async Task DisposeAsync_SkipsAndLogs_WhileAPublishIsWedged_AndCanBeRepeatedAfterwards()
+    {
+        var channel = MakeChannelMock();
+        var release = new TaskCompletionSource();
+        var entered = new TaskCompletionSource();
+        channel.Setup(c => c.BasicPublishAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<BasicProperties>(),
+                It.IsAny<ReadOnlyMemory<byte>>(), It.IsAny<CancellationToken>()))
+            .Returns(() => { entered.TrySetResult(); return new ValueTask(release.Task); });
+        var connection = MakeConnectionMock(channel, isOpen: true);
+        _factory.Setup(f => f.CreateConnectionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(connection.Object);
+        var logger = new Microsoft.Extensions.Logging.Testing.FakeLogger<RabbitMqEmailPublisher>();
+        var sut = new RabbitMqEmailPublisher(_factory.Object, logger, _testRecoveryGraceWindow) { DisposeLockTimeout = TimeSpan.FromMilliseconds(100) };
+        Task publish = sut.PublishAsync(_message, TestContext.Current.CancellationToken);
+        await entered.Task;
+
+        await sut.DisposeAsync();
+
+        connection.Verify(c => c.DisposeAsync(), Times.Never);
+        Assert.Contains(logger.Collector.GetSnapshot(), r =>
+            r.Level == Microsoft.Extensions.Logging.LogLevel.Warning && r.Message.Contains("waiting for an in-flight publish to finish", StringComparison.Ordinal));
+
+        release.SetResult();
+        await publish;
+        await sut.DisposeAsync();
+
+        connection.Verify(c => c.DisposeAsync(), Times.Once);
     }
 
     /// <summary>Dispose async with open connection disposes connection.</summary>

@@ -1,5 +1,5 @@
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Media;
+using Maroik.Core.Domain.Uploads;
 
 namespace Maroik.Website.Middlewares;
 

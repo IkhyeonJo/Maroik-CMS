@@ -207,12 +207,6 @@
   <data name="MyDepositAsset" xml:space="preserve">
     <value>MyDepositAsset</value>
   </data>
-  <data name="No fixedExpenditure exists" xml:space="preserve">
-    <value>No fixedExpenditure exists</value>
-  </data>
-  <data name="No fixedIncome exists" xml:space="preserve">
-    <value>No fixedIncome exists</value>
-  </data>
   <data name="NonConsumerSpending" xml:space="preserve">
     <value>NonConsumerSpending</value>
   </data>

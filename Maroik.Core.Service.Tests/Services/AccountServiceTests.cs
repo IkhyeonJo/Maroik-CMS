@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using Maroik.Core.Contract.Dtos;
+using Maroik.Core.Contract.Enums;
+using Maroik.Core.Contract.Extensions;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
-using Maroik.Core.Contract.Misc.Helpers;
-using Maroik.Core.Contract.Misc.Messaging;
-using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Account;
+using Maroik.Core.Contract.Messages;
+using Maroik.Core.Contract.Settings;
+using Maroik.Core.Domain.Accounts;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
@@ -1226,7 +1226,7 @@ public class AccountServiceTests
         RegisterResult result = await CreateSut().RegisterAsync(NewRegistration(), _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
-        Assert.Equal(EnumHelper.GetDescription(AccountMessage.UserAlreadyCreated), result.ErrorKey);
+        Assert.Equal(AccountMessage.UserAlreadyCreated.GetDescription(), result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -1355,6 +1355,28 @@ public class AccountServiceTests
         _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>
+    /// A time zone the domain refuses surfaces only under the lock, when the earlier registration is replaced: the transaction is
+    /// rolled back, the domain's error is returned and nothing is written or mailed.
+    /// </summary>
+    [Fact]
+    public async Task RegisterAsync_Unconfirmed_RollsBackWithTheDomainError_WhenTheTimeZoneIsUnknown()
+    {
+        var existing = ActiveAccount(emailConfirmed: false, registrationToken: GuidToken.Generate(Now));
+        SetupUnconfirmedAccountForRegister(existing, lockedRead: existing);
+        RegisterAccountRequest request = NewRegistration();
+        request.TimeZoneIanaId = "Not/AZone";
+
+        RegisterResult result = await CreateSut().RegisterAsync(request, _emailTemplate, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Success);
+        Assert.Equal("'{0}' is not a recognised time-zone ID.", result.ErrorKey);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
+        _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     /// <summary>A weak password or an invalid nickname is refused before hashing or taking the row lock.</summary>
     [Theory]
     [InlineData("TestUser", "weak")]
@@ -1422,7 +1444,7 @@ public class AccountServiceTests
         RegisterResult result = await CreateSut().ResendConfirmationEmailAsync("user@example.com", _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
-        Assert.Equal(EnumHelper.GetDescription(AccountMessage.UserAlreadyCreated), result.ErrorKey);
+        Assert.Equal(AccountMessage.UserAlreadyCreated.GetDescription(), result.ErrorKey);
         _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -1958,7 +1980,7 @@ public class AccountServiceTests
         await CreateSut().ForgotPasswordAsync(account.Email.Value, _emailTemplate, TestContext.Current.CancellationToken);
 
         _mailClient.Verify(m => m.GetMailResetPasswordBody("enc-token", "title", "c0", "c1", "https://example.com"), Times.Once);
-        string expected = published ? EnumHelper.GetDescription(AccountMessage.ResetPasswordMail) : "Fail to mail sent";
+        string expected = published ? AccountMessage.ResetPasswordMail.GetDescription() : "Fail to mail sent";
         _accountRepo.Verify(r => r.UpdateMessageAsync(account.Email.Value, expected, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 

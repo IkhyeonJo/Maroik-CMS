@@ -2,8 +2,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Maroik.Core.Client.Clients;
-using Maroik.Core.Contract.Misc.Enums;
+using Maroik.Core.Contract.Enums;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.Testing;
+using Microsoft.Extensions.Logging;
 
 namespace Maroik.Core.Client.Tests.Clients;
 
@@ -128,6 +130,57 @@ public class ClamavClientTests
         ClamavScanResult result = await _sut.ScanWithClamavAsync(stream, "127.0.0.1", server.Port, TestContext.Current.CancellationToken);
 
         Assert.Equal(ClamavScanResult.Unavailable, result);
+    }
+
+    /// <summary>A reply that is not a verdict is logged as a warning naming the daemon and the reply, so an operator can tell why uploads are refused.</summary>
+    [Fact]
+    public async Task ScanWithClamavAsync_LogsAReplyThatIsNotAVerdict()
+    {
+        var logger = new FakeLogger<ClamavClient>();
+        await using var server = FakeClamavServer.Start("stream: gibberish\n");
+        using var stream = new MemoryStream([0x01]);
+
+        await new ClamavClient(logger).ScanWithClamavAsync(stream, "127.0.0.1", server.Port, TestContext.Current.CancellationToken);
+
+        FakeLogRecord warning = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Equal(LogLevel.Warning, warning.Level);
+        Assert.Equal($"ClamAV at 127.0.0.1:{server.Port} returned a reply that is not a clean or infected verdict: stream: gibberish", warning.Message);
+    }
+
+    /// <summary>A scan that cannot reach the daemon is logged as a warning with the exception, naming the daemon.</summary>
+    [Fact]
+    public async Task ScanWithClamavAsync_LogsTheFailure_WhenTheDaemonIsUnreachable()
+    {
+        var logger = new FakeLogger<ClamavClient>();
+        using var stream = new MemoryStream([0x01]);
+
+        await new ClamavClient(logger).ScanWithClamavAsync(stream, "127.0.0.1", 1, TestContext.Current.CancellationToken);
+
+        FakeLogRecord warning = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Equal(LogLevel.Warning, warning.Level);
+        Assert.Equal("ClamAV scan failed against 127.0.0.1:1", warning.Message);
+        Assert.NotNull(warning.Exception);
+    }
+
+    /// <summary>
+    /// A daemon that accepts the scan but never answers cannot hold the upload: the scan gives up after its timeout and reports
+    /// the scan as unavailable, even though the caller's own token never fires.
+    /// </summary>
+    [Fact]
+    public async Task ScanWithClamavAsync_GivesUp_WhenTheDaemonNeverAnswers()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        Task<TcpClient> accepted = listener.AcceptTcpClientAsync(TestContext.Current.CancellationToken).AsTask();
+        var sut = new ClamavClient(NullLogger<ClamavClient>.Instance) { ScanTimeout = TimeSpan.FromMilliseconds(300) };
+        using var stream = new MemoryStream([0x01]);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
+        ClamavScanResult result = await sut.ScanWithClamavAsync(stream, "127.0.0.1", ((IPEndPoint)listener.LocalEndpoint).Port, CancellationToken.None);
+
+        Assert.Equal(ClamavScanResult.Unavailable, result);
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(10), $"took {clock.Elapsed}");
+        using TcpClient held = await accepted; // the silent daemon's side of the connection, closed here
     }
 
     /// <summary>A signature name that merely contains "OK" must not read as clean: FOUND wins.</summary>

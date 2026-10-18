@@ -165,32 +165,17 @@
   <data name="Success to reset password" xml:space="preserve">
     <value>비밀번호 초기화 성공</value>
   </data>
-  <data name="Error Found" xml:space="preserve">
-    <value>오류 발생</value>
-  </data>
   <data name="User already created, please login" xml:space="preserve">
     <value>계정이 이미 생성되었습니다. 로그인 해주십시오.</value>
   </data>
   <data name="User already created, please verify your given mail Id" xml:space="preserve">
     <value>계정이 이미 생성되었습니다. 등록하신 이메일을 인증해 주십시오.</value>
   </data>
-  <data name="Invalid User, Please Create account" xml:space="preserve">
-    <value>존재하지 않는 사용자입니다. 계정을 생성해 주십시오.</value>
-  </data>
-  <data name="Mail Sent" xml:space="preserve">
-    <value>메일이 전송되었습니다.</value>
-  </data>
   <data name="Fail to mail sent" xml:space="preserve">
     <value>메일 전송에 실패하였습니다.</value>
   </data>
   <data name="User created, Check email, click link and verify" xml:space="preserve">
     <value>계정이 생성되었습니다. 이메일을 확인한 뒤 링크를 클릭하여 인증해 주십시오.</value>
-  </data>
-  <data name="Invalid Token" xml:space="preserve">
-    <value>유효하지 않은 토큰입니다.</value>
-  </data>
-  <data name="Failed to resend email" xml:space="preserve">
-    <value>이메일 재전송에 실패하였습니다.</value>
   </data>
   <data name="Email has been sent to reset password" xml:space="preserve">
     <value>비밀번호 초기화 메일이 전송되었습니다.</value>

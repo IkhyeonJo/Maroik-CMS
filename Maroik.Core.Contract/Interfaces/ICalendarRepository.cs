@@ -1,4 +1,4 @@
-using Maroik.Core.Domain.Calendar;
+using Maroik.Core.Domain.Calendars;
 namespace Maroik.Core.Contract.Interfaces;
 
 /// <summary>
@@ -16,8 +16,17 @@ public interface ICalendarRepository : IGenericRepository<Calendar>
     /// </summary>
     Task<Calendar?> FindByIdForUpdateAsync(long id, CancellationToken ct = default);
 
-    /// <summary>Returns every calendar in the system, ordered by name.</summary>
-    Task<List<Calendar>> GetAllOrderedByNameAsync(CancellationToken ct = default);
+    /// <summary>Returns the calendars shared with guests (<c>CalendarShared.Anonymous</c>): what a signed-out visitor sees.</summary>
+    Task<List<Calendar>> GetSharedWithGuestsAsync(CancellationToken ct = default);
+
+    /// <summary>Returns the calendars shared with registered users (<c>CalendarShared.User</c>): what an account may subscribe to.</summary>
+    Task<List<Calendar>> GetSharedWithUsersAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the calendars <paramref name="accountEmail"/> subscribes to (<c>OtherCalendar</c>) that are still shared with users —
+    /// a subscription to a calendar since turned private is left out even if its row was not cleaned up.
+    /// </summary>
+    Task<List<Calendar>> GetSubscribedByAsync(string accountEmail, CancellationToken ct = default);
 
     /// <summary>Deletes the calendar with the given ID.</summary>
     Task DeleteByIdAsync(long id, CancellationToken ct = default);

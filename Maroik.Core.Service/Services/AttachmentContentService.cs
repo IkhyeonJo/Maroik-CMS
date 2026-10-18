@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Maroik.Core.Contract.Dtos;
+using Maroik.Core.Contract.Enums;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
-using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Media;
+using Maroik.Core.Contract.Settings;
+using Maroik.Core.Domain.Uploads;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 

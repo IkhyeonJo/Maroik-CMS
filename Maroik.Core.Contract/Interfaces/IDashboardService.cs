@@ -1,13 +1,14 @@
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Domain.Primitives;
 
 namespace Maroik.Core.Contract.Interfaces;
 
 /// <summary>
-/// Pure query service for the user dashboard, aggregating income, expenditure, and asset data
-/// and computing notification badge counts. Performs no state mutations.
+/// Read service for the user dashboard, aggregating income, expenditure, and asset data
+/// and computing notification badge counts. Its one write is a self-correction: when the account's stored
+/// <c>DefaultMonetaryUnit</c> differs from the one resolved from its assets, the summary persists the resolved
+/// value (never for the demo account), so other screens do not show a stale currency.
 /// </summary>
-public interface IDashboardService : IQueryService
+public interface IDashboardService
 {
     /// <summary>
     /// Builds the full dashboard summary for the given account, year, and month.

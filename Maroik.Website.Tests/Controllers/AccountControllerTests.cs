@@ -1,7 +1,6 @@
-using System.Text.RegularExpressions;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.PostgreSQL.Contexts;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Maroik.Website.Tests.Controllers;
@@ -37,6 +36,16 @@ public class AccountControllerTests(MaroikWebApplicationFactory factory)
         var response = await _client.GetAsync("/Account/Login", TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>The login form caps the password at the policy's ceiling (PasswordPolicy.MaxByteLength), not at a number of its own.</summary>
+    [Fact]
+    public async Task Login_Get_CapsThePasswordAtThePolicyLimit()
+    {
+        var response = await _client.GetAsync("/Account/Login", TestContext.Current.CancellationToken);
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Matches($"id=\"Password\"[^>]*maxlength=\"{PasswordPolicy.MaxByteLength}\"", html);
     }
 
     /// <summary>
@@ -89,8 +98,8 @@ public class AccountControllerTests(MaroikWebApplicationFactory factory)
         getRequest.Headers.Add("Cookie", $"{SessionCookieName}={attackerChosenSessionId}");
         var getResponse = await _client.SendAsync(getRequest, TestContext.Current.CancellationToken);
         string html = await getResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        string antiForgeryToken = ExtractAntiForgeryToken(html);
-        string? antiForgeryCookie = ExtractCookieValue(getResponse, AntiForgeryCookieName);
+        string antiForgeryToken = AuthenticatedSessionHelper.ExtractAntiForgeryToken(html);
+        string? antiForgeryCookie = AuthenticatedSessionHelper.ExtractCookieValue(getResponse, AntiForgeryCookieName);
         Assert.False(string.IsNullOrEmpty(antiForgeryCookie));
 
         // POST valid credentials while still presenting the attacker's session cookie, exactly as
@@ -106,7 +115,7 @@ public class AccountControllerTests(MaroikWebApplicationFactory factory)
         var postResponse = await _client.SendAsync(postRequest, TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.Redirect, postResponse.StatusCode); // confirms login actually succeeded (failure re-renders the form as 200)
-        string? postLoginSessionCookie = ExtractCookieValue(postResponse, SessionCookieName);
+        string? postLoginSessionCookie = AuthenticatedSessionHelper.ExtractCookieValue(postResponse, SessionCookieName);
         Assert.False(string.IsNullOrEmpty(postLoginSessionCookie));
         // The core assertion: the attacker's pre-chosen session ID must never become the
         // authenticated session — if it did, the attacker's own copy of that same cookie would
@@ -120,20 +129,6 @@ public class AccountControllerTests(MaroikWebApplicationFactory factory)
     private const string SessionCookieName = "__Secure-.AspNetCore.Session";
     /// <summary>Name prefix of the antiforgery cookie the site issues.</summary>
     private const string AntiForgeryCookieName = "__Secure-.AspNetCore.Antiforgery.";
-
-    /// <summary>Extracts the value of a specific cookie from a response's Set-Cookie headers, or null if absent.</summary>
-    private static string? ExtractCookieValue(HttpResponseMessage response, string cookieName)
-    {
-        return !response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders) ? null : (from header in setCookieHeaders select header.Split(';', 2)[0] into namePart let eq = namePart.IndexOf('=', StringComparison.Ordinal) where eq > 0 where namePart[..eq] == cookieName select namePart[(eq + 1)..]).FirstOrDefault();
-    }
-
-    /// <summary>Extracts the antiforgery hidden-input value from a rendered form's HTML.</summary>
-    private static string ExtractAntiForgeryToken(string html)
-    {
-        Match match = Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
-        Assert.True(match.Success, "Could not find __RequestVerificationToken in the login page HTML.");
-        return match.Groups[1].Value;
-    }
 
     // -- Logout ---------------------------------------------------------------
 
@@ -149,8 +144,8 @@ public class AccountControllerTests(MaroikWebApplicationFactory factory)
         using var getRequest = new HttpRequestMessage(HttpMethod.Get, "/Account/Login");
         var getResponse = await _client.SendAsync(getRequest, TestContext.Current.CancellationToken);
         string html = await getResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        string antiForgeryToken = ExtractAntiForgeryToken(html);
-        string? antiForgeryCookie = ExtractCookieValue(getResponse, AntiForgeryCookieName);
+        string antiForgeryToken = AuthenticatedSessionHelper.ExtractAntiForgeryToken(html);
+        string? antiForgeryCookie = AuthenticatedSessionHelper.ExtractCookieValue(getResponse, AntiForgeryCookieName);
         Assert.False(string.IsNullOrEmpty(antiForgeryCookie));
 
         using var postRequest = new HttpRequestMessage(HttpMethod.Post, "/Account/Logout");

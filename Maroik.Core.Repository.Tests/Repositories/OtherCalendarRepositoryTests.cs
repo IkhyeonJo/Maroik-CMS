@@ -1,4 +1,4 @@
-using Maroik.Core.Domain.Calendar;
+using Maroik.Core.Domain.Calendars;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
 using OrmOtherCalendar = Maroik.Core.PostgreSQL.Models.OtherCalendar;
@@ -10,8 +10,7 @@ namespace Maroik.Core.Repository.Tests.Repositories;
 /// preloaded with the <c>Init.sql</c> schema and seed data.
 /// <c>OtherCalendar</c> has the composite PK <c>(AccountEmail, CalendarId)</c> and the FKs
 /// <c>OtherCalendar_fk_0</c> to <c>Account.Email</c> and <c>OtherCalendar_fk_1</c> to
-/// <c>Calendar.ID</c> (both unenforced by InMemory). The global <c>GetAllAsync</c> assertion is
-/// scoped to the rows this test created.
+/// <c>Calendar.ID</c> (both unenforced by InMemory).
 /// </summary>
 public sealed class OtherCalendarRepositoryTests(DatabaseFixture database) : RepositoryTestBase(database)
 {
@@ -28,26 +27,6 @@ public sealed class OtherCalendarRepositoryTests(DatabaseFixture database) : Rep
         }));
         await Context.SaveChangesAsync();
         Context.ChangeTracker.Clear();
-    }
-
-    // -- GetAllAsync --------------------------------------------
-
-    /// <summary>Verifies that <c>GetAllAsync</c> includes every subscription this test inserted.</summary>
-    [Fact]
-    public async Task GetAllAsync_ReturnsInsertedEntries()
-    {
-        string alice = UniqueEmail("alice");
-        string bob = UniqueEmail("bob");
-        long c1 = await InsertCalendarAsync();
-        long c2 = await InsertCalendarAsync();
-        long c3 = await InsertCalendarAsync();
-        await SeedAsync(alice, c1, c2);
-        await SeedAsync(bob, c3);
-
-        List<OtherCalendar> result = await Sut.GetAllAsync(TestContext.Current.CancellationToken);
-
-        string[] mine = [alice, bob];
-        Assert.Equal(3, result.Count(oc => mine.Contains(oc.AccountEmail.Value)));
     }
 
     // -- GetByAccountEmailAsync -----------------------------------------------

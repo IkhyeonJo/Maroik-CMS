@@ -1,9 +1,10 @@
 using System.Xml.Linq;
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Menu;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Menus;
 using Maroik.Website.Controllers;
 using Maroik.Website.Extensions;
+using Maroik.Website.Tests.Fixtures;
 
 namespace Maroik.Website.Tests.Controllers;
 
@@ -19,15 +20,7 @@ public class MenuSafeguardTests
         "The menu entry that lets administrators open menu management cannot be removed, moved or given to another role.";
 
     /// <summary>The Maroik.Website project folder.</summary>
-    private static readonly string _websiteDir = FindWebsiteDirectory();
-
-    /// <summary>Walks up from the test output to the folder holding <c>Maroik.sln</c>, then into Maroik.Website.</summary>
-    private static string FindWebsiteDirectory()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Maroik.sln"))) dir = dir.Parent;
-        return Path.Combine(dir?.FullName ?? throw new InvalidOperationException("Could not locate Maroik.sln"), "Maroik.Website");
-    }
+    private static readonly string _websiteDir = RepositoryPaths.Website;
 
     /// <summary>The route the safeguard keeps is <c>ManagementController.Menu</c>: renaming either breaks this test, not the guard.</summary>
     [Fact]

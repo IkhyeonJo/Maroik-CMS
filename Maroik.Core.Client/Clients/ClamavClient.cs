@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Net.Sockets;
+using Maroik.Core.Contract.Enums;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Maroik.Core.Client.Clients;
@@ -15,8 +15,9 @@ public class ClamavClient(ILogger<ClamavClient> logger) : IClamavClient
     /// <summary>
     /// Bounds the whole scan (connect + stream + result) so a stalled or overloaded ClamAV daemon
     /// can't pin the calling request forever, even for a caller whose own CancellationToken never fires.
+    /// Internal so tests can shorten it.
     /// </summary>
-    private static readonly TimeSpan _scanTimeout = TimeSpan.FromSeconds(30);
+    internal TimeSpan ScanTimeout { get; init; } = TimeSpan.FromSeconds(30);
 
     /// <summary>Size in bytes of the big-endian length prefix that precedes every INSTREAM chunk.</summary>
     private const int LengthPrefixSize = sizeof(int);
@@ -32,7 +33,7 @@ public class ClamavClient(ILogger<ClamavClient> logger) : IClamavClient
     public async Task<ClamavScanResult> ScanWithClamavAsync(Stream fileStream, string clamavHost, int clamavPort, CancellationToken ct = default)
     {
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeoutCts.CancelAfter(_scanTimeout);
+        timeoutCts.CancelAfter(ScanTimeout);
         CancellationToken scanCt = timeoutCts.Token;
 
         try

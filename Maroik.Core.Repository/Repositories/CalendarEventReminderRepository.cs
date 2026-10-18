@@ -1,6 +1,6 @@
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Calendar;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Calendars;
+using Maroik.Core.PostgreSQL.Contexts;
 using Microsoft.EntityFrameworkCore;
 using OrmCalendarEventReminder = Maroik.Core.PostgreSQL.Models.CalendarEventReminder;
 

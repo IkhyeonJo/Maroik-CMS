@@ -5,7 +5,7 @@ namespace Maroik.Core.Contract.Dtos;
 /// <summary>
 /// Per-subClass amount and percentage-of-total breakdown for one main class (e.g. "RegularIncome")
 /// over one reporting period, computed by <c>DashboardService</c> via
-/// <see cref="Maroik.Core.Domain.Finance.FinanceBreakdownPolicy"/>. The dashboard view model mapper
+/// <see cref="Maroik.Core.Domain.Finances.FinanceBreakdownPolicy"/>. The dashboard view model mapper
 /// only reads values out of this — it never sums or divides.
 /// </summary>
 public class FinanceBreakdownDto

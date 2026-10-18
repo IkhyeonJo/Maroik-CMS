@@ -1,9 +1,9 @@
 using System.Globalization;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Finance;
+using Maroik.Core.Contract.Settings;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Finances;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
@@ -289,10 +289,6 @@ public class DashboardServiceTests
         // whole income/expenditure section would silently disappear from the dashboard.
         Assert.Contains("USD", summary.MonetaryUnits);
         Assert.Equal("KRW", summary.DefaultMonetaryUnit);
-
-        // Rows tied to the deleted asset still need its currency, so the lookup covers every asset.
-        Assert.Equal("USD", summary.CurrencyByProduct["OldForeignAccount"]);
-        Assert.Equal("KRW", summary.CurrencyByProduct["Wallet"]);
     }
 
     /// <summary>
@@ -377,8 +373,8 @@ public class DashboardServiceTests
 
         DashboardDto summary = await sut.GetSummaryAsync(email, "2025", "3", "UTC", TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, summary.YearIncomes.Count);
-        Assert.Single(summary.YearMonthIncomes);
+        Assert.Equal(300m, summary.YearIncomeBreakdown["RegularIncome"].Total);
+        Assert.Equal(100m, summary.YearMonthIncomeBreakdown["RegularIncome"].Total);
         _incomeRepo.Verify(r => r.GetByAccountEmailAndDateRangeAsync(email, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
         _expenditureRepo.Verify(r => r.GetByAccountEmailAndDateRangeAsync(email, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -703,6 +699,32 @@ public class DashboardServiceTests
         }
     }
 
+    /// <summary>A docker row with fewer than five columns (a cut-off line) is skipped; the rows around it are still read.</summary>
+    [Fact]
+    public void GetServerResourceSummary_SkipsAShortDockerRow()
+    {
+        string hostFile = Path.GetTempFileName();
+        string dockerFile = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(dockerFile,
+                "Docker Resource Usage:\n" +
+                "NAME CPU% MEM USED / LIMIT\n" +
+                "web 12.3% 100MiB / 512MiB\n" +
+                "broken 1%\n" +
+                "db 4.5% 1GiB / 2GiB");
+
+            ServerResourceDto summary = CreateSut().GetServerResourceSummary(hostFile, dockerFile);
+
+            Assert.Equal(["web", "db"], summary.DockerContainerResult.Select(c => c.Name));
+        }
+        finally
+        {
+            File.Delete(hostFile);
+            File.Delete(dockerFile);
+        }
+    }
+
     /// <summary>Verifies that <c>GetServerResourceSummary</c> returns an empty (not null) docker container list when the docker file is missing.</summary>
     [Fact]
     public void GetServerResourceSummary_ReturnsEmptyDockerContainerList_WhenDockerFileMissing()
@@ -777,7 +799,7 @@ public class DashboardServiceTests
 
     /// <summary>
     /// Only rows whose asset uses the account's default currency are totaled (mixing currencies would
-    /// add unlike amounts), but the product→currency lookup still lists every asset for the view.
+    /// add unlike amounts).
     /// </summary>
     [Fact]
     public async Task GetSummaryAsync_TotalsOnlyRowsInTheDefaultCurrency()
@@ -790,11 +812,10 @@ public class DashboardServiceTests
 
         DashboardDto summary = await CreateSut().GetSummaryAsync("user@example.com", "2025", "3", "UTC", TestContext.Current.CancellationToken);
 
-        Assert.Equal([1L], summary.YearIncomes.Select(i => i.Id));
-        Assert.Equal([1L], summary.YearMonthIncomes.Select(i => i.Id));
-        Assert.Equal([3L], summary.YearExpenditures.Select(e => e.Id));
-        Assert.Equal([3L], summary.YearMonthExpenditures.Select(e => e.Id));
-        Assert.Equal("USD", summary.CurrencyByProduct["UsdWallet"]);
+        Assert.Equal(100m, summary.YearIncomeBreakdown["RegularIncome"].Total);
+        Assert.Equal(100m, summary.YearMonthIncomeBreakdown["RegularIncome"].Total);
+        Assert.Equal(10m, summary.YearExpenditureBreakdown["ConsumerSpending"].Total);
+        Assert.Equal(10m, summary.YearMonthExpenditureBreakdown["ConsumerSpending"].Total);
     }
 
     /// <summary>A transaction on a since-deleted asset still resolves its currency and stays in the totals.</summary>
@@ -806,7 +827,7 @@ public class DashboardServiceTests
 
         DashboardDto summary = await CreateSut().GetSummaryAsync("user@example.com", "2025", "3", "UTC", TestContext.Current.CancellationToken);
 
-        Assert.Equal([1L], summary.YearIncomes.Select(i => i.Id));
+        Assert.Equal(100m, summary.YearIncomeBreakdown["RegularIncome"].Total);
     }
 
     /// <summary>The start year is the earlier of the first income and the first expenditure.</summary>
@@ -976,15 +997,16 @@ public class DashboardServiceTests
         var first = new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc);
         var next = new DateTime(2025, 4, 1, 0, 0, 0, DateTimeKind.Utc);
         GivenSummaryInputs([MakeAsset("Wallet")],
-            [IncomeAt(1, "Wallet", 1m, before), IncomeAt(2, "Wallet", 1m, first), IncomeAt(3, "Wallet", 1m, next)],
-            [ExpenditureAt(4, "Wallet", 1m, before), ExpenditureAt(5, "Wallet", 1m, first), ExpenditureAt(6, "Wallet", 1m, next)]);
+            [IncomeAt(1, "Wallet", 1m, before), IncomeAt(2, "Wallet", 2m, first), IncomeAt(3, "Wallet", 4m, next)],
+            [ExpenditureAt(4, "Wallet", 10m, before), ExpenditureAt(5, "Wallet", 20m, first), ExpenditureAt(6, "Wallet", 40m, next)]);
 
         DashboardDto summary = await CreateSut().GetSummaryAsync("user@example.com", "2025", "3", "UTC", TestContext.Current.CancellationToken);
 
-        Assert.Equal([2L], summary.YearMonthIncomes.Select(i => i.Id));
-        Assert.Equal([5L], summary.YearMonthExpenditures.Select(e => e.Id));
-        Assert.Equal(3, summary.YearIncomes.Count);
-        Assert.Equal(3, summary.YearExpenditures.Count);
+        // Distinct amounts identify the rows: only the one at the month's first instant is in the month totals.
+        Assert.Equal(2m, summary.YearMonthIncomeBreakdown["RegularIncome"].Total);
+        Assert.Equal(20m, summary.YearMonthExpenditureBreakdown["ConsumerSpending"].Total);
+        Assert.Equal(7m, summary.YearIncomeBreakdown["RegularIncome"].Total);
+        Assert.Equal(70m, summary.YearExpenditureBreakdown["ConsumerSpending"].Total);
     }
 
     /// <summary>A fixed expenditure outside its notice window (and not "always notify") is not counted as noticed.</summary>

@@ -638,7 +638,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
         return calendarEventClick(h, { el, event });
     };
     /** A stored attachment as the event reply describes it. */
-    const attachment = { name: "spec", extension: ".pdf", size: 2_500_000 };
+    const attachment = { name: "spec", extension: ".pdf", sizeLabel: "2,441" };
     /** An accepted event reply for event 55, with `over` merged into the event. */
     const payload = (over: Record<string, unknown> = {}) => ({
         result: true, calendarEvent: {
@@ -689,6 +689,19 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
             expect(h.$("#viewCalendarEventAllDayCheckedStartDate").val()).toBe("2024-05-01");
             expect(display(h, "#divViewEventAllDayChecked")).not.toBe("none");
             expect(display(h, "#divViewEventAllDayUnchecked")).toBe("none");
+        });
+
+        it("the shared event's reminder rows take their lower bound from the server's minLeadTimeBeforeEvent, not a number of their own", () => {
+            const h = build({ body: (html) => html.replace(hidden("minLeadTimeBeforeEvent", "0"), hidden("minLeadTimeBeforeEvent", "2")) + detailDom });
+            openView(h, {
+                allDay: true, displayStartDate: "2024-05-01", displayEndDate: "2024-05-03",
+                serializedCalendarReminders: JSON.stringify([reminder({ DaysBeforeEvent: 5 })])
+            });
+            expect(h.$("#divViewEventNotificationAllDayChecked input[type='number']").attr("min")).toBe("2");
+
+            const h2 = build({ body: (html) => html.replace(hidden("minLeadTimeBeforeEvent", "0"), hidden("minLeadTimeBeforeEvent", "2")) + detailDom });
+            openView(h2, { serializedCalendarReminders: JSON.stringify([reminder({ MinutesBeforeEvent: 10 })]) });
+            expect(h2.$("#divViewEventNotificationAllDayUnchecked input[type='number']").attr("min")).toBe("2");
         });
 
         it("renders the shared event's reminders — day/week rows for all-day, minute..week rows for timed", () => {

@@ -1,5 +1,5 @@
-using Maroik.Core.Domain.Account;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Website.Tests.Fixtures;
 
 namespace Maroik.Website.Tests.Controllers;
 

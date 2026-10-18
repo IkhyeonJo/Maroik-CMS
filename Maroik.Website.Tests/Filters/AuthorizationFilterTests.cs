@@ -1,9 +1,9 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Account;
+using Maroik.Core.Domain.Accounts;
 using Maroik.Website.Constants;
-using Maroik.Website.Contracts;
 using Maroik.Website.Filters;
+using Maroik.Website.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;

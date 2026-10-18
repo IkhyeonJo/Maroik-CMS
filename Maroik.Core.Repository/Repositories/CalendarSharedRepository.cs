@@ -1,6 +1,6 @@
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Calendar;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Calendars;
+using Maroik.Core.PostgreSQL.Contexts;
 using Microsoft.EntityFrameworkCore;
 using OrmCalendarShared = Maroik.Core.PostgreSQL.Models.CalendarShared;
 
@@ -29,8 +29,14 @@ public class CalendarSharedRepository(ApplicationDbContext context)
     };
 
     /// <inheritdoc />
-    public Task<List<CalendarShared>> GetAllAsync(CancellationToken ct = default)
-        => QueryAllAsync(ct: ct);
+    public async Task<List<CalendarShared>> GetByIdsAsync(IEnumerable<long> calendarIds, CancellationToken ct = default)
+    {
+        // Distinct keeps the IN list short when a caller passes one id per subscription; an empty list answers without a round
+        // trip. QueryAsync (not an untracked read) because the callers check for existing rows inside a write transaction and
+        // must see rows this unit of work has already added but not yet saved.
+        long[] ids = [.. calendarIds.Distinct()];
+        return ids.Length == 0 ? [] : await QueryAsync(e => ids.Contains(e.CalendarId), ct: ct);
+    }
 
     /// <inheritdoc />
     public async Task<List<CalendarShared>> GetByIdsForUpdateAsync(IEnumerable<long> calendarIds, CancellationToken ct = default)

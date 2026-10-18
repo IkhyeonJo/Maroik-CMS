@@ -1,10 +1,11 @@
+using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Service.Services;
 
 namespace Maroik.Core.Service.Tests.Services;
 
 /// <summary>
 /// Unit tests for <see cref="TimeZoneCatalogService"/> — the server-side
-/// Windows-to-IANA time zone enumeration the Razor views render their time-zone pickers from.
+/// time zone list (IANA IDs) the Razor views render their time-zone pickers from.
 /// </summary>
 public class TimeZoneCatalogServiceTests
 {
@@ -18,6 +19,16 @@ public class TimeZoneCatalogServiceTests
         var options = CreateSut().GetTimeZoneOptions();
 
         Assert.NotEmpty(options);
+    }
+
+    /// <summary>Every system time zone is offered, under its own ID, which on Linux is an IANA ID.</summary>
+    [Fact]
+    public void GetTimeZoneOptions_ListsEverySystemZone_UnderItsIanaId()
+    {
+        IReadOnlyList<TimeZoneOptionDto> options = CreateSut().GetTimeZoneOptions();
+
+        Assert.Equal(TimeZoneInfo.GetSystemTimeZones().Select(z => z.Id), options.Select(o => o.IanaId));
+        Assert.All(options, o => Assert.True(TimeZoneInfo.FindSystemTimeZoneById(o.IanaId).HasIanaId, o.IanaId));
     }
 
     /// <summary>Get time zone options no entry has empty iana id.</summary>

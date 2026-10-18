@@ -1,12 +1,12 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Account;
+using Maroik.Core.Domain.Accounts;
 using Maroik.Website.Attributes;
 using Maroik.Website.Constants;
 using Maroik.Website.Extensions;
-using Maroik.Website.Mappings;
-using Maroik.Website.Models.ViewModels.Account;
-using Maroik.Website.Models.ViewModels.Dashboard;
+using Maroik.Website.Mappers;
+using Maroik.Website.Models.ViewModels.Accounts;
+using Maroik.Website.Models.ViewModels.Dashboards;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -83,7 +83,7 @@ public class DashboardController(
         string? timeZoneId = loggedInAccount.TimeZoneIanaId;
 
         var summary = await dashboardService.GetSummaryAsync(email!, year, month, timeZoneId!, ct);
-        return View(summary.ToViewModel(timeZoneId!));
+        return View(summary.ToViewModel());
     }
     #endregion
 

@@ -1,11 +1,11 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Maroik.Core.Contract.Enums;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.PostgreSQL.Contexts;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;

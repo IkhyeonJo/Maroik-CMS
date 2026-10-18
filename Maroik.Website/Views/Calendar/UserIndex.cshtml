@@ -7,8 +7,8 @@
     and calendar-sharing / subscription settings. Events are serialised to JSON for FullCalendar initialisation.
     The time grid is scrolled to the user's current local time on page load.
 *@
-@using Maroik.Website.Models.ViewModels.Calendar
-@using Maroik.Core.Domain.Calendar
+@using Maroik.Website.Models.ViewModels.Calendars
+@using Maroik.Core.Domain.Calendars
 @model CalendarOutputViewModel
 
 @{
@@ -27,7 +27,7 @@
 @Html.Hidden("maxDaysBeforeEvent", CalendarReminderPolicy.MaxDaysBeforeEvent)
 @Html.Hidden("maxWeeksBeforeEvent", CalendarReminderPolicy.MaxWeeksBeforeEvent)
 @* "Notify at HH:MM" options + default, from CalendarReminderPolicy / the view model, so the client stops regenerating the 15-minute list. *@
-@Html.Hidden("reminderTimeIntervals", JsonSerialization.ToClientJson(Model.TimeIntervals))
+@Html.Hidden("reminderTimeIntervals", ClientJsonSerializer.Serialize(Model.TimeIntervals))
 @Html.Hidden("defaultReminderTimeOfDay", CalendarReminderPolicy.DefaultReminderTimeOfDay)
 @* The culture CalendarService orders the "my calendars" list under, so the client re-sorts it the same way. *@
 @Html.Hidden("calendarNameCulture", System.Globalization.CultureInfo.CurrentCulture.Name)
@@ -112,8 +112,8 @@
 @Html.Hidden("localizerErrorRangeDay", Localizer["ErrorRangeDay"].Value)
 @Html.Hidden("localizerErrorRangeWeek", Localizer["ErrorRangeWeek"].Value)
 @Html.Hidden("localizerFailedToLoadCalendars", Localizer["FailedToLoadCalendars"].Value)
-@Html.Hidden("calendarEventOutputViewModels", JsonSerialization.ToClientJson(Model.CalendarEventOutputViewModels))
-@Html.Hidden("otherCalendarEventOutputViewModels", JsonSerialization.ToClientJson(Model.OtherCalendarEventOutputViewModels))
+@Html.Hidden("calendarEventOutputViewModels", ClientJsonSerializer.Serialize(Model.CalendarEventOutputViewModels))
+@Html.Hidden("otherCalendarEventOutputViewModels", ClientJsonSerializer.Serialize(Model.OtherCalendarEventOutputViewModels))
 
 <section class="content">
     <div class="container-fluid">
@@ -242,7 +242,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="createCalendarName">@Localizer["Name"].Value</label>
-                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="createCalendarName" name="createCalendarName" value="">
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="createCalendarName" name="createCalendarName" value="" maxlength="@ShortTextPolicy.MaxLength">
                                 <span class="field-validation-valid text-danger" data-valmsg-for="createCalendarName" data-valmsg-replace="true"></span>
                             </div>
                         </div>
@@ -250,7 +250,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="createCalendarDescription">@Localizer["Description"].Value</label>
-                                <textarea class="form-control form-control-sm" id="createCalendarDescription" name="createCalendarDescription" maxlength="16384"></textarea> @*maxlength: 16KB*@
+                                <textarea class="form-control form-control-sm" id="createCalendarDescription" name="createCalendarDescription" maxlength="@TitledContentPolicy.MaxBodyLength"></textarea>
                             </div>
                         </div>
 
@@ -300,7 +300,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="editCalendarName">@Localizer["Name"].Value</label>
-                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="editCalendarName" name="editCalendarName" value="">
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="editCalendarName" name="editCalendarName" value="" maxlength="@ShortTextPolicy.MaxLength">
                                 <span class="field-validation-valid text-danger" data-valmsg-for="editCalendarName" data-valmsg-replace="true"></span>
                             </div>
                         </div>
@@ -308,7 +308,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="editCalendarDescription">@Localizer["Description"].Value</label>
-                                <textarea class="form-control form-control-sm" id="editCalendarDescription" name="editCalendarDescription" maxlength="16384"></textarea> @*maxlength: 16KB*@
+                                <textarea class="form-control form-control-sm" id="editCalendarDescription" name="editCalendarDescription" maxlength="@TitledContentPolicy.MaxBodyLength"></textarea>
                             </div>
                         </div>
 
@@ -371,7 +371,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="createCalendarEventName">@Localizer["Name"].Value</label>
-                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="createCalendarEventName" name="createCalendarEventName" value="" maxlength="100">
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="createCalendarEventName" name="createCalendarEventName" value="" maxlength="@TitledContentPolicy.MaxTitleLength">
                                 <span class="field-validation-valid text-danger" data-valmsg-for="createCalendarEventName" data-valmsg-replace="true"></span>
                             </div>
                         </div>
@@ -491,7 +491,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="createCalendarEventDescription">@Localizer["Description"].Value</label>
-                                <textarea class="form-control form-control-sm" id="createCalendarEventDescription" name="createCalendarEventDescription" maxlength="16384"></textarea> @*maxlength: 16KB*@
+                                <textarea class="form-control form-control-sm" id="createCalendarEventDescription" name="createCalendarEventDescription" maxlength="@TitledContentPolicy.MaxBodyLength"></textarea>
                             </div>
                         </div>
 
@@ -529,42 +529,6 @@
                                 <label for="createCalendarEventNotificationAllDayChecked">@Localizer["Notification"].Value</label>
                                 <br />
 
-                                @*
-                                <div class="divCreateEventNotificationAllDayCheckedRow">
-                                    <select class='form-control-sm createCalendarEventSelNotificationMethodAllDayChecked' style='width:20%;text-overflow:ellipsis;'>
-                                        <option value='Email'>@Localizer["Email"].Value</option>
-                                        <option value='Notification'>@Localizer["Notification"].Value</option>
-                                    </select>
-
-                                    <input type='number' class='form-control-sm createCalendarEventSelNotificationNumberAllDayChecked' style='width:30%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="0" max="@CalendarReminderPolicy.MaxDaysBeforeEvent">
-
-                                    <select class='form-control-sm createCalendarEventSelNotificationTimeTypeAllDayChecked' style='width:30%;text-overflow:ellipsis;'>
-                                        <option value='Days' selected>@Localizer["Days"].Value</option>
-                                        <option value='Weeks'>@Localizer["Weeks"].Value</option>
-                                    </select>
-                                    <label style="padding-left:5px;padding-right:5px;">@Localizer["before at"].Value</label>
-                                    <select class='form-control-sm createCalendarEventSelNotificationTimeAllDayChecked' style='width:11%;text-overflow:ellipsis;'>
-                                        @foreach (var time in timeIntervals)
-                                        {
-                                            if (time == CalendarReminderPolicy.DefaultReminderTimeOfDay) // Default time
-                                            {
-                                                <option value="@time" selected>@time</option>
-                                            }
-                                            else
-                                            {
-                                                <option value="@time">@time</option>
-                                            }
-                                        }
-                                    </select>
-                                    <a class='hover aCreateCalendarDeleteNotificationAllDayChecked' href='#' style='width:10%;'>
-                                        <i class='fa fa-trash' aria-hidden='true' style='margin-left: 7px;'></i>
-                                    </a>
-
-                                    <br />
-                                    <div class="error-message" style="color: red; font-size: 0.9em; display: none;"></div>
-
-                                </div>
-                                *@
 
                                 <input style="margin-top:20px;" class="btn btn-primary" type="button" id="createCalendarEventNotificationAllDayChecked" name="createCalendarEventNotificationAllDayChecked" value="@Localizer["Add notification"].Value">
                             </div>
@@ -575,30 +539,6 @@
                                 <label for="createCalendarEventNotificationAllDayUnchecked">@Localizer["Notification"].Value</label>
                                 <br />
 
-                                @*
-                                <div class="divCreateEventNotificationAllDayUncheckedRow" style="padding-bottom:5px;">
-                                    <select class='form-control-sm createCalendarEventSelNotificationMethodAllDayUnchecked' style='width:20%;text-overflow:ellipsis;'>
-                                        <option value='Email'>@Localizer["Email"].Value</option>
-                                        <option value='Notification'>@Localizer["Notification"].Value</option>
-                                    </select>
-
-                                    <input type='number' class='form-control-sm createCalendarEventSelNotificationNumberAllDayUnchecked' style='width:30%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="0" max="@CalendarReminderPolicy.MaxMinutesBeforeEvent">
-
-                                    <select class='form-control-sm createCalendarEventSelNotificationTimeTypeAllDayUnchecked' style='width:30%;text-overflow:ellipsis;'>
-                                        <option value='Minutes' selected>@Localizer["Minutes"].Value</option>
-                                        <option value='Hours'>@Localizer["Hours"].Value</option>
-                                        <option value='Days'>@Localizer["Days"].Value</option>
-                                        <option value='Weeks'>@Localizer["Weeks"].Value</option>
-                                    </select>
-                                    <a class='hover aCreateCalendarDeleteNotificationAllDayUnchecked' href='#' style='width:10%;'>
-                                        <i class='fa fa-trash' aria-hidden='true' style='margin-left: 7px;'></i>
-                                    </a>
-
-                                    <br />
-                                    <div class="error-message" style="color: red; font-size: 0.9em; display: none;"></div>
-
-                                </div>
-                                *@
 
                                 <input style="margin-top:20px;" class="btn btn-primary" type="button" id="createCalendarEventNotificationAllDayUnchecked" name="createCalendarEventNotificationAllDayUnchecked" value="@Localizer["Add notification"].Value">
                             </div>
@@ -631,7 +571,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="editCalendarEventName">@Localizer["Name"].Value</label>
-                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="editCalendarEventName" name="editCalendarEventName" value="" maxlength="100">
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="editCalendarEventName" name="editCalendarEventName" value="" maxlength="@TitledContentPolicy.MaxTitleLength">
                                 <span class="field-validation-valid text-danger" data-valmsg-for="editCalendarEventName" data-valmsg-replace="true"></span>
                             </div>
                         </div>
@@ -737,7 +677,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="editCalendarEventDescription">@Localizer["Description"].Value</label>
-                                <textarea class="form-control form-control-sm" id="editCalendarEventDescription" name="editCalendarEventDescription" maxlength="16384"></textarea> @*maxlength: 16KB*@
+                                <textarea class="form-control form-control-sm" id="editCalendarEventDescription" name="editCalendarEventDescription" maxlength="@TitledContentPolicy.MaxBodyLength"></textarea>
                             </div>
                         </div>
 
@@ -786,42 +726,6 @@
                                 <label for="editCalendarEventNotificationAllDayChecked">@Localizer["Notification"].Value</label>
                                 <br />
 
-                                @*
-                                <div class="divEditEventNotificationAllDayCheckedRow">
-                                <select class='form-control-sm editCalendarEventSelNotificationMethodAllDayChecked' style='width:20%;text-overflow:ellipsis;'>
-                                <option value='Email'>@Localizer["Email"].Value</option>
-                                <option value='Notification'>@Localizer["Notification"].Value</option>
-                                </select>
-
-                                <input type='number' class='form-control-sm editCalendarEventSelNotificationNumberAllDayChecked' style='width:30%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="0" max="@CalendarReminderPolicy.MaxDaysBeforeEvent">
-
-                                <select class='form-control-sm editCalendarEventSelNotificationTimeTypeAllDayChecked' style='width:30%;text-overflow:ellipsis;'>
-                                <option value='Days' selected>@Localizer["Days"].Value</option>
-                                <option value='Weeks'>@Localizer["Weeks"].Value</option>
-                                </select>
-                                <label style="padding-left:5px;padding-right:5px;">@Localizer["before at"].Value</label>
-                                <select class='form-control-sm editCalendarEventSelNotificationTimeAllDayChecked' style='width:11%;text-overflow:ellipsis;'>
-                                @foreach (var time in timeIntervals)
-                                {
-                                if (time == CalendarReminderPolicy.DefaultReminderTimeOfDay) // Default time
-                                {
-                                <option value="@time" selected>@time</option>
-                                }
-                                else
-                                {
-                                <option value="@time">@time</option>
-                                }
-                                }
-                                </select>
-                                <a class='hover aEditCalendarDeleteNotificationAllDayChecked' href='#' style='width:10%;'>
-                                <i class='fa fa-trash' aria-hidden='true' style='margin-left: 7px;'></i>
-                                </a>
-
-                                <br />
-                                <div class="error-message" style="color: red; font-size: 0.9em; display: none;"></div>
-
-                                </div>
-                                *@
 
                                 <input style="margin-top:20px;" class="btn btn-primary" type="button" id="editCalendarEventNotificationAllDayChecked" name="editCalendarEventNotificationAllDayChecked" value="@Localizer["Add notification"].Value">
                             </div>
@@ -832,30 +736,6 @@
                                 <label for="editCalendarEventNotificationAllDayUnchecked">@Localizer["Notification"].Value</label>
                                 <br />
 
-                                @*
-                                <div class="divEditEventNotificationAllDayUncheckedRow" style="padding-bottom:5px;">
-                                <select class='form-control-sm editCalendarEventSelNotificationMethodAllDayUnchecked' style='width:20%;text-overflow:ellipsis;'>
-                                <option value='Email'>@Localizer["Email"].Value</option>
-                                <option value='Notification'>@Localizer["Notification"].Value</option>
-                                </select>
-
-                                <input type='number' class='form-control-sm editCalendarEventSelNotificationNumberAllDayUnchecked' style='width:30%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="0" max="@CalendarReminderPolicy.MaxMinutesBeforeEvent">
-
-                                <select class='form-control-sm editCalendarEventSelNotificationTimeTypeAllDayUnchecked' style='width:30%;text-overflow:ellipsis;'>
-                                <option value='Minutes' selected>@Localizer["Minutes"].Value</option>
-                                <option value='Hours'>@Localizer["Hours"].Value</option>
-                                <option value='Days'>@Localizer["Days"].Value</option>
-                                <option value='Weeks'>@Localizer["Weeks"].Value</option>
-                                </select>
-                                <a class='hover aEditCalendarDeleteNotificationAllDayUnchecked' href='#' style='width:10%;'>
-                                <i class='fa fa-trash' aria-hidden='true' style='margin-left: 7px;'></i>
-                                </a>
-
-                                <br />
-                                <div class="error-message" style="color: red; font-size: 0.9em; display: none;"></div>
-
-                                </div>
-                                *@
 
                                 <input style="margin-top:20px;" class="btn btn-primary" type="button" id="editCalendarEventNotificationAllDayUnchecked" name="editCalendarEventNotificationAllDayUnchecked" value="@Localizer["Add notification"].Value">
                             </div>
@@ -888,7 +768,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="viewCalendarEventName">@Localizer["Name"].Value</label>
-                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="viewCalendarEventName" name="viewCalendarEventName" value="" maxlength="100" disabled/>
+                                <input class="form-control form-control-sm" type="text" data-val="true" data-val-required="@Localizer["Please enter Name"].Value" id="viewCalendarEventName" name="viewCalendarEventName" value="" maxlength="@TitledContentPolicy.MaxTitleLength" disabled/>
                                 <span class="field-validation-valid text-danger" data-valmsg-for="viewCalendarEventName" data-valmsg-replace="true"></span>
                             </div>
                         </div>
@@ -994,7 +874,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-3">
                                 <label for="viewCalendarEventDescription">@Localizer["Description"].Value</label>
-                                <textarea class="form-control form-control-sm" id="viewCalendarEventDescription" name="viewCalendarEventDescription" maxlength="16384" disabled></textarea> @*maxlength: 16KB*@
+                                <textarea class="form-control form-control-sm" id="viewCalendarEventDescription" name="viewCalendarEventDescription" maxlength="@TitledContentPolicy.MaxBodyLength" disabled></textarea>
                             </div>
                         </div>
 
@@ -1035,39 +915,6 @@
                                 <label for="viewCalendarEventNotificationAllDayChecked">@Localizer["Notification"].Value</label>
                                 <br />
 
-                                @*
-                                <div class="divViewEventNotificationAllDayCheckedRow">
-                                <select class='form-control-sm viewCalendarEventSelNotificationMethodAllDayChecked' style='width:20%;text-overflow:ellipsis;' disabled>
-                                <option value='Email'>@Localizer["Email"].Value</option>
-                                <option value='Notification'>@Localizer["Notification"].Value</option>
-                                </select>
-
-                                <input type='number' class='form-control-sm viewCalendarEventSelNotificationNumberAllDayChecked' style='width:30%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="0" max="@CalendarReminderPolicy.MaxDaysBeforeEvent" disabled>
-
-                                <select class='form-control-sm viewCalendarEventSelNotificationTimeTypeAllDayChecked' style='width:30%;text-overflow:ellipsis;' disabled>
-                                <option value='Days' selected>@Localizer["Days"].Value</option>
-                                <option value='Weeks'>@Localizer["Weeks"].Value</option>
-                                </select>
-                                <label style="padding-left:5px;padding-right:5px;">@Localizer["before at"].Value</label>
-                                <select class='form-control-sm viewCalendarEventSelNotificationTimeAllDayChecked' style='width:11%;text-overflow:ellipsis;' disabled>
-                                @foreach (var time in timeIntervals)
-                                {
-                                if (time == CalendarReminderPolicy.DefaultReminderTimeOfDay) // Default time
-                                {
-                                <option value="@time" selected>@time</option>
-                                }
-                                else
-                                {
-                                <option value="@time">@time</option>
-                                }
-                                }
-                                </select>
-
-                                <br />
-                                <div class="error-message" style="color: red; font-size: 0.9em; display: none;"></div>
-
-                                </div>
-                                *@
 
                                 <input style="margin-top:20px; display:none;" class="btn btn-primary" type="button" id="viewCalendarEventNotificationAllDayChecked" name="viewCalendarEventNotificationAllDayChecked" value="">
                             </div>
@@ -1078,27 +925,6 @@
                                 <label for="viewCalendarEventNotificationAllDayUnchecked">@Localizer["Notification"].Value</label>
                                 <br />
 
-                                @*
-                                <div class="divViewEventNotificationAllDayUncheckedRow" style="padding-bottom:5px;">
-                                <select class='form-control-sm viewCalendarEventSelNotificationMethodAllDayUnchecked' style='width:20%;text-overflow:ellipsis;' disabled>
-                                <option value='Email'>@Localizer["Email"].Value</option>
-                                <option value='Notification'>@Localizer["Notification"].Value</option>
-                                </select>
-
-                                <input type='number' class='form-control-sm viewCalendarEventSelNotificationNumberAllDayUnchecked' style='width:30%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min="0" max="@CalendarReminderPolicy.MaxMinutesBeforeEvent" disabled>
-
-                                <select class='form-control-sm viewCalendarEventSelNotificationTimeTypeAllDayUnchecked' style='width:30%;text-overflow:ellipsis;' disabled>
-                                <option value='Minutes' selected>@Localizer["Minutes"].Value</option>
-                                <option value='Hours'>@Localizer["Hours"].Value</option>
-                                <option value='Days'>@Localizer["Days"].Value</option>
-                                <option value='Weeks'>@Localizer["Weeks"].Value</option>
-                                </select>
-
-                                <br />
-                                <div class="error-message" style="color: red; font-size: 0.9em; display: none;"></div>
-
-                                </div>
-                                *@
                                 <input style="margin-top:20px; display:none;" class="btn btn-primary" type="button" id="viewCalendarEventNotificationAllDayUnchecked" name="viewCalendarEventNotificationAllDayUnchecked" value="">
                             </div>
                         </div>
@@ -1136,25 +962,6 @@
                         </div>
 
                         <div id="divBrowseCalendarsOfInterest">
-                            @*
-                            <div class="form-row browseCalendarsOfInterest" style="margin-top: 20px;">
-                                <div id="divBrowseCalendarsOfInterest1" class="form-group col-md-3 mb-3 text-center">
-                                    <input class="form-control form-control-sm checkBoxBrowseCalendarsOfInterest" type="checkbox" />
-                                </div>
-                                <div class="form-group col-md-9 mb-9 text-center">
-                                    <label style="word-break: break-all;">South Korea Public Holidays</label>
-                                </div>
-                            </div>
-
-                            <div class="form-row browseCalendarsOfInterest" style="margin-top: 20px;">
-                                <div id="divBrowseCalendarsOfInterest2" class="form-group col-md-3 mb-3 text-center">
-                                    <input class="form-control form-control-sm checkBoxBrowseCalendarsOfInterest" type="checkbox" />
-                                </div>
-                                <div class="form-group col-md-9 mb-9 text-center">
-                                    <label style="word-break: break-all;">China Public Holidays</label>
-                                </div>
-                            </div>
-                            *@
                         </div>
 
                         <div class="modal-footer justify-content-between">

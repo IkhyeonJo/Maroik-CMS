@@ -1,5 +1,5 @@
+using Maroik.Core.Contract.Enums;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace Maroik.Core.Service.Services;

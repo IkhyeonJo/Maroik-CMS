@@ -1,4 +1,4 @@
-using Maroik.Core.Domain.Finance;
+using Maroik.Core.Domain.Finances;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
 using OrmFixedExpenditure = Maroik.Core.PostgreSQL.Models.FixedExpenditure;

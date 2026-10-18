@@ -37,7 +37,6 @@ function fixture(): string {
         hidden("calendarNameCulture", "en-US") +
         hidden("loggedInAccountTimeZoneIanaId", "Asia/Seoul") +
         hidden("calendarEventOutputViewModels", "[]") +
-        hidden("otherCalendarEventOutputViewModels", "[]") +
         LOCALIZERS.map((n) => hidden(`localizer${n}`, `L_${n}`)).join("") +
         `<div id="calendar"></div>
      <div id="createCalendarTabs"></div><div id="editCalendarTabs"></div>

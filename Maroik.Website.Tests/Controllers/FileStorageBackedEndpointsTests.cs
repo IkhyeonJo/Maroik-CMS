@@ -1,12 +1,13 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using ImageMagick;
+using Maroik.Core.Contract.Enums;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Core.PostgreSQL.Models;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Extensions;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -402,6 +403,8 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        // Every attachment download names its type from the file's extension, as the calendar one does.
+        Assert.Equal("application/x-zip-compressed", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal("payload.zip", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName);
         Assert.Equal(bytes, await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
     }
@@ -506,7 +509,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         MultipartForm.Of(("calendarEventId", calendarEventId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
     /// <summary>
-    /// Asserts an event detail reply describes the attachment by name, extension and size only: neither the file's bytes nor its storage
+    /// Asserts an event detail reply describes the attachment by name, extension and size label only: neither the file's bytes nor its storage
     /// path (as a <c>path</c> property or anywhere in the body — its GUID segment included, should the slashes be escaped) reach the client.
     /// </summary>
     private static void AssertDescribesTheAttachmentOnly(string body, string storagePath, byte[] bytes)
@@ -517,7 +520,8 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         JsonElement file = calendarEvent.GetProperty("calendarEventAttachedFile");
         Assert.Equal("payload", file.GetProperty("name").GetString());
         Assert.Equal(".zip", file.GetProperty("extension").GetString());
-        Assert.Equal(bytes.Length, file.GetProperty("size").GetInt64());
+        Assert.Equal(((long)bytes.Length).ToKilobytesLabel(), file.GetProperty("sizeLabel").GetString());
+        Assert.False(file.TryGetProperty("size", out _));
         Assert.False(file.TryGetProperty("path", out _));
         Assert.False(calendarEvent.TryGetProperty("calendarEventAttachedFileBase64Data", out _));
         Assert.DoesNotContain(storagePath, body, StringComparison.Ordinal);
@@ -765,7 +769,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
     {
         using var host = CreateHost();
         var session = await LoginAsync(host, $"storage-toobig-{url.Replace("/", "-", StringComparison.Ordinal).ToLowerInvariant()}@test.com");
-        long limit = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Core.Contract.Misc.Settings.ServerSetting>>().Value.MaxAttachedFileSizeBytes;
+        long limit = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Core.Contract.Settings.ServerSetting>>().Value.MaxAttachedFileSizeBytes;
         var form = FileForm(field, "big.png", new byte[limit + 1], "image/png", ("Nickname", "x"));
 
         using var request = session.BuildFormPostRequest(url, form);

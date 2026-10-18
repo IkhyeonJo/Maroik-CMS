@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,12 +35,28 @@ public class ExceptionControllerTests(MaroikWebApplicationFactory factory)
         Assert.Contains("Request ID:", html, StringComparison.Ordinal);
     }
 
+    /// <summary>The error page speaks the visitor's language: its heading and the request-id label come from the resx pair.</summary>
+    [Theory]
+    [InlineData("en-US", "An error occurred while processing your request.", "Request ID:")]
+    [InlineData("ko-KR", "요청을 처리하는 중 오류가 발생했습니다.", "요청 ID:")]
+    public async Task Error_IsRenderedInTheVisitorsCulture(string culture, string heading, string requestIdLabel)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/Exception/Error");
+        request.Headers.Add("Cookie", $".AspNetCore.Culture=c={culture}|uic={culture}");
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        string html = System.Net.WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains(heading, html, StringComparison.Ordinal);
+        Assert.Contains(requestIdLabel, html, StringComparison.Ordinal);
+    }
+
     /// <summary>Error logged in user returns200.</summary>
     [Fact]
     public async Task Error_LoggedInUser_Returns200()
     {
         var session = await AuthenticatedSessionHelper.LoginAsync(
-            factory, _client, "exception-error-user@test.com", "UserPassword1!", Core.Domain.Account.Role.User,
+            factory, _client, "exception-error-user@test.com", "UserPassword1!", Core.Domain.Accounts.Role.User,
             TestContext.Current.CancellationToken);
         using var request = new HttpRequestMessage(HttpMethod.Get, "/Exception/Error");
         request.Headers.Add("Cookie", session.CookieHeader);

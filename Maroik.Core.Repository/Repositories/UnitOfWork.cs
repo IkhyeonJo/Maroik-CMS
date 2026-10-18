@@ -1,7 +1,7 @@
 using System.Data;
 using System.Data.Common;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.PostgreSQL.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 

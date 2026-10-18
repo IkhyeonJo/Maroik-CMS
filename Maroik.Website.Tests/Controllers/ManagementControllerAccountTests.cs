@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text.Json;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Website.Controllers;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

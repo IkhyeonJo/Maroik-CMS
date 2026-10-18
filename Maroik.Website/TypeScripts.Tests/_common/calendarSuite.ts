@@ -860,6 +860,17 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(display(h, `#div${cap}EventNotificationAllDayUnchecked`)).not.toBe("none");
         });
 
+        it.each([["create", true], ["create", false], ["edit", true], ["edit", false]])("the %s add-reminder button (all-day=%s) bounds the new row below by the server's minLeadTimeBeforeEvent", (which, allDay) => {
+            const suffix = allDay ? "AllDayChecked" : "AllDayUnchecked";
+            const block = `div${which === "create" ? "Create" : "Edit"}EventNotification${suffix}`;
+            const h = build({
+                body: (html) => html.replace(hidden("minLeadTimeBeforeEvent", "0"), hidden("minLeadTimeBeforeEvent", "2"))
+                    .replace(`<div id="${block}"></div>`, `<div id="${block}"><a id="${which}CalendarEventNotification${suffix}"></a></div>`)
+            });
+            h.$(`#${which}CalendarEventNotification${suffix}`).trigger("click");
+            expect(h.$(`#${block} .${which}CalendarEventSelNotificationNumber${suffix}`).last().attr("min")).toBe("2");
+        });
+
         it.each([["create", true], ["create", false], ["edit", true], ["edit", false]])("the %s add-reminder button (all-day=%s) inserts a fresh row with the right units and defaults", (which, allDay) => {
             const suffix = allDay ? "AllDayChecked" : "AllDayUnchecked";
             const h = build({
@@ -1229,7 +1240,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
         return calendarEventClick(h, { el, event: { id: "55", title: "T", allDay: false, extendedProps: eventProps({ calendarType: "My" }) } });
     };
     /** A stored attachment as the event reply describes it. */
-    const attachment = { name: "spec", extension: ".pdf", size: 2_500_000 };
+    const attachment = { name: "spec", extension: ".pdf", sizeLabel: "2,441" };
     /** An accepted IsCalendarEventExists reply for event 55, with `over` merged into the event. */
     const payload = (over: Record<string, unknown> = {}) => ({
         result: true, calendarEvent: {
@@ -1274,6 +1285,20 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             expect(h.$("#editCalendarEventAllDayCheckedStartDate").val()).toBe("2024-05-01");
         });
 
+        it("the rebuilt reminder rows take their lower bound from the server's minLeadTimeBeforeEvent", () => {
+            const withMin = () => build({
+                body: (html) => html.replace(hidden("minLeadTimeBeforeEvent", "0"), hidden("minLeadTimeBeforeEvent", "2"))
+                    .replace("<div id=\"divEditEventNotificationAllDayUnchecked\"></div>", "").replace("<div id=\"divEditEventNotificationAllDayChecked\"></div>", "") + editDom
+            });
+            const h = withMin();
+            openEdit(h, { allDay: true, displayStartDate: "2024-05-01", displayEndDate: "2024-05-03", serializedCalendarReminders: JSON.stringify([reminder({ DaysBeforeEvent: 3 })]) });
+            expect(h.$(".divEditEventNotificationAllDayCheckedRow .editCalendarEventSelNotificationNumberAllDayChecked").attr("min")).toBe("2");
+
+            const h2 = withMin();
+            openEdit(h2, { serializedCalendarReminders: JSON.stringify([reminder({ MinutesBeforeEvent: 15 })]) });
+            expect(h2.$(".divEditEventNotificationAllDayUncheckedRow .editCalendarEventSelNotificationNumberAllDayUnchecked").attr("min")).toBe("2");
+        });
+
         it("a timed event rebuilds its minute/hour/day/week reminder rows with the stored unit", () => {
             const h = setup();
             openEdit(h, {
@@ -1300,7 +1325,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             expect(h.$("#aEditCalendarEventAttachedFile").attr("data-name")).toBe("spec");
         });
 
-        it("an attached file shows its link, a comma-grouped size in KB and the event it is downloaded for — not the file's bytes", () => {
+        it("an attached file shows its link, the server's size label in KB and the event it is downloaded for — not the file's bytes", () => {
             const h = setup();
             openEdit(h, { calendarEventAttachedFile: attachment });
             expect(display(h, "#divEditCalendarEventAttachedFile")).not.toBe("none");

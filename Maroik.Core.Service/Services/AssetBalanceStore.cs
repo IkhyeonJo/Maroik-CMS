@@ -1,5 +1,5 @@
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Finance;
+using Maroik.Core.Domain.Finances;
 
 namespace Maroik.Core.Service.Services;
 

@@ -1,7 +1,7 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Website.Extensions;
-using Maroik.Website.Models.ViewModels.Calendar;
+using Maroik.Website.Models.ViewModels.Calendars;
 using Moq;
 
 namespace Maroik.Website.Tests.Extensions;
@@ -230,7 +230,7 @@ public class CalendarEventViewModelExtensionsTests
         CalendarEventAttachedFileOutputViewModel file = Assert.IsType<CalendarEventAttachedFileOutputViewModel>(result.CalendarEventAttachedFile);
         Assert.Equal("report", file.Name);
         Assert.Equal(".zip", file.Extension);
-        Assert.Equal(3, file.Size);
+        Assert.Equal("0", file.SizeLabel);
     }
 
     /// <summary>Passes cancellation token through to the service.</summary>

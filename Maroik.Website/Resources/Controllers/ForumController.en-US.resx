@@ -117,17 +117,11 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="content length is must be between 0 and 16384 characters." xml:space="preserve">
-    <value>content length is must be between 0 and 16384 characters.</value>
-  </data>
   <data name="File Size must be smaller than {0}MB." xml:space="preserve">
     <value>File Size must be smaller than {0}MB.</value>
   </data>
   <data name="Input is invalid" xml:space="preserve">
     <value>Input is invalid</value>
-  </data>
-  <data name="No freeBoard exists." xml:space="preserve">
-    <value>No freeBoard exists.</value>
   </data>
   <data name="Only .jpg or jpeg or .png file allowed." xml:space="preserve">
     <value>Only .jpg or jpeg or .png file allowed.</value>
@@ -158,9 +152,6 @@
   </data>
   <data name="The board has been successfully updated." xml:space="preserve">
     <value>The board has been successfully updated.</value>
-  </data>
-  <data name="Title length is must be between 1 and 100 characters." xml:space="preserve">
-    <value>Title length is must be between 1 and 100 characters.</value>
   </data>
   <data name="You do not have permission to delete." xml:space="preserve">
     <value>You do not have permission to delete.</value>

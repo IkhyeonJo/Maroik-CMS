@@ -1,6 +1,6 @@
-using Maroik.Core.Contract.Misc.Messaging;
-using Maroik.FileStorage.Contracts;
+using Maroik.Core.Contract.Messages;
 using Maroik.FileStorage.Helpers;
+using Maroik.FileStorage.Interfaces;
 using Maroik.FileStorage.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

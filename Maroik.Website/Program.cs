@@ -5,7 +5,7 @@
 
 using System.Globalization;
 using Maroik.Core.Client.Extensions;
-using Maroik.Core.Contract.Misc.Settings;
+using Maroik.Core.Contract.Settings;
 using Maroik.Core.Repository.Extensions;
 using Maroik.Core.Service.Extensions;
 using Maroik.Website.Constants;
@@ -89,8 +89,8 @@ try
 
     builder.Services.AddApplicationServices();
     builder.Services
-        .AddScoped<Maroik.Website.Contracts.IExcelExportService, Maroik.Website.Services.ExcelExportService>()
-        .AddScoped<Maroik.Website.Contracts.ISessionService, Maroik.Website.Services.SessionService>();
+        .AddScoped<Maroik.Website.Interfaces.IExcelExportService, Maroik.Website.Services.ExcelExportService>()
+        .AddScoped<Maroik.Website.Interfaces.ISessionService, Maroik.Website.Services.SessionService>();
 
     #endregion
 

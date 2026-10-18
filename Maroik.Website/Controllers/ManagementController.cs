@@ -1,21 +1,21 @@
 using Maroik.Core.Contract.Dtos;
+using Maroik.Core.Contract.Enums;
+using Maroik.Core.Contract.Extensions;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
-using Maroik.Core.Contract.Misc.Extensions;
-using Maroik.Core.Contract.Misc.Helpers;
-using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Board;
-using Maroik.Core.Domain.Time;
-using Maroik.Core.Domain.Media;
+using Maroik.Core.Contract.Settings;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Boards;
+using Maroik.Core.Domain.Extensions;
+using Maroik.Core.Domain.Uploads;
 using Maroik.Website.Attributes;
 using Maroik.Website.Constants;
-using Maroik.Website.Contracts;
 using Maroik.Website.Extensions;
-using Maroik.Website.Mappings;
+using Maroik.Website.Interfaces;
+using Maroik.Website.Mappers;
 using Maroik.Website.Models;
-using Maroik.Website.Models.ViewModels.Management;
+using Maroik.Website.Models.ViewModels.Managements;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
@@ -54,6 +54,9 @@ public class ManagementController(
     IDistributedCache cache,
     TimeProvider timeProvider) : Controller
 {
+    /// <summary>Shared extension-to-MIME-type lookup for attachment downloads (safe for concurrent reads).</summary>
+    private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
+
     /// <summary>
     /// E-mail of the signed-in administrator, passed to the admin write use cases so their audit log
     /// records who made the change (resolved by ViewBagPopulatorFilter).
@@ -276,7 +279,7 @@ public class ManagementController(
                 TimeZoneIanaId = accountInputViewModel.TimeZoneIanaId,
                 EmailConfirmed = true,
                 AgreedServiceTerms = true,
-                Message = EnumHelper.GetDescription(AccountMessage.Success)
+                Message = AccountMessage.Success.GetDescription()
             }, AdminEmail, HttpContext.RequestAborted);
 
             return createResult.Success
@@ -1057,21 +1060,21 @@ public class ManagementController(
                         };
 
                     // Preload comments and accounts for detail view
-                    privateNoteOutputViewModel.DetailBoardComments =
-                    [
-                        .. await boardService.GetCommentsByBoardIdAsync((long)boardId, HttpContext.RequestAborted)
-                    ];
+                    List<BoardCommentResponse> comments = [.. await boardService.GetCommentsByBoardIdAsync((long)boardId, HttpContext.RequestAborted)];
                     // Only the accounts shown on this page (the note's author and its commenters) are
                     // needed, to highlight admin-authored entries — not every account in the system.
-                    var detailNicknames = privateNoteOutputViewModel.DetailBoardComments.Select(c => c.Writer)
+                    var detailNicknames = comments.Select(c => c.Writer)
                         .Append(privateNoteBoard.Writer)
                         .Where(w => !string.IsNullOrEmpty(w))
                         .Select(w => w!)
                         .Distinct();
-                    privateNoteOutputViewModel.AllAccounts = await accountService.GetAccountsByNicknamesAsync(detailNicknames, HttpContext.RequestAborted);
-                    privateNoteOutputViewModel.AdminNicknames = privateNoteOutputViewModel.AllAccounts.ToAdminNicknameSet();
+                    HashSet<string> adminNicknames = (await accountService.GetAccountsByNicknamesAsync(detailNicknames, HttpContext.RequestAborted)).ToAdminNicknameSet();
+                    // Only its writer may delete a private-note comment, admins included (BoardService.DeleteCommentAsync checks again).
+                    privateNoteOutputViewModel.DetailBoardComments =
+                        [.. comments.Select(c => c.ToCommentRow(privateNoteBoard.Writer, loggedInAccount.IsOwner(c.Writer), adminNicknames))];
                     privateNoteOutputViewModel.LoggedInAccount = loggedInAccount;
                     privateNoteOutputViewModel.LoggedInAccountTimeZoneIanaId = loggedInAccount.TimeZoneIanaId ?? "";
+                    privateNoteOutputViewModel.ViewerSeesLocalTime = loggedInAccount.SeesLocalTime();
 
                     return View(privateNoteOutputViewModel);
                 }
@@ -1188,31 +1191,31 @@ public class ManagementController(
 
                 #region Board data logic
 
-                privateNoteOutputViewModel.Boards = [.. pageItems];
+                List<BoardResponse> boardResponses = [.. pageItems];
 
                 #endregion
 
                 #region Preload comment counts and attached files for view
                 privateNoteOutputViewModel.LoggedInAccount = loggedInAccount;
                 privateNoteOutputViewModel.LoggedInAccountTimeZoneIanaId = loggedInAccount.TimeZoneIanaId ?? "";
-                var boardResponses = privateNoteOutputViewModel.Boards.ToList();
+                privateNoteOutputViewModel.ViewerSeesLocalTime = loggedInAccount.SeesLocalTime();
                 // Only the writers on this page are needed (to highlight admin-authored notes).
                 var listNicknames = boardResponses.Select(b => b.Writer)
                     .Where(w => !string.IsNullOrEmpty(w))
                     .Select(w => w!)
                     .Distinct();
-                privateNoteOutputViewModel.AllAccounts = await accountService.GetAccountsByNicknamesAsync(listNicknames, HttpContext.RequestAborted);
-                privateNoteOutputViewModel.AdminNicknames = privateNoteOutputViewModel.AllAccounts.ToAdminNicknameSet();
+                HashSet<string> adminNicknames = (await accountService.GetAccountsByNicknamesAsync(listNicknames, HttpContext.RequestAborted)).ToAdminNicknameSet();
                 List<long> boardIds = [.. boardResponses.Select(b => b.Id)];
                 Dictionary<long, int> commentCounts = await boardService.GetCommentCountsForBoardsAsync(boardIds, HttpContext.RequestAborted);
                 Dictionary<long, BoardAttachedFileDto?> attachedFiles = await boardService.GetAttachedFilesForBoardsAsync(boardIds, HttpContext.RequestAborted);
 
-                foreach (var board in boardResponses)
-                {
-                    privateNoteOutputViewModel.CommentCountByBoardId[board.Id] = commentCounts.GetValueOrDefault(board.Id, 0);
-                    BoardAttachedFileDto? af = attachedFiles.GetValueOrDefault(board.Id);
-                    privateNoteOutputViewModel.AttachedFilesByBoardId[board.Id] = af != null && !string.IsNullOrEmpty(af.Name) ? [af] : [];
-                }
+                // A private note's title is shown to its writer only, admins included (Board.CanBeViewedBy).
+                privateNoteOutputViewModel.Boards =
+                [
+                    .. boardResponses.Select(board => board.ToListRow(
+                        board.IsTitleVisibleToOwner(loggedInAccount), adminNicknames,
+                        commentCounts.GetValueOrDefault(board.Id, 0), attachedFiles.GetValueOrDefault(board.Id)))
+                ];
                 #endregion
 
                 privateNoteOutputViewModel.SelectedSearchType = searchType;
@@ -1246,7 +1249,8 @@ public class ManagementController(
             if (!result.Success)
                 return Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
 
-            return File(file!.Content, "application/octet-stream", file.FileName);
+            string contentType = _contentTypeProvider.TryGetContentType(file!.FileName, out string? type) ? type : "application/octet-stream";
+            return File(file.Content, contentType, file.FileName);
         }
         catch (Exception ex)
         {

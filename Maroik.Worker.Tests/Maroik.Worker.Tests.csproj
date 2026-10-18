@@ -28,7 +28,7 @@
 
   <ItemGroup>
     <!-- the in-process SMTP server the Client tests use; here it stands in for the mail relay in the end-to-end host test -->
-    <Compile Include="..\Maroik.Core.Client.Tests\Clients\FakeSmtpServer.cs" Link="Infrastructure\FakeSmtpServer.cs" />
+    <Compile Include="..\Maroik.Core.Client.Tests\Fixtures\FakeSmtpServer.cs" Link="Fixtures\FakeSmtpServer.cs" />
   </ItemGroup>
 
   <ItemGroup>

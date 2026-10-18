@@ -1,5 +1,5 @@
 using System.Net;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
 

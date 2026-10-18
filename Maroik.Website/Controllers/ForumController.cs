@@ -1,15 +1,17 @@
 using Maroik.Core.Contract.Dtos;
+using Maroik.Core.Contract.Enums;
+using Maroik.Core.Contract.Extensions;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
-using Maroik.Core.Contract.Misc.Extensions;
-using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Board;
-using Maroik.Core.Domain.Media;
+using Maroik.Core.Contract.Settings;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Boards;
+using Maroik.Core.Domain.Uploads;
 using Maroik.Website.Attributes;
 using Maroik.Website.Extensions;
+using Maroik.Website.Mappers;
 using Maroik.Website.Models;
-using Maroik.Website.Models.ViewModels.Forum;
+using Maroik.Website.Models.ViewModels.Boards;
+using Maroik.Website.Models.ViewModels.Forums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.StaticFiles;
@@ -253,6 +255,7 @@ public class ForumController(
 
                     freeForumOutputViewModel.LoggedInAccount = loggedInAccount;
                     freeForumOutputViewModel.LoggedInAccountTimeZoneIanaId = freeForumOutputViewModel.LoggedInAccount.TimeZoneIanaId ?? "";
+                    freeForumOutputViewModel.ViewerSeesLocalTime = loggedInAccount.SeesLocalTime();
 
                     freeForumOutputViewModel.BoardOutputViewModel = new BoardOutputViewModel
                     {
@@ -270,15 +273,16 @@ public class ForumController(
                         CanDelete = freeForumOutputViewModel.LoggedInAccount.IsOwnerOrAdmin(freeBoard.Writer)
                     };
 
-                    freeForumOutputViewModel.DetailBoardComments =
-                        [.. await boardService.GetCommentsByBoardIdAsync((long)boardId, ct)];
-                    var detailNicknames = freeForumOutputViewModel.DetailBoardComments.Select(c => c.Writer)
+                    List<BoardCommentResponse> comments = [.. await boardService.GetCommentsByBoardIdAsync((long)boardId, ct)];
+                    var detailNicknames = comments.Select(c => c.Writer)
                         .Append(freeBoard.Writer ?? "")
                         .Where(w => !string.IsNullOrEmpty(w))
                         .Select(w => w!)
                         .Distinct();
-                    freeForumOutputViewModel.AllAccounts = await accountService.GetAccountsByNicknamesAsync(detailNicknames, ct);
-                    freeForumOutputViewModel.AdminNicknames = freeForumOutputViewModel.AllAccounts.ToAdminNicknameSet();
+                    HashSet<string> adminNicknames = (await accountService.GetAccountsByNicknamesAsync(detailNicknames, ct)).ToAdminNicknameSet();
+                    // The writer or an admin may delete a forum comment (BoardService.DeleteCommentAsync checks again).
+                    freeForumOutputViewModel.DetailBoardComments =
+                        [.. comments.Select(c => c.ToCommentRow(freeBoard.Writer, loggedInAccount.IsOwnerOrAdmin(c.Writer), adminNicknames))];
 
                     return View(freeForumOutputViewModel);
                 }
@@ -368,29 +372,18 @@ public class ForumController(
                     Page: page,
                     PageSize: pageSize), ct);
 
-                FreeForumOutputViewModel freeForumOutputViewModel = new()
-                {
-                    NoticeBoards = await boardService.GetNoticedBoardsAsync(BoardTypes.FreeForum, ct),
-                    Method = "list",
-                    Pager = new Pager(totalCount, page, pageSize),
-                    Boards =
-                        [.. pageItems],
-                    LoggedInAccount = loggedInAccountForQuery
-                };
-
-                freeForumOutputViewModel.LoggedInAccountTimeZoneIanaId = freeForumOutputViewModel.LoggedInAccount.TimeZoneIanaId ?? "";
-                var boardResponses = freeForumOutputViewModel.Boards as BoardResponse[] ?? [.. freeForumOutputViewModel.Boards];
-                var listNicknames = freeForumOutputViewModel.NoticeBoards.Select(b => b.Writer)
+                BoardResponse[] noticeBoards = [.. await boardService.GetNoticedBoardsAsync(BoardTypes.FreeForum, ct)];
+                BoardResponse[] boardResponses = [.. pageItems];
+                var listNicknames = noticeBoards.Select(b => b.Writer)
                     .Concat(boardResponses.Select(b => b.Writer))
                     .Where(w => !string.IsNullOrEmpty(w))
                     .Select(w => w!)
                     .Distinct();
-                freeForumOutputViewModel.AllAccounts = await accountService.GetAccountsByNicknamesAsync(listNicknames, ct);
-                freeForumOutputViewModel.AdminNicknames = freeForumOutputViewModel.AllAccounts.ToAdminNicknameSet();
+                HashSet<string> adminNicknames = (await accountService.GetAccountsByNicknamesAsync(listNicknames, ct)).ToAdminNicknameSet();
 
                 List<long> allBoardIds =
                 [
-                    .. freeForumOutputViewModel.NoticeBoards.Select(b => b.Id)
+                    .. noticeBoards.Select(b => b.Id)
                         .Concat(boardResponses.Select(b => b.Id))
                         .Distinct()
                 ];
@@ -398,23 +391,25 @@ public class ForumController(
                 Dictionary<long, int> commentCounts = await boardService.GetCommentCountsForBoardsAsync(allBoardIds, ct);
                 Dictionary<long, BoardAttachedFileDto?> attachedFiles = await boardService.GetAttachedFilesForBoardsAsync(allBoardIds, ct);
 
-                foreach (var board in freeForumOutputViewModel.NoticeBoards)
+                // A locked forum post's title is shown to its writer and to admins only (Board.CanBeViewedBy).
+                FreeForumOutputViewModel freeForumOutputViewModel = new()
                 {
-                    freeForumOutputViewModel.CommentCountByBoardId[board.Id] = commentCounts.GetValueOrDefault(board.Id, 0);
-                    BoardAttachedFileDto? af = attachedFiles.GetValueOrDefault(board.Id);
-                    freeForumOutputViewModel.AttachedFilesByBoardId[board.Id] = af != null && !string.IsNullOrEmpty(af.Name) ? [af] : [];
-                }
-                
-                foreach (var board in boardResponses)
-                {
-                    freeForumOutputViewModel.CommentCountByBoardId[board.Id] = commentCounts.GetValueOrDefault(board.Id, 0);
-                    BoardAttachedFileDto? af = attachedFiles.GetValueOrDefault(board.Id);
-                    freeForumOutputViewModel.AttachedFilesByBoardId[board.Id] = af != null && !string.IsNullOrEmpty(af.Name) ? [af] : [];
-                }
+                    NoticeBoards = [.. noticeBoards.Select(ToRow)],
+                    Method = "list",
+                    Pager = new Pager(totalCount, page, pageSize),
+                    Boards = [.. boardResponses.Select(ToRow)],
+                    LoggedInAccount = loggedInAccountForQuery,
+                    LoggedInAccountTimeZoneIanaId = loggedInAccountForQuery.TimeZoneIanaId ?? "",
+                    ViewerSeesLocalTime = loggedInAccountForQuery.SeesLocalTime()
+                };
 
                 freeForumOutputViewModel.SelectedSearchType = searchType;
                 freeForumOutputViewModel.TypedSearchText = searchText;
                 return View(freeForumOutputViewModel);
+
+                BoardListRowViewModel ToRow(BoardResponse board) => board.ToListRow(
+                    board.IsTitleVisibleToOwnerOrAdmin(loggedInAccountForQuery), adminNicknames,
+                    commentCounts.GetValueOrDefault(board.Id, 0), attachedFiles.GetValueOrDefault(board.Id));
             }
         }
     }

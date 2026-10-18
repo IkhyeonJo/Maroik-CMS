@@ -1,13 +1,13 @@
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Core.PostgreSQL.Models;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Razor;
-using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;

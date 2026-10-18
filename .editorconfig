@@ -106,8 +106,15 @@ csharp_style_deconstructed_variable_declaration = true:suggestion
 csharp_prefer_simple_default_expression = true:suggestion
 csharp_style_pattern_local_over_anonymous_function = true:suggestion
 csharp_style_inlined_variable_declaration = true:suggestion
-# Namespaces
-csharp_style_namespace_declarations = file_scoped:warning
+# Namespaces: file-scoped only (`namespace X;`), never a block (`namespace X { ... }`).
+# A build error by rule ID (IDE0161), not only through TreatWarningsAsErrors; it runs at build time
+# because Directory.Build.props sets EnforceCodeStyleInBuild.
+csharp_style_namespace_declarations = file_scoped:error
+dotnet_diagnostic.IDE0161.severity = error
+# The namespace matches the folder path (Accounts/X.cs -> <RootNamespace>.Accounts), so a folder rename cannot
+# leave its namespace behind. Build error by rule ID (IDE0130).
+dotnet_style_namespace_match_folder = true:error
+dotnet_diagnostic.IDE0130.severity = error
 ###############################
 # C# Formatting Rules         #
 ###############################
@@ -265,6 +272,13 @@ dotnet_diagnostic.CA1311.severity = error
 # ---- Unnecessary usings (build error) ----
 # Runs at build time because Directory.Build.props sets GenerateDocumentationFile.
 dotnet_diagnostic.IDE0005.severity = error
+
+# ---- One type per file (build errors) ----
+# StyleCop.Analyzers is referenced for these two rules only: SA1402 (one top-level type per file; stylecop.json counts
+# every kind of type) and SA1649 (the file is named after its first type). stylecop.globalconfig turns every other
+# StyleCop rule off by category; these rule-ID lines beat a category line wherever it is.
+dotnet_diagnostic.SA1402.severity = error
+dotnet_diagnostic.SA1649.severity = error
 
 # ---- Async and cancellation (build errors) ----
 # A CancellationToken the method received is forwarded to the calls that accept one.

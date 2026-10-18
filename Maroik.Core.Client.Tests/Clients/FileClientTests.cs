@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using Maroik.Core.Client.Clients;
-using Maroik.Core.Contract.Misc.Enums;
+using Maroik.Core.Contract.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -98,6 +98,14 @@ public class FileClientTests
     }
 
     /// <summary>Returns a fixed status + plain-text body, like Maroik.FileStorage's <c>BadRequest(error)</c>.</summary>
+    /// <summary>Fails every request as an unreachable storage service would.</summary>
+    private sealed class ThrowingHandler : HttpMessageHandler
+    {
+        /// <summary>Throws the connection failure.</summary>
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => throw new HttpRequestException("connection refused");
+    }
+
     private sealed class RefusingHandler(HttpStatusCode status, string body) : HttpMessageHandler
     {
         /// <inheritdoc />
@@ -159,6 +167,53 @@ public class FileClientTests
         bool result = await CreateSut().UploadAsync([], "image/png", "test.png", "http://localhost", TestContext.Current.CancellationToken);
 
         Assert.False(result);
+        Assert.Empty(_httpClientFactory.Created); // refused before any request is built
+    }
+
+    /// <summary>
+    /// The upload request carries the bytes as the "file" part under the bare file name, and the directory as the "filePath" part — the storage service saves the file there.
+    /// </summary>
+    [Fact]
+    public async Task UploadAsync_SendsTheFileAndItsDirectory_AsMultipartParts()
+    {
+        var handler = new CapturingHandler();
+        _httpClientFactory.InnerHandler = handler;
+
+        bool result = await CreateSut().UploadAsync("payload-bytes"u8.ToArray(), "application/zip", "upload/Forum/FreeForum/42/report.zip", "http://filestorage.local", TestContext.Current.CancellationToken);
+
+        Assert.True(result);
+        string body = Assert.IsType<string>(handler.LastRequestBody);
+        Assert.Contains("name=file; filename=report.zip", body, StringComparison.Ordinal);
+        Assert.Contains("payload-bytes", body, StringComparison.Ordinal);
+        Assert.Matches(@"name=filePath\r?\n(?:[^\r\n]+\r?\n)*\r?\nupload/Forum/FreeForum/42\r?\n", body);
+    }
+
+    /// <summary>A refused unsafe path is logged as a rejected upload, and an accepted one as a requested upload, each naming the path.</summary>
+    [Fact]
+    public async Task UploadAsync_LogsTheRejection_OfAnUnsafePath_AndTheRequest_OfASafeOne()
+    {
+        _httpClientFactory.InnerHandler = new CapturingHandler();
+        var logger = new RecordingLogger();
+        var sut = new FileClient(_httpClientFactory, logger);
+
+        await sut.UploadAsync([1], "image/png", "../../etc/passwd", "http://filestorage.local", TestContext.Current.CancellationToken);
+        await sut.UploadAsync([1], "image/png", "upload/a.png", "http://filestorage.local", TestContext.Current.CancellationToken);
+
+        Assert.Contains((LogLevel.Warning, "Rejected file upload with unsafe storage path: ../../etc/passwd"), logger.Entries);
+        Assert.Contains(logger.Entries, e => e.Level == LogLevel.Information && e.Message.StartsWith("Requesting file upload: upload/a.png.", StringComparison.Ordinal));
+    }
+
+    /// <summary>A request that fails outright (the storage service unreachable) is logged as an error naming the path, with the exception.</summary>
+    [Fact]
+    public async Task UploadAsync_LogsTheFailure_WhenTheRequestThrows()
+    {
+        _httpClientFactory.InnerHandler = new ThrowingHandler();
+        var logger = new RecordingLogger();
+
+        bool result = await new FileClient(_httpClientFactory, logger).UploadAsync([1], "image/png", "upload/a.png", "http://filestorage.local", TestContext.Current.CancellationToken);
+
+        Assert.False(result);
+        Assert.Contains((LogLevel.Error, "File upload request failed for upload/a.png"), logger.Entries);
     }
 
     /// <summary>Verifies that <c>UploadAsync</c> returns false when http call fails.</summary>

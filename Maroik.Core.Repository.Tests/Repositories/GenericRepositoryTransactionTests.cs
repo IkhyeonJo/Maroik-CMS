@@ -1,7 +1,7 @@
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Calendar;
-using Maroik.Core.Domain.Menu;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Calendars;
+using Maroik.Core.Domain.Menus;
+using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
 using OrmCategory = Maroik.Core.PostgreSQL.Models.Category;

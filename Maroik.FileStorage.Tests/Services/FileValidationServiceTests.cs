@@ -1,6 +1,6 @@
 using ICSharpCode.SharpZipLib.Zip;
+using Maroik.Core.Contract.Enums;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
 using Maroik.FileStorage.Services;
 using Maroik.FileStorage.Settings;
 using Microsoft.AspNetCore.Http;
@@ -94,6 +94,25 @@ public class FileValidationServiceTests
             zipStream.PutNextEntry(entry);
             var content = "hello world"u8.ToArray();
             zipStream.Write(content, 0, content.Length);
+            zipStream.CloseEntry();
+            zipStream.Finish();
+        }
+        return memStream.ToArray();
+    }
+
+    /// <summary>Builds a ZIP archive with one plain entry followed by one password-encrypted entry.</summary>
+    private static byte[] BuildZipWithOneEncryptedEntry()
+    {
+        using var memStream = new MemoryStream();
+        using (var zipStream = new ZipOutputStream(memStream))
+        {
+            zipStream.IsStreamOwner = false;
+            zipStream.PutNextEntry(new ZipEntry("plain.txt") { DateTime = DateTime.Now });
+            zipStream.Write("readable"u8);
+            zipStream.CloseEntry();
+            zipStream.Password = "secret";
+            zipStream.PutNextEntry(new ZipEntry("hidden.txt") { DateTime = DateTime.Now, AESKeySize = 0 });
+            zipStream.Write("payload"u8);
             zipStream.CloseEntry();
             zipStream.Finish();
         }
@@ -243,6 +262,66 @@ public class FileValidationServiceTests
 
         Assert.False(success);
         Assert.Equal("Invalid or unsupported file format.", error);
+    }
+
+    /// <summary>
+    /// A header that matches its format's signature only in part is refused: every byte of the signature must match (a renamed
+    /// file whose first byte happens to fit is not a zip, a jpeg or a png).
+    /// </summary>
+    [Theory]
+    [InlineData("a.zip", new byte[] { 0x50, 0x00, 0x00, 0x00, 0, 0, 0, 0 })]
+    [InlineData("a.zip", new byte[] { 0x50, 0x4B, 0x03, 0x05, 0, 0, 0, 0 })]
+    [InlineData("a.zip", new byte[] { 0x00, 0x4B, 0x03, 0x04, 0, 0, 0, 0 })]
+    [InlineData("a.jpg", new byte[] { 0xFF, 0x00, 0, 0, 0, 0, 0, 0 })]
+    [InlineData("a.jpeg", new byte[] { 0x00, 0xD8, 0, 0, 0, 0, 0, 0 })]
+    [InlineData("a.png", new byte[] { 0x89, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 })]
+    [InlineData("a.png", new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x00 })]
+    [InlineData("a.png", new byte[] { 0x00, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A })]
+    [InlineData("a.png", new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x00, 0x0A, 0x1A, 0x0A })]
+    public async Task ValidateAndSaveAsync_ReturnsInvalidFormat_WhenTheSignatureMatchesOnlyInPart(string fileName, byte[] header)
+    {
+        var service = new FileValidationService(CleanScanMock().Object, DefaultSettings());
+
+        var (success, error) = await service.ValidateAndSaveAsync(MakeFormFile(header, fileName), CreateTempDir());
+
+        Assert.False(success);
+        Assert.Equal("Invalid or unsupported file format.", error);
+    }
+
+    /// <summary>The size cap is inclusive: a file of exactly the limit is accepted, one byte more is refused.</summary>
+    [Fact]
+    public async Task ValidateAndSaveAsync_AcceptsAFileOfExactlyTheSizeLimit()
+    {
+        var settings = Options.Create(new FileStorageSetting { StorageRootPath = Path.GetTempPath(), MaxAttachedFileSizeBytes = 16 });
+        var service = new FileValidationService(CleanScanMock().Object, settings);
+        byte[] atLimit = [0xFF, 0xD8, .. new byte[14]];
+        string dir = CreateTempDir();
+        try
+        {
+            var (saved, _) = await service.ValidateAndSaveAsync(MakeFormFile(atLimit, "limit.jpg"), dir);
+            var (refused, error) = await service.ValidateAndSaveAsync(MakeFormFile([.. atLimit, 0x00], "over.jpg"), dir);
+
+            Assert.True(saved);
+            Assert.False(refused);
+            Assert.Equal("File too large.", error);
+        }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    /// <summary>One encrypted entry is enough to refuse an archive: ClamAV cannot look inside it, whatever the other entries hold.</summary>
+    [Fact]
+    public async Task ValidateAndSaveAsync_ReturnsEncryptedZipMessage_WhenOnlyOneEntryIsEncrypted()
+    {
+        byte[] bytes = BuildZipWithOneEncryptedEntry();
+        var service = new FileValidationService(CleanScanMock().Object, DefaultSettings());
+
+        var (success, error) = await service.ValidateAndSaveAsync(MakeFormFile(bytes, "mixed.zip"), CreateTempDir());
+
+        Assert.False(success);
+        Assert.Equal("Encrypted ZIP files are not allowed.", error);
     }
 
     // -- ClamAV -----------------------------------------------------------------------

@@ -1,8 +1,9 @@
 using System.Text.Json;
-using Maroik.Core.Client.Tests.Clients;
-using Maroik.Core.Contract.Misc.Messaging;
-using Maroik.Core.Contract.Misc.Settings;
+using Maroik.Core.Client.Tests.Fixtures;
+using Maroik.Core.Contract.Messages;
+using Maroik.Core.Contract.Settings;
 using Maroik.Worker.Handlers;
+using Maroik.Worker.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -97,7 +98,7 @@ public class WorkerHostTests(WorkerBrokerFixture broker) : IClassFixture<WorkerB
 
         using IServiceScope scope = host.Services.CreateScope();
 
-        Assert.IsType<EmailMessageHandler>(scope.ServiceProvider.GetRequiredService<Contracts.IEmailMessageHandler>());
+        Assert.IsType<EmailMessageHandler>(scope.ServiceProvider.GetRequiredService<Interfaces.IEmailMessageHandler>());
     }
 
     /// <summary>

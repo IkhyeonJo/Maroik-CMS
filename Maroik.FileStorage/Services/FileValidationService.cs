@@ -1,9 +1,9 @@
 using ICSharpCode.SharpZipLib.Zip;
+using Maroik.Core.Contract.Enums;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
-using Maroik.Core.Contract.Misc.Messaging;
-using Maroik.FileStorage.Contracts;
+using Maroik.Core.Contract.Messages;
 using Maroik.FileStorage.Helpers;
+using Maroik.FileStorage.Interfaces;
 using Maroik.FileStorage.Settings;
 using Microsoft.Extensions.Options;
 

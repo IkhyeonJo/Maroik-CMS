@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Maroik.Website.Models.ViewModels.Calendar;
+using Maroik.Website.Models.ViewModels.Calendars;
 
 namespace Maroik.Website.Tests.Models;
 

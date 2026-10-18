@@ -1,9 +1,10 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Messaging;
-using Maroik.Core.Contract.Misc.Settings;
+using Maroik.Core.Contract.Messages;
+using Maroik.Core.Contract.Settings;
 using Maroik.Worker.Handlers;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using Moq;
 
@@ -32,12 +33,15 @@ public class EmailMessageHandlerTests
         FromFullName = "Maroik"
     });
 
+    /// <summary>Records what the handler logs.</summary>
+    private readonly FakeLogger<EmailMessageHandler> _logger = new();
+
     /// <summary>The handler under test over the mocked dependencies.</summary>
     private EmailMessageHandler CreateSut() => new(
         _mailClient.Object,
         _accountMailStatusService.Object,
         _settings,
-        NullLogger<EmailMessageHandler>.Instance);
+        _logger);
 
     /// <summary>Verifies that <c>HandleAsync</c> does not mark the account failed when the SMTP send succeeds.</summary>
     [Fact]
@@ -75,6 +79,7 @@ public class EmailMessageHandlerTests
         _accountMailStatusService.Verify(
             s => s.ClearMailSendFailedAsync("user@example.com", It.IsAny<CancellationToken>()),
             Times.Once);
+        Assert.Single(_logger.Collector.GetSnapshot(), r => r.Level == LogLevel.Information && r.Message == "Email sent to user@example.com");
     }
 
     /// <summary>Verifies that <c>HandleAsync</c> marks the account as FailToMailSent when SMTP fails.</summary>
@@ -89,7 +94,7 @@ public class EmailMessageHandlerTests
         var sut = CreateSut();
         var message = new SendEmailMessage("user@example.com", "subject", "body");
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        var thrown = await Assert.ThrowsAsync<InvalidOperationException>(
             () => sut.HandleAsync(message, TestContext.Current.CancellationToken));
 
         _accountMailStatusService.Verify(
@@ -98,6 +103,9 @@ public class EmailMessageHandlerTests
         _accountMailStatusService.Verify(
             s => s.ClearMailSendFailedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
+        Assert.Single(_logger.Collector.GetSnapshot(),
+            r => r.Level == LogLevel.Warning && r.Message == "SMTP send failed for user@example.com: SMTP connection refused");
+        Assert.Equal("SMTP send failed for user@example.com: SMTP connection refused", thrown.Message);
     }
 
     /// <summary>Passes cancellation token through to the account service.</summary>

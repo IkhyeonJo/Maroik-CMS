@@ -79,9 +79,8 @@ public sealed class Email : ValueObject
         if (hostParts.Length == 1)
             return false;
 
-        if (hostParts.Any(p => p == ""))
-            return false;
-
+        // An empty label needs no check of its own: MailAddress refuses a leading or doubled dot, and the one it lets through,
+        // a trailing dot ("a@b.com."), leaves an empty last label that the top-level-domain length check below refuses.
         if (hostParts[^1].Length < 2)
             return false;
 

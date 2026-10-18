@@ -1,7 +1,7 @@
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Website.Constants;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -58,6 +58,24 @@ public class ManagementControllerMenuTests(MaroikWebApplicationFactory factory)
         Role = Role.User,
         Order = 500
     };
+
+    // -- Menu page ------------------------------------------------------------------
+
+    /// <summary>The create / edit forms bound a category's and a sub-category's order below by MenuFieldPolicy.MinOrder.</summary>
+    [Fact]
+    public async Task MenuPage_BoundsTheOrderInputs_ByThePolicy()
+    {
+        var admin = await LoginAsAdminAsync("management-menu-page-admin@test.com");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/Management/Menu");
+        request.Headers.Add("Cookie", admin.CookieHeader);
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        foreach (string id in new[] { "createCategoryOrder", "createSubcategoryOrder", "editCategoryOrder", "editSubCategoryOrder" })
+            Assert.Matches($"<input[^>]*min=\"{Maroik.Core.Domain.Menus.MenuFieldPolicy.MinOrder}\"[^>]*id=\"{id}\"", html);
+    }
 
     // -- CreateCategory: role gating --------------------------------------------
 

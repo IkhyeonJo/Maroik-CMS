@@ -43,7 +43,8 @@ nothing. Repositories/Clients are wired through `Contract` interfaces.
 - Hardcoded business constants (limits, thresholds, class lists, tax/rate tables).
   Expose them from a Domain **policy** and serialize into the page:
   `@Html.Hidden("maxDaysBeforeEvent", CalendarReminderPolicy.MaxDaysBeforeEvent)`
-  `@Html.Hidden("incomeSubClassMap", JsonConvert.SerializeObject(IncomeClassPolicy.SubClassesByMainClass))`
+  `@Html.Hidden("incomeSubClassMap", ClientJsonSerializer.Serialize(IncomeClassPolicy.SubClassesByMainClass))`
+  (`ClientJsonSerializer` in `Maroik.Website/Serializers` — the one JSON setting for page payloads; no Newtonsoft)
 
 ## What MUST NOT appear in `site.ts`
 

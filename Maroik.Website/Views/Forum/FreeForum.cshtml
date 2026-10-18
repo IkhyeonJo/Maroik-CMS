@@ -8,7 +8,7 @@
     All date/time values are converted to the logged-in user's local time zone for display.
     The Pager model drives the 5-link page navigation at the bottom of the list.
 *@
-@using Maroik.Website.Models.ViewModels.Forum
+@using Maroik.Website.Models.ViewModels.Forums
 @using System.Web
 
 @model FreeForumOutputViewModel
@@ -37,12 +37,12 @@
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                         <div class="form-group">
                             <label for="writeBoardTitle">@Localizer["Title"].Value</label>
-                            <input class="form-control" type="text" data-val="true" data-val-required="@Localizer["Title is required"].Value" id="writeBoardTitle" name="writeBoardTitle" value="" required maxlength="100">
+                            <input class="form-control" type="text" data-val="true" data-val-required="@Localizer["Title is required"].Value" id="writeBoardTitle" name="writeBoardTitle" value="" required maxlength="@TitledContentPolicy.MaxTitleLength">
                             <span class="field-validation-valid text-danger" data-valmsg-for="writeBoardTitle" data-valmsg-replace="true"></span>
                         </div>
                         <div class="form-group">
                             <label for="writeBoardContent" class="control-label">@Localizer["Content"].Value</label>
-                            <textarea name="writeBoardContent" id="writeBoardContent" maxlength="16384"></textarea> @*maxlength: 16KB*@
+                            <textarea name="writeBoardContent" id="writeBoardContent" maxlength="@TitledContentPolicy.MaxBodyLength"></textarea>
                         </div>
 
                         @if (loggedInAccount.Role == Role.Admin)
@@ -84,7 +84,7 @@
                         <span class="mailbox-read-time float-left">@Localizer["Views"].Value: @Model.BoardOutputViewModel!.Views</span>
 
                         <span class="mailbox-read-time float-right">
-                            @Localizer["Updated"].Value: [<span id="free_forum_detail_updated">@Model.BoardOutputViewModel.Updated.ToViewerFormattedString(loggedInAccount.SeesLocalTime(), loggedInAccountTimeZoneIanaId)</span>]
+                            @Localizer["Updated"].Value: [<span id="free_forum_detail_updated">@Model.BoardOutputViewModel.Updated.ToViewerFormattedString(Model.ViewerSeesLocalTime, loggedInAccountTimeZoneIanaId)</span>]
                         </span>
                         <br />
                     </div>
@@ -130,15 +130,14 @@
                     <div class="card-footer card-comments">
                         @foreach (var comment in Model.DetailBoardComments)
                         {
-                            bool isCommentWriterAdmin = comment.Writer.IsAdmin(Model.AdminNicknames);
-                            if (Model.BoardOutputViewModel.Writer == comment.Writer) /*Change background color if the commenter is the post author*/
+                            if (comment.IsByPostWriter) /*Change background color if the commenter is the post author*/
                             {
                                 <div class="card-comment" style="background-color:#003366;">
                                     <img class="img-circle img-sm" src="@comment.AvatarImagePath" alt="">
 
                                     <div class="comment-text">
                                         <span class="username">
-                                            @if (isCommentWriterAdmin)
+                                            @if (comment.IsWriterAdmin)
                                             {
                                                 <span style="font-weight:bold; color:green;">@comment.Writer</span>
                                             }
@@ -147,10 +146,10 @@
                                                 <span>@comment.Writer</span>
                                             }
                                             <span class="text-muted float-middle">
-                                                @Localizer["Created"].Value: [<span class="free_forum_detail_comment_created">@comment.Created.ToViewerFormattedString(loggedInAccount.SeesLocalTime(), loggedInAccountTimeZoneIanaId)</span>]
+                                                @Localizer["Created"].Value: [<span class="free_forum_detail_comment_created">@comment.Created.ToViewerFormattedString(Model.ViewerSeesLocalTime, loggedInAccountTimeZoneIanaId)</span>]
                                             </span>
                                             @{
-                                                if (loggedInAccount.IsOwnerOrAdmin(comment.Writer))/*If the visitor is the author or admin*/
+                                                if (comment.CanDelete)/*If the visitor is the author or admin*/
                                                 {
                                                     <span class="text-muted float-right" style="margin: 0 0 0 3px"><a class="hover aFreeForumDeleteComment" href="#" data-commentId="@comment.Id" data-detailBoardId="@Model.DetailBoardId" data-detailCurrentPage="@Model.DetailCurrentPage">@Localizer["Delete"].Value</a></span>
                                                 }
@@ -167,7 +166,7 @@
 
                                     <div class="comment-text">
                                         <span class="username">
-                                            @if (isCommentWriterAdmin)
+                                            @if (comment.IsWriterAdmin)
                                             {
                                                 <span style="font-weight:bold; color:green;">@comment.Writer</span>
                                             }
@@ -176,10 +175,10 @@
                                                 <span>@comment.Writer</span>
                                             }
                                             <span class="text-muted float-middle">
-                                                @Localizer["Created"].Value: [<span class="free_forum_detail_comment_created">@comment.Created.ToViewerFormattedString(loggedInAccount.SeesLocalTime(), loggedInAccountTimeZoneIanaId)</span>]
+                                                @Localizer["Created"].Value: [<span class="free_forum_detail_comment_created">@comment.Created.ToViewerFormattedString(Model.ViewerSeesLocalTime, loggedInAccountTimeZoneIanaId)</span>]
                                             </span>
                                             @{
-                                                if (loggedInAccount.IsOwnerOrAdmin(comment.Writer))/*If the visitor is the author or admin*/
+                                                if (comment.CanDelete)/*If the visitor is the author or admin*/
                                                 {
                                                     <span class="text-muted float-right" style="margin: 0 0 0 3px"><a class="hover aFreeForumDeleteComment" href="#" data-commentId="@comment.Id" data-detailBoardId="@Model.DetailBoardId" data-detailCurrentPage="@Model.DetailCurrentPage">@Localizer["Delete"].Value</a></span>
                                                 }
@@ -220,12 +219,12 @@
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                         <div class="form-group">
                             <label for="editBoardTitle">@Localizer["Title"].Value</label>
-                            <input class="form-control" type="text" data-val="true" data-val-required="@Localizer["Title is required"].Value" id="editBoardTitle" name="editBoardTitle" value="@Model.BoardOutputViewModel!.Title" required maxlength="100">
+                            <input class="form-control" type="text" data-val="true" data-val-required="@Localizer["Title is required"].Value" id="editBoardTitle" name="editBoardTitle" value="@Model.BoardOutputViewModel!.Title" required maxlength="@TitledContentPolicy.MaxTitleLength">
                             <span class="field-validation-valid text-danger" data-valmsg-for="editBoardTitle" data-valmsg-replace="true"></span>
                         </div>
                         <div id="divEditBoardContent" class="form-group" style="@(Model.BoardOutputViewModel!.IsImgTagIncluded ? "display:none;" : "")">
                             <label for="editBoardContent" class="control-label"></label>
-                            <textarea name="editBoardContent" id="editBoardContent" maxlength="16384">@Model.BoardOutputViewModel!.Content</textarea> @*maxlength: 16KB*@
+                            <textarea name="editBoardContent" id="editBoardContent" maxlength="@TitledContentPolicy.MaxBodyLength">@Model.BoardOutputViewModel!.Content</textarea>
                         </div>
 
                         <div class="form-group">
@@ -325,20 +324,17 @@
                             <tbody>
                                 @foreach (var noticeBoard in Model.NoticeBoards)
                                 {
-                                    int commentsOfUndeletedSelectedBoardCount = Model.CommentCountByBoardId.GetValueOrDefault(noticeBoard.Id, 0);
-                                    var boardAttachedFilesWithName = Model.AttachedFilesByBoardId.GetValueOrDefault(noticeBoard.Id, []);
-                                    bool noticeBoardTitleVisible = noticeBoard.IsTitleVisibleToOwnerOrAdmin(loggedInAccount);
 
                                     <tr style="background-color: lightgray;">
                                         <td style="color:green;font-weight:bold;">@Localizer["Notice"]</td>
                                         <td>
                                             @if (noticeBoard.Locked)
                                             {
-                                                <i class="fa @(noticeBoardTitleVisible ? "fa-lock-open" : "fa-lock")" aria-hidden="true"></i>
+                                                <i class="fa @(noticeBoard.TitleVisible ? "fa-lock-open" : "fa-lock")" aria-hidden="true"></i>
                                             }
-                                            @if (noticeBoardTitleVisible)
+                                            @if (noticeBoard.TitleVisible)
                                             {
-                                                <text>@Html!.ActionLink($"{noticeBoard.Title} [{commentsOfUndeletedSelectedBoardCount}]", "FreeForum", new {method = "detail", boardId = noticeBoard.Id, page = Model.Pager!.CurrentPage}, new { style = "color: green; font-weight: bold;" })</text>
+                                                <text>@Html!.ActionLink($"{noticeBoard.Title} [{noticeBoard.CommentCount}]", "FreeForum", new {method = "detail", boardId = noticeBoard.Id, page = Model.Pager!.CurrentPage}, new { style = "color: green; font-weight: bold;" })</text>
                                             }
                                             else
                                             {
@@ -348,10 +344,10 @@
 
                                         <td><span style="font-weight:bold; color:green;">@noticeBoard.Writer</span></td>
 
-                                        <td class="free_forum_board_created"><span style="font-weight:bold; color:green;">@noticeBoard.Created.ToViewerFormattedString(loggedInAccount.SeesLocalTime(), loggedInAccountTimeZoneIanaId)</span></td>
+                                        <td class="free_forum_board_created"><span style="font-weight:bold; color:green;">@noticeBoard.Created.ToViewerFormattedString(Model.ViewerSeesLocalTime, loggedInAccountTimeZoneIanaId)</span></td>
 
                                         <td><span style="font-weight:bold; color:green;">@noticeBoard.View</span></td>
-                                        @if (boardAttachedFilesWithName.Count != 0)
+                                        @if (noticeBoard.HasAttachment)
                                         {
                                             <td><span style="font-weight:bold; color:green;"><i class="fas fa-paperclip"></i></span></td>
                                         }
@@ -363,21 +359,17 @@
                                 }
                                 @foreach (var board in Model.Boards)
                                 {
-                                    int commentsOfUndeletedSelectedBoardCount = Model.CommentCountByBoardId.GetValueOrDefault(board.Id, 0);
-                                    var attachedFilesWithName = Model.AttachedFilesByBoardId.GetValueOrDefault(board.Id, []);
-                                    bool boardTitleVisible = board.IsTitleVisibleToOwnerOrAdmin(loggedInAccount);
-                                    bool isBoardWriterAdmin = board.Writer.IsAdmin(Model.AdminNicknames);
 
                                     <tr>
                                         <td>@Localizer["Free Forum"]</td>
                                         <td>
                                             @if (board.Locked)
                                             {
-                                                <i class="fa @(boardTitleVisible ? "fa-lock-open" : "fa-lock")" aria-hidden="true"></i>
+                                                <i class="fa @(board.TitleVisible ? "fa-lock-open" : "fa-lock")" aria-hidden="true"></i>
                                             }
-                                            @if (boardTitleVisible)
+                                            @if (board.TitleVisible)
                                             {
-                                                <text>@Html!.ActionLink($"{board.Title} [{commentsOfUndeletedSelectedBoardCount}]", "FreeForum", new {method = "detail", boardId = board.Id, page = Model.Pager!.CurrentPage})</text>
+                                                <text>@Html!.ActionLink($"{board.Title} [{board.CommentCount}]", "FreeForum", new {method = "detail", boardId = board.Id, page = Model.Pager!.CurrentPage})</text>
                                             }
                                             else
                                             {
@@ -385,7 +377,7 @@
                                             }
                                         </td>
 
-                                        @if (isBoardWriterAdmin)
+                                        @if (board.IsWriterAdmin)
                                         {
                                             <td><span style="font-weight:bold; color:green;">@board.Writer</span></td>
                                         }
@@ -394,10 +386,10 @@
                                             <td><span>@board.Writer</span></td>
                                         }
 
-                                        <td class="free_forum_board_created">@board.Created.ToViewerFormattedString(loggedInAccount.SeesLocalTime(), loggedInAccountTimeZoneIanaId)</td>
+                                        <td class="free_forum_board_created">@board.Created.ToViewerFormattedString(Model.ViewerSeesLocalTime, loggedInAccountTimeZoneIanaId)</td>
 
                                         <td>@board.View</td>
-                                        @if (attachedFilesWithName.Count != 0)
+                                        @if (board.HasAttachment)
                                         {
                                             <td><i class="fas fa-paperclip"></i></td>
                                         }
@@ -412,7 +404,7 @@
                     </div>
                     <hr />
 
-                    <nav aria-label="Page navigation example">
+                    <nav aria-label="@Localizer["Page navigation"].Value">
                         @if (Model.Pager!.TotalPages > 0)
                         {
                             <ul class="pagination justify-content-center">

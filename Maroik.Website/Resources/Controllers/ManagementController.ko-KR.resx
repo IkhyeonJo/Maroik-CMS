@@ -162,9 +162,6 @@
   <data name="Nickname" xml:space="preserve">
     <value>닉네임</value>
   </data>
-  <data name="Nickname is must be between 1 and 255 characters" xml:space="preserve">
-    <value>닉네임 자릿수는 한자리 또는 255자리 사이여야 합니다.</value>
-  </data>
   <data name="'{0}' is a Nickname that already exists. Please enter another Nickname." xml:space="preserve">
     <value>'{0}'은(는) 이미 존재하는 닉네임입니다. 다른 닉네임을 입력해 주세요.</value>
   </data>
@@ -176,9 +173,6 @@
   </data>
   <data name="Input is invalid" xml:space="preserve">
     <value>유효하지 않은 입력값입니다.</value>
-  </data>
-  <data name="Invalid email form" xml:space="preserve">
-    <value>유효하지 않은 이메일 형식입니다.</value>
   </data>
   <data name="Invalid password. Please check again." xml:space="preserve">
     <value>유효하지 않은 비밀번호입니다. 다시 확인해주세요.</value>
@@ -255,9 +249,6 @@
   <data name="Please select time zone" xml:space="preserve">
     <value>시간대를 선택해 주세요</value>
   </data>
-  <data name="TimeZone" xml:space="preserve">
-    <value>시간대</value>
-  </data>
   <data name="TimeZoneIanaId" xml:space="preserve">
     <value>시간대</value>
   </data>
@@ -269,12 +260,6 @@
   </data>
   <data name="You cannot remove the Admin role from your own account." xml:space="preserve">
     <value>자기 계정의 Admin 권한은 해제할 수 없습니다.</value>
-  </data>
-  <data name="content length is must be between 0 and 16384 characters." xml:space="preserve">
-    <value>내용 길이는 1~16384 글자여야 합니다.</value>
-  </data>
-  <data name="No PrivateNoteBoard exists" xml:space="preserve">
-    <value>해당 사적 메모가 존재하지 않습니다.</value>
   </data>
   <data name="Only .jpg or jpeg or .png file allowed." xml:space="preserve">
     <value>.jpg 또는 .jpeg 또는 .png 파일만 가능합니다.</value>
@@ -305,9 +290,6 @@
   </data>
   <data name="The board has been successfully updated." xml:space="preserve">
     <value>게시물이 성공적으로 수정되었습니다.</value>
-  </data>
-  <data name="Title length is must be between 1 and 100 characters." xml:space="preserve">
-    <value>제목 길이는 1~100 글자여야 합니다.</value>
   </data>
   <data name="You do not have permission to delete." xml:space="preserve">
     <value>삭제할 권한이 없습니다.</value>

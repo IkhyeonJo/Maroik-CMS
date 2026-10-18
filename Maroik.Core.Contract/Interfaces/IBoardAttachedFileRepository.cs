@@ -1,4 +1,4 @@
-using Maroik.Core.Domain.Board;
+using Maroik.Core.Domain.Boards;
 namespace Maroik.Core.Contract.Interfaces;
 
 /// <summary>

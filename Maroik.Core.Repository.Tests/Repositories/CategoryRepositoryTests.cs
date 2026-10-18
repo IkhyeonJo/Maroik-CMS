@@ -1,5 +1,5 @@
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Menu;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Menus;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
 using OrmCategory = Maroik.Core.PostgreSQL.Models.Category;

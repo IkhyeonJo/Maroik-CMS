@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using Maroik.Core.Contract.Misc.Messaging;
-using Maroik.Worker.Contracts;
+using Maroik.Core.Contract.Messages;
+using Maroik.Worker.Interfaces;
 using Maroik.Worker.Workers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -149,6 +149,10 @@ public class EmailConsumerWorkerTests
         channel.Verify(c => c.BasicNackAsync(4, false, false, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>The single entry <paramref name="logger"/> recorded at <paramref name="level"/> whose text contains <paramref name="text"/>.</summary>
+    private static FakeLogRecord SingleLog(FakeLogger<EmailConsumerWorker> logger, LogLevel level, string text) =>
+        Assert.Single(logger.Collector.GetSnapshot(), r => r.Level == level && r.Message.Contains(text, StringComparison.Ordinal));
+
     /// <summary>On message received async handler throws on first delivery republishes for retry, giving a transient SMTP blip a second chance.</summary>
     [Fact]
     public async Task OnMessageReceivedAsync_HandlerThrows_FirstDelivery_RepublishesForRetry()
@@ -156,7 +160,8 @@ public class EmailConsumerWorkerTests
         var handler = new Mock<IEmailMessageHandler>();
         handler.Setup(h => h.HandleAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("SMTP down"));
-        using var worker = CreateSut(handler.Object, out var channel);
+        var logger = new FakeLogger<EmailConsumerWorker>();
+        using var worker = CreateSut(handler.Object, out var channel, logger);
         byte[] body = JsonSerializer.SerializeToUtf8Bytes(_message);
         channel.Setup(c => c.BasicPublishAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<BasicProperties>(), It.IsAny<ReadOnlyMemory<byte>>(), It.IsAny<CancellationToken>()))
@@ -166,6 +171,8 @@ public class EmailConsumerWorkerTests
 
         channel.Verify(c => c.BasicAckAsync(9, false, It.IsAny<CancellationToken>()), Times.Once);
         channel.Verify(c => c.BasicNackAsync(It.IsAny<ulong>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+        FakeLogRecord warning = SingleLog(logger, LogLevel.Warning, "Failed to process email message (delivery tag 9, retry");
+        Assert.IsType<InvalidOperationException>(warning.Exception);
     }
 
     /// <summary>
@@ -199,12 +206,15 @@ public class EmailConsumerWorkerTests
     public async Task OnMessageReceivedAsync_AckThrowsAfterSuccessfulHandle_DoesNotNack()
     {
         var handler = new Mock<IEmailMessageHandler>();
-        using var worker = CreateSut(handler.Object, out var channel);
+        var logger = new FakeLogger<EmailConsumerWorker>();
+        using var worker = CreateSut(handler.Object, out var channel, logger);
         channel.Setup(c => c.BasicAckAsync(It.IsAny<ulong>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("channel closed"));
         byte[] body = JsonSerializer.SerializeToUtf8Bytes(_message);
 
         await worker.OnMessageReceivedAsync(this, MakeDeliverArgs(body, deliveryTag: 11));
+
+        Assert.NotNull(SingleLog(logger, LogLevel.Error, "Failed to ack email message (delivery tag 11)").Exception);
 
         handler.Verify(h => h.HandleAsync(
             It.Is<SendEmailMessage>(m => m == _message), It.IsAny<CancellationToken>()), Times.Once);
@@ -224,7 +234,8 @@ public class EmailConsumerWorkerTests
         var handler = new Mock<IEmailMessageHandler>();
         handler.Setup(h => h.HandleAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("SMTP down"));
-        using var worker = CreateSut(handler.Object, out var channel);
+        var logger = new FakeLogger<EmailConsumerWorker>();
+        using var worker = CreateSut(handler.Object, out var channel, logger);
         channel.Setup(c => c.BasicNackAsync(It.IsAny<ulong>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("channel closed"));
         byte[] body = JsonSerializer.SerializeToUtf8Bytes(_message);
@@ -233,6 +244,7 @@ public class EmailConsumerWorkerTests
             worker.OnMessageReceivedAsync(this, MakeDeliverArgs(body, deliveryTag: 13, redelivered: true, retryCount: EmailConsumerWorker.MaxRetries)));
 
         Assert.Null(exception);
+        Assert.NotNull(SingleLog(logger, LogLevel.Error, "Failed to republish/ack or nack email message (delivery tag 13)").Exception);
     }
 
     /// <summary>
@@ -305,12 +317,14 @@ public class EmailConsumerWorkerTests
         var handler = new Mock<IEmailMessageHandler>();
         handler.Setup(h => h.HandleAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("SMTP down"));
-        using var worker = CreateSut(handler.Object, out var channel);
+        var logger = new FakeLogger<EmailConsumerWorker>();
+        using var worker = CreateSut(handler.Object, out var channel, logger);
         byte[] body = JsonSerializer.SerializeToUtf8Bytes(_message);
 
         await worker.OnMessageReceivedAsync(this, MakeDeliverArgs(body, deliveryTag: 9, redelivered: true, retryCount: EmailConsumerWorker.MaxRetries));
 
         channel.Verify(c => c.BasicNackAsync(9, false, false, It.IsAny<CancellationToken>()), Times.Once);
+        Assert.NotNull(SingleLog(logger, LogLevel.Error, $"Failed to process email message (delivery tag 9) after {EmailConsumerWorker.MaxRetries}").Exception);
         channel.Verify(c => c.BasicAckAsync(It.IsAny<ulong>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -405,7 +419,8 @@ public class EmailConsumerWorkerTests
         }
 
         /// <summary>Creates a worker wired to this fake broker, with short retry and drain timeouts.</summary>
-        public EmailConsumerWorker CreateWorker() => new(Factory.Object, BuildScopeFactory(Mock.Of<IEmailMessageHandler>()), Mock.Of<ILogger<EmailConsumerWorker>>())
+        public EmailConsumerWorker CreateWorker(ILogger<EmailConsumerWorker>? logger = null) =>
+            new(Factory.Object, BuildScopeFactory(Mock.Of<IEmailMessageHandler>()), logger ?? Mock.Of<ILogger<EmailConsumerWorker>>())
         {
             ConnectRetryInitialDelay = TimeSpan.FromMilliseconds(10),
             DrainTimeout = TimeSpan.FromMilliseconds(50),
@@ -482,7 +497,9 @@ public class EmailConsumerWorkerTests
         int attempts = 0;
         broker.Factory.Setup(f => f.CreateConnectionAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => ++attempts < 3 ? throw new InvalidOperationException("broker not ready") : broker.Connection.Object);
-        using var worker = broker.CreateWorker();
+        var logger = new FakeLogger<EmailConsumerWorker>();
+        using var worker = broker.CreateWorker(logger);
+        var started = System.Diagnostics.Stopwatch.StartNew();
 
         await worker.StartAsync(TestContext.Current.CancellationToken);
         try
@@ -490,6 +507,12 @@ public class EmailConsumerWorkerTests
             await WaitUntilAsync(() => broker.Consume != null);
             Assert.Equal(3, attempts);
             Assert.Equal((QueueNames.Email, false), broker.Consume);
+            // Each failed attempt is logged with the wait before the next, and the wait doubles (10 ms, then 20 ms) — both
+            // waits are actually taken before the third attempt connects.
+            Assert.Equal(["0.01", "0.02"], logger.Collector.GetSnapshot()
+                .Where(r => r.Level == LogLevel.Warning && r.Message.StartsWith("Could not connect to RabbitMQ; retrying in ", StringComparison.Ordinal))
+                .Select(r => r.Message["Could not connect to RabbitMQ; retrying in ".Length..^1]));
+            Assert.True(started.Elapsed >= TimeSpan.FromMilliseconds(30), $"connected after {started.Elapsed}");
         }
         finally
         {
@@ -578,12 +601,14 @@ public class EmailConsumerWorkerTests
         var broker = new BrokerFixture();
         broker.Channel.Setup(c => c.BasicCancelAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("channel already closed"));
-        using var worker = broker.CreateWorker();
+        var logger = new FakeLogger<EmailConsumerWorker>();
+        using var worker = broker.CreateWorker(logger);
         await worker.StartAsync(TestContext.Current.CancellationToken);
         await WaitUntilAsync(() => broker.Consume != null);
 
         await worker.StopAsync(CancellationToken.None);
 
+        Assert.NotNull(SingleLog(logger, LogLevel.Warning, "Failed to cancel RabbitMQ consumer 'consumer-tag-1' during shutdown").Exception);
         broker.Channel.Verify(c => c.DisposeAsync(), Times.Once);
         broker.Connection.Verify(c => c.DisposeAsync(), Times.Once);
     }

@@ -1,6 +1,6 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Finance;
+using Maroik.Core.Domain.Finances;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -160,20 +160,25 @@ public class FixedExpenditureServiceTests
         Assert.False(result.Success);
     }
 
-    /// <summary>Verifies that <c>CreateAsync</c> returns fail when same payment and deposit asset.</summary>
-    [Fact]
-    public async Task CreateAsync_ReturnsFail_WhenSamePaymentAndDepositAsset()
+    /// <summary>
+    /// A new transfer schedule must name a deposit asset, and not the payment asset itself: refused with the transfer rule's
+    /// code (ExpenditureClassPolicy.ResolveDepositAsset), and nothing is stored.
+    /// </summary>
+    [Theory]
+    [InlineData("Wallet", "FixedExpenditure.SameAsset")]
+    [InlineData("", "FixedExpenditure.DepositAssetEmpty")]
+    [InlineData(null, "FixedExpenditure.DepositAssetEmpty")]
+    public async Task CreateAsync_RefusesATransfer_WithoutADistinctDepositAsset(string? depositAsset, string expectedCode)
     {
-        _assetBalance.Setup(r => r.GetAssetAsync("user@example.com", "Wallet", It.IsAny<CancellationToken>())).ReturnsAsync(MakeAsset("Wallet"));
-        var sut = CreateSut();
+        GivenAssets(MakeAsset("Wallet"));
         var request = SavingsRequest();
         request.PaymentMethod = "Wallet";
-        request.MyDepositAsset = "Wallet";
+        request.MyDepositAsset = depositAsset;
 
-        ServiceResult result = await sut.CreateAsync("user@example.com", request, TestContext.Current.CancellationToken);
+        ServiceResult result = await CreateSut().CreateAsync(Email, request, TestContext.Current.CancellationToken);
 
-        Assert.False(result.Success);
-        Assert.Contains("same", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(expectedCode, result.ErrorCode);
+        _fixedExpenditureRepo.Verify(r => r.CreateAsync(It.IsAny<FixedExpenditure>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     /// <summary>Verifies that <c>CreateAsync</c> returns fail when deposit asset not found.</summary>

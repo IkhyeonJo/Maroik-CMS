@@ -1,4 +1,4 @@
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.PostgreSQL.Contexts;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Maroik.Core.Repository.HealthChecks;
