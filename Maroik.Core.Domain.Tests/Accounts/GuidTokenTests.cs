@@ -88,4 +88,17 @@ public class GuidTokenTests
 
         Assert.False(GuidToken.IsTokenAlive(tooShort, Now));
     }
+
+    /// <summary>
+    /// The length check sits exactly at the 8-byte timestamp: a fresh 8-byte prefix is read as a time and is alive, while one byte
+    /// fewer is refused before it is read.
+    /// </summary>
+    [Fact]
+    public void IsTokenAlive_ReadsAnEightByteToken_AndRefusesSevenBytes()
+    {
+        byte[] stamp = BitConverter.GetBytes(Now.ToBinary());
+
+        Assert.True(GuidToken.IsTokenAlive(Convert.ToBase64String(stamp), Now));
+        Assert.False(GuidToken.IsTokenAlive(Convert.ToBase64String(stamp[..7]), Now));
+    }
 }

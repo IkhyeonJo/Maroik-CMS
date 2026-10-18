@@ -234,13 +234,6 @@ public sealed class Board : AggregateRoot<long>
         Updated = utcNow;
     }
 
-    /// <summary>Unpins the post from the notice position.</summary>
-    public void Unpin(DateTime utcNow)
-    {
-        Noticed = false;
-        Updated = utcNow;
-    }
-
     /// <summary>Marks the post as soft-deleted.</summary>
     public ErrorOr<Success> SoftDelete(DateTime utcNow)
     {

@@ -44,13 +44,6 @@ public sealed class Money : ValueObject
     }
 
     /// <summary>
-    /// Returns a new <see cref="Money"/> with the same currency as this instance but a different
-    /// amount. No validation is needed since the currency is inherited from an already-valid
-    /// <see cref="Money"/> rather than parsed from raw external input.
-    /// </summary>
-    public Money WithAmount(decimal amount) => new(amount, Currency);
-
-    /// <summary>
     /// Returns a new <see cref="Money"/> whose amount is the sum of both operands, or a validation
     /// error when the currencies differ.
     /// </summary>

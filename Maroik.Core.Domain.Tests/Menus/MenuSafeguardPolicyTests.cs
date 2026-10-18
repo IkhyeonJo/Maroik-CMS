@@ -208,4 +208,34 @@ public class MenuSafeguardPolicyTests
 
         Assert.False(MenuSafeguardPolicy.CheckChange(before, before.WithoutSubCategory(3)).IsError);
     }
+
+    // -- With… edits replace only the row they name --------------------------------
+
+    /// <summary>Editing another category replaces that category only: the Management category, and with it the route, stay.</summary>
+    [Fact]
+    public void WithCategory_ReplacesOnlyTheCategoryWithItsId()
+    {
+        Category dashboard = Category.Reconstitute(1, "Dashboard", "Dashboard", "nav-icon fas fa-tachometer-alt", "Dashboard", "AdminIndex", Role.Admin, 1);
+        MenuSnapshot before = new([dashboard, AdminManagement()], [AdminMenu()]);
+        Category renamed = Category.Reconstitute(1, "Home", "Home", "nav-icon fas fa-home", "Dashboard", "AdminIndex", Role.Admin, 1);
+
+        MenuSnapshot after = before.WithCategory(renamed);
+
+        Assert.Equal(["Home", "Management"], after.Categories.Select(c => c.Name));
+        Assert.True(after.AdminCanReachMenuManagement);
+    }
+
+    /// <summary>Editing another menu item replaces that item only: the Menu item, and with it the route, stay.</summary>
+    [Fact]
+    public void WithSubCategory_ReplacesOnlyTheSubCategoryWithItsId()
+    {
+        SubCategory account = SubCategory.Reconstitute(4, 2, "Account", "Account", "far fa-circle nav-icon", "Account", Role.Admin, 1);
+        MenuSnapshot before = new([AdminManagement()], [account, AdminMenu()]);
+        SubCategory renamed = SubCategory.Reconstitute(4, 2, "Accounts", "Accounts", "far fa-circle nav-icon", "Account", Role.Admin, 1);
+
+        MenuSnapshot after = before.WithSubCategory(renamed);
+
+        Assert.Equal(["Accounts", "Menu"], after.SubCategories.Select(s => s.Name));
+        Assert.True(after.AdminCanReachMenuManagement);
+    }
 }

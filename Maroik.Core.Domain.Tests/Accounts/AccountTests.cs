@@ -247,6 +247,40 @@ public class AccountTests
         Assert.False(account.EmailConfirmed);
     }
 
+    /// <summary>
+    /// A blank candidate never matches a live stored registration token: the blank check refuses before the constant-time
+    /// comparison, and the stored token's being alive does not let a blank one through.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ConfirmEmail_ReturnsError_WhenTheCandidateIsBlank_AndTheStoredTokenIsLive(string candidate)
+    {
+        var account = ValidAccount(registrationToken: GuidToken.Generate(Now));
+
+        var result = account.ConfirmEmail(candidate, Now);
+
+        Assert.Equal("Account.InvalidToken", result.FirstError.Code);
+        Assert.False(account.EmailConfirmed);
+    }
+
+    /// <summary>A blank candidate never matches a live stored password-reset token either; the password is left as it was.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ResetPassword_ReturnsError_WhenTheCandidateIsBlank_AndTheStoredTokenIsLive(string candidate)
+    {
+        string registration = GuidToken.Generate(Now);
+        var account = ValidAccount(registrationToken: registration);
+        account.ConfirmEmail(registration, Now);
+        account.RequestPasswordReset(GuidToken.Generate(Now), Now);
+
+        var result = account.ResetPassword(candidate, "new-hash", Now);
+
+        Assert.Equal("Account.InvalidToken", result.FirstError.Code);
+        Assert.Equal("hashed", account.HashedPassword);
+    }
+
     // -- RequestPasswordReset -------------------------------------------------
 
     /// <summary>Request password reset succeeds, when email confirmed.</summary>
