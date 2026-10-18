@@ -133,7 +133,8 @@ public class CalendarService(
             await unitOfWork.BeginAsync(ct: ct);
             try
             {
-                // Single fetch of the whole table, reused for every ID instead of one full scan per calendar.
+                // One query for the sharing rows of just these ids (not the whole table), reused for every id
+                // instead of one lookup per calendar.
                 HashSet<long> existingIds = [.. (await calendarSharedRepository.GetByIdsAsync(ids, ct)).Select(s => s.Id)];
 
                 foreach (long id in ids.Where(id => !existingIds.Contains(id)))
