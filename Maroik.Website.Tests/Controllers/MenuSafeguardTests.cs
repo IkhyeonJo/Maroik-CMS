@@ -1,7 +1,7 @@
 using System.Xml.Linq;
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Menu;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Menus;
 using Maroik.Website.Controllers;
 using Maroik.Website.Extensions;
 

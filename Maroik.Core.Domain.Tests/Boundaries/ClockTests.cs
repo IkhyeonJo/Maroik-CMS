@@ -1,7 +1,7 @@
-using Maroik.Core.Domain.Board;
-using Maroik.Core.Domain.Calendar;
-using DomainBoard = Maroik.Core.Domain.Board.Board;
-using DomainCalendar = Maroik.Core.Domain.Calendar.Calendar;
+using Maroik.Core.Domain.Boards;
+using Maroik.Core.Domain.Calendars;
+using DomainBoard = Maroik.Core.Domain.Boards.Board;
+using DomainCalendar = Maroik.Core.Domain.Calendars.Calendar;
 namespace Maroik.Core.Domain.Tests.Boundaries;
 
 /// <summary>

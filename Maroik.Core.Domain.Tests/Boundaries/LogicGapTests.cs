@@ -1,13 +1,13 @@
 using System.Text.RegularExpressions;
 using ErrorOr;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Board;
-using Maroik.Core.Domain.Calendar;
-using Maroik.Core.Domain.Finance;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Boards;
+using Maroik.Core.Domain.Calendars;
+using Maroik.Core.Domain.Finances;
 using Maroik.Core.Domain.ValueObjects;
-using DomainAccount = Maroik.Core.Domain.Account.Account;
-using DomainCalendar = Maroik.Core.Domain.Calendar.Calendar;
-using DomainIncome = Maroik.Core.Domain.Finance.Income;
+using DomainAccount = Maroik.Core.Domain.Accounts.Account;
+using DomainCalendar = Maroik.Core.Domain.Calendars.Calendar;
+using DomainIncome = Maroik.Core.Domain.Finances.Income;
 
 namespace Maroik.Core.Domain.Tests.Boundaries;
 
@@ -244,8 +244,8 @@ public class LogicGapTests
     [Fact]
     public void Board_CanBeDeletedBy_FollowsThePrivateNoteAndForumRules()
     {
-        Domain.Board.Board forum = Domain.Board.Board.Reconstitute(1, BoardTypes.FreeForum, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, false, false, false);
-        Domain.Board.Board note = Domain.Board.Board.Reconstitute(2, BoardTypes.PrivateNote, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, false, false, false);
+        Domain.Boards.Board forum = Domain.Boards.Board.Reconstitute(1, BoardTypes.FreeForum, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, false, false, false);
+        Domain.Boards.Board note = Domain.Boards.Board.Reconstitute(2, BoardTypes.PrivateNote, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, false, false, false);
 
         Assert.True(forum.CanBeDeletedBy("Alice", isAdmin: false));
         Assert.True(forum.CanBeDeletedBy("Admin", isAdmin: true));

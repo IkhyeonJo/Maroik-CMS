@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Maroik.Core.Client.Clients;
-using Maroik.Core.Contract.Misc.Enums;
+using Maroik.Core.Contract.Enums;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Maroik.Core.Client.Tests.Clients;

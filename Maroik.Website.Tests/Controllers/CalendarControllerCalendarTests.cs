@@ -1,6 +1,6 @@
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.PostgreSQL.Contexts;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Maroik.Website.Tests.Controllers;

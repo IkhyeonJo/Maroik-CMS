@@ -4,7 +4,7 @@ using MailKit.Net.Smtp;
 using MailKit.Security;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Settings;
+using Maroik.Core.Contract.Settings;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 

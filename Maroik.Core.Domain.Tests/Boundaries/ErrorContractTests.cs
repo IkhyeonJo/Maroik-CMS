@@ -1,11 +1,11 @@
 using ErrorOr;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Board;
-using Maroik.Core.Domain.Calendar;
-using Maroik.Core.Domain.Finance;
-using Maroik.Core.Domain.Menu;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Boards;
+using Maroik.Core.Domain.Calendars;
+using Maroik.Core.Domain.Finances;
+using Maroik.Core.Domain.Menus;
 using Maroik.Core.Domain.ValueObjects;
-using DomainAccount = Maroik.Core.Domain.Account.Account;
+using DomainAccount = Maroik.Core.Domain.Accounts.Account;
 using DomainTitledContentPolicy = Maroik.Core.Domain.Primitives.TitledContentPolicy;
 
 namespace Maroik.Core.Domain.Tests.Boundaries;
@@ -116,14 +116,14 @@ public class ErrorContractTests
     [Fact]
     public void Board_Conflicts()
     {
-        Domain.Board.Board board = Domain.Board.Board.Reconstitute(1, BoardTypes.FreeForum, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, deleted: true, locked: false, noticed: false);
+        Domain.Boards.Board board = Domain.Boards.Board.Reconstitute(1, BoardTypes.FreeForum, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, deleted: true, locked: false, noticed: false);
         BoardComment comment = BoardComment.Create(1, 0, null, "Bob", "hi", Now).Value;
 
         ErrorAssert.Is(board.Update("t", "c", Now), "Board.Deleted", ErrorType.Conflict, "Cannot update a deleted post.");
         ErrorAssert.Is(board.AddComment(comment, Now), "Board.Deleted", ErrorType.Conflict, "Cannot add a comment to a deleted post.");
         ErrorAssert.Is(board.SoftDelete(Now), "Board.AlreadyDeleted", ErrorType.Conflict, "Post is already deleted.");
 
-        Domain.Board.Board locked = Domain.Board.Board.Reconstitute(1, BoardTypes.FreeForum, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, deleted: false, locked: true, noticed: false);
+        Domain.Boards.Board locked = Domain.Boards.Board.Reconstitute(1, BoardTypes.FreeForum, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, deleted: false, locked: true, noticed: false);
         ErrorAssert.Is(locked.AddComment(comment, Now, "Bob"), "Board.Locked", ErrorType.Conflict, "Cannot add a comment to a locked post.");
 
         BoardComment foreign = BoardComment.Create(999, 0, null, "Bob", "hi", Now).Value;
@@ -131,8 +131,8 @@ public class ErrorContractTests
     }
 
     /// <summary>A persisted free-forum post with id <paramref name="id"/>.</summary>
-    private static Domain.Board.Board NewBoardWithId(long id) =>
-        Domain.Board.Board.Reconstitute(id, BoardTypes.FreeForum, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, false, false, false);
+    private static Domain.Boards.Board NewBoardWithId(long id) =>
+        Domain.Boards.Board.Reconstitute(id, BoardTypes.FreeForum, "t", "c", "Alice", DateTime.UtcNow, DateTime.UtcNow, 0L, false, false, false);
 
     /// <summary>Verifies the empty-writer, empty/too-long content and already-deleted errors of a board comment.</summary>
     [Fact]

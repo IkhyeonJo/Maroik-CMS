@@ -1,4 +1,4 @@
-using Maroik.Core.Contract.Misc.Messaging;
+using Maroik.Core.Contract.Messages;
 using Maroik.FileStorage.Contracts;
 using Maroik.FileStorage.Helpers;
 using Maroik.FileStorage.Settings;

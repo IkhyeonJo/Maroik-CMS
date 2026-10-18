@@ -1,4 +1,4 @@
-using Maroik.E2E.Tests.Infrastructure;
+using Maroik.E2E.Tests.Fixtures;
 using Microsoft.Playwright;
 
 namespace Maroik.E2E.Tests.Flows;

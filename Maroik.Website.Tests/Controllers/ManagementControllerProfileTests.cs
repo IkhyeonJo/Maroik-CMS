@@ -1,7 +1,7 @@
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.PostgreSQL.Contexts;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -57,7 +57,7 @@ public class ManagementControllerProfileTests(MaroikWebApplicationFactory factor
         var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
-        string expected = string.Join(", ", Core.Domain.Media.ImageUploadPolicy.AllowedContentTypes);
+        string expected = string.Join(", ", Core.Domain.Uploads.ImageUploadPolicy.AllowedContentTypes);
         Assert.Contains("id=\"ProfileAvatarFiles\"", html, StringComparison.Ordinal);
         Assert.Matches($"id=\"ProfileAvatarFiles\"[^>]*accept=\"{System.Text.RegularExpressions.Regex.Escape(expected)}\"", html);
     }

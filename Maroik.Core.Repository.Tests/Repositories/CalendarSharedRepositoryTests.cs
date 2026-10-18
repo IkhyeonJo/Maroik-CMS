@@ -1,5 +1,5 @@
-using Maroik.Core.Domain.Calendar;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Calendars;
+using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
 using OrmCalendarShared = Maroik.Core.PostgreSQL.Models.CalendarShared;

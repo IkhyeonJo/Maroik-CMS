@@ -1,4 +1,4 @@
-using Maroik.Core.Domain.Calendar;
+using Maroik.Core.Domain.Calendars;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
 using OrmCalendarEvent = Maroik.Core.PostgreSQL.Models.CalendarEvent;

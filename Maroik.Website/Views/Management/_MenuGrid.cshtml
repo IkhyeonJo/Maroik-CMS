@@ -5,7 +5,7 @@
     Each row is clickable to populate the edit form in the parent Menu.cshtml view.
     Note: this partial should contain only the grid declaration (NonFactors constraint).
 *@
-@model IQueryable<Maroik.Website.Models.ViewModels.Management.MenuOutputViewModel>
+@model IQueryable<Maroik.Website.Models.ViewModels.Managements.MenuOutputViewModel>
 
 @* Should only include grid declaration *@
 
@@ -13,15 +13,15 @@
     .Grid(Model)
     .Build(columns =>
     {
-        columns.Add(model => model.Id).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Management.MenuOutputViewModel.Id)]);
-        columns.Add(model => model.CategoryId).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Management.MenuOutputViewModel.CategoryId)]);
-        columns.Add(model => model.Name).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Management.MenuOutputViewModel.Name)]);
-        columns.Add(model => model.DisplayName).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Management.MenuOutputViewModel.DisplayName)]);
-        columns.Add(model => model.IconPath).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Management.MenuOutputViewModel.IconPath)]);
-        columns.Add(model => model.Controller).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Management.MenuOutputViewModel.Controller)]);
-        columns.Add(model => model.Action).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Management.MenuOutputViewModel.Action)]);
-        columns.Add(model => model.Role).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Management.MenuOutputViewModel.Role)]);
-        columns.Add(model => model.Order).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Management.MenuOutputViewModel.Order)]);
+        columns.Add(model => model.Id).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Managements.MenuOutputViewModel.Id)]);
+        columns.Add(model => model.CategoryId).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Managements.MenuOutputViewModel.CategoryId)]);
+        columns.Add(model => model.Name).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Managements.MenuOutputViewModel.Name)]);
+        columns.Add(model => model.DisplayName).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Managements.MenuOutputViewModel.DisplayName)]);
+        columns.Add(model => model.IconPath).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Managements.MenuOutputViewModel.IconPath)]);
+        columns.Add(model => model.Controller).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Managements.MenuOutputViewModel.Controller)]);
+        columns.Add(model => model.Action).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Managements.MenuOutputViewModel.Action)]);
+        columns.Add(model => model.Role).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Managements.MenuOutputViewModel.Role)]);
+        columns.Add(model => model.Order).Titled(Localizer[nameof(Maroik.Website.Models.ViewModels.Managements.MenuOutputViewModel.Order)]);
 
     })
     .Id("menuGrid")

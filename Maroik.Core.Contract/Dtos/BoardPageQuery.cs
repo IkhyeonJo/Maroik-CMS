@@ -15,7 +15,7 @@ namespace Maroik.Core.Contract.Dtos;
 /// <param name="SearchText">Search text; the search is skipped if this is null or empty.</param>
 /// <param name="IsLoggedIn">Whether the viewer has an active session. Ignored when <see cref="OwnerNickname"/> is set.</param>
 /// <param name="ViewerRole">
-/// The viewer's role (<see cref="Domain.Account.Role"/>); ignored when not logged in or when
+/// The viewer's role (<see cref="Domain.Accounts.Role"/>); ignored when not logged in or when
 /// <see cref="OwnerNickname"/> is set.
 /// </param>
 /// <param name="ViewerNickname">

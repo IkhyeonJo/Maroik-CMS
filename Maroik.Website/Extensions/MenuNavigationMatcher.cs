@@ -1,5 +1,5 @@
 using Maroik.Core.Contract.Dtos;
-using Maroik.Website.Models.ViewModels.Shared;
+using Maroik.Website.Models.ViewModels.Layouts;
 
 namespace Maroik.Website.Extensions;
 

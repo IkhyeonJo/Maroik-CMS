@@ -1,4 +1,4 @@
-using Maroik.Core.Domain.Board;
+using Maroik.Core.Domain.Boards;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
 using OrmBoard = Maroik.Core.PostgreSQL.Models.Board;

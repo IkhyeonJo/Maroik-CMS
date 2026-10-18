@@ -1,4 +1,4 @@
-using Maroik.Core.Domain.Finance;
+using Maroik.Core.Domain.Finances;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;

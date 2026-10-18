@@ -3,7 +3,7 @@ namespace Maroik.FileStorage.Settings;
 /// <summary>
 /// Strongly-typed configuration bound to the "ServerSetting" section of appsettings.json.
 /// Deliberately reuses the same section/env-var name as Maroik.Website's
-/// <c>Maroik.Core.Contract.Misc.Settings.ServerSetting.MaxAttachedFileSizeBytes</c>: both
+/// <c>Maroik.Core.Contract.Settings.ServerSetting.MaxAttachedFileSizeBytes</c>: both
 /// services load the same env file (.env.debug, see docker-compose.debug.yml), so a single
 /// <c>ServerSetting__MaxAttachedFileSizeBytes</c> env var keeps the website-level check and
 /// this microservice's hard cap in sync instead of drifting apart.

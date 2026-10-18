@@ -2,11 +2,11 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using ImageMagick;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Contract.Enums;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.PostgreSQL.Contexts;
 using Maroik.Core.PostgreSQL.Models;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -765,7 +765,7 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
     {
         using var host = CreateHost();
         var session = await LoginAsync(host, $"storage-toobig-{url.Replace("/", "-", StringComparison.Ordinal).ToLowerInvariant()}@test.com");
-        long limit = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Core.Contract.Misc.Settings.ServerSetting>>().Value.MaxAttachedFileSizeBytes;
+        long limit = factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Core.Contract.Settings.ServerSetting>>().Value.MaxAttachedFileSizeBytes;
         var form = FileForm(field, "big.png", new byte[limit + 1], "image/png", ("Nickname", "x"));
 
         using var request = session.BuildFormPostRequest(url, form);

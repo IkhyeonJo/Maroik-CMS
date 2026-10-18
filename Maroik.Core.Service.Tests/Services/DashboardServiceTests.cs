@@ -1,9 +1,9 @@
 using System.Globalization;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Settings;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.Domain.Finance;
+using Maroik.Core.Contract.Settings;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Finances;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;

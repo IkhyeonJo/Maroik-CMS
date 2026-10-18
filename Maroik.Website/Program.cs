@@ -5,7 +5,7 @@
 
 using System.Globalization;
 using Maroik.Core.Client.Extensions;
-using Maroik.Core.Contract.Misc.Settings;
+using Maroik.Core.Contract.Settings;
 using Maroik.Core.Repository.Extensions;
 using Maroik.Core.Service.Extensions;
 using Maroik.Website.Constants;

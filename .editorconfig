@@ -111,6 +111,10 @@ csharp_style_inlined_variable_declaration = true:suggestion
 # because Directory.Build.props sets EnforceCodeStyleInBuild.
 csharp_style_namespace_declarations = file_scoped:error
 dotnet_diagnostic.IDE0161.severity = error
+# The namespace matches the folder path (Accounts/X.cs -> <RootNamespace>.Accounts), so a folder rename cannot
+# leave its namespace behind. Build error by rule ID (IDE0130).
+dotnet_style_namespace_match_folder = true:error
+dotnet_diagnostic.IDE0130.severity = error
 ###############################
 # C# Formatting Rules         #
 ###############################

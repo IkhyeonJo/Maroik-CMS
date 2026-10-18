@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Maroik.Core.Client.Clients;
-using Maroik.Core.Client.Tests.Infrastructure;
-using Maroik.Core.Contract.Misc.Messaging;
+using Maroik.Core.Client.Tests.Fixtures;
+using Maroik.Core.Contract.Messages;
 using Microsoft.Extensions.Logging;
 using Moq;
 using RabbitMQ.Client;

@@ -1,9 +1,9 @@
 using System.Net;
 using System.Text.Json;
-using Maroik.Core.Domain.Account;
-using Maroik.Core.PostgreSQL.Data;
+using Maroik.Core.Domain.Accounts;
+using Maroik.Core.PostgreSQL.Contexts;
 using Microsoft.Extensions.DependencyInjection;
-using Maroik.Website.Tests.Infrastructure;
+using Maroik.Website.Tests.Fixtures;
 
 namespace Maroik.Website.Tests.Controllers;
 

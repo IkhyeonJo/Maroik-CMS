@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Misc.Enums;
-using Maroik.Core.Contract.Misc.Messaging;
+using Maroik.Core.Contract.Enums;
+using Maroik.Core.Contract.Messages;
 using Microsoft.Extensions.Logging;
 
 namespace Maroik.Core.Client.Clients;

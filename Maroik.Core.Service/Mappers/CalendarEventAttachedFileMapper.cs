@@ -1,5 +1,5 @@
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Domain.Calendar;
+using Maroik.Core.Domain.Calendars;
 
 namespace Maroik.Core.Service.Mappers;
 

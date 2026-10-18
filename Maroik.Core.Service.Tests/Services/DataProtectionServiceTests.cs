@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using Maroik.Core.Contract.Misc.Enums;
+using Maroik.Core.Contract.Enums;
 using Maroik.Core.Service.Services;
 using Microsoft.AspNetCore.DataProtection;
 

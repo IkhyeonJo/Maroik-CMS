@@ -1,4 +1,4 @@
-using Maroik.Core.Contract.Misc.Messaging;
+using Maroik.Core.Contract.Messages;
 
 namespace Maroik.Worker.Contracts;
 

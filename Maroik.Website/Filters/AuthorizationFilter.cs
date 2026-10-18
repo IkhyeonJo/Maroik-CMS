@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Domain.Account;
+using Maroik.Core.Domain.Accounts;
 using Maroik.Website.Attributes;
 using Maroik.Website.Constants;
 using Maroik.Website.Contracts;
