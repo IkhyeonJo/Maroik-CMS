@@ -15,6 +15,7 @@ using Maroik.Website.Mappers;
 using Maroik.Website.Models;
 using Maroik.Website.Models.ViewModels.Managements;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
@@ -53,6 +54,9 @@ public class ManagementController(
     IDistributedCache cache,
     TimeProvider timeProvider) : Controller
 {
+    /// <summary>Shared extension-to-MIME-type lookup for attachment downloads (safe for concurrent reads).</summary>
+    private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
+
     /// <summary>
     /// E-mail of the signed-in administrator, passed to the admin write use cases so their audit log
     /// records who made the change (resolved by ViewBagPopulatorFilter).
@@ -1245,7 +1249,8 @@ public class ManagementController(
             if (!result.Success)
                 return Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
 
-            return File(file!.Content, "application/octet-stream", file.FileName);
+            string contentType = _contentTypeProvider.TryGetContentType(file!.FileName, out string? type) ? type : "application/octet-stream";
+            return File(file.Content, contentType, file.FileName);
         }
         catch (Exception ex)
         {

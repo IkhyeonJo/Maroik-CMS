@@ -403,6 +403,8 @@ public class FileStorageBackedEndpointsTests(MaroikWebApplicationFactory factory
         var response = await host.Client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        // Every attachment download names its type from the file's extension, as the calendar one does.
+        Assert.Equal("application/x-zip-compressed", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal("payload.zip", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName);
         Assert.Equal(bytes, await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
     }
