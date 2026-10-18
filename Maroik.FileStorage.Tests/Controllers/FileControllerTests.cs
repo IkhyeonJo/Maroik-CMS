@@ -458,6 +458,60 @@ public class FileControllerTests(WebApplicationFactory<Program> baseFactory)
         }
     }
 
+    /// <summary>The controller under test over <paramref name="validation"/>, the temp folder as storage root, and <paramref name="logger"/>.</summary>
+    private static Maroik.FileStorage.Controllers.FileController ControllerWith(IFileValidationService validation, Microsoft.Extensions.Logging.Testing.FakeLogger<Maroik.FileStorage.Controllers.FileController> logger) =>
+        new(validation,
+            Microsoft.Extensions.Options.Options.Create(new Maroik.FileStorage.Settings.FileStorageSetting { StorageRootPath = Path.GetTempPath() }),
+            logger);
+
+    /// <summary>An unexpected failure while saving is answered with a generic refusal and logged as an error with the path, correlation id and exception.</summary>
+    [Fact]
+    public async Task Upload_LogsAnError_AndAnswersGenerically_WhenSavingThrows()
+    {
+        var validation = new Mock<IFileValidationService>();
+        validation.Setup(v => v.ValidateAndSaveAsync(It.IsAny<IFormFile>(), It.IsAny<string>())).ThrowsAsync(new IOException("disk full"));
+        var logger = new Microsoft.Extensions.Logging.Testing.FakeLogger<Maroik.FileStorage.Controllers.FileController>();
+        using var bytes = new MemoryStream([0xFF, 0xD8]);
+
+        var result = await ControllerWith(validation.Object, logger).UploadAsync(new FormFile(bytes, 0, 2, "file", "a.jpg"), "upload/x", "corr-up-9");
+
+        Assert.Equal("File upload failed.", Assert.IsType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>(result).Value);
+        var error = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Error, error.Level);
+        Assert.Equal("File upload failed for upload/x. CorrelationId=corr-up-9", error.Message);
+        Assert.IsType<IOException>(error.Exception);
+    }
+
+    /// <summary>A file that cannot be opened is answered "Invalid file" and logged as an error with the path, correlation id and exception.</summary>
+    [Fact]
+    public void Download_LogsAnError_WhenTheFileCannotBeOpened()
+    {
+        // Unix file modes make the file unreadable; Maroik runs on Linux only (a Windows dev box has no such mode).
+        if (OperatingSystem.IsWindows())
+            return;
+
+        var tempPath = Path.Combine(Path.GetTempPath(), $"maroik_test_{Guid.NewGuid()}.zip");
+        File.WriteAllBytes(tempPath, [1, 2, 3, 4]);
+        File.SetUnixFileMode(tempPath, UnixFileMode.None); // unreadable to this (non-root) test process
+        try
+        {
+            var logger = new Microsoft.Extensions.Logging.Testing.FakeLogger<Maroik.FileStorage.Controllers.FileController>();
+
+            var result = ControllerWith(Mock.Of<IFileValidationService>(), logger).Download(tempPath, "corr-dl-9");
+
+            Assert.Equal("Invalid file", Assert.IsType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>(result).Value);
+            var error = Assert.Single(logger.Collector.GetSnapshot());
+            Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Error, error.Level);
+            Assert.Equal($"File download failed for {tempPath}. CorrelationId=corr-dl-9", error.Message);
+            Assert.IsType<UnauthorizedAccessException>(error.Exception);
+        }
+        finally
+        {
+            File.SetUnixFileMode(tempPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            File.Delete(tempPath);
+        }
+    }
+
     /// <summary>Verifies that <c>Download</c> returns correct content type for png.</summary>
     [Fact]
     public async Task Download_ReturnsCorrectContentType_ForPng()

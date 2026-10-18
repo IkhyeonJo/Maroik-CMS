@@ -62,6 +62,28 @@ public class MailClient(ILogger<MailClient> logger) : IMailClient
     };
 
     /// <summary>
+    /// The relaxed certificate check used when <c>SmtpSsl</c> is off: <see cref="ShouldAcceptCertificate"/> decides, and any
+    /// certificate problem is logged as a warning — accepted (an untrusted chain) or rejected (with the errors) — so the operator
+    /// sees which relay is being trusted on what grounds.
+    /// </summary>
+    internal bool AcceptRelaxedCertificate(SslPolicyErrors errors, string? smtpHost)
+    {
+        bool accept = ShouldAcceptCertificate(errors);
+        if (errors != SslPolicyErrors.None)
+        {
+            if (accept)
+                logger.LogWarning(
+                    "Accepting an untrusted SMTP server certificate for {SmtpHost} because SmtpSsl is disabled for this relay",
+                    smtpHost);
+            else
+                logger.LogWarning(
+                    "Rejecting the SMTP server certificate for {SmtpHost}: {SslPolicyErrors}",
+                    smtpHost, errors);
+        }
+        return accept;
+    }
+
+    /// <summary>
     /// Picks the TLS mode for the SMTP connection. <c>SmtpSsl</c> on means TLS is <b>required</b>:
     /// implicit TLS on the conventional implicit-TLS ports (465 / 2465), otherwise a mandatory
     /// STARTTLS upgrade — the connect fails rather than continuing in cleartext if the server does
@@ -129,22 +151,7 @@ public class MailClient(ILogger<MailClient> logger) : IMailClient
             SecureSocketOptions socketOptions = GetSecureSocketOptions(settings.SmtpSsl, settings.SmtpPort);
             if (!settings.SmtpSsl)
             {
-                smtp.ServerCertificateValidationCallback = (_, _, _, errors) =>
-                {
-                    bool accept = ShouldAcceptCertificate(errors);
-                    if (errors != SslPolicyErrors.None)
-                    {
-                        if (accept)
-                            logger.LogWarning(
-                                "Accepting an untrusted SMTP server certificate for {SmtpHost} because SmtpSsl is disabled for this relay",
-                                settings.SmtpHost);
-                        else
-                            logger.LogWarning(
-                                "Rejecting the SMTP server certificate for {SmtpHost}: {SslPolicyErrors}",
-                                settings.SmtpHost, errors);
-                    }
-                    return accept;
-                };
+                smtp.ServerCertificateValidationCallback = (_, _, _, errors) => AcceptRelaxedCertificate(errors, settings.SmtpHost);
             }
             await smtp.ConnectAsync(settings.SmtpHost ?? "", settings.SmtpPort, socketOptions, ct);
             await smtp.AuthenticateAsync(settings.SmtpUserName ?? "", settings.SmtpPassword ?? "", ct);
