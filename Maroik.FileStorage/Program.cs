@@ -5,8 +5,8 @@
 using System.Globalization;
 using Maroik.Core.Client.Clients;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.FileStorage.Contracts;
-using Maroik.FileStorage.Helpers;
+using Maroik.FileStorage.Constants;
+using Maroik.FileStorage.Interfaces;
 using Maroik.FileStorage.Services;
 using Maroik.FileStorage.Settings;
 using Microsoft.OpenApi;

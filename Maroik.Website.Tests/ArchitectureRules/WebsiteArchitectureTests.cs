@@ -3,8 +3,8 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Website.Attributes;
-using Maroik.Website.Contracts;
 using Maroik.Website.Filters;
+using Maroik.Website.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -437,7 +437,7 @@ public class WebsiteArchitectureTests
             {
                 if (instruction.Operand is not MethodReference calledMethod) continue;
 
-                if (calledMethod.DeclaringType.FullName == "Maroik.Website.Contracts.ISessionService"
+                if (calledMethod.DeclaringType.FullName == "Maroik.Website.Interfaces.ISessionService"
                     && calledMethod.Name == nameof(ISessionService.GetAccountAsync))
                 {
                     return false;

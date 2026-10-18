@@ -1,3 +1,4 @@
+using Maroik.Core.Contract.Interfaces;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -5,7 +6,6 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
-using Maroik.Core.Contract.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;

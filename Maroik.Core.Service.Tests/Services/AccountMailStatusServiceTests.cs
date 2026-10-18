@@ -1,5 +1,5 @@
+using Maroik.Core.Contract.Extensions;
 using Maroik.Core.Contract.Interfaces;
-using Maroik.Core.Contract.Helpers;
 using Maroik.Core.Domain.Accounts;
 using Maroik.Core.Service.Services;
 using Microsoft.Extensions.Time.Testing;
@@ -58,7 +58,7 @@ public class AccountMailStatusServiceTests
         await sut.MarkMailSendFailedAsync(account.Email.Value, TestContext.Current.CancellationToken);
 
         _accountRepo.Verify(r => r.UpdateMessageAsync(
-            account.Email.Value, EnumHelper.GetDescription(AccountMessage.FailToMailSent), It.IsAny<DateTime>(),
+            account.Email.Value, AccountMessage.FailToMailSent.GetDescription(), It.IsAny<DateTime>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -93,7 +93,7 @@ public class AccountMailStatusServiceTests
     [Fact]
     public async Task ClearMailSendFailedAsync_ClearsMessage_WhenAccountWasFailToMailSent()
     {
-        var account = ActiveAccount(message: EnumHelper.GetDescription(AccountMessage.FailToMailSent));
+        var account = ActiveAccount(message: AccountMessage.FailToMailSent.GetDescription());
         _accountRepo.Setup(r => r.FindByEmailAsync(account.Email.Value, It.IsAny<CancellationToken>())).ReturnsAsync(account);
         var sut = CreateSut();
 
@@ -121,7 +121,7 @@ public class AccountMailStatusServiceTests
     [Fact]
     public async Task ClearMailSendFailedAsync_DoesNothing_WhenAccountMessageIsNotFailToMailSent()
     {
-        var account = ActiveAccount(message: EnumHelper.GetDescription(AccountMessage.MailSent));
+        var account = ActiveAccount(message: AccountMessage.MailSent.GetDescription());
         _accountRepo.Setup(r => r.FindByEmailAsync(account.Email.Value, It.IsAny<CancellationToken>())).ReturnsAsync(account);
         var sut = CreateSut();
 

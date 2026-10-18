@@ -1,15 +1,15 @@
-using Maroik.Core.Contract.Helpers;
+using Maroik.Core.Contract.Extensions;
 using Maroik.Core.Domain.Accounts;
 
-namespace Maroik.Core.Contract.Tests.Helpers;
+namespace Maroik.Core.Contract.Tests.Extensions;
 
 /// <summary>
-/// Unit tests for <see cref="Maroik.Core.Contract.Helpers.EnumHelper"/>.
+/// Unit tests for <see cref="Maroik.Core.Contract.Extensions.EnumExtensions"/>.
 /// Verifies that <c>GetDescription</c> returns the value of the
 /// <see cref="System.ComponentModel.DescriptionAttribute"/> on each enum member,
 /// and falls back to the member name when no attribute is present.
 /// </summary>
-public class EnumHelperTests
+public class EnumExtensionsTests
 {
     /// <summary>Verifies that <c>GetDescription</c> returns description attribute for account message.</summary>
     [Theory]
@@ -28,7 +28,7 @@ public class EnumHelperTests
     [InlineData(AccountMessage.ErrorFound, "Error Found")]
     public void GetDescription_ReturnsDescriptionAttribute_ForAccountMessage(AccountMessage value, string expected)
     {
-        string result = EnumHelper.GetDescription(value);
+        string result = value.GetDescription();
 
         Assert.Equal(expected, result);
     }
@@ -37,6 +37,6 @@ public class EnumHelperTests
     [Fact]
     public void GetDescription_FallsBackToTheValueText_ForAnUndefinedEnumValue()
     {
-        Assert.Equal("99", EnumHelper.GetDescription((DayOfWeek)99));
+        Assert.Equal("99", ((DayOfWeek)99).GetDescription());
     }
 }

@@ -1,7 +1,7 @@
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Enums;
 using Maroik.Core.Contract.Extensions;
+using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Settings;
 using Maroik.Core.Domain.Accounts;
 using Maroik.Core.Domain.Boards;

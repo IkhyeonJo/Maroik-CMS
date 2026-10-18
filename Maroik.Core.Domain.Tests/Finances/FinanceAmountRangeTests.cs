@@ -1,6 +1,6 @@
 using System.Globalization;
-using Maroik.Core.Domain.Finances;
 using Maroik.Core.Domain.Errors;
+using Maroik.Core.Domain.Finances;
 namespace Maroik.Core.Domain.Tests.Finances;
 
 /// <summary>

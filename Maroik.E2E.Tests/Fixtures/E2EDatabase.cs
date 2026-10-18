@@ -3,12 +3,6 @@ using Npgsql;
 
 namespace Maroik.E2E.Tests.Fixtures;
 
-/// <summary>An account seeded straight into the E2E database, ready to sign in through the UI.</summary>
-/// <param name="Email">Sign-in e-mail.</param>
-/// <param name="Password">Plain-text password (meets the password policy).</param>
-/// <param name="Nickname">Unique nickname.</param>
-public sealed record SeededAccount(string Email, string Password, string Nickname);
-
 /// <summary>
 /// Direct access to the seeded E2E PostgreSQL database: seeds the fixtures a browser flow needs (an
 /// account to sign in as, an asset to spend from, ...) without driving the UI for setup, and reads

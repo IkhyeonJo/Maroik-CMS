@@ -273,6 +273,13 @@ dotnet_diagnostic.CA1311.severity = error
 # Runs at build time because Directory.Build.props sets GenerateDocumentationFile.
 dotnet_diagnostic.IDE0005.severity = error
 
+# ---- One type per file (build errors) ----
+# StyleCop.Analyzers is referenced for these two rules only: SA1402 (one top-level type per file; stylecop.json counts
+# every kind of type) and SA1649 (the file is named after its first type). stylecop.globalconfig turns every other
+# StyleCop rule off by category; these rule-ID lines beat a category line wherever it is.
+dotnet_diagnostic.SA1402.severity = error
+dotnet_diagnostic.SA1649.severity = error
+
 # ---- Async and cancellation (build errors) ----
 # A CancellationToken the method received is forwarded to the calls that accept one.
 dotnet_diagnostic.CA2016.severity = error

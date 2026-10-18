@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Enums;
-using Maroik.Core.Contract.Helpers;
+using Maroik.Core.Contract.Extensions;
+using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Messages;
 using Maroik.Core.Contract.Settings;
 using Maroik.Core.Domain.Accounts;
@@ -1226,7 +1226,7 @@ public class AccountServiceTests
         RegisterResult result = await CreateSut().RegisterAsync(NewRegistration(), _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
-        Assert.Equal(EnumHelper.GetDescription(AccountMessage.UserAlreadyCreated), result.ErrorKey);
+        Assert.Equal(AccountMessage.UserAlreadyCreated.GetDescription(), result.ErrorKey);
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
         _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -1422,7 +1422,7 @@ public class AccountServiceTests
         RegisterResult result = await CreateSut().ResendConfirmationEmailAsync("user@example.com", _emailTemplate, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
-        Assert.Equal(EnumHelper.GetDescription(AccountMessage.UserAlreadyCreated), result.ErrorKey);
+        Assert.Equal(AccountMessage.UserAlreadyCreated.GetDescription(), result.ErrorKey);
         _emailPublisher.Verify(p => p.PublishAsync(It.IsAny<SendEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -1958,7 +1958,7 @@ public class AccountServiceTests
         await CreateSut().ForgotPasswordAsync(account.Email.Value, _emailTemplate, TestContext.Current.CancellationToken);
 
         _mailClient.Verify(m => m.GetMailResetPasswordBody("enc-token", "title", "c0", "c1", "https://example.com"), Times.Once);
-        string expected = published ? EnumHelper.GetDescription(AccountMessage.ResetPasswordMail) : "Fail to mail sent";
+        string expected = published ? AccountMessage.ResetPasswordMail.GetDescription() : "Fail to mail sent";
         _accountRepo.Verify(r => r.UpdateMessageAsync(account.Email.Value, expected, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 

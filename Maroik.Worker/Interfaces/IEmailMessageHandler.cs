@@ -1,6 +1,6 @@
 using Maroik.Core.Contract.Messages;
 
-namespace Maroik.Worker.Contracts;
+namespace Maroik.Worker.Interfaces;
 
 /// <summary>Handles a single dequeued <see cref="SendEmailMessage"/>.</summary>
 public interface IEmailMessageHandler

@@ -1,9 +1,9 @@
-using Maroik.FileStorage.Helpers;
+using Maroik.FileStorage.Constants;
 using Serilog.Events;
 using Serilog.Formatting.Display;
 using Serilog.Parsing;
 
-namespace Maroik.FileStorage.Tests.Helpers;
+namespace Maroik.FileStorage.Tests.Constants;
 
 /// <summary>
 /// The console line format FileStorage logs with. Logged values can come from a request (an upload path …), so a value must

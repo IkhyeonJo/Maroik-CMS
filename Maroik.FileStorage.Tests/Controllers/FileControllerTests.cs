@@ -1,7 +1,7 @@
 using System.Net;
-using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Enums;
-using Maroik.FileStorage.Contracts;
+using Maroik.Core.Contract.Interfaces;
+using Maroik.FileStorage.Interfaces;
 using Maroik.FileStorage.Tests.Fixtures;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;

@@ -97,7 +97,7 @@ public class WorkerHostTests(WorkerBrokerFixture broker) : IClassFixture<WorkerB
 
         using IServiceScope scope = host.Services.CreateScope();
 
-        Assert.IsType<EmailMessageHandler>(scope.ServiceProvider.GetRequiredService<Contracts.IEmailMessageHandler>());
+        Assert.IsType<EmailMessageHandler>(scope.ServiceProvider.GetRequiredService<Interfaces.IEmailMessageHandler>());
     }
 
     /// <summary>

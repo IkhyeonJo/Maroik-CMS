@@ -2,7 +2,7 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Messages;
 using Maroik.Core.Contract.Settings;
-using Maroik.Worker.Contracts;
+using Maroik.Worker.Interfaces;
 using Microsoft.Extensions.Options;
 
 namespace Maroik.Worker.Handlers;

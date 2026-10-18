@@ -56,6 +56,3 @@ public abstract class SchemaDatabaseFixture(string initScriptRelativePath) : IAs
         return dir?.FullName ?? throw new InvalidOperationException("Could not locate the repository root (Maroik.sln) from " + AppContext.BaseDirectory);
     }
 }
-
-/// <summary>The debugging init script (schema, the menu/category rows the site needs, and the admin and demo accounts).</summary>
-public sealed class DebuggingSchemaFixture() : SchemaDatabaseFixture("Maroik.DB/PostgreSQL/SQL_Init_Script/Debugging/Init.sql");

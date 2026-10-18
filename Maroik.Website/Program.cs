@@ -89,8 +89,8 @@ try
 
     builder.Services.AddApplicationServices();
     builder.Services
-        .AddScoped<Maroik.Website.Contracts.IExcelExportService, Maroik.Website.Services.ExcelExportService>()
-        .AddScoped<Maroik.Website.Contracts.ISessionService, Maroik.Website.Services.SessionService>();
+        .AddScoped<Maroik.Website.Interfaces.IExcelExportService, Maroik.Website.Services.ExcelExportService>()
+        .AddScoped<Maroik.Website.Interfaces.ISessionService, Maroik.Website.Services.SessionService>();
 
     #endregion
 

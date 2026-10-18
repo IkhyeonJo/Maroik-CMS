@@ -1,5 +1,5 @@
-using Maroik.Core.Domain.ValueObjects;
 using Maroik.Core.Domain.Finances;
+using Maroik.Core.Domain.ValueObjects;
 namespace Maroik.Core.Domain.Tests.Finances;
 
 /// <summary>

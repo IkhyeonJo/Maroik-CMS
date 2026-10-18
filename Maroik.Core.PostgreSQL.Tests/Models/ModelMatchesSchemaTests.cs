@@ -480,7 +480,3 @@ public abstract class ModelMatchesSchemaTests(SchemaDatabaseFixture database)
         Assert.Equal(entities, withDbSet);
     }
 }
-
-/// <summary>The model against the debugging init script.</summary>
-public sealed class ModelMatchesDebuggingSchemaTests(DebuggingSchemaFixture database)
-    : ModelMatchesSchemaTests(database), IClassFixture<DebuggingSchemaFixture>;

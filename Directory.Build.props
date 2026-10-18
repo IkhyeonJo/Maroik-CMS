@@ -32,6 +32,16 @@
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
   </ItemGroup>
   <!--
+    One type per file, named after it (StyleCop SA1402 / SA1649), for every project, test projects included. A
+    build-time analyzer only, like BannedApiAnalyzers above. stylecop.globalconfig turns every other StyleCop rule off;
+    stylecop.json makes SA1402 count every kind of top-level type, not only classes.
+  -->
+  <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <PackageReference Include="StyleCop.Analyzers" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" />
+    <GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)stylecop.globalconfig" />
+  </ItemGroup>
+  <!--
     Plural folder names: the folder that directly holds a .cs file is named with a plural noun (Accounts, Fixtures,
     ArchitectureRules, Mappers), never a singular noun, an adjective or a mass/concept word (Account, Shared,
     Infrastructure, Misc). A concept word is replaced by a noun that has a plural, then pluralized (Time -> TimeZones,

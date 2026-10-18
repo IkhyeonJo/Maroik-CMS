@@ -1,7 +1,7 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Accounts;
-using Maroik.Website.Contracts;
+using Maroik.Website.Interfaces;
 using Maroik.Website.Middlewares;
 using Microsoft.AspNetCore.Http;
 using Moq;

@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using Maroik.Core.Contract.Dtos;
-using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Enums;
-using Maroik.Core.Contract.Helpers;
+using Maroik.Core.Contract.Extensions;
+using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Messages;
 using Maroik.Core.Contract.Settings;
 using Maroik.Core.Domain.Accounts;
@@ -172,7 +172,7 @@ public class AccountService(
                 return RegisterResult.FromError(createResult.FirstError);
 
             var account = createResult.Value;
-            account.SetMessage(EnumHelper.GetDescription(AccountMessage.UserCreatedVerifyEmail), utcNow);
+            account.SetMessage(AccountMessage.UserCreatedVerifyEmail.GetDescription(), utcNow);
 
             try
             {
@@ -243,7 +243,7 @@ public class AccountService(
                 {
                     // Confirmed by a concurrent request while this one waited for the lock.
                     await unitOfWork.RollbackAsync(ct);
-                    return RegisterResult.Fail(EnumHelper.GetDescription(AccountMessage.UserAlreadyCreated));
+                    return RegisterResult.Fail(AccountMessage.UserAlreadyCreated.GetDescription());
                 }
 
                 // The account's own nickname (in any letter case) is not a conflict — only another
@@ -308,7 +308,7 @@ public class AccountService(
         // another account's terms flag or status message. The BCrypt verify also keeps this path's
         // cost in line with the new-account path (which hashes) so the "already exists" outcome is
         // not distinguishable by timing.
-        string alreadyCreatedMessage = EnumHelper.GetDescription(AccountMessage.UserAlreadyCreated);
+        string alreadyCreatedMessage = AccountMessage.UserAlreadyCreated.GetDescription();
         bool callerOwnsAccount =
             passwordService.VerifyPassword(newAccount.PlainPassword ?? "", existing.HashedPassword);
         if (!callerOwnsAccount)
@@ -358,7 +358,7 @@ public class AccountService(
             // ownership (unlike RegisterAsync's equivalent branch, which requires the account's
             // password before writing anything) -- an unauthenticated caller who only knows the
             // address must not be able to mutate the account, so this path is read-only.
-            return RegisterResult.Fail(EnumHelper.GetDescription(AccountMessage.UserAlreadyCreated));
+            return RegisterResult.Fail(AccountMessage.UserAlreadyCreated.GetDescription());
         }
 
         Account locked;
@@ -383,7 +383,7 @@ public class AccountService(
             {
                 // Confirmed by a concurrent request while this one waited for the lock.
                 await unitOfWork.RollbackAsync(ct);
-                return RegisterResult.Fail(EnumHelper.GetDescription(AccountMessage.UserAlreadyCreated));
+                return RegisterResult.Fail(AccountMessage.UserAlreadyCreated.GetDescription());
             }
 
             // Ensure a live token exists before building the confirmation URL — regenerate when it is
@@ -500,7 +500,7 @@ public class AccountService(
                 }
 
                 // Email was already confirmed by a previous request.
-                locked.SetMessage(EnumHelper.GetDescription(AccountMessage.UserAlreadyCreated), utcNow);
+                locked.SetMessage(AccountMessage.UserAlreadyCreated.GetDescription(), utcNow);
                 try
                 {
                     await accountRepository.UpdateMessageAsync(locked.Email.Value, locked.Message, locked.Updated, ct);
@@ -514,7 +514,7 @@ public class AccountService(
                 return new ConfirmEmailResult { InvalidToken = false, AccountCreated = false };
             }
 
-            locked.SetMessage(EnumHelper.GetDescription(AccountMessage.Success), utcNow);
+            locked.SetMessage(AccountMessage.Success.GetDescription(), utcNow);
             int rowsAffected;
             try
             {
@@ -610,7 +610,7 @@ public class AccountService(
             if (published)
                 logger.LogInformation("Password reset requested for {Email}", account.Email.Value);
 
-            account.SetMessage(EnumHelper.GetDescription(published ? AccountMessage.ResetPasswordMail : AccountMessage.FailToMailSent), utcNow);
+            account.SetMessage((published ? AccountMessage.ResetPasswordMail : AccountMessage.FailToMailSent).GetDescription(), utcNow);
             await accountRepository.UpdateMessageAsync(account.Email.Value, account.Message, account.Updated, ct);
         }
         catch (Exception e) { logger.LogWarning(e, "ForgotPassword failed for {Email}", email); }
@@ -697,7 +697,7 @@ public class AccountService(
 
             // Unlock the account so the user can log in immediately after resetting their password.
             account.Unlock(utcNow);
-            account.SetMessage(EnumHelper.GetDescription(AccountMessage.SuccessToResetPassword), utcNow);
+            account.SetMessage(AccountMessage.SuccessToResetPassword.GetDescription(), utcNow);
 
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
@@ -779,7 +779,7 @@ public class AccountService(
         {
             try
             {
-                account.SetMessage(EnumHelper.GetDescription(AccountMessage.FailToMailSent), utcNow);
+                account.SetMessage(AccountMessage.FailToMailSent.GetDescription(), utcNow);
                 await accountRepository.UpdateMessageAsync(account.Email.Value, account.Message, account.Updated, ct);
             }
             catch (Exception e) { logger.LogWarning(e, "Failed to update account message after mail send failure for {Email}", account.Email.Value); }
@@ -794,7 +794,7 @@ public class AccountService(
         {
             try
             {
-                account.SetMessage(EnumHelper.GetDescription(AccountMessage.VerifyEmail), utcNow);
+                account.SetMessage(AccountMessage.VerifyEmail.GetDescription(), utcNow);
                 await accountRepository.UpdateMessageAsync(account.Email.Value, account.Message, account.Updated, ct);
             }
             catch (Exception e)
