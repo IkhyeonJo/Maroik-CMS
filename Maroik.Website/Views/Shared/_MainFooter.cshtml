@@ -4,10 +4,13 @@
     Displays the copyright year range (2021–current year in the user's local time zone)
     and the application domain name link from ViewBag.DomainName.
     The year is computed server-side using the user's IANA time-zone ID to match the user's local date.
+    On the right: the app version ("v1.4.2", AppVersion.Display), with the full InformationalVersion
+    ("1.4.2+2ecebf469478", AppVersion.Informational) in its title.
 *@
 @model Maroik.Core.Contract.Dtos.AccountResponse
 
 <footer class="main-footer text-sm">
+    <div id="mainFooterVersion" class="float-right" title="@Maroik.Website.Constants.AppVersion.Informational">@Maroik.Website.Constants.AppVersion.Display</div>
     @switch (Model.Role)
     {
         case Role.Admin:
