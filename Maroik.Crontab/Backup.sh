@@ -12,8 +12,16 @@
 #            └─ Maroik.FileStorage/upload/                          (Maroik.FileStorage:/app/upload)
 #
 #          Everything else (source, docker-compose.prod.yml, Maroik.Crontab, Maroik.DeployOps) is in the
-#          repository, so it is not backed up. Restore: clone the repository, extract the archive over the
-#          clone, run Maroik.DeployOps/Deploy.sh.
+#          repository, so it is not backed up.
+#
+# How to restore (as ubuntu, on a fresh server or after `mv Maroik Maroik.old`):
+#   git clone https://github.com/IkhyeonJo/Maroik.git /home/ubuntu/Maroik
+#   tar xJf Maroik-Backup-YYYY-MM-DD-HH-MM-SS.tar.xz --strip-components=1 -C /home/ubuntu/Maroik
+#   cd /home/ubuntu/Maroik && bash Maroik.DeployOps/Deploy.sh
+#
+#   The archive has the same layout as the clone, so extracting it puts the three items exactly where
+#   Deploy.sh's preflight check looks for them. Run Deploy.sh without sudo.
+#
 # External drive capacity check: Delete oldest backup when usage exceeds 50%
 # =============================================================================
 
