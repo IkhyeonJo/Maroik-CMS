@@ -1,0 +1,3 @@
+0 * * * * /bin/bash /home/ubuntu/Maroik/Maroik.Crontab/Backup.sh
+* * * * * /bin/bash /home/ubuntu/Maroik/Maroik.Crontab/ResourceInfo.sh
+*/5 * * * * /bin/bash /home/ubuntu/Maroik/Maroik.Crontab/AutoDeploy.sh

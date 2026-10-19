@@ -1,0 +1,212 @@
+#file: noinspection HttpUrlsUsage
+# ─────────────────────────────────────────────────────────────────────────────
+# Maroik — PRODUCTION compose stack (maroik.com, home server behind Cloudflare).
+#
+# Brought up by Maroik.DeployOps/Deploy.sh (full deploy) and kept current by
+# Maroik.Crontab/AutoDeploy.sh (cron, app services only). Both set MAROIK_TAG.
+# Differences from docker-compose.debug.yml: reads .env.prod (server-only, git-ignored;
+# template: .env.prod.example), seeds the DB from the Production SQL scripts (server-only:
+# the Init.sql of a Backup.sh archive), `restart: unless-stopped` on every long-running service,
+# a Cloudflare Tunnel (cloudflared) instead of published ports, and the three app
+# services are NOT built here: they run the images CI (.github/workflows/ci.yml, publish job)
+# built, tested and pushed to ghcr.io, tagged sha-<12-char commit>. The website image
+# there is a release build: minified site.js, no TypeScript source maps.
+#
+# MAROIK_TAG has no default on purpose: run compose through Deploy.sh / AutoDeploy.sh, or
+# set it yourself (e.g. MAROIK_TAG=sha-2ecebf469478), so a bare `up` can never pull some
+# other image (a newer `latest` whose schema change has not been deployed yet).
+#
+# TLS ends at Cloudflare. cloudflared dials out to Cloudflare and hands each request to
+# maroik.website over plain HTTP on `backend`, so the host publishes no port at all and
+# needs no origin certificate. The tunnel's public hostnames (maroik.com, www.maroik.com
+# -> http://maroik.website:80) are configured in the Cloudflare dashboard.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Container log rotation, applied to every service below. Every service logs to stdout (Serilog
+# console sink), which Docker's json-file driver keeps on the host disk with no size limit by default:
+# between two deploys the logs would grow until the root disk fills up. Each container keeps at most
+# 3 files of 10 MB.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# Named volumes — Docker-managed, survive `down`; wiped only by `down -v`.
+# (Hourly backups of the DB + upload files go to an external HDD via Maroik.Crontab.)
+volumes:
+      datasource:            # PostgreSQL data directory (/var/lib/postgresql/data)
+      dataprotection-keys:   # ASP.NET Core default Data Protection key-ring location (/root/.aspnet/DataProtection-Keys). The website does NOT use it: Program.cs persists the ring to Valkey (ConnectionStrings__Valkey, set in the env file) and, only without Valkey, to <ContentRoot>/dataprotection-keys (not this volume). FileStorage uses no Data Protection at all.
+      valkey-data:           # Valkey (Redis-compatible) append-only file persistence
+      rabbitmq-data:         # RabbitMQ node data (durable queues, definitions)
+
+# Private bridge network. No service publishes a port to the host; cloudflared reaches
+# maroik.website, and everything else each other, by service name on `backend`.
+networks:
+       backend:
+
+services:
+    # ── Valkey ────────────────────────────────────────────────────────────────
+    # Redis-compatible cache / data store (sessions, transient app state).
+    valkey:
+      image: valkey/valkey:9-alpine
+      container_name: Maroik.Valkey
+      logging: *default-logging
+      restart: unless-stopped
+      expose:
+        - "6379"                       # visible to other containers on `backend`, NOT published to the host
+      volumes:
+        - valkey-data:/data
+      networks:
+        - backend
+      command: valkey-server --appendonly yes   # enable AOF persistence to valkey-data
+      healthcheck:                     # `depends_on: condition: service_healthy` gates the app on this
+        test: ["CMD", "valkey-cli", "ping"]
+        interval: 5s
+        timeout: 3s
+        retries: 5
+
+    # ── RabbitMQ ─────────────────────────────────────────────────────────────
+    # Message broker for Maroik.Worker (e.g. outbound email jobs).
+    rabbitmq:
+      image: rabbitmq:4-management-alpine   # -management = adds the web UI / rabbitmqadmin on 15672
+      container_name: Maroik.RabbitMQ
+      logging: *default-logging
+      restart: unless-stopped
+      expose:
+        - "5672"                       # AMQP protocol port
+        - "15672"                      # management UI (still only on `backend`, not published)
+      env_file:
+        - .env.prod                    # RABBITMQ_DEFAULT_USER / _PASS etc.
+      volumes:
+        - rabbitmq-data:/var/lib/rabbitmq
+      networks:
+        - backend
+      healthcheck:
+        test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+
+    # ── ClamAV ───────────────────────────────────────────────────────────────
+    # Virus scanner; Maroik.FileStorage streams every upload to it over TCP 3310.
+    # No healthcheck here — the signature-DB load makes first readiness slow and
+    # nothing uses `depends_on` on it — but it does auto-restart.
+    clamav:
+      image: clamav/clamav:latest
+      container_name: Maroik.Clamav
+      logging: *default-logging
+      restart: unless-stopped
+      expose:
+        - "3310"                       # clamd TCP socket
+      networks:
+        - backend
+
+    # ── PostgreSQL ───────────────────────────────────────────────────────────
+    # Primary database. Schema is DB-first: the mounted SQL scripts run once, on an
+    # empty data volume, via the postgres image's /docker-entrypoint-initdb.d hook.
+    postgresql:
+      image: postgres:17
+      container_name: Maroik.PostgreSQL
+      logging: *default-logging
+      restart: unless-stopped
+      env_file:
+        - .env.prod                    # POSTGRES_PASSWORD, POSTGRES_DB=Maroik, ...
+      volumes:
+        - datasource:/var/lib/postgresql/data
+        - ./Maroik.DB/PostgreSQL/SQL_Init_Script/Production:/docker-entrypoint-initdb.d   # PRODUCTION schema/seed (debug uses .../Debugging)
+      expose:
+        - "5432"
+      networks:
+        - backend
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U postgres -d Maroik"]
+        interval: 5s
+        timeout: 3s
+        retries: 5
+
+    # ── Maroik.Website ───────────────────────────────────────────────────────
+    # The ASP.NET Core MVC app. Plain HTTP on 80 (ASPNETCORE_URLS in .env.prod), reached
+    # only by cloudflared over `backend`; the visitor's https arrives as X-Forwarded-Proto.
+    maroik.website:
+        image: ghcr.io/ikhyeonjo/maroik-website:${MAROIK_TAG:?set MAROIK_TAG or run Maroik.DeployOps/Deploy.sh}
+        container_name: Maroik.Website
+        logging: *default-logging
+        restart: unless-stopped
+        networks :
+          - backend
+        expose:
+          - "80"                       # visible to cloudflared on `backend`, NOT published to the host
+        env_file:
+          - .env.prod
+        volumes:
+          - ./Maroik.Log/:/app/Maroik.Log:rw                       # app writes logs to the host tree
+          - dataprotection-keys:/root/.aspnet/DataProtection-Keys  # default key-ring path; unused while Valkey is configured (see the volume note above)
+        depends_on:                    # wait for each dependency's healthcheck to pass before starting
+          postgresql:
+            condition: service_healthy
+          valkey:
+            condition: service_healthy
+          rabbitmq:
+            condition: service_healthy
+
+    # ── Maroik.FileStorage ───────────────────────────────────────────────────
+    # Internal file-serving/upload API. Not published; reached only from
+    # maroik.website over `backend`. Runs plain HTTP on 80 (TLS ends at the edge).
+    maroik.filestorage:
+        image: ghcr.io/ikhyeonjo/maroik-filestorage:${MAROIK_TAG:?set MAROIK_TAG or run Maroik.DeployOps/Deploy.sh}
+        container_name: Maroik.FileStorage
+        logging: *default-logging
+        restart: unless-stopped
+        networks :
+          - backend
+        expose:
+          - "80"
+        env_file:
+          - .env.prod
+        environment:
+          - ASPNETCORE_URLS=http://+:80   # bind HTTP only; TLS is not used on the private network
+        volumes:
+          - ./Maroik.FileStorage/upload/:/app/upload:rw            # uploaded files persisted to the host tree (backed up hourly)
+          - dataprotection-keys:/root/.aspnet/DataProtection-Keys  # unused: FileStorage does not use Data Protection
+
+    # ── Maroik.Worker ────────────────────────────────────────────────────────
+    # Headless background service: consumes RabbitMQ messages (e.g. sends email).
+    # No network ports at all. Needs only postgresql + rabbitmq.
+    maroik.worker:
+        image: ghcr.io/ikhyeonjo/maroik-worker:${MAROIK_TAG:?set MAROIK_TAG or run Maroik.DeployOps/Deploy.sh}
+        container_name: Maroik.Worker
+        logging: *default-logging
+        restart: unless-stopped
+        # Must exceed EmailConsumerWorker's 25s in-flight drain budget so Docker's SIGKILL
+        # doesn't cut off an in-progress send before it can ack/nack.
+        stop_grace_period: 30s
+        networks :
+          - backend
+        env_file:
+          - .env.prod
+        volumes:
+          - ./Maroik.Log/:/app/Maroik.Log:rw
+        depends_on:
+          postgresql:
+            condition: service_healthy
+          rabbitmq:
+            condition: service_healthy
+
+    # ── cloudflared ──────────────────────────────────────────────────────────
+    # Cloudflare Tunnel connector. Opens outbound connections to Cloudflare (7844) and
+    # forwards the tunnel's traffic to maroik.website:80; nothing inbound is needed.
+    # Reads TUNNEL_TOKEN from .env.prod. Running the same token on another host adds a
+    # replica connector to the same tunnel.
+    cloudflared:
+        image: cloudflare/cloudflared:2026.9.3
+        container_name: Maroik.Cloudflared
+        logging: *default-logging
+        restart: unless-stopped
+        command: tunnel --no-autoupdate run
+        env_file:
+          - .env.prod
+        networks:
+          - backend
+        depends_on:
+          - maroik.website
