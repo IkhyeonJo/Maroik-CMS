@@ -277,7 +277,7 @@ The goal is that a test fails whenever the behaviour it describes breaks — not
   or ones the MTP runner miscounts inside static field initializers).
 
 ### Test projects
-Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all; CI runs each with coverage (`.github/workflows/ci.yml`, gate: line >= 80 %, branch >= 65 %).
+Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all; CI runs each with coverage (`.github/workflows/ci-cd.yml`, gate: line >= 80 %, branch >= 65 %).
 
 | Tests | What they cover | Needs Docker |
 |---|---|---|
@@ -331,7 +331,7 @@ flowchart LR
     Cron --> Apps["Replace the app containers<br/>(DB, Valkey, RabbitMQ keep running)"]
 ```
 
-One workflow, `.github/workflows/ci.yml`, with two jobs.
+One workflow, `.github/workflows/ci-cd.yml`, with two jobs.
 
 - **`build-and-test`** runs on every pull request and every push to `main`: a warning-free build, the client-script
   suite, every .NET test project one after another, then the E2E suite on its own (run side by side, the other projects'

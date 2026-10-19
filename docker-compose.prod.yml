@@ -8,7 +8,7 @@
 # template: .env.prod.example), seeds the DB from the Production SQL scripts (server-only:
 # the Init.sql of a Backup.sh archive), `restart: unless-stopped` on every long-running service,
 # a Cloudflare Tunnel (cloudflared) instead of published ports, and the three app
-# services are NOT built here: they run the images CI (.github/workflows/ci.yml, publish job)
+# services are NOT built here: they run the images CI/CD (.github/workflows/ci-cd.yml, publish job)
 # built, tested and pushed to ghcr.io, tagged sha-<12-char commit>. The website image
 # there is a release build: minified site.js, no TypeScript source maps.
 #

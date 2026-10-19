@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Full deploy of the latest main whose images CI published (.github/workflows/ci.yml: build-and-test -> publish).
+# Full deploy of the latest main whose images CI/CD published (.github/workflows/ci-cd.yml: build-and-test -> publish).
 # The three app images (ghcr.io/ikhyeonjo/maroik-*:sha-<12-char commit>) are pulled, not built here.
 # /home/ubuntu/Maroik is a clone of github.com/IkhyeonJo/Maroik. docker-compose.prod.yml, Maroik.Crontab and
 # Maroik.DeployOps are tracked there and come with the checkout below. The server-only files (.env.prod, whose
