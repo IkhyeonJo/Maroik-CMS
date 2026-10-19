@@ -22,6 +22,10 @@ public static class AppVersion
     public static string Read(Assembly assembly) =>
         assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown";
 
-    /// <summary>"v" and the part of <paramref name="informational"/> before the first '+' (the build metadata, i.e. the commit, is left out).</summary>
-    public static string ToDisplay(string informational) => "v" + informational.Split('+')[0];
+    /// <summary>
+    /// "v" and the part of <paramref name="informational"/> before the first '+' (the build metadata, i.e. the commit, is left out).
+    /// "unknown" is not a version number, so it is shown as it is rather than as "vunknown".
+    /// </summary>
+    public static string ToDisplay(string informational) =>
+        informational == "unknown" ? informational : "v" + informational.Split('+')[0];
 }

@@ -56,6 +56,11 @@ public class AppVersionTests
     public void ToDisplay_KeepsThePartBeforeThePlus(string informational, string expected) =>
         Assert.Equal(expected, AppVersion.ToDisplay(informational));
 
+    /// <summary>"unknown" is not a version number, so the footer shows it as it is, without the "v" ("vunknown").</summary>
+    [Fact]
+    public void ToDisplay_ShowsUnknown_WithoutTheV() =>
+        Assert.Equal("unknown", AppVersion.ToDisplay("unknown"));
+
     /// <summary><see cref="AppVersion.Display"/> is <see cref="AppVersion.Informational"/> in its footer form.</summary>
     [Fact]
     public void Display_IsTheInformationalVersionInItsFooterForm() =>
