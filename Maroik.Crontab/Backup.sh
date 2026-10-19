@@ -3,21 +3,17 @@
 # =============================================================================
 # Maroik Backup Script
 # =============================================================================
-# Purpose: Collect the deployment files and the server-only data from the running server and
+# Purpose: Collect the server-only data — the three things the Maroik repository does not carry — and
 #          copy them to external drive as $BACKUP_BASE_DIR/Maroik-Backup-YYYY-MM-DD-HH-MM-SS.tar.xz
 #
 #          Maroik-Backup-YYYY-MM-DD-HH-MM-SS/
 #            ├─ .env.prod
-#            ├─ docker-compose.prod.yml
-#            ├─ Maroik.Crontab/                                     (Backup.sh, InitCron, ResourceInfo.sh)
-#            ├─ Maroik.DeployOps/                                   (Deploy.sh, Undeploy.sh)
 #            ├─ Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql   (pg_dump of Maroik.PostgreSQL)
 #            └─ Maroik.FileStorage/upload/                          (Maroik.FileStorage:/app/upload)
 #
-#          Only .env.prod, Init.sql and upload/ are server-only (git-ignored in the Maroik repository);
-#          the compose file and scripts are tracked there too, but are kept here so the archive is
-#          self-contained. Extracting it over a Maroik checkout and running Deploy.sh restores the
-#          server (its checkout replaces the tracked copies with the deployed commit's version).
+#          Everything else (source, docker-compose.prod.yml, Maroik.Crontab, Maroik.DeployOps) is in the
+#          repository, so it is not backed up. Restore: clone the repository, extract the archive over the
+#          clone, run Maroik.DeployOps/Deploy.sh.
 # External drive capacity check: Delete oldest backup when usage exceeds 50%
 # =============================================================================
 
@@ -27,15 +23,9 @@ set -e
 MAROIK_ROOT_DIR="/home/ubuntu/Maroik"
 ENV_FILE="$MAROIK_ROOT_DIR/.env.prod"
 
-# Files copied as-is from $MAROIK_ROOT_DIR (.env.prod is server-only; the rest are tracked in the Maroik repository)
+# Server-only files copied as-is from $MAROIK_ROOT_DIR (the database dump and the uploads are handled below)
 PRIVATE_FILES=(
     ".env.prod"
-    "docker-compose.prod.yml"
-    "Maroik.Crontab/Backup.sh"
-    "Maroik.Crontab/InitCron"
-    "Maroik.Crontab/ResourceInfo.sh"
-    "Maroik.DeployOps/Deploy.sh"
-    "Maroik.DeployOps/Undeploy.sh"
 )
 DB_DUMP_PATH="Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql"
 UPLOAD_PATH="Maroik.FileStorage/upload"
@@ -78,8 +68,8 @@ sudo rm -rf "$STAGING_DIR"
 
 mkdir -p "$STAGING_DIR"
 
-# Step 1: Copy private files
-log INFO "Copying private files..."
+# Step 1: Copy the server-only files
+log INFO "Copying .env.prod..."
 for FILE in "${PRIVATE_FILES[@]}"; do
     if [ -f "$MAROIK_ROOT_DIR/$FILE" ]; then
         mkdir -p "$STAGING_DIR/$(dirname "$FILE")"
