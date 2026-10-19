@@ -21,19 +21,21 @@ env:
 
 jobs:
   build-and-test:
-    # ubuntu-latest ships Docker (Testcontainers: PostgreSQL 17, RabbitMQ 4) and Google Chrome (E2E default browser).
-    runs-on: ubuntu-latest
+    # Pinned to the production OS (Ubuntu Server 24.04) instead of ubuntu-latest, which moves to Ubuntu 26.
+    # The image ships Docker (Testcontainers: PostgreSQL 17, RabbitMQ 4) and Google Chrome (E2E default browser).
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
 
-      # package.json engines: >=22.22.2 <23, enforced by .npmrc engine-strict.
-      - uses: actions/setup-node@v4
+      # Node 22 for the project (package.json engines: >=22.22.2 <23, enforced by .npmrc engine-strict),
+      # same as production. The @v5 actions themselves run on Node 24; that does not change this.
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -148,7 +150,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-results
           path: TestResults/
