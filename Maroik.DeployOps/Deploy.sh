@@ -31,6 +31,10 @@ if [ ! -d "$REPO_DIR/.git" ]; then
     || { echo "[ERROR] git init failed"; exit 1; }
 fi
 
+# Deploy.sh makes the tracked Maroik.Crontab/*.sh executable (chmod below), which git would otherwise report as a
+# local change; the next checkout of a commit that changes one of them would then refuse to run (AutoDeploy.sh).
+git -C "$REPO_DIR" config core.fileMode false
+
 # The deploy bookkeeping files live in the clone but are not part of the repository.
 for f in .deployed-sha .failed-sha; do
   grep -qxF "$f" "$REPO_DIR/.git/info/exclude" 2>/dev/null || echo "$f" >> "$REPO_DIR/.git/info/exclude"
