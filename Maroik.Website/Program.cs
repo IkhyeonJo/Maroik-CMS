@@ -1,3 +1,4 @@
+// Start
 // Maroik.Website - Program.cs
 // Entry point for the Maroik web application.
 // Configures DI services (repositories, services, clients, session, antiforgery, CORS, localization),
