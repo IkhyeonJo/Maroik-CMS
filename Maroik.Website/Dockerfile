@@ -9,8 +9,9 @@ EXPOSE 80
 # SDK image has no Node, so this dedicated stage generates them (they are git-ignored,
 # not committed). See Maroik.Website/TypeScripts/README.md.
 #
-# TS_SOURCEMAPS: default "false" -> `npm run build` (tsconfig.build.json): no site.js.map,
-# no sourceMappingURL comment -> nothing to strip from a production image.
+# TS_SOURCEMAPS: default "false" -> `npm run build` (tsconfig.build.json, then terser via
+# minify-client-scripts.mjs): minified site.js, no site.js.map, no sourceMappingURL comment
+# -> nothing to strip from a production image.
 # docker-compose.debug.yml sets it "true" -> `npm run build:debug` (tsconfig.json) also
 # emits wwwroot/**/custom/**/site.js.map (with .ts inlined), so container debugging in
 # Rider/VS maps site.js back to site.ts. Leave it "false" for a release image.
@@ -24,7 +25,7 @@ ARG TS_SOURCEMAPS=false
 WORKDIR /ts
 COPY ["Maroik.Website/package.json", "Maroik.Website/package-lock.json", "Maroik.Website/.npmrc", "./"]
 RUN npm ci --no-audit --no-fund
-COPY ["Maroik.Website/tsconfig.json", "Maroik.Website/tsconfig.build.json", "Maroik.Website/vitest.config.mts", "./"]
+COPY ["Maroik.Website/tsconfig.json", "Maroik.Website/tsconfig.build.json", "Maroik.Website/vitest.config.mts", "Maroik.Website/minify-client-scripts.mjs", "./"]
 COPY ["Maroik.Website/TypeScripts", "./TypeScripts"]
 COPY ["Maroik.Website/TypeScripts.Tests", "./TypeScripts.Tests"]
 RUN if [ "$TS_SOURCEMAPS" = "true" ]; then npm run build:debug; else npm run build; fi && \

@@ -2,9 +2,9 @@
   "name": "maroik-website-clientscripts",
   "version": "1.0.0",
   "private": true,
-  "description": "TypeScript sources for Maroik.Website custom client scripts. tsc compiles TypeScripts/**/*.ts -> wwwroot/**/*.js 1:1. No bundler: each site.ts is a self-contained IIFE global script with no imports. See TypeScripts/README.md.",
+  "description": "TypeScript sources for Maroik.Website custom client scripts. tsc compiles TypeScripts/**/*.ts -> wwwroot/**/*.js 1:1, and the release build (npm run build) then minifies each site.js in place with terser. No bundler: each site.ts is a self-contained IIFE global script with no imports. See TypeScripts/README.md.",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node minify-client-scripts.mjs",
     "build:debug": "tsc -p tsconfig.json",
     "watch": "tsc -p tsconfig.json --watch",
     "check": "tsc -p tsconfig.json --noEmit",
@@ -27,6 +27,7 @@
     "jquery": "3.6.0",
     "jsdom": "30.0.1",
     "moment": "2.31.0",
+    "terser": "5.51.2",
     "typescript": "7.0.2",
     "vitest": "4.1.11"
   }

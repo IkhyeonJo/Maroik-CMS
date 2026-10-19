@@ -65,7 +65,8 @@
   </ItemGroup>
 
   <!--
-    Custom client scripts: TypeScripts/**/*.ts  ->(tsc)->  wwwroot/**/*.js  (1:1, no bundler).
+    Custom client scripts: TypeScripts/**/*.ts  ->(tsc)->  wwwroot/**/*.js  (1:1, no bundler);
+    the release `npm run build` then minifies each site.js in place (minify-client-scripts.mjs).
     See TypeScripts/README.md.
 
     This target compiles them as part of `dotnet build` / `dotnet run`, but ONLY where the
@@ -109,7 +110,7 @@
 
   <ItemGroup Condition="'$(RunClientScriptTests)' == 'true'">
     <_ClientScriptTestInput Include="TypeScripts/**/*.ts;TypeScripts.Tests/**/*.ts" />
-    <_ClientScriptTestInput Include="tsconfig.json;vitest.config.mts;package.json" />
+    <_ClientScriptTestInput Include="tsconfig.json;vitest.config.mts;package.json;minify-client-scripts.mjs" />
   </ItemGroup>
 
   <Target Name="RunClientScriptTests"
