@@ -356,11 +356,12 @@ full deploy below is run by hand, because it rebuilds the database from `Init.sq
 
 ### Server setup (Ubuntu Server 24.04)
 1. Clone this repository to `/home/ubuntu/Maroik`.
-2. Add the server-only files, both git-ignored:
+2. Add the server-only files, all git-ignored:
    - `.env.prod`: copy `.env.prod.example` and replace its dummy values (database, RabbitMQ and SMTP credentials,
      `EXTERNAL_DRIVE_UUID`, `TUNNEL_TOKEN`).
    - `Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql`: the `Init.sql` of the latest backup, or a copy of
      `Debugging/Init.sql` (same schema, demo seed data) on a new server.
+   - `Maroik.FileStorage/upload/`: the uploaded attachments of the latest backup (empty on a new server).
 
    `docker-compose.prod.yml` (the three app services use `image: ghcr.io/ikhyeonjo/maroik-*:${MAROIK_TAG}`),
    `Maroik.Crontab/` and `Maroik.DeployOps/` are part of the repository.
