@@ -54,9 +54,24 @@ jobs:
         working-directory: Maroik.Website
         run: npm test
 
+      # Every test project except E2E. Run one after another: run side by side, their Testcontainers start and stop
+      # on the Docker bridge while E2E's browser is mid-request, which fails it with net::ERR_NETWORK_CHANGED.
       - name: .NET tests with coverage
+        run: |
+          status=0
+          for project in $(ls -d Maroik.*.Tests | grep -vx 'Maroik.E2E.Tests'); do
+            echo "::group::$project"
+            dotnet test --project "$project" --no-build \
+              --coverage --coverage-output-format cobertura \
+              --results-directory "${{ github.workspace }}/TestResults" || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+
+      # E2E last and alone, once no other test project's containers are running.
+      - name: E2E tests (Playwright) with coverage
         run: >-
-          dotnet test --solution Maroik.sln --no-build
+          dotnet test --project Maroik.E2E.Tests --no-build
           --coverage --coverage-output-format cobertura
           --results-directory "${{ github.workspace }}/TestResults"
 
