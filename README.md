@@ -20,7 +20,8 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 - Income recording
 - Fixed (recurring) income and expenditure with deposit-day reminders — the next deposit is found across the year end (e.g. 28 Dec → 2 Jan), and a 29 February schedule is skipped in common years
 - Amounts are kept exactly to four decimal places (`numeric(20,4)`); a fifth decimal is rejected instead of silently rounded, so no recorded amount is ever changed by rounding
-- Every income and expenditure updates its asset's balance in the same transaction, under a row lock, so concurrent records never lose an update; the balance can also be corrected by hand when editing the asset- Financial reports and analytics
+- Every income and expenditure updates its asset's balance in the same transaction, under a row lock, so concurrent records never lose an update; the balance can also be corrected by hand when editing the asset
+- Financial reports and analytics
 - Export to Excel — amounts as numeric cells (they sum and sort in Excel), timestamps as `yyyy-MM-dd HH:mm:ss` in the viewer's time zone
 
 ### 2. Calendar and Schedule Management
@@ -347,17 +348,22 @@ One workflow, `.github/workflows/ci.yml`, with two jobs.
 `sha-<commit>`, `latest` and, when the version moved, `X.Y.Z`. The assemblies carry `X.Y.Z+<commit>` as their
 InformationalVersion; a local or debug build, which gets no version from CI, keeps the one in `Directory.Build.props`.
 
-**Deployment.** The server never builds. Every five minutes `AutoDeploy.sh` looks at the newest commit on `main`; once
-its `publish` job has succeeded it pulls that commit's three images and replaces only the app containers, so the
-database, Valkey (sessions) and RabbitMQ keep running. A deploy whose pull fails leaves the running containers alone and
-is not retried. A release that changes `Maroik.DB/` (the schema) is not deployed automatically: it is logged, and the
+**Deployment.** The server never builds. Every five minutes `Maroik.Crontab/AutoDeploy.sh` looks at the newest commit on
+`main`; once its `publish` job has succeeded it pulls that commit's three images and replaces only the app containers, so
+the database, Valkey (sessions) and RabbitMQ keep running. A deploy whose pull fails leaves the running containers alone
+and is not retried. A release that changes `Maroik.DB/` (the schema) is not deployed automatically: it is logged, and the
 full deploy below is run by hand, because it rebuilds the database from `Init.sql` and restores the backup.
 
 ### Server setup (Ubuntu Server 24.04)
 1. Clone this repository to `/home/ubuntu/Maroik`.
-2. Add the server-only files, all git-ignored: `.env.prod`, `docker-compose.prod.yml` (the three app services use
-   `image: ghcr.io/ikhyeonjo/maroik-*:${MAROIK_TAG}`), `Maroik.Crontab/`, `Maroik.DeployOps/` and
-   `Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql`.
+2. Add the server-only files, both git-ignored:
+   - `.env.prod`: copy `.env.prod.example` and replace its dummy values (database, RabbitMQ and SMTP credentials,
+     `EXTERNAL_DRIVE_UUID`, `TUNNEL_TOKEN`).
+   - `Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql`: the `Init.sql` of the latest backup, or a copy of
+     `Debugging/Init.sql` (same schema, demo seed data) on a new server.
+
+   `docker-compose.prod.yml` (the three app services use `image: ghcr.io/ikhyeonjo/maroik-*:${MAROIK_TAG}`),
+   `Maroik.Crontab/` and `Maroik.DeployOps/` are part of the repository.
 3. Run `Maroik.DeployOps/Deploy.sh`: it checks out the latest `main` whose images were published, pulls them, starts the
    whole stack, mounts the backup drive, installs the cron jobs (hourly backup, resource monitoring, auto deploy) and
    closes every inbound port.
@@ -399,4 +405,5 @@ For issues and questions, please use the GitHub issue tracker.
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Special Notes
-- Mail account configuration is required for deployment.
+- Deployment needs a real SMTP account (`ServerSetting__SmtpOptions__*` in `.env.prod`) and a Cloudflare Tunnel token
+  (`TUNNEL_TOKEN`); `.env.prod.example` lists every setting with dummy values.
