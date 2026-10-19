@@ -32,7 +32,12 @@ RUN if [ "$TS_SOURCEMAPS" = "true" ]; then npm run build:debug; else npm run bui
     if [ "$RUN_CLIENT_TESTS" = "true" ]; then npx vitest run; \
     else echo "skipping client-script tests (build with --build-arg RUN_CLIENT_TESTS=true to run them)"; fi
 
+# APP_VERSION / SOURCE_REVISION: set by CI when it publishes the image (semver from the commit messages, short commit
+# hash). They become the assembly's Version and InformationalVersion ("1.4.2+1a2b3c4"). Unset (local and debug
+# builds), the build keeps the Version in Directory.Build.props.
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG APP_VERSION
+ARG SOURCE_REVISION
 WORKDIR /src
 COPY ["Directory.Build.props", "./"]
 COPY ["Directory.Packages.props", "./"]
@@ -49,10 +54,12 @@ COPY . .
 # here, so the csproj CompileClientTypeScript target is a no-op and won't run tsc).
 COPY --from=tsbuild /ts/wwwroot/ Maroik.Website/wwwroot/
 WORKDIR "/src/Maroik.Website"
-RUN dotnet build "Maroik.Website.csproj" -c Release -o /app/build
+RUN dotnet build "Maroik.Website.csproj" -c Release -o /app/build ${APP_VERSION:+-p:Version=$APP_VERSION} ${SOURCE_REVISION:+-p:SourceRevisionId=$SOURCE_REVISION}
 
 FROM build AS publish
-RUN dotnet publish "Maroik.Website.csproj" -c Release -o /app/publish
+ARG APP_VERSION
+ARG SOURCE_REVISION
+RUN dotnet publish "Maroik.Website.csproj" -c Release -o /app/publish ${APP_VERSION:+-p:Version=$APP_VERSION} ${SOURCE_REVISION:+-p:SourceRevisionId=$SOURCE_REVISION}
 
 FROM base AS final
 WORKDIR /app

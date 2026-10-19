@@ -3,7 +3,12 @@
 FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
 WORKDIR /app
 
+# APP_VERSION / SOURCE_REVISION: set by CI when it publishes the image (semver from the commit messages, short commit
+# hash). They become the assembly's Version and InformationalVersion ("1.4.2+1a2b3c4"). Unset (local and debug
+# builds), the build keeps the Version in Directory.Build.props.
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG APP_VERSION
+ARG SOURCE_REVISION
 WORKDIR /src
 COPY ["Directory.Build.props", "./"]
 COPY ["Directory.Packages.props", "./"]
@@ -17,10 +22,12 @@ COPY ["Maroik.Core.PostgreSQL/Maroik.Core.PostgreSQL.csproj", "Maroik.Core.Postg
 RUN dotnet restore "Maroik.Worker/Maroik.Worker.csproj" --disable-parallel
 COPY . .
 WORKDIR "/src/Maroik.Worker"
-RUN dotnet build "Maroik.Worker.csproj" -c Release -o /app/build
+RUN dotnet build "Maroik.Worker.csproj" -c Release -o /app/build ${APP_VERSION:+-p:Version=$APP_VERSION} ${SOURCE_REVISION:+-p:SourceRevisionId=$SOURCE_REVISION}
 
 FROM build AS publish
-RUN dotnet publish "Maroik.Worker.csproj" -c Release -o /app/publish
+ARG APP_VERSION
+ARG SOURCE_REVISION
+RUN dotnet publish "Maroik.Worker.csproj" -c Release -o /app/publish ${APP_VERSION:+-p:Version=$APP_VERSION} ${SOURCE_REVISION:+-p:SourceRevisionId=$SOURCE_REVISION}
 
 FROM base AS final
 WORKDIR /app
