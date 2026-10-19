@@ -19,6 +19,52 @@ if [ "$(id -u)" = "0" ]; then
 fi
 cd "$REPO_DIR" || exit 1
 
+# ── Preflight: the server-only files this repository does not carry ─────────────────────────────────────────────────
+# Checked first, before git, apt or docker do anything, and reported all at once.
+ENV_PROD_PATH="$REPO_DIR/.env.prod"
+SQL_PROD_PATH="$REPO_DIR/Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql"
+UPLOAD_PATH="$REPO_DIR/Maroik.FileStorage/upload"
+missing=()
+
+if [ ! -f "$ENV_PROD_PATH" ]; then
+  missing+=(".env.prod not found: copy .env.prod.example to $ENV_PROD_PATH and fill in the real values.")
+else
+  env_value() { grep "^$1=" "$ENV_PROD_PATH" | head -1 | cut -d '=' -f2- | tr -d '\r'; }
+  [ -n "$(env_value TUNNEL_TOKEN)" ] \
+    || missing+=(".env.prod: TUNNEL_TOKEN is empty (Cloudflare Zero Trust > Networks > Tunnels > connector token).")
+  case "$(env_value EXTERNAL_DRIVE_UUID)" in
+    ""|"<CHANGE_ME>") missing+=(".env.prod: EXTERNAL_DRIVE_UUID is empty (the backup drive's UUID: sudo blkid).") ;;
+  esac
+  [ -n "$(env_value BACKUP_BASE_DIR)" ] \
+    || missing+=(".env.prod: BACKUP_BASE_DIR is empty (the backup folder on the external drive).")
+fi
+
+if [ ! -s "$SQL_PROD_PATH" ]; then
+  missing+=("Production Init.sql not found or empty: put the Init.sql of the latest Backup.sh archive at $SQL_PROD_PATH.")
+fi
+
+if [ ${#missing[@]} -gt 0 ]; then
+  echo "[ERROR] Not ready to deploy:"
+  for m in "${missing[@]}"; do echo "  - $m"; done
+  exit 1
+fi
+
+# The uploaded files are not required (a new server has none), but forgetting to copy them back after Undeploy.sh is
+# easy, so an empty folder needs a yes.
+if [ -z "$(find "$UPLOAD_PATH" -type f ! -name README.md -print -quit 2>/dev/null)" ]; then
+  echo "[WARN] $UPLOAD_PATH has no uploaded files (forum / calendar / note attachments)."
+  echo "[WARN] Copy them from the latest Backup.sh archive first, unless this is a new server."
+  if [ "${ALLOW_EMPTY_UPLOAD:-0}" != "1" ]; then
+    if [ -t 0 ]; then
+      read -r -p "Deploy without uploaded files? [y/N] " answer
+      [ "$answer" = "y" ] || [ "$answer" = "Y" ] || { echo "[INFO] Not deploying."; exit 1; }
+    else
+      echo "[ERROR] Not deploying. Set ALLOW_EMPTY_UPLOAD=1 to deploy without uploaded files."
+      exit 1
+    fi
+  fi
+fi
+
 command -v git > /dev/null 2>&1 || sudo apt install -y git
 
 # First deploy on this box: only a backup (Backup.sh) or the server-only files were copied here. Turn the folder into
@@ -30,6 +76,10 @@ if [ ! -d "$REPO_DIR/.git" ]; then
     && git -C "$REPO_DIR" remote add origin "$REPO_URL" \
     || { echo "[ERROR] git init failed"; exit 1; }
 fi
+
+# Deploy.sh makes the tracked Maroik.Crontab/*.sh executable (chmod below), which git would otherwise report as a
+# local change; the next checkout of a commit that changes one of them would then refuse to run (AutoDeploy.sh).
+git -C "$REPO_DIR" config core.fileMode false
 
 # The deploy bookkeeping files live in the clone but are not part of the repository.
 for f in .deployed-sha .failed-sha; do
@@ -131,27 +181,8 @@ if [ ! -f "$COMPOSE_PROD_PATH" ]; then
   exit 1
 fi
 
-# check .env.prod file
-ENV_PROD_PATH="/home/ubuntu/Maroik/.env.prod"
-if [ ! -f "$ENV_PROD_PATH" ]; then
-  echo "[INFO] File $ENV_PROD_PATH not found."
-  echo "[INFO] Please create .env.prod file with required environment variables."
-  exit 1
-fi
-
-# check the Cloudflare Tunnel token: cloudflared is the site's only way in (no port is published)
-if ! grep -q '^TUNNEL_TOKEN=.' "$ENV_PROD_PATH"; then
-  echo "[INFO] TUNNEL_TOKEN is not set in $ENV_PROD_PATH."
-  echo "[INFO] Copy the connector token from Cloudflare Zero Trust > Networks > Tunnels."
-  exit 1
-fi
-
-# check Init.sql file
-SQL_PROD_PATH="/home/ubuntu/Maroik/Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql"
-if [ ! -f "$SQL_PROD_PATH" ]; then
-  echo "[INFO] File $SQL_PROD_PATH not found."
-  exit 1
-fi
+# .env.prod, its TUNNEL_TOKEN (cloudflared is the site's only way in) and the Production Init.sql: checked in the
+# preflight at the top.
 
 # Read external drive configuration from .env.prod
 EXTERNAL_DRIVE_UUID=$(grep "^EXTERNAL_DRIVE_UUID=" "$ENV_PROD_PATH" | cut -d '=' -f2)
