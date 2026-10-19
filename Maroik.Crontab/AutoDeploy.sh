@@ -70,7 +70,12 @@ if ! $GIT diff --quiet "$CURRENT_SHA" "$NEW_SHA" -- Maroik.DB/; then
 fi
 
 # Keep the clone at the deployed commit, so the next run diffs Maroik.DB/ from here.
-$GIT checkout -q --detach "$NEW_SHA" || { log "git checkout $NEW_SHA failed (tracked file changed on this box?)"; exit 1; }
+if ! $GIT checkout -q --detach "$NEW_SHA"; then
+  # A tracked file edited on this box. Logged once; Deploy.sh (whose checkout overwrites such edits) clears it.
+  grep -q "checkout $NEW_SHA failed" "$LOG" 2>/dev/null || \
+    log "git checkout $NEW_SHA failed: a tracked file was changed on this box (git status). Fix it or run Deploy.sh."
+  exit 1
+fi
 
 # Compose v2 (docker compose) when installed: v1 (docker-compose 1.29) fails with KeyError 'ContainerConfig' when it
 # recreates a container on recent Docker Engine versions, which is exactly what this script does.
