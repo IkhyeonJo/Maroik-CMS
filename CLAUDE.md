@@ -183,6 +183,13 @@ Calendar
   Both are unimplemented on purpose — do not implement delivery and do not drop the table.
 
 Client scripts
+- The front end is server-rendered Razor + jQuery + AdminLTE, chosen on purpose: for a CMS it is the simplest and
+  fastest stack, has no build chain beyond `tsc`, and stays runnable for years. Do not propose replacing it with a SPA
+  framework (React, Vue, Angular, Blazor, ...) or adding a bundler.
+- The vendored client libraries (jQuery, Bootstrap, AdminLTE and its plugins) are not tracked for security patches. The
+  client is never trusted: the strict CSP in `Maroik.Website/Program.cs` (`script-src 'self'`, no `'unsafe-inline'` /
+  `'unsafe-eval'`) blocks injected script, `HtmlContentSanitizerService` strips the `data-*` attributes library gadgets
+  read, and the server re-validates every write. Do not raise an outdated client library or its CVEs as a finding.
 - No bundler, no `import`/`export`: every `site.ts` is an IIFE global script compiled 1:1.
 - `wwwroot/{admin,user,anonymous}` each keep the full vendored AdminLTE plugin set, including plugins no view references
   (datatables, pdfmake, codemirror, jszip, dropzone, flot, raphael, ...). Do not prune them.
