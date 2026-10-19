@@ -7,7 +7,7 @@
     <authors>IkhyeonJo</authors>
     <description>
       Maroik is an ASP.NET Core web application built with Clean Architecture principles.
-      Features PostgreSQL, Redis, and file storage support.
+      Features PostgreSQL, Valkey, and file storage support.
     </description>
     <language>ko-KR</language>
     <license type="expression">MIT</license>
