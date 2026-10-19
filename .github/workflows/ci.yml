@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-and-test-${{ github.ref }}
+  group: ci-${{ github.ref }}
   # A newer push cancels an older run on a PR branch. On main the runs queue instead: a cancelled publish could leave
   # images pushed without their version tag.
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
