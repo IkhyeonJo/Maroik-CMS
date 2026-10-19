@@ -72,7 +72,9 @@ $ npm run build
 ```
 
 Runs `tsc`, which (re)writes
-`wwwroot/{area}/custom/{Feature}/{Page}/js/site.js` for every matching `.ts`. **A clean build prints nothing and just
+`wwwroot/{area}/custom/{Feature}/{Page}/js/site.js` for every matching `.ts`, then
+`minify-client-scripts.mjs`, which overwrites each of them with its terser-minified version (it prints one
+`minify: 22 site.js minified, … bytes` line). **A clean build prints nothing and just
 returns to the prompt.** A type error
 prints `path/file.ts(line,col): error TS####: <message>` and exits non-zero — fix
 the `.ts` and re-run.
@@ -150,6 +152,7 @@ unlike C#).
 |-------------------------|------------------------------------------------|-------------------------|----------------------------------------------------------------------------------------------------------------------------|
 | Type-check **and** emit | **TypeScript** (`tsc`)                         | **7.0.2**               | The native (Go) compiler — the whole `TypeScripts/` tree type-checks + emits in well under a second. No Babel, no bundler. |
 | Type-check-only gate    | `tsc --noEmit`                                 | —                       | `npm run check`.                                                                                                          |
+| Minify (release only)   | **terser** (`minify-client-scripts.mjs`)       | **5.51.2**              | Run by `npm run build` after `tsc`; top-level names kept, strings double-quoted. Not run by `build:debug` / `watch`.     |
 | Tests                   | **Vitest** + **jsdom** + real **jQuery 3.6.0** | 4.1.11 / 30.0.1 / 3.6.0 | See `../TypeScripts.Tests/`.                                                                                               |
 
 ### `@types/*` — pinned to the runtime versions actually loaded by `Views/Shared/_Layout.cshtml`
@@ -288,7 +291,7 @@ Run from `Maroik.Website/`:
 
 ```bash
 npm ci            # once, after checkout
-npm run build     # tsc -p tsconfig.build.json → writes wwwroot/**/site.js  (release: NO source maps)
+npm run build     # tsc -p tsconfig.build.json + terser → writes minified wwwroot/**/site.js  (release: NO source maps)
 npm run build:debug  # tsc -p tsconfig.json    → same + wwwroot/**/custom/**/site.js.map  (for Chrome)
 npm run watch     # build:debug, --watch
 npm run check     # tsc --noEmit  (type-check only, for CI)
@@ -316,7 +319,8 @@ this and the maps are there. A release image build leaves `TS_SOURCEMAPS` at its
 
 **Nothing debug-related reaches production.** With `TS_SOURCEMAPS` unset/`false` —
 `npm run build`, a Release `dotnet build`, a release Docker build — `tsc` runs `tsconfig.build.json`: no `.map`, no
-`sourceMappingURL` comment. On top of that `.dockerignore` keeps host maps out of the build context.
+`sourceMappingURL` comment, and each `site.js` is then minified. Production therefore ships the minified scripts; an
+error's stack in a production console points into the minified file, so reproduce it locally with `npm run build:debug`. On top of that `.dockerignore` keeps host maps out of the build context.
 Both `site.js` and `site.js.map` under `Maroik.Website/wwwroot/**/custom/**` are git-ignored.
 
 ## Build integration
