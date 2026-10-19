@@ -364,6 +364,15 @@ public class EmailConsumerWorkerTests
             await Task.Delay(5, timeout.Token);
     }
 
+    /// <summary>
+    /// Waits until the worker has logged that it is consuming. <see cref="BrokerFixture.Consume"/> is set inside the
+    /// <c>BasicConsume</c> call, before the worker has stored the consumer tag it returns, so a test that stops the
+    /// worker as soon as that is set can find no tag to cancel yet; the log is written after the tag is stored.
+    /// </summary>
+    private static Task WaitUntilConsumingAsync(FakeLogger<EmailConsumerWorker> logger) =>
+        WaitUntilAsync(() => logger.Collector.GetSnapshot().Any(r =>
+            r.Level == LogLevel.Information && r.Message.Contains("Email consumer started", StringComparison.Ordinal)));
+
     /// <summary>Mocked connection factory, connection and channel that record the worker's startup calls.</summary>
     private sealed class BrokerFixture
     {
@@ -583,9 +592,10 @@ public class EmailConsumerWorkerTests
     {
         var broker = new BrokerFixture();
         broker.Channel.Setup(c => c.BasicCancelAsync("consumer-tag-1", It.IsAny<bool>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        using var worker = broker.CreateWorker();
+        var logger = new FakeLogger<EmailConsumerWorker>();
+        using var worker = broker.CreateWorker(logger);
         await worker.StartAsync(TestContext.Current.CancellationToken);
-        await WaitUntilAsync(() => broker.Consume != null);
+        await WaitUntilConsumingAsync(logger);
 
         await worker.StopAsync(CancellationToken.None);
 
@@ -604,7 +614,7 @@ public class EmailConsumerWorkerTests
         var logger = new FakeLogger<EmailConsumerWorker>();
         using var worker = broker.CreateWorker(logger);
         await worker.StartAsync(TestContext.Current.CancellationToken);
-        await WaitUntilAsync(() => broker.Consume != null);
+        await WaitUntilConsumingAsync(logger);
 
         await worker.StopAsync(CancellationToken.None);
 
