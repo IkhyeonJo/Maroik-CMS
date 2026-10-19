@@ -54,6 +54,26 @@ jobs:
         working-directory: Maroik.Website
         run: npm test
 
+      # The production image is built from source on the server, so a broken Dockerfile tsbuild stage would only show up
+      # at deploy time. Build that stage both ways: a release build (TS_SOURCEMAPS unset, docker-compose.prod.yml) must
+      # minify site.js and ship no source maps; a debug build (TS_SOURCEMAPS=true, docker-compose.debug.yml) must not
+      # minify and must ship the maps.
+      - name: Docker tsbuild stage (prod = minified, debug = source maps)
+        run: |
+          set -o pipefail
+          docker build --progress=plain --target tsbuild -f Maroik.Website/Dockerfile -t tsbuild-prod . 2>&1 | tee tsbuild-prod.log
+          docker build --progress=plain --target tsbuild --build-arg TS_SOURCEMAPS=true -f Maroik.Website/Dockerfile -t tsbuild-debug . 2>&1 | tee tsbuild-debug.log
+
+          grep -qE 'minify: [0-9]+ site\.js minified' tsbuild-prod.log \
+            || { echo "::error::prod tsbuild did not minify site.js"; exit 1; }
+          ! grep -qE 'minify: [0-9]+ site\.js minified' tsbuild-debug.log \
+            || { echo "::error::debug tsbuild minified site.js"; exit 1; }
+
+          maps() { docker run --rm "$1" sh -c "find /ts/wwwroot -path '*/custom/*' -name site.js.map | wc -l"; }
+          [ "$(maps tsbuild-prod)" -eq 0 ] || { echo "::error::prod tsbuild shipped source maps"; exit 1; }
+          [ "$(maps tsbuild-debug)" -gt 0 ] || { echo "::error::debug tsbuild has no source maps"; exit 1; }
+          echo "prod: minified, no maps / debug: not minified, $(maps tsbuild-debug) maps"
+
       # Every test project except E2E. Run one after another: run side by side, their Testcontainers start and stop
       # on the Docker bridge while E2E's browser is mid-request, which fails it with net::ERR_NETWORK_CHANGED.
       - name: .NET tests with coverage
