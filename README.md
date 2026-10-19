@@ -59,6 +59,7 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 - **Rich domain model.** Value objects (`Email`, `Money`, `CurrencyCode`, `AccountRole`, …) replace primitive strings; admin actions are intent-revealing aggregate operations (`ChangeRole`, `Lock`/`Unlock`, `ForceConfirmEmail`/`RevokeEmailConfirmation`, `AcceptServiceTerms`/`RevokeServiceTerms`, `SoftDelete`/`Restore`, `AdminResetPassword`) instead of a field-overwriting update.
 - **Use-case DTOs.** Self-registration, admin account creation and admin account update each have their own request type, so a registration form can never carry a role, lock or confirmation flag.
 - **Test-first development.** Every change starts with a failing test, including the log entries it must write; real PostgreSQL and RabbitMQ run in Testcontainers instead of mocks wherever the behaviour depends on them.
+- **Production runs what CI tested.** CI builds the three images once, versions them from the commit messages and publishes them to GHCR; the server only pulls them. A release that changes the database schema is never deployed automatically.
 
 ## Development Timeline
 Maroik has been built by one developer since May 2021. It was developed in a private repository until September 2026, when the project moved to this public repository; all development now happens here. The earlier history — about 4,300 commits — stays in the private repository; those commits show on the contribution graph of the [author's GitHub profile](https://github.com/IkhyeonJo).
@@ -95,7 +96,7 @@ Maroik has been built by one developer since May 2021. It was developed in a pri
 | 2026-07 | Valkey (replacing Redis), RabbitMQ and the Maroik.Worker mail service |
 | 2026-09 | Client scripts migrated to TypeScript; repository and E2E tests on real PostgreSQL (Testcontainers); a series of whole-solution reviews fixing race conditions and security gaps; strict TDD and logging rules; mutation testing (Domain 78 % → 92 %) |
 | 2026-09-28 | Moved from the private repository to this public repository, where all development continues |
-| 2026-10 | Service mutation score 70 % → 96 %; TLS ended at Cloudflare through a Cloudflare Tunnel; RSA replaced with ASP.NET Core Data Protection; memory-safety, logging-template, security and banned-API analyzers as build errors; admin and menu safeguards against locking administrators out |
+| 2026-10 | Service mutation score 70 % → 96 %; TLS ended at Cloudflare through a Cloudflare Tunnel; RSA replaced with ASP.NET Core Data Protection; memory-safety, logging-template, security and banned-API analyzers as build errors; admin and menu safeguards against locking administrators out; GitHub Actions CI (coverage gate, isolated E2E run), release-only minified client scripts, semver from Conventional Commits, images published to GHCR and pulled by the server |
 
 ## Architecture
 
@@ -316,13 +317,52 @@ dotnet test --project Maroik.Core.Service.Tests            # any single project
 2. Open Maroik.sln
 3. Start debug mode with docker-compose.debug.yml
 
-## Deployment
+## CI/CD
 
-### Ubuntu Server 24.04.4
-1. Configure .env.prod with domain name and mail settings
-2. Set email credentials in DBBackup.sh and UploadFileBackup.sh
-3. Copy Maroik folder to /home/ubuntu/
-4. Run Deploy.sh script
+```mermaid
+flowchart LR
+    PR["Pull request"] --> Test["build-and-test<br/>build · Vitest · .NET tests · E2E · coverage gate"]
+    Main["Push to main"] --> Test
+    Test -- "main only" --> Publish["publish<br/>version · build 3 images · push · tag"]
+    Publish --> GHCR[("ghcr.io<br/>maroik-website / -filestorage / -worker")]
+    Publish --> Tag["git tag vX.Y.Z"]
+    Cron["Server cron<br/>AutoDeploy.sh, every 5 min"] -- "pull image tag sha-commit" --> GHCR
+    Cron --> Apps["Replace the app containers<br/>(DB, Valkey, RabbitMQ keep running)"]
+```
+
+One workflow, `.github/workflows/ci.yml`, with two jobs.
+
+- **`build-and-test`** runs on every pull request and every push to `main`: a warning-free build, the client-script
+  suite, every .NET test project one after another, then the E2E suite on its own (run side by side, the other projects'
+  Testcontainers change the Docker network under the browser), and the coverage gate (line >= 80 %, branch >= 65 %). It
+  also builds the Dockerfile's client-script stage both ways, so a pull request that breaks the image build fails before
+  it is merged: the release build must ship minified `site.js` without source maps, the debug build the opposite.
+- **`publish`** runs only on `main`, after `build-and-test` passed. It computes the version, builds the Website,
+  FileStorage and Worker images with that version stamped into the assemblies, checks that the website image ships
+  minified scripts and no source maps, pushes the images to GHCR and tags the commit.
+
+**Versioning.** Semantic Versioning from [Conventional Commits](https://www.conventionalcommits.org/) since the last
+`vX.Y.Z` tag, one step per release — the largest change wins: `type!:` or `BREAKING CHANGE:` raises MAJOR, `feat:` MINOR,
+`fix:` PATCH; `docs:`, `refactor:`, `test:`, `chore:` and the like leave the version as it is. The image tags are
+`sha-<commit>`, `latest` and, when the version moved, `X.Y.Z`. The assemblies carry `X.Y.Z+<commit>` as their
+InformationalVersion; a local or debug build, which gets no version from CI, keeps the one in `Directory.Build.props`.
+
+**Deployment.** The server never builds. Every five minutes `AutoDeploy.sh` looks at the newest commit on `main`; once
+its `publish` job has succeeded it pulls that commit's three images and replaces only the app containers, so the
+database, Valkey (sessions) and RabbitMQ keep running. A deploy whose pull fails leaves the running containers alone and
+is not retried. A release that changes `Maroik.DB/` (the schema) is not deployed automatically: it is logged, and the
+full deploy below is run by hand, because it rebuilds the database from `Init.sql` and restores the backup.
+
+### Server setup (Ubuntu Server 24.04)
+1. Clone this repository to `/home/ubuntu/Maroik`.
+2. Add the server-only files, all git-ignored: `.env.prod`, `docker-compose.prod.yml` (the three app services use
+   `image: ghcr.io/ikhyeonjo/maroik-*:${MAROIK_TAG}`), `Maroik.Crontab/`, `Maroik.DeployOps/` and
+   `Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql`.
+3. Run `Maroik.DeployOps/Deploy.sh`: it checks out the latest `main` whose images were published, pulls them, starts the
+   whole stack, mounts the backup drive, installs the cron jobs (hourly backup, resource monitoring, auto deploy) and
+   closes every inbound port.
+4. From then on, merged changes reach production by themselves; a schema change needs `Maroik.DeployOps/Undeploy.sh`,
+   `Deploy.sh` and a restore of the latest backup.
 
 ## Screenshots
 
