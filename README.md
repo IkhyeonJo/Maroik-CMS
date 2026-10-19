@@ -356,19 +356,46 @@ full deploy below is run by hand, because it rebuilds the database from `Init.sq
 
 ### Server setup (Ubuntu Server 24.04)
 1. Clone this repository to `/home/ubuntu/Maroik`.
-2. Add the server-only files, both git-ignored:
+2. Add the three server-only items, all git-ignored (or extract a backup, see below):
    - `.env.prod`: copy `.env.prod.example` and replace its dummy values (database, RabbitMQ and SMTP credentials,
      `EXTERNAL_DRIVE_UUID`, `TUNNEL_TOKEN`).
    - `Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql`: the `Init.sql` of the latest backup, or a copy of
      `Debugging/Init.sql` (same schema, demo seed data) on a new server.
+   - `Maroik.FileStorage/upload/`: the uploaded attachments of the latest backup (empty on a new server).
 
    `docker-compose.prod.yml` (the three app services use `image: ghcr.io/ikhyeonjo/maroik-*:${MAROIK_TAG}`),
    `Maroik.Crontab/` and `Maroik.DeployOps/` are part of the repository.
-3. Run `Maroik.DeployOps/Deploy.sh`: it checks out the latest `main` whose images were published, pulls them, starts the
-   whole stack, mounts the backup drive, installs the cron jobs (hourly backup, resource monitoring, auto deploy) and
-   closes every inbound port.
+3. Run `Maroik.DeployOps/Deploy.sh` as `ubuntu`, without `sudo`. It first checks that the three items are in place and
+   stops with a list of what is missing. Then it checks out the latest `main` whose images were published, pulls them,
+   starts the whole stack, mounts the backup drive, installs the cron jobs (hourly backup, resource monitoring, auto
+   deploy) and closes every inbound port.
 4. From then on, merged changes reach production by themselves; a schema change needs `Maroik.DeployOps/Undeploy.sh`,
-   `Deploy.sh` and a restore of the latest backup.
+   then the restore below.
+
+### Backup and restore
+`Maroik.Crontab/Backup.sh` runs every hour and writes
+`$BACKUP_BASE_DIR/Maroik-Backup-YYYY-MM-DD-HH-MM-SS.tar.xz` to the external drive. It holds exactly the three
+server-only items, laid out as in the clone; everything else is in the repository.
+
+```
+Maroik-Backup-YYYY-MM-DD-HH-MM-SS/
+├─ .env.prod
+├─ Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql   (pg_dump of the running database)
+└─ Maroik.FileStorage/upload/                                 (uploaded attachments)
+```
+
+To restore — on a new server, or after a schema change (run `Undeploy.sh` first and move the old clone aside with
+`mv /home/ubuntu/Maroik /home/ubuntu/Maroik.old`) — as `ubuntu`:
+
+```bash
+git clone https://github.com/IkhyeonJo/Maroik.git /home/ubuntu/Maroik
+tar xJf Maroik-Backup-YYYY-MM-DD-HH-MM-SS.tar.xz --strip-components=1 -C /home/ubuntu/Maroik
+cd /home/ubuntu/Maroik && bash Maroik.DeployOps/Deploy.sh
+```
+
+The archive has the clone's layout, so extracting it over the clone puts the three items exactly where `Deploy.sh`
+looks for them. On a new server the backup drive is not mounted yet (`Deploy.sh` mounts it), so copy the archive off the
+drive first. For a schema change, edit the restored `Init.sql` for the new columns before running `Deploy.sh`.
 
 ## Screenshots
 
