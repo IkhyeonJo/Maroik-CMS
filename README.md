@@ -275,7 +275,7 @@ The goal is that a test fails whenever the behaviour it describes breaks — not
   or ones the MTP runner miscounts inside static field initializers).
 
 ### Test projects
-Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all; CI runs each with coverage (`.github/workflows/build-and-test.yml`, gate: line >= 80 %, branch >= 65 %).
+Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all; CI runs each with coverage (`.github/workflows/ci.yml`, gate: line >= 80 %, branch >= 65 %).
 
 | Tests | What they cover | Needs Docker |
 |---|---|---|
