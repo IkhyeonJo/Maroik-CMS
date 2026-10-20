@@ -83,7 +83,7 @@ public class FileController(IFileValidationService fileValidationService, IOptio
             // Streamed straight from disk (not read into memory first). Opened here, inside the try,
             // so an unreadable file is still answered as "Invalid file" below.
             // resolvedPath comes from StoragePath.ResolveWithinRoot above, which returns null for any path
-            // outside the storage root (declared as an SCS0018 sanitizer in SecurityCodeScan.config.yml).
+            // outside the storage root (pinned by StoragePathTests).
             FileStream? fileStream = new(resolvedPath, FileMode.Open, FileAccess.Read, FileShare.Read,
                 bufferSize: 81920, FileOptions.Asynchronous | FileOptions.SequentialScan);
             try

@@ -202,12 +202,15 @@ dotnet_diagnostic.RS0030.severity = error
 dotnet_diagnostic.RS0031.severity = error
 
 # ---- Security (build errors) ----
-# .NET's own security rules, alongside SecurityCodeScan (SCS*). Injection taint: SQL (CA2100 command text, CA3001),
+# .NET's own security rules. Injection taint: SQL (CA2100 command text, CA3001),
 # XSS, information disclosure, command / XPath / XAML / DLL / LDAP / regex injection, open redirect; unsafe XML (DTD,
 # XmlReader settings); missing antiforgery (CA3147); insecure deserializers and JSON TypeNameHandling (CA23xx); weak
 # hashing / ciphers / keys, disabled certificate checks, insecure TLS and randomness (CA53xx).
-# CA3003 (file path injection) is not enabled: SCS0018 covers path traversal and, unlike CA3003, lets the project
-# declare its validator as a sanitizer (Maroik.FileStorage/SecurityCodeScan.config.yml).
+# CA3003 (file path injection) is not enabled: it offers no way to declare the project's own validator
+# (Maroik.FileStorage StoragePath.ResolveWithinRoot) as a sanitizer, so it could only be met with suppressions.
+# Path traversal is pinned by StoragePathTests and the FileController tests instead. SecurityCodeScan, which did
+# accept that declaration (SCS0018), was removed on 2026-10-20: unmaintained since 2022, and its Roslyn
+# dependency was the one most likely to stop loading after an SDK bump.
 dotnet_diagnostic.CA2100.severity = error
 dotnet_diagnostic.CA3001.severity = error
 dotnet_diagnostic.CA3002.severity = error

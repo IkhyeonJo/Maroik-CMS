@@ -12,17 +12,8 @@
   <ItemGroup>
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
-    <PackageReference Include="SecurityCodeScan.VS2019">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="SharpZipLib" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Declares this project's path validators as SCS0018 sanitizers (see the file). -->
-    <AdditionalFiles Include="SecurityCodeScan.config.yml" />
   </ItemGroup>
 
   <ItemGroup>

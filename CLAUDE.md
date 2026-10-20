@@ -330,8 +330,10 @@ e.g. `await app.RunAsync()`, `await Log.CloseAndFlushAsync()`, `SaveChangesAsync
 
 Also `error`, by rule ID:
 - **Security** ("Security" block): .NET's injection-taint, XML, antiforgery (CA3147), deserialization (CA23xx) and
-  crypto / TLS / randomness (CA53xx) rules, next to SecurityCodeScan. CA3003 (file path injection) is left off on purpose:
-  SCS0018 covers path traversal and accepts a declared sanitizer, CA3003 offers no such hook. CA2100 is off for
+  crypto / TLS / randomness (CA53xx) rules. CA3003 (file path injection) is left off on purpose: it offers no hook to declare
+  `StoragePath.ResolveWithinRoot` as a sanitizer, so it could only be met with suppressions; path traversal is pinned by
+  `StoragePathTests` and the `FileController` tests. SecurityCodeScan (whose SCS0018 did accept that declaration) was removed
+  on 2026-10-20 — unmaintained since 2022 and the analyzer most likely to stop loading after an SDK bump. CA2100 is off for
   `*.Tests/**` only — the test fixtures create and drop throwaway databases with DDL, whose identifiers cannot be parameters.
 - **String comparison and culture** (CA1304, CA1305, CA1307, CA1309, CA1310, CA1311): `StringComparison.Ordinal` for
   identifiers, paths and test assertions (xUnit's `Assert.Contains(string, string)` included), `CultureInfo.InvariantCulture`
@@ -356,10 +358,7 @@ Also `error`, by rule ID:
 any other rollback failure propagates after the transaction is released and the tracker cleared (pinned by
 `UnitOfWorkTests.*_Rethrows_AFailureThatIsNotADatabaseError_AndStillClearsTheTracker`).
 
-The code has no `#pragma warning disable`. SecurityCodeScan's path-traversal rule (SCS0018) is satisfied by declaring the
-project's own validator as a sanitizer — `Maroik.FileStorage/SecurityCodeScan.config.yml` lists `StoragePath.ResolveWithinRoot`
-(an `AdditionalFiles` item) — not by suppressing it; such a file declares validators and switches no rule off. A
-sanitizer entry must be proven to matter: rename its method in the file and the SCS0018 error must come back.
+The code has no `#pragma warning disable`.
 
 - **CA2000 stays on the default `dispose_analysis_kind`, not `AllPaths`** (tried 2026-10-16). In `AllPaths` mode it reports
   the construction site of a type whose async `DisposeAsync` awaits e.g. `Task.WhenAll` / `Task.Yield`, even after every owned
