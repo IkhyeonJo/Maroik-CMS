@@ -208,7 +208,8 @@ dotnet_diagnostic.RS0031.severity = error
 # hashing / ciphers / keys, disabled certificate checks, insecure TLS and randomness (CA53xx).
 # CA3003 (file path injection) is not enabled: it offers no way to declare the project's own validator
 # (Maroik.FileStorage StoragePath.ResolveWithinRoot) as a sanitizer, so it could only be met with suppressions.
-# Path traversal is pinned by StoragePathTests and the FileController tests instead. SecurityCodeScan, which did
+# Path traversal is pinned by StoragePathTests and the FileController tests instead, and FileSystemAccessArchitectureTests
+# keeps unchecked paths away from the file system (see CLAUDE.md, "Security"). SecurityCodeScan, which did
 # accept that declaration (SCS0018), was removed on 2026-10-20: unmaintained since 2022, and its Roslyn
 # dependency was the one most likely to stop loading after an SDK bump.
 dotnet_diagnostic.CA2100.severity = error

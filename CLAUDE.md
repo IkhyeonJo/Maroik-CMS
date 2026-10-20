@@ -348,10 +348,13 @@ Also `error`, by rule ID:
 - **Security** ("Security" block): .NET's injection-taint, XML, antiforgery (CA3147), deserialization (CA23xx) and
   crypto / TLS / randomness (CA53xx) rules. CA3003 (file path injection) is left off on purpose: it offers no hook to declare
   `StoragePath.ResolveWithinRoot` as a sanitizer, so it could only be met with suppressions; path traversal is pinned by
-  `StoragePathTests` and the `FileController` tests, and `FileSystemAccessArchitectureTests` confines the file system (`File`,
-  `Directory`, `FileStream`, `FileInfo`, `DirectoryInfo`) to a listed set of files, each with the reason its paths are safe, and
-  requires `StoragePath.ResolveWithinRoot` in every such `Maroik.FileStorage` file. A new file-system call needs a new list
-  entry, written after checking where its path comes from. SecurityCodeScan (whose SCS0018 did accept that declaration) was removed
+  `StoragePathTests` and the `FileController` tests, and held in two ways by `FileSystemAccessArchitectureTests`. In
+  `Maroik.FileStorage` (the one service whose paths come from a request) by the type system: `StoragePath` is a value only
+  `StoragePath.ResolveWithinRoot` / `InDirectory` can make, `Helpers/StorageFiles` is the service's only code that names `File`,
+  `Directory`, `FileStream`, `FileInfo` or `DirectoryInfo`, and its members take a `StoragePath`, never a `string` — an unchecked
+  path does not compile into a file access. Everywhere else (paths from server configuration or a fixed folder) each use is
+  listed by file, member and API with the reason its path is safe, and the list must match the code exactly: a new use, even
+  inside a listed member, fails until it is listed after checking where its path comes from. SecurityCodeScan (whose SCS0018 did accept that declaration) was removed
   on 2026-10-20 — unmaintained since 2022 and the analyzer most likely to stop loading after an SDK bump. CA2100 is off for
   `*.Tests/**` only — the test fixtures create and drop throwaway databases with DDL, whose identifiers cannot be parameters.
 - **String comparison and culture** (CA1304, CA1305, CA1307, CA1309, CA1310, CA1311): `StringComparison.Ordinal` for
