@@ -11,12 +11,15 @@ namespace Maroik.Core.Contract.Tests.ArchitectureRules;
 /// every production source (the <c>Maroik.Core.PostgreSQL</c> scaffold aside) with the Roslyn parser:
 /// <list type="number">
 ///   <item>Every <c>catch</c> logs, rethrows, or carries a comment saying why it may be silent (an expected condition turned
-///         into a result, a shutdown cancellation, a drain whose fault already surfaced).</item>
+///         into a result, a shutdown cancellation).</item>
+///   <item>A silent <c>catch</c> does not swallow every exception: it names an exception type more specific than
+///         <c>Exception</c>, filters with <c>when</c>, or hands the exception on (a health check's
+///         <c>HealthCheckResult.Unhealthy(..., ex)</c>). A comment cannot excuse dropping any exception unseen.</item>
 ///   <item>An <c>Error</c> / <c>Critical</c> log inside a <c>catch</c> that names its exception passes that exception as the
 ///         first argument, so the stack trace is kept.</item>
 ///   <item>No log call passes the caught exception's <c>Message</c> (the exception object is logged instead).</item>
-///   <item>No log template placeholder is named for a secret (password, token, hash, secret, connection string, cookie,
-///         antiforgery value).</item>
+///   <item>No log template placeholder is named for a secret (password, token, hash, secret, connection string, cookie),
+///         and no value passed to a log is a variable or member named for one (<c>account.HashedPassword</c>).</item>
 ///   <item><c>Maroik.Core.Repository</c> does not log: the exception propagates to the service that owns the transaction.</item>
 /// </list>
 /// The template shape itself (constant template, matching PascalCase placeholders) is a compiler error already (CA2254,
@@ -34,6 +37,9 @@ public class LoggingRuleArchitectureTests
         @"\{@?[A-Za-z0-9]*(Password|Token|Secret|Hash|ConnectionString|Cookie)(,[^}]*)?(:[^}]*)?\}",
         RegexOptions.IgnoreCase);
 
+    /// <summary>The nouns a secret's name ends in.</summary>
+    private static readonly string[] _secretNouns = ["Password", "Token", "Secret", "Hash", "ConnectionString", "Cookie"];
+
     /// <summary>The <c>ILogger</c> extension methods and Serilog <c>Log.*</c> methods that write at Error or Critical / Fatal.</summary>
     private static readonly HashSet<string> _errorLevelMethods = ["LogError", "LogCritical", "Error", "Fatal"];
 
@@ -44,6 +50,12 @@ public class LoggingRuleArchitectureTests
     public void EveryCatch_LogsOrRethrows_OrSaysWhyItIsSilent()
     {
         AssertNone(_productionSources.Value.SelectMany(SilentCatches));
+    }
+
+    [Fact]
+    public void ASilentCatch_IsNarrow()
+    {
+        AssertNone(_productionSources.Value.SelectMany(BroadSilentCatches));
     }
 
     [Fact]
@@ -62,6 +74,12 @@ public class LoggingRuleArchitectureTests
     public void NoLogTemplate_NamesASecret()
     {
         AssertNone(_productionSources.Value.SelectMany(SecretPlaceholders));
+    }
+
+    [Fact]
+    public void NoLog_PassesASecretValue()
+    {
+        AssertNone(_productionSources.Value.SelectMany(SecretValues));
     }
 
     [Fact]
@@ -95,6 +113,9 @@ public class LoggingRuleArchitectureTests
                 void LogsTheMessage(ILogger logger) { try { } catch (Exception ex) { logger.LogWarning(ex, "Failed {Reason}", ex.Message); } }
                 void LeaksASecret(ILogger logger) { logger.LogInformation("Reset {Email} with {ResetPasswordToken}", "a", "b"); }
                 void Nested(ILogger logger) { try { } catch (Exception ex) { try { } catch (Exception inner) { logger.LogError(ex, "x"); } } }
+                void SwallowsAll() { try { } catch { /* commented, still everything */ } }
+                void DropsIt() { try { } catch (Exception ex) { /* commented, ex unused */ } }
+                void LogsAHash(ILogger logger, Account account) { logger.LogInformation("Hash of {Email}: {Value}", account.Email, account.HashedPassword); }
             }
             """);
         SyntaxTree good = Parse("Sample/Good.cs", """
@@ -111,14 +132,22 @@ public class LoggingRuleArchitectureTests
                     // Not valid input: no result to give.
                     catch (ArgumentException) { } }
                 void Nested(ILogger logger) { try { } catch (Exception ex) { try { } catch (Exception inner) { logger.LogError(inner, "x"); } } }
+                void Filtered() { try { } catch (Exception ex) when (ex is IOException) { /* expected: retried below */ } }
+                void Bool(ILogger logger, string? newHashedPassword) { logger.LogInformation("Reset {PasswordReset}", newHashedPassword != null); }
+                HealthCheckResult Health() { try { return HealthCheckResult.Healthy(); } catch (Exception ex) { /* the check reports it */ return HealthCheckResult.Unhealthy("down", ex); } }
+                void Optional(ILogger? logger) { try { } catch (Exception e) { logger?.LogWarning(e, "Cache unavailable"); } }
             }
             """);
 
         Assert.Equal(["Sample/Bad.cs:3"], SilentCatches(bad));
+        Assert.Equal(["Sample/Bad.cs:3", "Sample/Bad.cs:8", "Sample/Bad.cs:9"], BroadSilentCatches(bad));
+        Assert.Equal(["Sample/Bad.cs:10 account.HashedPassword"], SecretValues(bad));
         Assert.Equal(["Sample/Bad.cs:4", "Sample/Bad.cs:7"], ErrorLogsWithoutTheException(bad));
         Assert.Equal(["Sample/Bad.cs:5"], LoggedExceptionMessages(bad));
         Assert.Equal(["Sample/Bad.cs:6 {ResetPasswordToken}"], SecretPlaceholders(bad));
         Assert.Empty(SilentCatches(good));
+        Assert.Empty(BroadSilentCatches(good));
+        Assert.Empty(SecretValues(good));
         Assert.Empty(ErrorLogsWithoutTheException(good));
         Assert.Empty(LoggedExceptionMessages(good));
         Assert.Empty(SecretPlaceholders(good));
@@ -138,6 +167,35 @@ public class LoggingRuleArchitectureTests
         tree.GetRoot().DescendantNodes().OfType<CatchClauseSyntax>()
             .Where(c => !Throws(c.Block) && !LogCalls(c.Block).Any() && !HasComment(c))
             .Select(c => Where(c));
+
+    /// <summary>
+    /// Catches that neither throw nor log, catch everything (no exception type, or <c>Exception</c> itself, with no
+    /// <c>when</c> filter), and do not hand the exception on (its variable is never used in the block).
+    /// </summary>
+    private static IEnumerable<string> BroadSilentCatches(SyntaxTree tree) =>
+        tree.GetRoot().DescendantNodes().OfType<CatchClauseSyntax>()
+            .Where(c => !Throws(c.Block) && !LogCalls(c.Block).Any())
+            .Where(c => c.Filter == null && (c.Declaration == null || c.Declaration.Type.ToString() is "Exception" or "System.Exception"))
+            .Where(c => !UsesTheException(c))
+            .Select(c => Where(c));
+
+    /// <summary>True when <paramref name="catchClause"/> names its exception and its block uses that variable.</summary>
+    private static bool UsesTheException(CatchClauseSyntax catchClause) =>
+        catchClause.Declaration?.Identifier.ValueText is { Length: > 0 } exception
+        && catchClause.Block.DescendantNodes().OfType<IdentifierNameSyntax>().Any(name => name.Identifier.ValueText == exception);
+
+    /// <summary>Values passed to a log call that are a variable or member named for a secret (the name ends in its noun).</summary>
+    private static IEnumerable<string> SecretValues(SyntaxTree tree) =>
+        from call in LogCalls(tree.GetRoot())
+        from argument in call.ArgumentList.Arguments
+        let name = argument.Expression switch
+        {
+            IdentifierNameSyntax identifier => identifier.Identifier.ValueText,
+            MemberAccessExpressionSyntax access => access.Name.Identifier.ValueText,
+            _ => null,
+        }
+        where name != null && _secretNouns.Any(noun => name.EndsWith(noun, StringComparison.OrdinalIgnoreCase))
+        select $"{Where(call)} {argument.Expression}";
 
     /// <summary>
     /// Error / Critical logs whose nearest enclosing catch names its exception, and whose first argument is not that exception.
@@ -172,21 +230,25 @@ public class LoggingRuleArchitectureTests
 
     /// <summary>
     /// The log calls under <paramref name="node"/>: an <c>ILogger</c> extension (<c>logger.LogError(...)</c>,
-    /// <c>_logger.LogWarning(...)</c>) or a Serilog static (<c>Log.Fatal(...)</c>).
+    /// <c>logger?.LogWarning(...)</c>) or a Serilog static (<c>Log.Fatal(...)</c>).
     /// </summary>
     private static IEnumerable<InvocationExpressionSyntax> LogCalls(SyntaxNode node) =>
-        node.DescendantNodes().OfType<InvocationExpressionSyntax>().Where(call => call.Expression is MemberAccessExpressionSyntax access
-            && (access.Name.Identifier.ValueText.StartsWith("Log", StringComparison.Ordinal) && access.Name.Identifier.ValueText.Length > 3
-                || access.Expression is IdentifierNameSyntax { Identifier.ValueText: "Log" }));
+        node.DescendantNodes().OfType<InvocationExpressionSyntax>().Where(call =>
+            MethodName(call) is { Length: > 3 } name && name.StartsWith("Log", StringComparison.Ordinal)
+            || call.Expression is MemberAccessExpressionSyntax { Expression: IdentifierNameSyntax { Identifier.ValueText: "Log" } });
 
     /// <summary>The exception variable of the innermost catch whose block holds <paramref name="call"/>, if it names one.</summary>
     private static string? CaughtException(InvocationExpressionSyntax call) =>
         call.Ancestors().OfType<CatchClauseSyntax>().FirstOrDefault(c => c.Block.Span.Contains(call.Span))
             ?.Declaration?.Identifier.ValueText;
 
-    /// <summary>The name of the method an invocation calls.</summary>
-    private static string MethodName(InvocationExpressionSyntax call) =>
-        call.Expression is MemberAccessExpressionSyntax access ? access.Name.Identifier.ValueText : "";
+    /// <summary>The name of the method an invocation calls (<c>a.Name(...)</c> or <c>a?.Name(...)</c>).</summary>
+    private static string MethodName(InvocationExpressionSyntax call) => call.Expression switch
+    {
+        MemberAccessExpressionSyntax access => access.Name.Identifier.ValueText,
+        MemberBindingExpressionSyntax binding => binding.Name.Identifier.ValueText,
+        _ => "",
+    };
 
     /// <summary>True when <paramref name="block"/> holds a <c>throw</c> statement or expression.</summary>
     private static bool Throws(BlockSyntax block) =>

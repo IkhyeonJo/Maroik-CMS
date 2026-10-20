@@ -205,6 +205,28 @@ public class HtmlParserServiceTests
         Assert.Equal(source, async);
     }
 
+    /// <summary>
+    /// When one fetch fails, the method still waits for the fetches already running before it returns that failure: they
+    /// hold the concurrency gate, which the method disposes on the way out, so returning early would dispose it under them.
+    /// </summary>
+    [Fact]
+    public async Task TransformImageAttributesAsync_WaitsForTheOtherFetches_BeforeReportingAFailedOne()
+    {
+        var slowFetch = new TaskCompletionSource<HtmlImgPatch?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<(string Html, bool HasImages)> transform = _sut.TransformImageAttributesAsync(
+            "<img alt=\"slow\"><img alt=\"broken\">",
+            (alt, _) => alt == "broken" ? Task.FromException<HtmlImgPatch?>(new InvalidOperationException("fetch failed")) : slowFetch.Task,
+            TestContext.Current.CancellationToken);
+
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        bool finishedWhileAFetchWasRunning = transform.IsCompleted;
+        slowFetch.SetResult(null);
+
+        Assert.False(finishedWhileAFetchWasRunning);
+        InvalidOperationException failure = await Assert.ThrowsAsync<InvalidOperationException>(() => transform);
+        Assert.Equal("fetch failed", failure.Message);
+    }
+
     // -- Images without alt, and more images than the fetch limit ----------------------------
 
     /// <summary>An &lt;img&gt; without an alt reaches the async patch factory as an empty string.</summary>

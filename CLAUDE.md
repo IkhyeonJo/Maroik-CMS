@@ -311,11 +311,15 @@ Enforced by tests where a syntax tree can decide (since 2026-10-20, at the owner
 (`Maroik.Core.Contract.Tests`) reads every production source with the Roslyn parser (the PostgreSQL scaffold aside) and fails when
 - a `catch` neither logs, nor throws, nor carries a comment (in its block or just before `catch`) saying why it may be silent —
   so an allowed silent catch (an expected condition turned into a result) always states its reason;
+- a silent `catch` swallows every exception: no type or `Exception` itself, no `when` filter, and the exception is not handed on
+  (a health check's `HealthCheckResult.Unhealthy(..., ex)` hands it on). A comment does not excuse that;
 - an `Error` / `Critical` (Serilog `Error` / `Fatal`) log inside a `catch` that names its exception does not pass that exception
   first (judged against the innermost enclosing `catch`);
 - a log call passes the caught exception's `.Message`;
 - a template placeholder's name ends in a secret noun (`Password`, `Token`, `Secret`, `Hash`, `ConnectionString`, `Cookie`);
   `{PasswordReset}` (whether a reset happened) passes;
+- a value passed to a log is a variable or member whose name ends in one of those nouns (`account.HashedPassword`) — this
+  reads names only, so a secret passed under an innocent name is still the reviewer's to catch;
 - `Maroik.Core.Repository` mentions `ILogger` / `ILoggerFactory` / Serilog `Log`.
 `TheRules_FireOnWhatTheyForbid_AndOnlyOnThat` pins each rule against a bad and a good sample. Whether a use case logs at all, at
 which level and with what text stays with its own tests (the TDD order above). `DomainArchitectureTests.Domain_ShouldNot_Log`
