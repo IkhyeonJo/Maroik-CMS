@@ -112,7 +112,7 @@ Accounts
   re-registrable.
 - The Login page is pre-filled with the public demo account (`demo@maroik.com` / `demoO12!!`), and the demo
   account's dashboard always shows the fixed period from `ServerSetting.DemoDashboardYear/Month`.
-- Nicknames reject `<`, `>`, `"`, the backtick and `\` (after NFKC) but allow `&` and `'` ("R&D팀",
+- Nicknames reject `<`, `>`, `"`, the backtick and `\` (after NFKC) but allow `&` and `'` ("R&D team",
   "O'Brien"): nicknames are always output encoded, so those two are not an injection vector. An
   administrator may create an account under a reserved nickname; self-registration may not.
 - IP-based rate limiting is done at Cloudflare. Do not add `AddRateLimiter` or IP-keyed throttling in
