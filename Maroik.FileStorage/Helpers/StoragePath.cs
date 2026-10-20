@@ -32,6 +32,7 @@ internal static class StoragePath
         }
         catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException)
         {
+            // Expected input, not a fault: a path that cannot be resolved is refused like one outside the root (the caller answers it).
             return null;
         }
 

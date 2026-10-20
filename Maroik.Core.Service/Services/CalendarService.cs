@@ -145,6 +145,7 @@ public class CalendarService(
             }
             catch (Exception ex) when (ex.IsPostgresUniqueViolationOn(SharedPkConstraint))
             {
+                // The expected race described above: retry. Running out of retries is logged after the loop.
                 await unitOfWork.RollbackAsync(ct);
             }
             catch (Exception ex)
@@ -242,6 +243,7 @@ public class CalendarService(
         }
         catch (Exception ex) when (ex.IsPostgresUniqueViolationOn(NameUniqueConstraint))
         {
+            // Expected, not a fault: the account already has a calendar of this name, answered as a Conflict.
             await unitOfWork.RollbackAsync(ct);
             return ServiceResult.Conflict("Calendar.NameExists", ServiceErrorKeys.CalendarExists);
         }
@@ -463,6 +465,7 @@ public class CalendarService(
             }
             catch (Exception ex) when (ex.IsPostgresUniqueViolationOn(SharedPkConstraint))
             {
+                // The expected race described above: retry. Running out of retries is logged after the loop.
                 await unitOfWork.RollbackAsync(ct);
             }
             catch (Exception ex)

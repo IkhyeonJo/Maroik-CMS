@@ -117,6 +117,7 @@ public static class NicknamePolicy
         try { normalized = Normalize(nickname); }
         catch (ArgumentException)
         {
+            // Expected input, not a fault: text that is not valid Unicode is a validation error (the domain never logs).
             return DomainError.Validation("Account.NicknameInvalidCharacters", "Nickname contains characters that are not allowed.");
         }
 

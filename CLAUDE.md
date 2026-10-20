@@ -307,10 +307,19 @@ How:
   filters log. Do not log-and-rethrow the same exception at several layers — log it once, where it is handled.
 - **Done also means** every `catch` you added or touched satisfies the rules above and its test is green.
 
-Not enforced by tests: the logging rules above are followed by convention and checked in review. The earlier
-`*LoggingArchitectureTests` / `LoggingRulesSelfTests` (and the `Maroik.Tests.Shared` project that held them) were removed on
-purpose — do not reintroduce them. The only automated logging test left is `DomainArchitectureTests.Domain_ShouldNot_Log`
-(`Maroik.Core.Domain` must not depend on `Microsoft.Extensions.Logging`).
+Enforced by tests where a syntax tree can decide (since 2026-10-20, at the owner's request): `LoggingRuleArchitectureTests`
+(`Maroik.Core.Contract.Tests`) reads every production source with the Roslyn parser (the PostgreSQL scaffold aside) and fails when
+- a `catch` neither logs, nor throws, nor carries a comment (in its block or just before `catch`) saying why it may be silent —
+  so an allowed silent catch (an expected condition turned into a result) always states its reason;
+- an `Error` / `Critical` (Serilog `Error` / `Fatal`) log inside a `catch` that names its exception does not pass that exception
+  first (judged against the innermost enclosing `catch`);
+- a log call passes the caught exception's `.Message`;
+- a template placeholder's name ends in a secret noun (`Password`, `Token`, `Secret`, `Hash`, `ConnectionString`, `Cookie`);
+  `{PasswordReset}` (whether a reset happened) passes;
+- `Maroik.Core.Repository` mentions `ILogger` / `ILoggerFactory` / Serilog `Log`.
+`TheRules_FireOnWhatTheyForbid_AndOnlyOnThat` pins each rule against a bad and a good sample. Whether a use case logs at all, at
+which level and with what text stays with its own tests (the TDD order above). `DomainArchitectureTests.Domain_ShouldNot_Log`
+keeps `Maroik.Core.Domain` off `Microsoft.Extensions.Logging`.
 
 The compiler does enforce the template rules (`.editorconfig`, "Logging templates" block, all `error`): CA2254 (the message
 template is a constant — no interpolation or concatenation), CA2017 (its `{Placeholders}` match the arguments) and CA1727
