@@ -42,6 +42,9 @@ Deployment and schema
   repo-wide comment / style passes; touch it only when the schema mapping itself changes.
 
 Operations and hosting
+- CI/CD (`.github/workflows/ci-cd.yml`) runs on pushes to `main`, pull requests into `main` and on demand only — not on
+  pushes to other branches. A feature branch is checked by opening its pull request (or a manual run). Do not widen the
+  triggers.
 - Maroik only ever runs under docker-compose on Linux (Ubuntu). Behaviour that differs only on a Windows dev box
   (path separators, a test that fails only there) is an environment difference, not a defect.
 - The containers run as root (no `USER` in the Dockerfiles).
