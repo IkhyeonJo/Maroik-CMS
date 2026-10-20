@@ -31,9 +31,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # The exact SDK global.json pins (rollForward: disable), the same one the Dockerfiles build with
+      # (pinned by SdkPinArchitectureTests): a newer SDK can bring analyzer diagnostics the build treats as errors.
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
 
       # Node 22 for the project (package.json engines: >=22.22.2 <23, enforced by .npmrc engine-strict),
       # same as production. The @v5 actions themselves run on Node 24; that does not change this.

@@ -35,7 +35,7 @@ RUN if [ "$TS_SOURCEMAPS" = "true" ]; then npm run build:debug; else npm run bui
 # APP_VERSION / SOURCE_REVISION: set by CI when it publishes the image (semver from the commit messages, short commit
 # hash). They become the assembly's Version and InformationalVersion ("1.4.2+1a2b3c4"). Unset (local and debug
 # builds), the build keeps the Version in Directory.Build.props.
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.402 AS build
 ARG APP_VERSION
 ARG SOURCE_REVISION
 WORKDIR /src

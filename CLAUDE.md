@@ -360,6 +360,11 @@ any other rollback failure propagates after the transaction is released and the 
 
 The code has no `#pragma warning disable`.
 
+- **One pinned SDK.** `global.json` pins the exact .NET SDK (`rollForward: disable`); CI installs it from that file and every
+  Dockerfile's build stage uses the same `sdk:<version>` tag (pinned by `SdkPinArchitectureTests`). The analyzers are build
+  errors, so an SDK bump (a newer Roslyn) is one deliberate change to all of these at once. The runtime images (`aspnet` /
+  `runtime`) stay on the floating `10.0` tag so they pick up runtime security patches.
+
 - **CA2000 stays on the default `dispose_analysis_kind`, not `AllPaths`** (tried 2026-10-16). In `AllPaths` mode it reports
   the construction site of a type whose async `DisposeAsync` awaits e.g. `Task.WhenAll` / `Task.Yield`, even after every owned
   field was disposed (`FakeSmtpServer`), so it could only be met with suppressions. The genuine exception-path leaks that run
