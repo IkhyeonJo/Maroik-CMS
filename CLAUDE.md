@@ -379,7 +379,11 @@ The code has no `#pragma warning disable`.
 - **One pinned SDK.** `global.json` pins the exact .NET SDK (`rollForward: disable`); CI installs it from that file and every
   Dockerfile's build stage uses the same `sdk:<version>` tag (pinned by `SdkPinArchitectureTests`). The analyzers are build
   errors, so an SDK bump (a newer Roslyn) is one deliberate change to all of these at once. The runtime images (`aspnet` /
-  `runtime`) stay on the floating `10.0` tag so they pick up runtime security patches.
+  `runtime`) stay on the floating `10.0` tag so they pick up runtime security patches. `.github/workflows/sdk-bump.yml` checks
+  weekly for a newer SDK of the pinned channel and opens one pull request that moves all of them together (Dependabot would
+  split global.json and the Dockerfiles into pull requests that each fail the test); it starts CI/CD on that branch itself,
+  since a pull request opened with `GITHUB_TOKEN` triggers no workflow. It needs the repository setting "Allow GitHub Actions
+  to create and approve pull requests".
 
 - **CA2000 stays on the default `dispose_analysis_kind`, not `AllPaths`** (tried 2026-10-16). In `AllPaths` mode it reports
   the construction site of a type whose async `DisposeAsync` awaits e.g. `Task.WhenAll` / `Task.Yield`, even after every owned

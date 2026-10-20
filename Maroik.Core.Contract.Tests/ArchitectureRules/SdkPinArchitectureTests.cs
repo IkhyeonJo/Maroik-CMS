@@ -58,6 +58,29 @@ public class SdkPinArchitectureTests
         Assert.Empty(violations);
     }
 
+    /// <summary>
+    /// The weekly bump (<c>.github/workflows/sdk-bump.yml</c>) rewrites global.json and every <c>&lt;project&gt;/Dockerfile</c>
+    /// in one pull request, so it never opens a bump the test above would fail. It finds the Dockerfiles with that one-level
+    /// glob, so every Dockerfile must sit directly in a project folder.
+    /// </summary>
+    [Fact]
+    public void TheSdkBumpWorkflow_RewritesEveryPinnedFile()
+    {
+        string workflow = File.ReadAllText(Path.Combine(RepositoryPaths.Root, ".github", "workflows", "sdk-bump.yml"));
+        string[] nested =
+        [
+            .. Directory.GetFiles(RepositoryPaths.Root, "Dockerfile", SearchOption.AllDirectories)
+                .Where(f => !RepositoryPaths.HasSegment(f, "bin") && !RepositoryPaths.HasSegment(f, "obj"))
+                .Select(f => Path.GetRelativePath(RepositoryPaths.Root, f))
+                .Where(f => f.Split(Path.DirectorySeparatorChar).Length != 2),
+        ];
+
+        Assert.Contains("global.json", workflow, StringComparison.Ordinal);
+        Assert.Contains("*/Dockerfile", workflow, StringComparison.Ordinal);
+        Assert.Contains("SdkPinArchitectureTests", workflow, StringComparison.Ordinal);
+        Assert.Empty(nested);
+    }
+
     [Fact]
     public void Ci_InstallsTheSdkFromGlobalJson()
     {
