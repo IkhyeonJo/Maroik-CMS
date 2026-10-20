@@ -47,7 +47,6 @@
     <!-- Test-only: FolderRoleArchitectureTests parses the production sources. 5.0.0 is the SDK's own compiler version, so it
          parses every C# 14 construct the build accepts (extension blocks included). -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
-    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageVersion Include="Testcontainers.RabbitMq" Version="4.16.0" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.63.0" />
