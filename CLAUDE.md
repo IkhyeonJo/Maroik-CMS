@@ -136,7 +136,7 @@ Data access and transactions
   only soft-deleted.
 
 Finance
-- An asset's currency label can be edited at any time (e.g. "원" → "KRW"). Never reject a currency
+- An asset's currency label can be edited at any time (e.g. "$" → "USD"). Never reject a currency
   change, whatever the existing balance looks like.
 - A transfer-type expenditure (deposit / investment / public pension / debt repayment), one-off or fixed,
   requires its payment method and its deposit asset to carry the same currency label, on create and on update. Relabelling only one
