@@ -42,6 +42,9 @@ Deployment and schema
   repo-wide comment / style passes; touch it only when the schema mapping itself changes.
 
 Operations and hosting
+- CI/CD (`.github/workflows/ci-cd.yml`) runs on pushes to `main`, pull requests into `main` and on demand only — not on
+  pushes to other branches. A feature branch is checked by opening its pull request (or a manual run). Do not widen the
+  triggers.
 - Maroik only ever runs under docker-compose on Linux (Ubuntu). Behaviour that differs only on a Windows dev box
   (path separators, a test that fails only there) is an environment difference, not a defect.
 - The containers run as root (no `USER` in the Dockerfiles).
@@ -183,6 +186,13 @@ Calendar
   Both are unimplemented on purpose — do not implement delivery and do not drop the table.
 
 Client scripts
+- The front end is server-rendered Razor + jQuery + AdminLTE, chosen on purpose: for a CMS it is the simplest and
+  fastest stack, has no build chain beyond `tsc`, and stays runnable for years. Do not propose replacing it with a SPA
+  framework (React, Vue, Angular, Blazor, ...) or adding a bundler.
+- The vendored client libraries (jQuery, Bootstrap, AdminLTE and its plugins) are not tracked for security patches. The
+  client is never trusted: the strict CSP in `Maroik.Website/Program.cs` (`script-src 'self'`, no `'unsafe-inline'` /
+  `'unsafe-eval'`) blocks injected script, `HtmlContentSanitizerService` strips the `data-*` attributes library gadgets
+  read, and the server re-validates every write. Do not raise an outdated client library or its CVEs as a finding.
 - No bundler, no `import`/`export`: every `site.ts` is an IIFE global script compiled 1:1.
 - `wwwroot/{admin,user,anonymous}` each keep the full vendored AdminLTE plugin set, including plugins no view references
   (datatables, pdfmake, codemirror, jszip, dropzone, flot, raphael, ...). Do not prune them.
@@ -300,10 +310,23 @@ How:
   filters log. Do not log-and-rethrow the same exception at several layers — log it once, where it is handled.
 - **Done also means** every `catch` you added or touched satisfies the rules above and its test is green.
 
-Not enforced by tests: the logging rules above are followed by convention and checked in review. The earlier
-`*LoggingArchitectureTests` / `LoggingRulesSelfTests` (and the `Maroik.Tests.Shared` project that held them) were removed on
-purpose — do not reintroduce them. The only automated logging test left is `DomainArchitectureTests.Domain_ShouldNot_Log`
-(`Maroik.Core.Domain` must not depend on `Microsoft.Extensions.Logging`).
+Enforced by tests where a syntax tree can decide (since 2026-10-20, at the owner's request): `LoggingRuleArchitectureTests`
+(`Maroik.Core.Contract.Tests`) reads every production source with the Roslyn parser (the PostgreSQL scaffold aside) and fails when
+- a `catch` neither logs, nor throws, nor carries a comment (in its block or just before `catch`) saying why it may be silent —
+  so an allowed silent catch (an expected condition turned into a result) always states its reason;
+- a silent `catch` swallows every exception: no type or `Exception` itself, no `when` filter, and the exception is not handed on
+  (a health check's `HealthCheckResult.Unhealthy(..., ex)` hands it on). A comment does not excuse that;
+- an `Error` / `Critical` (Serilog `Error` / `Fatal`) log inside a `catch` that names its exception does not pass that exception
+  first (judged against the innermost enclosing `catch`);
+- a log call passes the caught exception's `.Message`;
+- a template placeholder's name ends in a secret noun (`Password`, `Token`, `Secret`, `Hash`, `ConnectionString`, `Cookie`);
+  `{PasswordReset}` (whether a reset happened) passes;
+- a value passed to a log is a variable or member whose name ends in one of those nouns (`account.HashedPassword`) — this
+  reads names only, so a secret passed under an innocent name is still the reviewer's to catch;
+- `Maroik.Core.Repository` mentions `ILogger` / `ILoggerFactory` / Serilog `Log`.
+`TheRules_FireOnWhatTheyForbid_AndOnlyOnThat` pins each rule against a bad and a good sample. Whether a use case logs at all, at
+which level and with what text stays with its own tests (the TDD order above). `DomainArchitectureTests.Domain_ShouldNot_Log`
+keeps `Maroik.Core.Domain` off `Microsoft.Extensions.Logging`.
 
 The compiler does enforce the template rules (`.editorconfig`, "Logging templates" block, all `error`): CA2254 (the message
 template is a constant — no interpolation or concatenation), CA2017 (its `{Placeholders}` match the arguments) and CA1727
@@ -323,8 +346,16 @@ e.g. `await app.RunAsync()`, `await Log.CloseAndFlushAsync()`, `SaveChangesAsync
 
 Also `error`, by rule ID:
 - **Security** ("Security" block): .NET's injection-taint, XML, antiforgery (CA3147), deserialization (CA23xx) and
-  crypto / TLS / randomness (CA53xx) rules, next to SecurityCodeScan. CA3003 (file path injection) is left off on purpose:
-  SCS0018 covers path traversal and accepts a declared sanitizer, CA3003 offers no such hook. CA2100 is off for
+  crypto / TLS / randomness (CA53xx) rules. CA3003 (file path injection) is left off on purpose: it offers no hook to declare
+  `StoragePath.ResolveWithinRoot` as a sanitizer, so it could only be met with suppressions; path traversal is pinned by
+  `StoragePathTests` and the `FileController` tests, and held in two ways by `FileSystemAccessArchitectureTests`. In
+  `Maroik.FileStorage` (the one service whose paths come from a request) by the type system: `StoragePath` is a value only
+  `StoragePath.ResolveWithinRoot` / `InDirectory` can make, `Helpers/StorageFiles` is the service's only code that names `File`,
+  `Directory`, `FileStream`, `FileInfo` or `DirectoryInfo`, and its members take a `StoragePath`, never a `string` — an unchecked
+  path does not compile into a file access. Everywhere else (paths from server configuration or a fixed folder) each use is
+  listed by file, member and API with the reason its path is safe, and the list must match the code exactly: a new use, even
+  inside a listed member, fails until it is listed after checking where its path comes from. SecurityCodeScan (whose SCS0018 did accept that declaration) was removed
+  on 2026-10-20 — unmaintained since 2022 and the analyzer most likely to stop loading after an SDK bump. CA2100 is off for
   `*.Tests/**` only — the test fixtures create and drop throwaway databases with DDL, whose identifiers cannot be parameters.
 - **String comparison and culture** (CA1304, CA1305, CA1307, CA1309, CA1310, CA1311): `StringComparison.Ordinal` for
   identifiers, paths and test assertions (xUnit's `Assert.Contains(string, string)` included), `CultureInfo.InvariantCulture`
@@ -349,10 +380,16 @@ Also `error`, by rule ID:
 any other rollback failure propagates after the transaction is released and the tracker cleared (pinned by
 `UnitOfWorkTests.*_Rethrows_AFailureThatIsNotADatabaseError_AndStillClearsTheTracker`).
 
-The code has no `#pragma warning disable`. SecurityCodeScan's path-traversal rule (SCS0018) is satisfied by declaring the
-project's own validator as a sanitizer — `Maroik.FileStorage/SecurityCodeScan.config.yml` lists `StoragePath.ResolveWithinRoot`
-(an `AdditionalFiles` item) — not by suppressing it; such a file declares validators and switches no rule off. A
-sanitizer entry must be proven to matter: rename its method in the file and the SCS0018 error must come back.
+The code has no `#pragma warning disable`.
+
+- **One pinned SDK.** `global.json` pins the exact .NET SDK (`rollForward: disable`); CI installs it from that file and every
+  Dockerfile's build stage uses the same `sdk:<version>` tag (pinned by `SdkPinArchitectureTests`). The analyzers are build
+  errors, so an SDK bump (a newer Roslyn) is one deliberate change to all of these at once. The runtime images (`aspnet` /
+  `runtime`) stay on the floating `10.0` tag so they pick up runtime security patches. `.github/workflows/sdk-bump.yml` checks
+  weekly for a newer SDK of the pinned channel and opens one pull request that moves all of them together (Dependabot would
+  split global.json and the Dockerfiles into pull requests that each fail the test); it starts CI/CD on that branch itself,
+  since a pull request opened with `GITHUB_TOKEN` triggers no workflow. It needs the repository setting "Allow GitHub Actions
+  to create and approve pull requests".
 
 - **CA2000 stays on the default `dispose_analysis_kind`, not `AllPaths`** (tried 2026-10-16). In `AllPaths` mode it reports
   the construction site of a type whose async `DisposeAsync` awaits e.g. `Task.WhenAll` / `Task.Yield`, even after every owned

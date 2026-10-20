@@ -74,7 +74,7 @@ public class FileController(IFileValidationService fileValidationService, IOptio
                 return NotFound("File not found");
             }
 
-            if (!System.IO.File.Exists(resolvedPath))
+            if (!StorageFiles.Exists(resolvedPath))
             {
                 logger.LogWarning("File download failed: file not found. FilePath={FilePath} CorrelationId={CorrelationId}", filePath, correlationId);
                 return NotFound("File not found");
@@ -82,10 +82,7 @@ public class FileController(IFileValidationService fileValidationService, IOptio
 
             // Streamed straight from disk (not read into memory first). Opened here, inside the try,
             // so an unreadable file is still answered as "Invalid file" below.
-            // resolvedPath comes from StoragePath.ResolveWithinRoot above, which returns null for any path
-            // outside the storage root (declared as an SCS0018 sanitizer in SecurityCodeScan.config.yml).
-            FileStream? fileStream = new(resolvedPath, FileMode.Open, FileAccess.Read, FileShare.Read,
-                bufferSize: 81920, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            Stream? fileStream = StorageFiles.OpenRead(resolvedPath);
             try
             {
                 if (!_contentTypeProvider.TryGetContentType(sanitizedFileName, out var contentType))

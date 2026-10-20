@@ -189,6 +189,25 @@ public class FileValidationServiceTests
     // -- Invalid / empty file ---------------------------------------------------
 
     /// <summary>Validate and save async returns invalid file, when file is null.</summary>
+    /// <summary>
+    /// An upload whose name is not a plain file name ("..", ".") is refused before anything else is checked or written: joined to
+    /// the target directory it would name the directory itself or its parent.
+    /// </summary>
+    [Theory]
+    [InlineData("..")]
+    [InlineData(".")]
+    public async Task ValidateAndSaveAsync_ReturnsInvalidFileName_WhenTheNameIsNotAPlainFileName(string fileName)
+    {
+        var scan = CleanScanMock();
+        var service = new FileValidationService(scan.Object, DefaultSettings());
+
+        var (success, error) = await service.ValidateAndSaveAsync(MakeFormFile([0xFF, 0xD8, 0xFF], fileName), CreateTempDir());
+
+        Assert.False(success);
+        Assert.Equal("Invalid file name.", error);
+        scan.VerifyNoOtherCalls();
+    }
+
     [Fact]
     public async Task ValidateAndSaveAsync_ReturnsInvalidFile_WhenFileIsNull()
     {

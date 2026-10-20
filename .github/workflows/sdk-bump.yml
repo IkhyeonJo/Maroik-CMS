@@ -1,0 +1,109 @@
+name: SDK bump
+
+# The .NET SDK is pinned exactly (global.json, rollForward: disable) and every Dockerfile build stage uses the same
+# sdk:<version> tag (SdkPinArchitectureTests). Pinning stops a new SDK from breaking an unchanged build, but nothing would
+# pick up a new one either. Once a week this workflow looks up the newest SDK of the pinned channel, rewrites global.json
+# and every */Dockerfile together, checks the result with SdkPinArchitectureTests and opens one pull request. Dependabot
+# cannot do this: it bumps global.json and the Dockerfiles in separate pull requests, each of which would fail that test.
+#
+# A pull request opened with GITHUB_TOKEN does not start the pull_request workflows, so this one starts CI/CD on the bump
+# branch itself (workflow_dispatch is the exception GitHub allows). The repository setting "Allow GitHub Actions to create
+# and approve pull requests" must be on.
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"   # Mondays 00:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write        # push the bump branch
+  pull-requests: write   # open the pull request
+  actions: write         # start CI/CD on the bump branch
+
+concurrency:
+  group: sdk-bump
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Find the newest SDK of the pinned channel
+        id: sdk
+        run: |
+          current=$(python3 -c 'import json; print(json.load(open("global.json"))["sdk"]["version"])')
+          channel=$(cut -d. -f1,2 <<< "$current")
+          latest=$(curl -fsSL "https://builds.dotnet.microsoft.com/dotnet/release-metadata/$channel/releases.json" \
+            | python3 -c 'import json, sys; print(json.load(sys.stdin)["latest-sdk"])')
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest"   >> "$GITHUB_OUTPUT"
+          echo "branch=deps/dotnet-sdk-$latest" >> "$GITHUB_OUTPUT"
+          echo "Pinned $current, newest $channel SDK $latest"
+
+      # Skips (successfully) when the pin is current, when the bump branch is already open, or when mcr.microsoft.com does
+      # not serve the new SDK image yet (the release metadata can list an SDK first): next week's run tries again.
+      - name: Skip when current, already proposed, or not yet published as an image
+        id: gate
+        env:
+          CURRENT: ${{ steps.sdk.outputs.current }}
+          LATEST: ${{ steps.sdk.outputs.latest }}
+          BRANCH: ${{ steps.sdk.outputs.branch }}
+        run: |
+          if [ "$CURRENT" = "$LATEST" ]; then
+            echo "SDK $CURRENT is current."; echo "run=false" >> "$GITHUB_OUTPUT"
+          elif git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null; then
+            echo "$BRANCH already exists."; echo "run=false" >> "$GITHUB_OUTPUT"
+          elif ! curl -fsSL https://mcr.microsoft.com/v2/dotnet/sdk/tags/list \
+              | python3 -c 'import json, os, sys; sys.exit(0 if os.environ["LATEST"] in json.load(sys.stdin)["tags"] else 1)'; then
+            echo "::notice::mcr.microsoft.com/dotnet/sdk:$LATEST is not published yet"; echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Rewrite global.json and the Dockerfiles
+        if: steps.gate.outputs.run == 'true'
+        env:
+          CURRENT: ${{ steps.sdk.outputs.current }}
+          LATEST: ${{ steps.sdk.outputs.latest }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          with open("global.json") as f:
+              data = json.load(f)
+          data["sdk"]["version"] = os.environ["LATEST"]
+          with open("global.json", "w") as f:
+              json.dump(data, f, indent=2)
+              f.write("\n")
+          PY
+          sed -i -E "s#^(FROM mcr\.microsoft\.com/dotnet/sdk:)$CURRENT( |$)#\1$LATEST\2#" */Dockerfile
+          git diff --stat
+
+      - uses: actions/setup-dotnet@v5
+        if: steps.gate.outputs.run == 'true'
+        with:
+          global-json-file: global.json
+
+      - name: Check the pins agree (SdkPinArchitectureTests)
+        if: steps.gate.outputs.run == 'true'
+        run: dotnet test --project Maroik.Core.Contract.Tests --filter-class "*SdkPinArchitectureTests"
+
+      - name: Open the pull request and start CI/CD on it
+        if: steps.gate.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT: ${{ steps.sdk.outputs.current }}
+          LATEST: ${{ steps.sdk.outputs.latest }}
+          BRANCH: ${{ steps.sdk.outputs.branch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git commit -am "build: bump the .NET SDK to $LATEST"
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" --title "build: bump the .NET SDK to $LATEST" --body \
+            "Moves the pinned .NET SDK from $CURRENT to $LATEST in global.json and every Dockerfile build stage. The analyzers run as build errors, so a new SDK can bring new diagnostics: CI/CD was started on this branch and must pass before merging."
+          gh workflow run ci-cd.yml --ref "$BRANCH"

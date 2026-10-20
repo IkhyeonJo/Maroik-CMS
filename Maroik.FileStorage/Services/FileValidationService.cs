@@ -36,7 +36,11 @@ public class FileValidationService(IClamavClient clamavClient, IOptions<FileStor
         var safeDir = StoragePath.ResolveWithinRoot(settings.Value.StorageRootPath, filePath);
         if (safeDir == null)
             return (false, "Invalid file path.");
-        var safePath = Path.Combine(safeDir, fileName);
+        // The file joins the confined directory only under a plain file name ("." / ".." would name the directory or its
+        // parent), so the target stays inside it.
+        var safePath = safeDir.InDirectory(fileName);
+        if (safePath == null)
+            return (false, "Invalid file name.");
 
         if (!_allowedExtensions.Contains(ext))
             return (false, "Unsupported file extension.");
@@ -61,41 +65,22 @@ public class FileValidationService(IClamavClient clamavClient, IOptions<FileStor
         if (ext == ".zip" && IsZipEncrypted(memStream))
             return (false, "Encrypted ZIP files are not allowed.");
 
-        if (!Directory.Exists(safeDir))
-            Directory.CreateDirectory(safeDir);
+        StorageFiles.CreateDirectory(safeDir);
 
         // Every caller generates a fresh GUID-based file name per upload (see BoardService/
         // CalendarService/AttachmentContentService), so a path collision here means something
         // is wrong upstream — fail loudly instead of silently overwriting existing data.
-        if (File.Exists(safePath))
+        if (StorageFiles.Exists(safePath))
             return (false, "A file already exists at the target path.");
 
-        // safePath is built from Path.GetFileName(file.FileName) combined into safeDir above, and its extension
-        // was checked against the allow-list, so it cannot escape the target directory.
-        await using var stream = new FileStream(safePath, FileMode.CreateNew);
+        await using var stream = StorageFiles.CreateNew(safePath);
         memStream.Position = 0;
         await memStream.CopyToAsync(stream);
         await stream.FlushAsync();
 
-        SetReadableFileMode(safePath);
+        StorageFiles.MakeReadable(safePath);
 
         return (true, null);
-    }
-
-    /// <summary>
-    /// Sets mode 644 on the newly written file so the process serving downloads can read it
-    /// regardless of the container's umask. Uses the framework API rather than shelling out to
-    /// <c>/bin/chmod</c>; a no-op on Windows (dev only — the deployment target is Linux).
-    /// </summary>
-    private static void SetReadableFileMode(string filePath)
-    {
-        if (OperatingSystem.IsWindows())
-            return;
-
-        File.SetUnixFileMode(
-            filePath,
-            UnixFileMode.UserRead | UnixFileMode.UserWrite |
-            UnixFileMode.GroupRead | UnixFileMode.OtherRead);
     }
 
     /// <summary>

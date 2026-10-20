@@ -42,7 +42,7 @@ public class StoragePathTests
     [Fact]
     public void ResolveWithinRoot_ResolvesRelativePath_WhenItStaysInsideRoot()
     {
-        string? resolved = StoragePath.ResolveWithinRoot(_root, "upload/Management/Profile/Avatar/photo.png");
+        string? resolved = StoragePath.ResolveWithinRoot(_root, "upload/Management/Profile/Avatar/photo.png")?.FullPath;
 
         Assert.Equal(Path.Combine(_root, "Management", "Profile", "Avatar", "photo.png"), resolved);
     }
@@ -51,7 +51,7 @@ public class StoragePathTests
     [Fact]
     public void ResolveWithinRoot_ReturnsRootItself_WhenRequestedPathIsExactlyTheRoot()
     {
-        string? resolved = StoragePath.ResolveWithinRoot(_root, "upload");
+        string? resolved = StoragePath.ResolveWithinRoot(_root, "upload")?.FullPath;
 
         Assert.Equal(_root, resolved);
     }
@@ -60,7 +60,7 @@ public class StoragePathTests
     [Fact]
     public void ResolveWithinRoot_ResolvesRelativePath_WhenDotDotSegmentStaysInsideRoot()
     {
-        string? resolved = StoragePath.ResolveWithinRoot(_root, "upload/sub/../file.txt");
+        string? resolved = StoragePath.ResolveWithinRoot(_root, "upload/sub/../file.txt")?.FullPath;
 
         Assert.Equal(Path.Combine(_root, "file.txt"), resolved);
     }
@@ -69,7 +69,7 @@ public class StoragePathTests
     [Fact]
     public void ResolveWithinRoot_IgnoresTrailingSeparator_OnUploadRoot()
     {
-        string? resolved = StoragePath.ResolveWithinRoot(_root + Path.DirectorySeparatorChar, "upload/file.txt");
+        string? resolved = StoragePath.ResolveWithinRoot(_root + Path.DirectorySeparatorChar, "upload/file.txt")?.FullPath;
 
         Assert.Equal(Path.Combine(_root, "file.txt"), resolved);
     }
@@ -121,5 +121,36 @@ public class StoragePathTests
     public void ResolveWithinRoot_ReturnsNull_ForPathWithEmbeddedNulCharacter()
     {
         Assert.Null(StoragePath.ResolveWithinRoot(_root, "upload/file\0.txt"));
+    }
+
+    // -- A file inside a confined directory -----------------------------------------------
+
+    /// <summary>A plain file name joins the confined directory it is asked of.</summary>
+    [Fact]
+    public void InDirectory_JoinsAPlainFileName()
+    {
+        StoragePath? directory = StoragePath.ResolveWithinRoot(_root, "upload/Board/2026");
+
+        Assert.Equal(Path.Combine(_root, "Board", "2026", "photo.png"), directory?.InDirectory("photo.png")?.FullPath);
+    }
+
+    /// <summary>
+    /// A name that is not a plain file name is refused, so the file cannot leave its directory: "." / ".." (which would
+    /// name the directory itself or climb out of it), a name carrying a directory part, and a blank name.
+    /// </summary>
+    [Theory]
+    [InlineData("..")]
+    [InlineData(".")]
+    [InlineData("sub/photo.png")]
+    [InlineData("../photo.png")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void InDirectory_ReturnsNull_ForANameThatIsNotAPlainFileName(string? fileName)
+    {
+        StoragePath? directory = StoragePath.ResolveWithinRoot(_root, "upload/Board/2026");
+
+        Assert.NotNull(directory);
+        Assert.Null(directory.InDirectory(fileName));
     }
 }

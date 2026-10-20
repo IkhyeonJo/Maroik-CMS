@@ -37,24 +37,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AngleSharp" />
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="DocumentFormat.OpenXml" />
-    <PackageReference Include="HtmlAgilityPack" />
-    <PackageReference Include="HtmlSanitizer" />
-    <PackageReference Include="Magick.NET-Q8-AnyCPU" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" />
     <PackageReference Include="NonFactors.Grid.Mvc6" />
-    <PackageReference Include="NuGet.Packaging" />
-    <PackageReference Include="NuGet.Protocol" />
-    <PackageReference Include="SecurityCodeScan.VS2019">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+  </ItemGroup>
+
+  <!--
+    Razor runtime compilation is a dev-box convenience (edit a .cshtml, refresh): launchSettings.json switches it on through
+    ASPNETCORE_HOSTINGSTARTUPASSEMBLIES, and no code calls AddRazorRuntimeCompilation. A Release build (every Docker image)
+    leaves it out, so the published app does not carry the Roslyn compiler.
+  -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" />
   </ItemGroup>
 
   <ItemGroup>
