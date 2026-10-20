@@ -93,7 +93,7 @@ services:
     # No healthcheck here — the signature-DB load makes first readiness slow and
     # nothing uses `depends_on` on it — but it does auto-restart.
     clamav:
-      image: clamav/clamav:latest
+      image: clamav/clamav:1.5         # pinned like the other images (major.minor; patch releases still arrive)
       container_name: Maroik.Clamav
       logging: *default-logging
       restart: unless-stopped
