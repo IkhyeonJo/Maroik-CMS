@@ -1,10 +1,17 @@
-using HtmlAgilityPack;
+using AngleSharp.Dom;
+using AngleSharp.Html.Parser;
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 
 namespace Maroik.Core.Service.Services;
 
-/// <summary>HtmlAgilityPack-backed implementation of <see cref="IHtmlParserService"/>.</summary>
+/// <summary>AngleSharp-backed implementation of <see cref="IHtmlParserService"/>.</summary>
+/// <remarks>
+/// AngleSharp is the parser <see cref="HtmlContentSanitizerService"/> (Ganss.Xss) sanitizes with, and it follows the HTML5
+/// parsing algorithm the browser uses. Reading the stored HTML with the same algorithm means this service patches exactly the
+/// &lt;img&gt; elements the sanitizer judged and the browser will build — no second parser that could disagree about what is an
+/// element (raw text, foster parenting, ...). The HTML is parsed as a fragment in a &lt;body&gt;, as it is shown.
+/// </remarks>
 public class HtmlParserService : IHtmlParserService
 {
     /// <summary>
@@ -21,9 +28,8 @@ public class HtmlParserService : IHtmlParserService
         Func<string, CancellationToken, Task<HtmlImgPatch?>> patchFactory,
         CancellationToken ct = default)
     {
-        var doc = new HtmlDocument();
-        doc.LoadHtml(html);
-        List<HtmlNode> imgTags = [.. doc.DocumentNode.Descendants("img")];
+        using IDocument document = ParseIntoBody(html, out IElement body);
+        List<IElement> imgTags = [.. body.QuerySelectorAll("img")];
 
         // Fetch image patches concurrently (patchFactory typically makes a network call to the
         // file-storage service) but cap the fan-out so a many-image post can't storm that service.
@@ -51,22 +57,22 @@ public class HtmlParserService : IHtmlParserService
         {
             HtmlImgPatch? patch = patches[i];
             if (patch == null) continue;
-            HtmlNode imgTag = imgTags[i];
+            IElement imgTag = imgTags[i];
             if (patch.Remove) { imgTag.Remove(); continue; }
-            if (patch.NewAlt != null) imgTag.SetAttributeValue("alt", patch.NewAlt);
-            if (patch.DataFile != null) imgTag.SetAttributeValue("data-file", patch.DataFile);
-            if (patch.DataContentType != null) imgTag.SetAttributeValue("data-contenttype", patch.DataContentType);
+            if (patch.NewAlt != null) imgTag.SetAttribute("alt", patch.NewAlt);
+            if (patch.DataFile != null) imgTag.SetAttribute("data-file", patch.DataFile);
+            if (patch.DataContentType != null) imgTag.SetAttribute("data-contenttype", patch.DataContentType);
         }
 
-        return (doc.DocumentNode.OuterHtml, imgTags.Count > 0);
+        return (body.InnerHtml, imgTags.Count > 0);
 
         // Runs patchFactory for one <img>'s alt value once a gate slot is free, releasing the slot
         // afterwards, so no more than MaxConcurrentPatchFetches fetches are ever in flight.
-        async Task<HtmlImgPatch?> FetchPatchAsync(HtmlNode imgTag)
+        async Task<HtmlImgPatch?> FetchPatchAsync(IElement imgTag)
         {
             // ReSharper disable once AccessToDisposedClosure
             await gate.WaitAsync(ct);
-            try { return await patchFactory(imgTag.GetAttributeValue("alt", ""), ct); }
+            try { return await patchFactory(imgTag.GetAttribute("alt") ?? "", ct); }
             // ReSharper disable once AccessToDisposedClosure
             finally { _ = gate.Release(); }
         }
@@ -75,20 +81,31 @@ public class HtmlParserService : IHtmlParserService
     /// <inheritdoc />
     public string TransformImageAttributes(string html, Func<string, HtmlImgPatch?> patchFactory)
     {
-        var doc = new HtmlDocument();
-        doc.LoadHtml(html);
+        using IDocument document = ParseIntoBody(html, out IElement body);
 
-        // Materialize first: a patch may remove its node, which would invalidate the lazy
-        // Descendants() enumerator mid-iteration.
-        foreach (HtmlNode imgTag in doc.DocumentNode.Descendants("img").ToList())
+        // Materialize first: a patch may remove its node while the loop is still going.
+        foreach (IElement imgTag in body.QuerySelectorAll("img").ToList())
         {
-            string alt = imgTag.GetAttributeValue("alt", "");
+            string alt = imgTag.GetAttribute("alt") ?? "";
             HtmlImgPatch? patch = patchFactory(alt);
             if (patch == null) continue;
             if (patch.Remove) { imgTag.Remove(); continue; }
-            if (patch.NewAlt != null) imgTag.SetAttributeValue("alt", patch.NewAlt);
+            if (patch.NewAlt != null) imgTag.SetAttribute("alt", patch.NewAlt);
         }
 
-        return doc.DocumentNode.OuterHtml;
+        return body.InnerHtml;
+    }
+
+    /// <summary>
+    /// Parses <paramref name="html"/> as the content of a &lt;body&gt; (the HTML5 fragment algorithm) and returns the owning
+    /// document (the caller disposes it), with <paramref name="body"/> holding the parsed nodes.
+    /// </summary>
+    private static IDocument ParseIntoBody(string html, out IElement body)
+    {
+        var parser = new HtmlParser();
+        IDocument document = parser.ParseDocument(string.Empty);
+        body = document.CreateElement("body");
+        body.Append([.. parser.ParseFragment(html, body)]);
+        return document;
     }
 }

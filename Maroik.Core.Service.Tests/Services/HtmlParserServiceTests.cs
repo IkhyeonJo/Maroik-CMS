@@ -144,6 +144,67 @@ public class HtmlParserServiceTests
         Assert.Contains("alt=\"clean\"", html, StringComparison.Ordinal);
     }
 
+    // -- Parsed the way the browser (and the sanitizer) parse it ------------------------------
+    // The stored HTML went through HtmlContentSanitizerService, whose parser (AngleSharp) follows the HTML5 parsing algorithm, as
+    // the browser does. This service must read the markup the same way: a parser that disagrees about what is an element would
+    // patch (and re-serialize) markup the sanitizer judged as something else.
+
+    /// <summary>
+    /// Inside a &lt;textarea&gt; (RCDATA) "&lt;img&gt;" is text, not an element: the sanitizer left it alone as text, so it is not
+    /// handed to the patch factory either.
+    /// </summary>
+    [Fact]
+    public void TransformImageAttributes_LeavesImgMarkupInsideATextareaAlone_AsTheBrowserReadsItAsText()
+    {
+        List<string> alts = [];
+
+        _sut.TransformImageAttributes("<textarea><img alt=\"inside\"></textarea>", alt => { alts.Add(alt); return null; });
+
+        Assert.Empty(alts);
+    }
+
+    /// <summary>The async overload reads a &lt;textarea&gt;'s content as text too.</summary>
+    [Fact]
+    public async Task TransformImageAttributesAsync_LeavesImgMarkupInsideATextareaAlone_AsTheBrowserReadsItAsText()
+    {
+        (_, bool hasImages) = await _sut.TransformImageAttributesAsync("<textarea><img alt=\"inside\"></textarea>",
+            (_, _) => Task.FromResult<HtmlImgPatch?>(new HtmlImgPatch(DataFile: "x")), TestContext.Current.CancellationToken);
+
+        Assert.False(hasImages);
+    }
+
+    /// <summary>
+    /// An &lt;img&gt; directly inside a &lt;table&gt; is moved in front of the table by the HTML5 algorithm (foster parenting); the
+    /// output is the tree the browser builds, not the source text.
+    /// </summary>
+    [Fact]
+    public void TransformImageAttributes_SerializesTheTreeTheBrowserBuilds()
+    {
+        string html = _sut.TransformImageAttributes("<table><img alt=\"a\"></table>", _ => new HtmlImgPatch(NewAlt: "A"));
+
+        Assert.Equal("<img alt=\"A\"><table></table>", html);
+    }
+
+    /// <summary>
+    /// A post's &lt;img&gt; carries its file's Data Protection-protected storage path in <c>alt</c> ("CfDJ8…", base64url). The
+    /// factory receives it exactly, and an untouched tag keeps it exactly, in both overloads.
+    /// </summary>
+    [Fact]
+    public async Task TransformImageAttributes_PassesAndKeepsAProtectedAltValueExactly()
+    {
+        const string protectedAlt = "CfDJ8HTAFH7hn0tPj9LZyUduDPGx1XFZ7ozclO1fPW6E-VxIpDx7wiAkHWtmatuIc6nKb-BHOrEF5IkFem_FZTfR3KQw-_khgyuCgpLjCjdWWtHwCPW74M1wq6y5g_X-V3E2KZ8qD-PSsl1RS0HJdh_H7tMbofS4kjSPYiUZKaZ266WZXgfGxwxxkAIx553m5ZeXr_XAClEg_FeL_ggbVMHZMg4Um7bbU3d0LazJ0-MU0TLu";
+        string source = $"<p>text</p><p><img style=\"width: 50%;\" alt=\"{protectedAlt}\"></p>";
+        List<string> alts = [];
+
+        string sync = _sut.TransformImageAttributes(source, alt => { alts.Add(alt); return null; });
+        (string async, _) = await _sut.TransformImageAttributesAsync(source,
+            (alt, _) => { alts.Add(alt); return Task.FromResult<HtmlImgPatch?>(null); }, TestContext.Current.CancellationToken);
+
+        Assert.Equal([protectedAlt, protectedAlt], alts);
+        Assert.Equal(source, sync);
+        Assert.Equal(source, async);
+    }
+
     // -- Images without alt, and more images than the fetch limit ----------------------------
 
     /// <summary>An &lt;img&gt; without an alt reaches the async patch factory as an empty string.</summary>

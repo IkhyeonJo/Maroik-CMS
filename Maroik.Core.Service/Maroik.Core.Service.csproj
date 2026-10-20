@@ -9,7 +9,6 @@
   <ItemGroup>
     <PackageReference Include="AngleSharp" />
     <PackageReference Include="BCrypt.Net-Next" />
-    <PackageReference Include="HtmlAgilityPack" />
     <PackageReference Include="HtmlSanitizer" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.Abstractions" />
     <PackageReference Include="Magick.NET-Q8-AnyCPU" />
