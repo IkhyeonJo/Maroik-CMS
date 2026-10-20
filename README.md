@@ -354,22 +354,84 @@ the database, Valkey (sessions) and RabbitMQ keep running. A deploy whose pull f
 and is not retried. A release that changes `Maroik.DB/` (the schema) is not deployed automatically: it is logged, and the
 full deploy below is run by hand, because it rebuilds the database from `Init.sql` and restores the backup.
 
-### Server setup (Ubuntu Server 24.04)
-1. Clone this repository to `/home/ubuntu/Maroik`.
-2. Add the server-only files, all git-ignored:
-   - `.env.prod`: copy `.env.prod.example` and replace its dummy values (database, RabbitMQ and SMTP credentials,
-     `EXTERNAL_DRIVE_UUID`, `TUNNEL_TOKEN`).
-   - `Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql`: the `Init.sql` of the latest backup, or a copy of
-     `Debugging/Init.sql` (same schema, demo seed data) on a new server.
-   - `Maroik.FileStorage/upload/`: the uploaded attachments of the latest backup (empty on a new server).
+## How to Deploy
 
-   `docker-compose.prod.yml` (the three app services use `image: ghcr.io/ikhyeonjo/maroik-*:${MAROIK_TAG}`),
-   `Maroik.Crontab/` and `Maroik.DeployOps/` are part of the repository.
-3. Run `Maroik.DeployOps/Deploy.sh`: it checks out the latest `main` whose images were published, pulls them, starts the
-   whole stack, mounts the backup drive, installs the cron jobs (hourly backup, resource monitoring, auto deploy) and
-   closes every inbound port.
-4. From then on, merged changes reach production by themselves; a schema change needs `Maroik.DeployOps/Undeploy.sh`,
-   `Deploy.sh` and a restore of the latest backup.
+The server runs Ubuntu Server 24.04 and Maroik lives in `/home/ubuntu/Maroik`. Run every command below **as `ubuntu`,
+not with `sudo`**: `Deploy.sh` refuses to run as root, because the clone must belong to `ubuntu` (the scripts call `sudo`
+themselves where they need it).
+
+`Deploy.sh` needs three server-only things the repository does not carry (all git-ignored). It checks for them before it
+does anything and lists whatever is missing:
+
+| Item | What it is |
+|---|---|
+| `.env.prod` | Passwords and settings: copy `.env.prod.example` and fill in the database, RabbitMQ and SMTP credentials, `TUNNEL_TOKEN` (Cloudflare Zero Trust > Networks > Tunnels > connector token), `EXTERNAL_DRIVE_UUID` (`sudo blkid`) and `BACKUP_BASE_DIR`. |
+| `Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql` | The database the stack starts from: a backup's `pg_dump`, or `Debugging/Init.sql` (same schema, demo data) on a new server. |
+| `Maroik.FileStorage/upload/` | Uploaded attachments. Empty is allowed only on a new server: `Deploy.sh` asks first (`ALLOW_EMPTY_UPLOAD=1` skips the question). |
+
+Every backup `Maroik.Crontab/Backup.sh` makes (`Maroik-Backup-YYYY-MM-DD-HH-MM-SS.tar.xz`, hourly) holds exactly these
+three, laid out like the clone, so extracting it into the clone puts each one where `Deploy.sh` looks. The archives are
+on the backup drive in `BACKUP_BASE_DIR` (`/home/ubuntu/512GB/Maroik-Backup` by default), and the newest one is also kept
+next to the clone, in `/home/ubuntu`.
+
+`Deploy.sh` then checks out the newest `main` whose CI `publish` job succeeded, pulls its three images, starts the whole
+stack, mounts the backup drive, installs the cron jobs (hourly backup, resource monitoring, auto deploy) and closes every
+inbound port. From then on, merged changes reach production by themselves (`AutoDeploy.sh`, every five minutes).
+
+### Restore from a backup (a new server, or after losing the old one)
+
+```bash
+# 1. Mount the backup drive to reach the archives (Deploy.sh mounts it for good later; `sudo blkid` shows the UUID)
+sudo mkdir -p /home/ubuntu/512GB
+sudo mount UUID=<backup drive UUID> /home/ubuntu/512GB
+ls /home/ubuntu/512GB/Maroik-Backup/            # pick the newest Maroik-Backup-YYYY-MM-DD-HH-MM-SS.tar.xz
+
+# 2. Clone, then extract the backup over the clone: .env.prod, the Production Init.sql and the uploads land in place
+git clone https://github.com/IkhyeonJo/Maroik.git /home/ubuntu/Maroik
+tar xJf /home/ubuntu/512GB/Maroik-Backup/Maroik-Backup-YYYY-MM-DD-HH-MM-SS.tar.xz --strip-components=1 -C /home/ubuntu/Maroik
+
+# 3. Deploy
+cd /home/ubuntu/Maroik && bash Maroik.DeployOps/Deploy.sh
+```
+
+On a different machine, check `EXTERNAL_DRIVE_UUID` in the restored `.env.prod` against `sudo blkid` before step 3.
+
+### First deploy (a new server, no backup)
+
+```bash
+git clone https://github.com/IkhyeonJo/Maroik.git /home/ubuntu/Maroik
+cd /home/ubuntu/Maroik
+
+cp .env.prod.example .env.prod                  # then edit it: replace every dummy value (see the table above)
+cp Maroik.DB/PostgreSQL/SQL_Init_Script/Debugging/Init.sql Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql
+
+ALLOW_EMPTY_UPLOAD=1 bash Maroik.DeployOps/Deploy.sh
+```
+
+### Redeploy after a schema change
+
+A release that changes `Maroik.DB/` is not deployed automatically (`AutoDeploy.sh` logs it and waits), because the database
+has to be rebuilt from `Init.sql`. `Undeploy.sh` removes **every** Docker volume, the database's included, so take a fresh
+backup right before it:
+
+```bash
+cd /home/ubuntu/Maroik
+
+# 1. A fresh backup of the running server (the newest archive is also left in /home/ubuntu)
+bash Maroik.Crontab/Backup.sh
+
+# 2. Take the stack down: containers, volumes (the database too), images and cron jobs; unmounts the backup drive
+bash Maroik.DeployOps/Undeploy.sh
+
+# 3. Put the backup back in place
+tar xJf /home/ubuntu/Maroik-Backup-YYYY-MM-DD-HH-MM-SS.tar.xz --strip-components=1 -C /home/ubuntu/Maroik
+
+# 4. Bring Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql up to the new schema: make the same change the release
+#    made to the tracked Init.sql variants (the backup's dump still has the old schema)
+
+# 5. Deploy the new release
+bash Maroik.DeployOps/Deploy.sh
+```
 
 ## Screenshots
 
