@@ -197,8 +197,7 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
                     entryOptions),
                 cache.SetAsync(AnonymousCategoriesCacheKey, JsonSerializer.SerializeToUtf8Bytes(anonymousCategories),
                     entryOptions),
-                cache.SetAsync(AnonymousSubCategoriesCacheKey,
-                    JsonSerializer.SerializeToUtf8Bytes(anonymousSubCategories),
+                cache.SetAsync(AnonymousSubCategoriesCacheKey, JsonSerializer.SerializeToUtf8Bytes(anonymousSubCategories),
                     entryOptions));
         }
 
@@ -252,19 +251,18 @@ public class AuthorizationFilter(IMenuService menuService, IDistributedCache cac
                 (currentControllerName == "Account" && currentActionName == "Logout") ||
                 (currentControllerName == "Exception" && currentActionName == "Error");
 
-            if (!isAllowedWhileForced)
+            if (isAllowedWhileForced)
+                return; // Result set above when refused; the allowed actions pass through
+            if (string.Equals(currentRequestMethod, "GET", StringComparison.OrdinalIgnoreCase))
             {
-                if (string.Equals(currentRequestMethod, "GET", StringComparison.OrdinalIgnoreCase))
-                {
-                    // The ordinary forced-change flow (every page leads to the change-password form): not a denial.
-                    context.Result = new RedirectResult("/Management/Profile");
-                }
-                else
-                {
-                    logger.LogWarning("Access denied: {Method} {Controller}/{Action} for {Account} while a password change is pending",
-                        currentRequestMethod, currentControllerName, currentActionName, loggedInAccount.Email);
-                    context.Result = new RedirectResult("/Dashboard/AnonymousIndex");
-                }
+                // The ordinary forced-change flow (every page leads to the change-password form): not a denial.
+                context.Result = new RedirectResult("/Management/Profile");
+            }
+            else
+            {
+                logger.LogWarning("Access denied: {Method} {Controller}/{Action} for {Account} while a password change is pending",
+                    currentRequestMethod, currentControllerName, currentActionName, loggedInAccount.Email);
+                context.Result = new RedirectResult("/Dashboard/AnonymousIndex");
             }
 
             return; // Result set above when refused; the allowed actions pass through
