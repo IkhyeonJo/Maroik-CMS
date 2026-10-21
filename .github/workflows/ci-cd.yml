@@ -52,7 +52,7 @@ jobs:
       # node_modules is present, so the Website build runs tsc (wwwroot/**/site.js is needed by the E2E suite).
       # Client-script tests run in their own step below, so they are switched off inside the build.
       - name: Build (warnings are errors)
-        run: dotnet build Maroik.sln -p:RunClientScriptTests=false
+        run: dotnet build Maroik.slnx -p:RunClientScriptTests=false
 
       - name: Client-script tests (Vitest + jsdom)
         working-directory: Maroik.Website
