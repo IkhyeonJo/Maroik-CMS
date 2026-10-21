@@ -480,7 +480,7 @@ don't leave them for later or treat them as optional:
   (`Maroik.Core.Domain` → `Maroik.Core.Domain.Tests`, `Maroik.Core.Service` →
   `Maroik.Core.Service.Tests`, etc. — see the list under `ls -d */ | grep Tests`), **and**
   `Maroik.Website/TypeScripts/**/site.ts` has its own counterpart,
-  `Maroik.Website/TypeScripts.Tests/` (Vitest + jsdom; no `.csproj`, not in `Maroik.sln`,
+  `Maroik.Website/TypeScripts.Tests/` (Vitest + jsdom; no `.csproj`, not in `Maroik.slnx`,
   run via `npm test` from `Maroik.Website/` — see `TypeScripts.Tests/README.md`). New or
   changed behavior in a source project **or in a `.ts` file** gets corresponding tests
   added in its `.Tests` project in the same change, not deferred.
@@ -529,7 +529,7 @@ mocks when a test is about how the code behaves against PostgreSQL / RabbitMQ.
 bridge, the browser aborts a request in flight (`net::ERR_NETWORK_CHANGED`), and `OtherTestcontainersTests` expects no other
 session to be running. A solution-wide run must therefore run the modules one at a time:
 
-    dotnet test --solution Maroik.sln --max-parallel-test-modules 1
+    dotnet test --solution Maroik.slnx --max-parallel-test-modules 1
 
 ## Mutation testing (on demand)
 
@@ -558,8 +558,8 @@ the `.csproj` project- and package-reference graph itself. They run under
 `dotnet test`, so a violation fails the test run. Keep them green; extend them
 when the layer model changes.
 
-**Every project — including a new one — must be registered in `Maroik.sln` under the matching solution folder** (`src`
-for shipped code, `tests` for `*.Tests`): `dotnet sln Maroik.sln add <csproj> --solution-folder tests`. Enforced by
+**Every project — including a new one — must be registered in `Maroik.slnx` under the matching solution folder** (`src`
+for shipped code, `tests` for `*.Tests`): `dotnet sln Maroik.slnx add <csproj> --solution-folder tests`. Enforced by
 `SolutionLayeringArchitectureTests` (`EveryProject_MustBeRegisteredInTheSolution`,
 `EveryProject_MustBeNestedUnderTheMatchingSolutionFolder`).
 

@@ -16,14 +16,14 @@
 *.json  text eol=lf
 
 # .NET source, project / solution files, and resources — also declared
-# explicitly, all LF (Visual Studio 2022 and Rider both handle LF .sln fine).
+# explicitly, all LF (Visual Studio 2022 and Rider both handle LF .slnx fine).
 *.cs            text eol=lf
 *.cshtml        text eol=lf
 *.razor         text eol=lf
 *.csproj        text eol=lf
 *.props         text eol=lf
 *.targets       text eol=lf
-*.sln           text eol=lf
+*.slnx          text eol=lf
 *.resx          text eol=lf
 *.config        text eol=lf
 *.DotSettings   text eol=lf

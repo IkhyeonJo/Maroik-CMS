@@ -277,7 +277,7 @@ The goal is that a test fails whenever the behaviour it describes breaks — not
   or ones the MTP runner miscounts inside static field initializers).
 
 ### Test projects
-Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.sln` builds them all; CI runs each with coverage (`.github/workflows/ci-cd.yml`, gate: line >= 80 %, branch >= 65 %).
+Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Testing.Platform), plus the client-script suite and an end-to-end suite. `Maroik.slnx` builds them all; CI runs each with coverage (`.github/workflows/ci-cd.yml`, gate: line >= 80 %, branch >= 65 %).
 
 | Tests | What they cover | Needs Docker |
 |---|---|---|
@@ -293,7 +293,7 @@ Every source project has a matching `*.Tests` project (xUnit v3 on Microsoft.Tes
 | `Maroik.E2E.Tests` | the running site in a real browser (Playwright), including the computed styles of the site's own stylesheets over the vendor CSS | yes |
 
 ```bash
-dotnet build Maroik.sln -p:RunClientScriptTests=false
+dotnet build Maroik.slnx -p:RunClientScriptTests=false
 dotnet test --project Maroik.Core.Service.Tests            # any single project
 (cd Maroik.Website && npm ci && npm test)                  # client scripts
 ```
@@ -309,13 +309,13 @@ dotnet test --project Maroik.Core.Service.Tests            # any single project
 
 #### Windows
 1. Install Visual Studio
-2. Open Maroik.sln
+2. Open Maroik.slnx
 3. Set docker-compose as startup project
 4. Press F5 to run in debug mode
 
 #### Linux/Mac
 1. Install JetBrains Rider
-2. Open Maroik.sln
+2. Open Maroik.slnx
 3. Start debug mode with docker-compose.debug.yml
 
 ## CI/CD
