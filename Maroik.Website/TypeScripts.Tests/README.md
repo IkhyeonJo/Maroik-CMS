@@ -116,7 +116,7 @@ Also exported: `hidden(id, value)`, `antiForgery`, `hiddenByStyle(el)`,
 (e.g. `stubPlugin(h, "valid", () => false)`).
 
 Like a page load, `loadSite` runs the role's real `_Layout` script before the page script (the account pages
-excepted — their layout has none), adds the layout's hidden `_LocalizerTemporaryError`, and fills in every
+excepted — their layout has none), adds the layout's hidden `_localizerTemporaryError`, and fills in every
 `#localizer…` text the script reads that the fixture leaves out (as `L_<Key>`). Test fixtures carry what the
 real views and replies carry: a reply missing a field is refused by the page's check, just as in production.
 

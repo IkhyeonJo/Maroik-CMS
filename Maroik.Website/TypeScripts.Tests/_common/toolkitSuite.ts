@@ -8,7 +8,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { loadSite, hidden, type SiteHandle } from "@tests/_common/harness";
 
-/** A few elements to read from (loadSite adds the layout's `_LocalizerTemporaryError`). */
+/** A few elements to read from (loadSite adds the layout's `_localizerTemporaryError`). */
 const fixture = () =>
     hidden("text", "hello") +
     `<select id="one"><option value="a">a</option><option value="b" selected>b</option></select>

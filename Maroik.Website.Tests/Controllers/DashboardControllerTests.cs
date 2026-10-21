@@ -57,7 +57,7 @@ public class DashboardControllerTests
         // Razor's encoder writes non-ASCII text as character references, so compare the decoded markup.
         string html = System.Net.WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
 
-        Assert.Contains($"<input id=\"_LocalizerTemporaryError\" type=\"hidden\" value=\"{text}\" />", html, StringComparison.Ordinal);
+        Assert.Contains($"<input id=\"_localizerTemporaryError\" type=\"hidden\" value=\"{text}\" />", html, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that <c>DefaultRoute</c> get when returns200.</summary>

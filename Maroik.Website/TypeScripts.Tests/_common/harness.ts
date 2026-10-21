@@ -24,7 +24,7 @@ import jqueryImport from "jquery";
 const WWWROOT = resolve(__dirname, "../../wwwroot");
 
 /** What Views/Shared/_Layout.cshtml renders on every page that the scripts read. */
-const LAYOUT_CHROME = `<input id="_LocalizerTemporaryError" type="hidden" value="L_TemporaryError" />`;
+const LAYOUT_CHROME = `<input id="_localizerTemporaryError" type="hidden" value="L_TemporaryError" />`;
 
 /** The options object a script passed to `$.ajax`. */
 export interface AjaxCall {

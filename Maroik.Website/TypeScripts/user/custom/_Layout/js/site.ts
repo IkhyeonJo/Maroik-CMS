@@ -161,7 +161,7 @@
     /** Logs why a reply was not what the page expected and shows the generic error. */
     function reportUnexpectedReply(problem: string): void {
         console.error(`Unexpected reply: ${problem}`);
-        toastr.error(window.fieldValue($("#_LocalizerTemporaryError")));
+        toastr.error(window.fieldValue($("#_localizerTemporaryError")));
     }
 
     window.onReply = function<T>(replyCheck: Check<T>, handler: (reply: T) => void) {

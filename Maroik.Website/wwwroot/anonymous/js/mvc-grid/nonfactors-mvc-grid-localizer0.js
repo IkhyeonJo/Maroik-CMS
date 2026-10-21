@@ -8,9 +8,9 @@
  */
 
 const _localizerNonFactors0 = {
-    IRS: $('#_LocalizerNonFactorsIRS').val(),
-    GPSOIGD: $('#_LocalizerNonFactorsGPSOIGD').val(),
-    GCOBCFWMS: $('#_LocalizerNonFactorsGCOBCFWMS').val()
+    IRS: $('#_localizerNonFactorsIRS').val(),
+    GPSOIGD: $('#_localizerNonFactorsGPSOIGD').val(),
+    GCOBCFWMS: $('#_localizerNonFactorsGCOBCFWMS').val()
 };
 
 class MvcGrid {
