@@ -3,7 +3,7 @@
 ## Prerequisites — Node.js (written for a non-JS dev)
 
 This suite has **no `.csproj`**, is **not** its own npm package, and is not in
-`Maroik.sln`. Vitest, jsdom, jQuery and the `typescript` compiler are npm **devDependencies of
+`Maroik.slnx`. Vitest, jsdom, jQuery and the `typescript` compiler are npm **devDependencies of
 `Maroik.Website/package.json`**, and every command below is
 run from **`Maroik.Website/`** (the folder with `package.json`). Nothing here runs without
 Node.js on the machine.
@@ -204,4 +204,4 @@ no `<canvas>` engine for the Chart.js code to use. Only the
   `--build-arg RUN_CLIENT_TESTS=true` (keeps Rider/VS "regular mode" docker-compose
   debug from being gated on it). CI passes that arg.
 
-Not a .NET project (no `.csproj`) — not in `Maroik.sln`.
+Not a .NET project (no `.csproj`) — not in `Maroik.slnx`.

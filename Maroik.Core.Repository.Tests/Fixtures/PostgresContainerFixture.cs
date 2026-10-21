@@ -106,16 +106,16 @@ public sealed class PostgresContainerFixture : IAsyncLifetime
             Pooling = false,
         }.ConnectionString;
 
-    /// <summary>Absolute path of the seed script, found by walking up to the directory holding <c>Maroik.sln</c>.</summary>
+    /// <summary>Absolute path of the seed script, found by walking up to the directory holding <c>Maroik.slnx</c>.</summary>
     private static string ResolveInitScriptPath()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Maroik.sln")))
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Maroik.slnx")))
             dir = dir.Parent;
 
         if (dir is null)
             throw new InvalidOperationException(
-                "Could not locate the repository root (Maroik.sln) from " + AppContext.BaseDirectory);
+                "Could not locate the repository root (Maroik.slnx) from " + AppContext.BaseDirectory);
 
         string path = Path.Combine(
             dir.FullName, InitScriptRelativePath.Replace('/', Path.DirectorySeparatorChar));

@@ -32,12 +32,12 @@ public partial class ServiceErrorKeyArchitectureTests
     [GeneratedRegex(@"^\s*//.*$", RegexOptions.Multiline)]
     private static partial Regex CommentLine();
 
-    /// <summary>The Maroik.Core.Service project folder (walks up from the test binaries to the folder holding <c>Maroik.sln</c>).</summary>
+    /// <summary>The Maroik.Core.Service project folder (walks up from the test binaries to the folder holding <c>Maroik.slnx</c>).</summary>
     private static string ServiceSourceDirectory()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Maroik.sln"))) dir = dir.Parent;
-        return Path.Combine(dir?.FullName ?? throw new InvalidOperationException("Could not locate Maroik.sln"), "Maroik.Core.Service");
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Maroik.slnx"))) dir = dir.Parent;
+        return Path.Combine(dir?.FullName ?? throw new InvalidOperationException("Could not locate Maroik.slnx"), "Maroik.Core.Service");
     }
 
     /// <summary>The literal message keys in <paramref name="source"/>, as <c>'key'</c> strings.</summary>

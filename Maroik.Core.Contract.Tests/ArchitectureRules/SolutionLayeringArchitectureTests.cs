@@ -207,7 +207,7 @@ public class SolutionLayeringArchitectureTests
             {
                 violations.Add(
                     $"{project.Name} is a production project with no entry in _allowedProjectReferences — " +
-                    "add it to the map (and to Maroik.sln's layer model) deliberately.");
+                    "add it to the map (and to Maroik.slnx's layer model) deliberately.");
                 continue;
             }
 
@@ -296,80 +296,103 @@ public class SolutionLayeringArchitectureTests
     }
 
     // ─────────────────────────────────────────────────────────────────────────────────────────
-    // Solution registration — every project is in Maroik.sln, under the right solution folder
+    // Solution registration — every project is in Maroik.slnx, under the right solution folder
     // ─────────────────────────────────────────────────────────────────────────────────────────
 
-    /// <summary>A project that exists on disk but is missing from <c>Maroik.sln</c> is invisible to the IDE and to
-    /// <c>dotnet build Maroik.sln</c> / CI's solution build.</summary>
+    /// <summary>A project that exists on disk but is missing from <c>Maroik.slnx</c> is invisible to the IDE and to
+    /// <c>dotnet build Maroik.slnx</c> / CI's solution build.</summary>
     [Fact]
     public void EveryProject_MustBeRegisteredInTheSolution()
     {
-        SolutionFile solution = SolutionFile.Load(Path.Combine(RepositoryPaths.Root, "Maroik.sln"));
+        SolutionFile solution = SolutionFile.Load(Path.Combine(RepositoryPaths.Root, "Maroik.slnx"));
 
         string[] missing = [.. LoadAllProjects().Select(p => p.Name).Where(name => !solution.ProjectNames.Contains(name)).Order()];
 
         Assert.True(missing.Length == 0,
-            "Add these projects to Maroik.sln (dotnet sln add <csproj> --solution-folder <src|tests>): " + string.Join(", ", missing));
+            "Add these projects to Maroik.slnx (dotnet sln Maroik.slnx add <csproj> --solution-folder <src|tests>): " + string.Join(", ", missing));
     }
 
     /// <summary>Test projects (and the test-support project) live in the <c>tests</c> solution folder, the rest in <c>src</c>.</summary>
     [Fact]
     public void EveryProject_MustBeNestedUnderTheMatchingSolutionFolder()
     {
-        SolutionFile solution = SolutionFile.Load(Path.Combine(RepositoryPaths.Root, "Maroik.sln"));
+        SolutionFile solution = SolutionFile.Load(Path.Combine(RepositoryPaths.Root, "Maroik.slnx"));
         List<string> wrong =
         [
             .. from project in LoadAllProjects() let isTestSide = project.Name.EndsWith(".Tests", StringComparison.Ordinal) let expected = isTestSide ? "tests" : "src" let actual = solution.FolderOf(project.Name) where actual != expected select $"{project.Name}: in '{actual ?? "(solution root)"}', expected '{expected}'"
-
         ];
 
         Assert.True(wrong.Count == 0, "Solution folder mismatch:\n" + string.Join("\n", wrong));
     }
 
-    /// <summary>The parts of <c>Maroik.sln</c> the rules above need: project names, and each project's solution folder.</summary>
+    /// <summary>The parts of <c>Maroik.slnx</c> the rules above need: project names, and each project's solution folder.</summary>
     private sealed class SolutionFile
     {
-        /// <summary>Every <c>Project(...)</c> entry (projects and solution folders) keyed by its GUID.</summary>
-        private readonly Dictionary<string, (string Name, string Path)> _byGuid;
-        /// <summary>The <c>NestedProjects</c> section: child GUID to parent (solution folder) GUID.</summary>
-        private readonly Dictionary<string, string> _parentByGuid;
+        private readonly Dictionary<string, string> _projectPathByName;
+        private readonly Dictionary<string, string?> _folderByProjectName;
 
-        /// <summary>Wraps the parsed entries; created by <c>Load</c>.</summary>
-        private SolutionFile(Dictionary<string, (string Name, string Path)> byGuid, Dictionary<string, string> parentByGuid)
+        private SolutionFile(
+            Dictionary<string, string> projectPathByName,
+            Dictionary<string, string?> folderByProjectName)
         {
-            _byGuid = byGuid;
-            _parentByGuid = parentByGuid;
+            _projectPathByName = projectPathByName;
+            _folderByProjectName = folderByProjectName;
         }
 
-        /// <summary>Names of every project entry in the solution (solution folders included).</summary>
-        public IReadOnlySet<string> ProjectNames => _byGuid.Values.Select(v => v.Name).ToHashSet(StringComparer.Ordinal);
+        /// <summary>Names of all projects registered in the solution.</summary>
+        public IReadOnlySet<string> ProjectNames =>
+            _projectPathByName.Keys.ToHashSet(StringComparer.Ordinal);
 
-        /// <summary>Parses the <c>.sln</c> at <paramref name="path"/>.</summary>
+        /// <summary>Parses the XML-based <c>.slnx</c> at <paramref name="path"/>.</summary>
         public static SolutionFile Load(string path)
         {
-            string text = File.ReadAllText(path);
+            XDocument document = XDocument.Load(path);
+            XElement root = document.Root
+                ?? throw new InvalidDataException($"Solution file '{path}' has no root element.");
 
-            Dictionary<string, (string Name, string Path)> byGuid = System.Text.RegularExpressions.Regex
-                .Matches(text, """
-                               Project\("\{[^}]+\}"\) = "(?<name>[^"]+)", "(?<path>[^"]+)", "\{(?<guid>[^}]+)\}"
-                               """)
-                .ToDictionary(m => m.Groups["guid"].Value.ToUpperInvariant(), m => (m.Groups["name"].Value, m.Groups["path"].Value));
+            Dictionary<string, string> projectPathByName = new(StringComparer.Ordinal);
+            Dictionary<string, string?> folderByProjectName = new(StringComparer.Ordinal);
 
-            Dictionary<string, string> parentByGuid = System.Text.RegularExpressions.Regex
-                .Matches(text, @"\{(?<child>[0-9A-Fa-f-]+)\}\s*=\s*\{(?<parent>[0-9A-Fa-f-]+)\}")
-                .ToDictionary(m => m.Groups["child"].Value.ToUpperInvariant(), m => m.Groups["parent"].Value.ToUpperInvariant());
+            foreach (XElement project in root.Descendants()
+                         .Where(element => element.Name.LocalName == "Project"))
+            {
+                string projectPath = (string?)project.Attribute("Path")
+                    ?? throw new InvalidDataException(
+                        $"A Project element in '{path}' is missing its Path attribute.");
 
-            return new SolutionFile(byGuid, parentByGuid);
+                string projectName = Path.GetFileNameWithoutExtension(projectPath);
+
+                if (!projectPathByName.TryAdd(projectName, projectPath))
+                {
+                    throw new InvalidDataException(
+                        $"Solution '{path}' contains multiple projects named '{projectName}'.");
+                }
+
+                // SLNX folder names may be represented as paths such as "/src/".
+                // Use the first folder segment so nested folders still map to "src" or "tests".
+                XElement? topLevelFolder = project
+                    .Ancestors()
+                    .LastOrDefault(element => element.Name.LocalName == "Folder");
+
+                string? folderName = (string?)topLevelFolder?.Attribute("Name");
+                string? topLevelName = folderName?
+                    .Split('/', StringSplitOptions.RemoveEmptyEntries)
+                    .FirstOrDefault();
+
+                folderByProjectName.Add(projectName, topLevelName);
+            }
+
+            return new SolutionFile(projectPathByName, folderByProjectName);
         }
 
-        /// <summary>The name of the solution folder the project is directly nested in, or <see langword="null"/> at the solution root.</summary>
-        public string? FolderOf(string projectName)
-        {
-            string? guid = _byGuid.FirstOrDefault(kv => kv.Value.Name == projectName).Key;
-            return guid != null && _parentByGuid.TryGetValue(guid, out string? parent) && _byGuid.TryGetValue(parent, out var folder)
-                ? folder.Name
+        /// <summary>
+        /// Gets the top-level solution folder containing the project, or <see langword="null"/>
+        /// if the project is at the solution root.
+        /// </summary>
+        public string? FolderOf(string projectName) =>
+            _folderByProjectName.TryGetValue(projectName, out string? folder)
+                ? folder
                 : null;
-        }
     }
 
     /// <summary>The production project named <paramref name="name"/>; throws when it does not exist.</summary>

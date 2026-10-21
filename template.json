@@ -14,7 +14,7 @@
   "name": "Maroik Web Application",
   "shortName": "maroik",
   "sourceName": "Maroik",
-  "templateFileExtensions": [ ".cs", ".csproj", ".sln" ],
+  "templateFileExtensions": [ ".cs", ".csproj", ".slnx" ],
   "preferNameDirectory": true,
   "sources": [
     {
