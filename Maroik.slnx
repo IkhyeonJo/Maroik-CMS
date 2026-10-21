@@ -1,0 +1,45 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="ARM" />
+    <Platform Name="iPhone" />
+    <Platform Name="iPhoneSimulator" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="Maroik.nuspec" />
+    <File Path="Maroik.sln.DotSettings" />
+    <File Path="template.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="docker-compose.dcproj">
+      <Platform Project="AnyCPU" />
+      <Build />
+    </Project>
+    <Project Path="Maroik.Core.Client/Maroik.Core.Client.csproj" />
+    <Project Path="Maroik.Core.Contract/Maroik.Core.Contract.csproj" />
+    <Project Path="Maroik.Core.Domain/Maroik.Core.Domain.csproj" />
+    <Project Path="Maroik.Core.PostgreSQL/Maroik.Core.PostgreSQL.csproj" />
+    <Project Path="Maroik.Core.Repository/Maroik.Core.Repository.csproj" />
+    <Project Path="Maroik.Core.Service/Maroik.Core.Service.csproj" />
+    <Project Path="Maroik.FileStorage/Maroik.FileStorage.csproj" />
+    <Project Path="Maroik.Website/Maroik.Website.csproj" />
+    <Project Path="Maroik.Worker/Maroik.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="Maroik.Core.Client.Tests/Maroik.Core.Client.Tests.csproj" />
+    <Project Path="Maroik.Core.Contract.Tests/Maroik.Core.Contract.Tests.csproj" />
+    <Project Path="Maroik.Core.Domain.Tests/Maroik.Core.Domain.Tests.csproj" />
+    <Project Path="Maroik.Core.PostgreSQL.Tests/Maroik.Core.PostgreSQL.Tests.csproj" />
+    <Project Path="Maroik.Core.Repository.Tests/Maroik.Core.Repository.Tests.csproj" />
+    <Project Path="Maroik.Core.Service.Tests/Maroik.Core.Service.Tests.csproj" />
+    <Project Path="Maroik.E2E.Tests/Maroik.E2E.Tests.csproj" />
+    <Project Path="Maroik.FileStorage.Tests/Maroik.FileStorage.Tests.csproj" />
+    <Project Path="Maroik.Website.Tests/Maroik.Website.Tests.csproj" />
+    <Project Path="Maroik.Worker.Tests/Maroik.Worker.Tests.csproj" />
+  </Folder>
+</Solution>
