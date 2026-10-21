@@ -48,11 +48,11 @@ public abstract class SchemaDatabaseFixture(string initScriptRelativePath) : IAs
         return connection;
     }
 
-    /// <summary>Walks up from the test binary's folder to the directory holding <c>Maroik.sln</c>.</summary>
+    /// <summary>Walks up from the test binary's folder to the directory holding <c>Maroik.slnx</c>.</summary>
     private static string FindRepositoryRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Maroik.sln"))) dir = dir.Parent;
-        return dir?.FullName ?? throw new InvalidOperationException("Could not locate the repository root (Maroik.sln) from " + AppContext.BaseDirectory);
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Maroik.slnx"))) dir = dir.Parent;
+        return dir?.FullName ?? throw new InvalidOperationException("Could not locate the repository root (Maroik.slnx) from " + AppContext.BaseDirectory);
     }
 }
