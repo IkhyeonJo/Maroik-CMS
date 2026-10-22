@@ -65,6 +65,8 @@ Maroik is a modern web application built with ASP.NET Core MVC, featuring a comp
 ## Development Timeline
 Maroik has been built by one developer since May 2021. It was developed in a private repository until September 2026, when the project moved to this public repository; all development now happens here. The earlier history — about 4,300 commits — stays in the private repository; those commits show on the contribution graph of the [author's GitHub profile](https://github.com/IkhyeonJo).
 
+**Authorship.** Through 2025 the code was written by hand (C#, JavaScript). From 2026 the large mechanical refactors — the DDD + Clean Architecture restructuring, the test suites and the TypeScript migration — were done with AI assistance (Claude Code) under the author's design and review; the feature design and the original implementation are the author's own. Commits made with AI assistance carry a `Co-Authored-By: Claude` trailer.
+
 | When | Milestone |
 |---|---|
 | 2021-05 | Project starts as *MyLaboratory*: ASP.NET Core (2.1 → .NET 5) with MariaDB, run under docker-compose from the first week |
