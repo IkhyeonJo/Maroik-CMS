@@ -1039,7 +1039,8 @@
                     displayStartDate: item.DisplayStartDate,
                     displayEndDate: item.DisplayEndDate,
                     displayStartDateTimeZone: item.DisplayStartDateTimeZone,
-                    displayEndDateTimeZone: item.DisplayEndDateTimeZone
+                    displayEndDateTimeZone: item.DisplayEndDateTimeZone,
+                    calendarType: "My"
                 }
             });
         });
@@ -1102,7 +1103,8 @@
                                     displayStartDate: item.DisplayStartDate,
                                     displayEndDate: item.DisplayEndDate,
                                     displayStartDateTimeZone: item.DisplayStartDateTimeZone,
-                                    displayEndDateTimeZone: item.DisplayEndDateTimeZone
+                                    displayEndDateTimeZone: item.DisplayEndDateTimeZone,
+                                    calendarType: item.CalendarType
                                 }
                             });
                         });
@@ -1554,7 +1556,8 @@
                                                 displayStartDate: item.DisplayStartDate,
                                                 displayEndDate: item.DisplayEndDate,
                                                 displayStartDateTimeZone: item.DisplayStartDateTimeZone,
-                                                displayEndDateTimeZone: item.DisplayEndDateTimeZone
+                                                displayEndDateTimeZone: item.DisplayEndDateTimeZone,
+                                                calendarType: item.CalendarType
                                             }
                                         });
                                     });
@@ -1781,7 +1784,8 @@
                                                 displayStartDate: item.DisplayStartDate,
                                                 displayEndDate: item.DisplayEndDate,
                                                 displayStartDateTimeZone: item.DisplayStartDateTimeZone,
-                                                displayEndDateTimeZone: item.DisplayEndDateTimeZone
+                                                displayEndDateTimeZone: item.DisplayEndDateTimeZone,
+                                                calendarType: item.CalendarType
                                             }
                                         });
                                     });
