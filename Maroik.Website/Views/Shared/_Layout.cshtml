@@ -9,7 +9,7 @@
 
 @{
     string returnUri = ViewBag.ReturnUri as string ?? "/";
-    AccountResponse loggedInAccount = Context.GetLoggedInAccount();
+    var loggedInAccount = Context.GetLoggedInAccount();
 }
 
 <!DOCTYPE html>
