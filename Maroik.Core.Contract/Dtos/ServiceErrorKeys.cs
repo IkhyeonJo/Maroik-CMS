@@ -113,6 +113,20 @@ public static class ServiceErrorKeys
     /// <summary>The Kanban card does not exist, or belongs to another account.</summary>
     public const string KanbanCardNotFound = "The card could not be found.";
 
+    // --- File Manager
+    /// <summary>The file or folder does not exist, or belongs to another account.</summary>
+    public const string FileManagerItemNotFound = "The file or folder could not be found.";
+    /// <summary>Template: a file or folder named <c>{0}</c> is already in the folder.</summary>
+    public const string FileManagerNameTaken = "A file or folder named '{0}' already exists here.";
+    /// <summary>The upload does not exist (finished, abandoned or another account's).</summary>
+    public const string FileManagerUploadNotFound = "The upload could not be found.";
+    /// <summary>The virus scan found a virus in the uploaded file.</summary>
+    public const string FileManagerInfected = "The file may be infected with a virus.";
+    /// <summary>The uploaded file could not be scanned (scanner outage, or a scan limit was exceeded).</summary>
+    public const string FileManagerScanUnavailable = "The file could not be scanned for viruses.";
+    /// <summary>The file has no preview (not a png / jpg / gif / webp image of at most 100 MB).</summary>
+    public const string FileManagerNoPreview = "This file cannot be previewed.";
+
     /// <summary>
     /// Keys that are not resx keys: the controller that receives one compares <c>ErrorKey</c> against it and chooses its own
     /// response (another view, or a message of its own). Shared here so the service and the controller cannot drift apart.

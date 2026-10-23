@@ -154,6 +154,7 @@ public class ManagementAccountService(
             AccountRole oldRole = account.Role;
             bool oldLocked = account.Locked;
             bool oldDeleted = account.Deleted;
+            long oldQuota = account.FileManagerQuotaBytes;
             AdminStanding before = AdminStanding.Of(account);
 
             if (newHashedPassword != null)
@@ -187,8 +188,8 @@ public class ManagementAccountService(
             await accountRepository.UpdateEntityAsync(account, ct);
             await unitOfWork.CommitAsync(ct);
             logger.LogInformation(
-                "Admin updated account {Email}: role {OldRole} -> {NewRole}, locked {OldLocked} -> {NewLocked}, deleted {OldDeleted} -> {NewDeleted}, password reset {PasswordReset} by admin {Admin}",
-                account.Email.Value, oldRole, account.Role, oldLocked, account.Locked, oldDeleted, account.Deleted, newHashedPassword != null, actorEmail);
+                "Admin updated account {Email}: role {OldRole} -> {NewRole}, locked {OldLocked} -> {NewLocked}, deleted {OldDeleted} -> {NewDeleted}, file manager quota {OldQuota} -> {NewQuota}, password reset {PasswordReset} by admin {Admin}",
+                account.Email.Value, oldRole, account.Role, oldLocked, account.Locked, oldDeleted, account.Deleted, oldQuota, account.FileManagerQuotaBytes, newHashedPassword != null, actorEmail);
             return ServiceResult.Ok();
         }
         catch (Exception e)
@@ -211,6 +212,12 @@ public class ManagementAccountService(
         {
             var tzResult = account.ChangeTimeZone(request.TimeZoneIanaId, utcNow);
             if (tzResult.IsError) return tzResult.Errors;
+        }
+
+        if (request.FileManagerQuotaBytes is { } quota)
+        {
+            var quotaResult = account.ChangeFileManagerQuota(quota, utcNow);
+            if (quotaResult.IsError) return quotaResult.Errors;
         }
 
         if (request.Role != null)

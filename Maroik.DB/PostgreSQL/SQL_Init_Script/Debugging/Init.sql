@@ -63,7 +63,9 @@ CREATE TABLE public."Account" (
     "Deleted" boolean NOT NULL,
     "SecurityStamp" text DEFAULT (gen_random_uuid())::text NOT NULL,
     "MustChangePassword" boolean DEFAULT false NOT NULL,
+    "FileManagerQuotaBytes" bigint DEFAULT 0 NOT NULL,
     CONSTRAINT "Account_Email_check" CHECK ((("Email")::text = lower(("Email")::text))),
+    CONSTRAINT "Account_FileManagerQuotaBytes_check" CHECK (("FileManagerQuotaBytes" >= 0)),
     CONSTRAINT "Account_LoginAttempt_check" CHECK (("LoginAttempt" >= 0)),
     CONSTRAINT "Account_Role_check" CHECK (((("Role")::text = 'Admin'::text) OR (("Role")::text = 'User'::text)))
 );
@@ -209,6 +211,13 @@ COMMENT ON COLUMN public."Account"."SecurityStamp" IS 'Opaque value that changes
 --
 
 COMMENT ON COLUMN public."Account"."MustChangePassword" IS 'Forces a password change on next login (set by an admin password override)';
+
+
+--
+-- Name: COLUMN "Account"."FileManagerQuotaBytes"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Account"."FileManagerQuotaBytes" IS 'File Manager storage quota in bytes (0 = no uploads)';
 
 
 --
@@ -1472,6 +1481,127 @@ ALTER SEQUENCE public."Expenditure_Id_seq" OWNED BY public."Expenditure"."Id";
 
 
 --
+-- Name: FileManagerNode; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."FileManagerNode" (
+    "Id" bigint NOT NULL,
+    "AccountEmail" character varying(255) NOT NULL,
+    "ParentId" bigint,
+    "Name" character varying(255) NOT NULL,
+    "IsFolder" boolean NOT NULL,
+    "Size" bigint NOT NULL,
+    "StoragePath" character varying(255),
+    "Uploading" boolean NOT NULL,
+    "Created" timestamp without time zone NOT NULL,
+    "Updated" timestamp without time zone NOT NULL,
+    CONSTRAINT "FileManagerNode_Kind_check" CHECK ((("IsFolder" AND ("StoragePath" IS NULL) AND ("Size" = 0) AND (NOT "Uploading")) OR ((NOT "IsFolder") AND ("StoragePath" IS NOT NULL)))),
+    CONSTRAINT "FileManagerNode_Name_check" CHECK ((("Name")::text ~ '\S'::text)),
+    CONSTRAINT "FileManagerNode_Size_check" CHECK (("Size" >= 0))
+);
+
+
+ALTER TABLE public."FileManagerNode" OWNER TO postgres;
+
+--
+-- Name: TABLE "FileManagerNode"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public."FileManagerNode" IS 'FileManagerNode';
+
+
+--
+-- Name: COLUMN "FileManagerNode"."Id"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."FileManagerNode"."Id" IS 'PK';
+
+
+--
+-- Name: COLUMN "FileManagerNode"."AccountEmail"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."FileManagerNode"."AccountEmail" IS 'Account Email (ID)';
+
+
+--
+-- Name: COLUMN "FileManagerNode"."ParentId"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."FileManagerNode"."ParentId" IS 'Parent folder Id (NULL = the drive root)';
+
+
+--
+-- Name: COLUMN "FileManagerNode"."Name"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."FileManagerNode"."Name" IS 'Name shown to the user';
+
+
+--
+-- Name: COLUMN "FileManagerNode"."IsFolder"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."FileManagerNode"."IsFolder" IS 'Folder (true) or file (false)';
+
+
+--
+-- Name: COLUMN "FileManagerNode"."Size"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."FileManagerNode"."Size" IS 'File size in bytes (0 for a folder)';
+
+
+--
+-- Name: COLUMN "FileManagerNode"."StoragePath"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."FileManagerNode"."StoragePath" IS 'upload/FileManager/{GUID} (NULL for a folder)';
+
+
+--
+-- Name: COLUMN "FileManagerNode"."Uploading"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."FileManagerNode"."Uploading" IS 'Upload started but not completed';
+
+
+--
+-- Name: COLUMN "FileManagerNode"."Created"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."FileManagerNode"."Created" IS 'Created';
+
+
+--
+-- Name: COLUMN "FileManagerNode"."Updated"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."FileManagerNode"."Updated" IS 'Updated';
+
+
+--
+-- Name: FileManagerNode_Id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public."FileManagerNode_Id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public."FileManagerNode_Id_seq" OWNER TO postgres;
+
+--
+-- Name: FileManagerNode_Id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public."FileManagerNode_Id_seq" OWNED BY public."FileManagerNode"."Id";
+
+
+--
 -- Name: FixedExpenditure; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2239,6 +2369,13 @@ ALTER TABLE ONLY public."Expenditure" ALTER COLUMN "Id" SET DEFAULT nextval('pub
 
 
 --
+-- Name: FileManagerNode Id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."FileManagerNode" ALTER COLUMN "Id" SET DEFAULT nextval('public."FileManagerNode_Id_seq"'::regclass);
+
+
+--
 -- Name: FixedExpenditure Id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -2284,9 +2421,9 @@ ALTER TABLE ONLY public."SubCategory" ALTER COLUMN "Id" SET DEFAULT nextval('pub
 -- Data for Name: Account; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public."Account" ("Email", "HashedPassword", "Nickname", "AvatarImagePath", "Role", "TimeZoneIanaId", "DefaultMonetaryUnit", "Locked", "LoginAttempt", "EmailConfirmed", "AgreedServiceTerms", "RegistrationToken", "ResetPasswordToken", "Created", "Updated", "Message", "Deleted", "SecurityStamp", "MustChangePassword") FROM stdin;
-demo@maroik.com	$2a$13$e06KyPwRiFlJSgUeYoCv6uxedAHR1COyg9HsemA40xQbDVRQp/xfa	Demo	/upload/Management/Profile/Avatar/56EEF375-6DE8-49C2-BD23-673F2513F6D5.jpeg	User	Asia/Seoul	KRW	f	0	t	t	\N	\N	2021-07-12 22:46:59	2025-08-24 13:32:49.471924	This account is locked	f	5f69576a-557e-4d91-b810-9ba8930ae02a	f
-admin@maroik.com	$2a$13$e06KyPwRiFlJSgUeYoCv6uxedAHR1COyg9HsemA40xQbDVRQp/xfa	Admin	/upload/Management/Profile/Avatar/DB0DDBD8-4AF9-4219-B034-F19773209AD0.png	Admin	Asia/Seoul	\N	f	0	t	t	\N	\N	2021-07-12 22:37:36	2026-04-29 23:11:46.589216	Success	f	31c7d654-a52d-4573-a4b1-84fd30c3ebbb	f
+COPY public."Account" ("Email", "HashedPassword", "Nickname", "AvatarImagePath", "Role", "TimeZoneIanaId", "DefaultMonetaryUnit", "Locked", "LoginAttempt", "EmailConfirmed", "AgreedServiceTerms", "RegistrationToken", "ResetPasswordToken", "Created", "Updated", "Message", "Deleted", "SecurityStamp", "MustChangePassword", "FileManagerQuotaBytes") FROM stdin;
+demo@maroik.com	$2a$13$e06KyPwRiFlJSgUeYoCv6uxedAHR1COyg9HsemA40xQbDVRQp/xfa	Demo	/upload/Management/Profile/Avatar/56EEF375-6DE8-49C2-BD23-673F2513F6D5.jpeg	User	Asia/Seoul	KRW	f	0	t	t	\N	\N	2021-07-12 22:46:59	2025-08-24 13:32:49.471924	This account is locked	f	5f69576a-557e-4d91-b810-9ba8930ae02a	f	0
+admin@maroik.com	$2a$13$e06KyPwRiFlJSgUeYoCv6uxedAHR1COyg9HsemA40xQbDVRQp/xfa	Admin	/upload/Management/Profile/Avatar/DB0DDBD8-4AF9-4219-B034-F19773209AD0.png	Admin	Asia/Seoul	\N	f	0	t	t	\N	\N	2021-07-12 22:37:36	2026-04-29 23:11:46.589216	Success	f	31c7d654-a52d-4573-a4b1-84fd30c3ebbb	f	0
 \.
 
 
@@ -2391,17 +2528,18 @@ COPY public."Category" ("Id", "Name", "DisplayName", "IconPath", "Controller", "
 1	Dashboard	Dashboard	nav-icon fas fa-tachometer-alt	Dashboard	AdminIndex	Admin	0
 3	Dashboard	Dashboard	nav-icon fas fa-tachometer-alt	Dashboard	UserIndex	User	0
 12	Dashboard	Dashboard	nav-icon fas fa-tachometer-alt	Dashboard	AnonymousIndex	Anonymous	0
-9	Notice	Notice	nav-icon fas fa-bell	Notice		User	4
-4	Management	Management	nav-icon fas fa-cog	Management		User	6
+9	Notice	Notice	nav-icon fas fa-bell	Notice		User	5
+4	Management	Management	nav-icon fas fa-cog	Management		User	7
 19	Calendar	Calendar	nav-icon far fa-calendar-alt	Calendar	AnonymousIndex	Anonymous	2
 18	Forum	Forum	nav-icon fas fa-comments	Forum		Anonymous	3
-20	Calendar	Calendar	nav-icon far fa-calendar-alt	Calendar	UserIndex	User	2
-17	Forum	Forum	nav-icon fas fa-comments	Forum		User	3
+20	Calendar	Calendar	nav-icon far fa-calendar-alt	Calendar	UserIndex	User	3
+17	Forum	Forum	nav-icon fas fa-comments	Forum		User	4
 21	Calendar	Calendar	nav-icon far fa-calendar-alt	Calendar	AdminIndex	Admin	2
 16	Forum	Forum	nav-icon fas fa-comments	Forum		Admin	3
 2	Management	Management	nav-icon fas fa-cog	Management		Admin	4
-8	AccountBook	AccountBook	nav-icon fa fa-wallet	AccountBook		User	5
-25	Kanban	Kanban Board	nav-icon fas fa-columns	Kanban	UserIndex	User	1
+8	AccountBook	AccountBook	nav-icon fa fa-wallet	AccountBook		User	6
+25	Kanban	Kanban Board	nav-icon fas fa-columns	Kanban	UserIndex	User	2
+26	FileManager	File Manager	nav-icon fas fa-folder-open	FileManager	UserIndex	User	1
 \.
 
 
@@ -2415,6 +2553,14 @@ COPY public."Expenditure" ("Id", "AccountEmail", "MainClass", "SubClass", "Conte
 5149	demo@maroik.com	ConsumerSpending	MealOrEatOutExpenses	Food	20.00	USA Bank	\N	2025-06-11 10:00:52	2025-05-31 10:04:31.424056	
 5147	demo@maroik.com	ConsumerSpending	MealOrEatOutExpenses	Food	200.00	Korea Bank	\N	2025-06-20 10:00:52	2025-05-31 10:04:45.612039	
 5265	demo@maroik.com	ConsumerSpending	MealOrEatOutExpenses	rewr	45000.00	Korea Bank	\N	2025-06-25 02:10:06	2026-03-10 05:35:15.809917	
+\.
+
+
+--
+-- Data for Name: FileManagerNode; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."FileManagerNode" ("Id", "AccountEmail", "ParentId", "Name", "IsFolder", "Size", "StoragePath", "Uploading", "Created", "Updated") FROM stdin;
 \.
 
 
@@ -2551,7 +2697,7 @@ SELECT pg_catalog.setval('public."Calendar_Id_seq"', 6, true);
 -- Name: Category_Id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."Category_Id_seq"', 25, true);
+SELECT pg_catalog.setval('public."Category_Id_seq"', 26, true);
 
 
 --
@@ -2559,6 +2705,13 @@ SELECT pg_catalog.setval('public."Category_Id_seq"', 25, true);
 --
 
 SELECT pg_catalog.setval('public."Expenditure_Id_seq"', 5265, true);
+
+
+--
+-- Name: FileManagerNode_Id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public."FileManagerNode_Id_seq"', 1, false);
 
 
 --
@@ -2724,6 +2877,22 @@ ALTER TABLE ONLY public."Expenditure"
 
 
 --
+-- Name: FileManagerNode FileManagerNode_StoragePath_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."FileManagerNode"
+    ADD CONSTRAINT "FileManagerNode_StoragePath_unique" UNIQUE ("StoragePath");
+
+
+--
+-- Name: FileManagerNode FileManagerNode_pk; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."FileManagerNode"
+    ADD CONSTRAINT "FileManagerNode_pk" PRIMARY KEY ("Id");
+
+
+--
 -- Name: FixedExpenditure FixedExpenditure_pk; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2865,6 +3034,27 @@ CREATE INDEX "Expenditure_index_0" ON public."Expenditure" USING btree ("Payment
 --
 
 CREATE INDEX "Expenditure_index_1" ON public."Expenditure" USING btree ("AccountEmail", "Created");
+
+
+--
+-- Name: FileManagerNode_index_0; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX "FileManagerNode_index_0" ON public."FileManagerNode" USING btree ("AccountEmail");
+
+
+--
+-- Name: FileManagerNode_index_1; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX "FileManagerNode_index_1" ON public."FileManagerNode" USING btree ("ParentId");
+
+
+--
+-- Name: FileManagerNode_unique_index_0; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX "FileManagerNode_unique_index_0" ON public."FileManagerNode" USING btree ("AccountEmail", "ParentId", "Name") NULLS NOT DISTINCT WHERE (NOT "Uploading");
 
 
 --
@@ -3025,6 +3215,22 @@ ALTER TABLE ONLY public."Expenditure"
 
 ALTER TABLE ONLY public."Expenditure"
     ADD CONSTRAINT "Expenditure_fk_1" FOREIGN KEY ("MyDepositAsset", "AccountEmail") REFERENCES public."Asset"("ProductName", "AccountEmail") ON UPDATE CASCADE;
+
+
+--
+-- Name: FileManagerNode FileManagerNode_fk_0; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."FileManagerNode"
+    ADD CONSTRAINT "FileManagerNode_fk_0" FOREIGN KEY ("AccountEmail") REFERENCES public."Account"("Email") ON UPDATE CASCADE;
+
+
+--
+-- Name: FileManagerNode FileManagerNode_fk_1; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."FileManagerNode"
+    ADD CONSTRAINT "FileManagerNode_fk_1" FOREIGN KEY ("ParentId") REFERENCES public."FileManagerNode"("Id") ON DELETE CASCADE;
 
 
 --

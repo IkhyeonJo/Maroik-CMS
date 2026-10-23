@@ -1,4 +1,4 @@
-using Maroik.Core.Domain.Accounts;
+﻿using Maroik.Core.Domain.Accounts;
 using Maroik.Core.Domain.Menus;
 using Maroik.Core.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -38,6 +38,22 @@ public sealed class CategoryRepositoryTests(DatabaseFixture database) : Reposito
     }
 
     // -- GetAllAsync ----------------------------------------------------------
+
+    /// <summary>
+    /// The seed's User menu, in sidebar order: the File Manager ("My Drive") comes right below the dashboard, each entry with its own
+    /// Order (no ties, so the sidebar order does not depend on how the database breaks them).
+    /// </summary>
+    [Fact]
+    public async Task TheSeededUserMenu_PutsTheFileManagerRightBelowTheDashboard()
+    {
+        string[] seeded = ["Dashboard", "FileManager", "Kanban", "Calendar", "Forum", "Notice", "AccountBook", "Management"];
+        List<Category> all = await Sut.GetAllAsync(TestContext.Current.CancellationToken);
+
+        // Scoped to the seed's entries: the other tests of this class insert User categories into the same database.
+        List<Category> user = [.. all.Where(c => c.Role == Role.User && seeded.Contains(c.Name)).OrderBy(c => c.Order)];
+        Assert.Equal(seeded, user.Select(c => c.Name));
+        Assert.Equal(user.Count, user.Select(c => c.Order).Distinct().Count());
+    }
 
     /// <summary>Verifies that <c>GetAllAsync</c> includes every category this test inserted.</summary>
     [Fact]

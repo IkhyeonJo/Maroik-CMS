@@ -183,6 +183,59 @@ public class ClamavClientTests
         using TcpClient held = await accepted; // the silent daemon's side of the connection, closed here
     }
 
+    /// <summary>
+    /// With <c>AlertExceedsMax</c> on, clamd answers a stream it could not scan whole (a size, recursion or time limit was reached —
+    /// a zip bomb, a file past MaxScanSize) with "Heuristics.Limits.Exceeded… FOUND". That is a scan that did not complete, not a
+    /// virus: it is reported as Unavailable ("could not be scanned", S3) and logged as a warning naming the daemon and the reply.
+    /// </summary>
+    [Theory]
+    [InlineData("stream: Heuristics.Limits.Exceeded.MaxFileSize FOUND\n")]
+    [InlineData("stream: Heuristics.Limits.Exceeded.MaxScanTime FOUND\n")]
+    public async Task ScanWithClamavAsync_ReportsAnExceededLimit_AsUnavailable_NotInfected(string reply)
+    {
+        var logger = new FakeLogger<ClamavClient>();
+        await using var server = FakeClamavServer.Start(reply);
+        using var stream = new MemoryStream([0x01, 0x02, 0x03]);
+
+        ClamavScanResult result = await new ClamavClient(logger).ScanWithClamavAsync(stream, "127.0.0.1", server.Port, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ClamavScanResult.Unavailable, result);
+        FakeLogRecord warning = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Equal(LogLevel.Warning, warning.Level);
+        Assert.Equal($"ClamAV at 127.0.0.1:{server.Port} could not scan the whole stream (a scan limit was exceeded): {reply.TrimEnd()}", warning.Message);
+    }
+
+    /// <summary>
+    /// A caller that scans large files (the File Manager, up to 2 GB) passes its own, longer time limit; the limit it passes is the
+    /// one applied — a silent daemon is given up on after it, not after the default.
+    /// </summary>
+    [Fact]
+    public async Task ScanWithClamavAsync_AppliesTheTimeLimitTheCallerPasses()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        Task<TcpClient> accepted = listener.AcceptTcpClientAsync(TestContext.Current.CancellationToken).AsTask();
+        var sut = new ClamavClient(NullLogger<ClamavClient>.Instance) { ScanTimeout = TimeSpan.FromMinutes(10) };
+        using var stream = new MemoryStream([0x01]);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
+        ClamavScanResult result = await sut.ScanWithClamavAsync(stream, "127.0.0.1", ((IPEndPoint)listener.LocalEndpoint).Port, TimeSpan.FromMilliseconds(300), CancellationToken.None);
+
+        Assert.Equal(ClamavScanResult.Unavailable, result);
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(10), $"took {clock.Elapsed}");
+        using TcpClient held = await accepted;
+    }
+
+    /// <summary>The time-limit overload scans like the default one: a clean reply is Clean.</summary>
+    [Fact]
+    public async Task ScanWithClamavAsync_WithATimeLimit_ReturnsClean_WhenDaemonRespondsOk()
+    {
+        await using var server = FakeClamavServer.Start("stream: OK\n");
+        using var stream = new MemoryStream([0x01]);
+
+        Assert.Equal(ClamavScanResult.Clean, await _sut.ScanWithClamavAsync(stream, "127.0.0.1", server.Port, TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
     /// <summary>A signature name that merely contains "OK" must not read as clean: FOUND wins.</summary>
     [Fact]
     public async Task ScanWithClamavAsync_ReturnsInfected_WhenSignatureNameContainsOk()

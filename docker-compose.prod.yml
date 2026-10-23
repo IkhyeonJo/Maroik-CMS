@@ -97,6 +97,15 @@ services:
       container_name: Maroik.Clamav
       logging: *default-logging
       restart: unless-stopped
+      environment:
+        # File Manager limits (requirement S3; pinned by ClamavConfigurationArchitectureTests). The image writes each CLAMD_CONF_*
+        # variable into clamd.conf. 2048M = the largest file ClamAV can scan (2 GB); AlertExceedsMax reports a stream clamd could
+        # not scan whole (Maroik answers it as "could not be scanned"); MaxScanTime (ms) lets a 2 GB file finish.
+        CLAMD_CONF_StreamMaxLength: "2048M"
+        CLAMD_CONF_MaxFileSize: "2048M"
+        CLAMD_CONF_MaxScanSize: "2048M"
+        CLAMD_CONF_AlertExceedsMax: "yes"
+        CLAMD_CONF_MaxScanTime: "600000"
       expose:
         - "3310"                       # clamd TCP socket
       networks:

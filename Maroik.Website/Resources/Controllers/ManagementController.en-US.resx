@@ -537,4 +537,10 @@
   <data name="A temporary error occurred. Please try again later." xml:space="preserve">
     <value>A temporary error occurred. Please try again later.</value>
   </data>
+  <data name="The storage quota cannot be negative." xml:space="preserve">
+    <value>The storage quota cannot be negative.</value>
+  </data>
+  <data name="The storage quota is too large." xml:space="preserve">
+    <value>The storage quota is too large.</value>
+  </data>
 </root>

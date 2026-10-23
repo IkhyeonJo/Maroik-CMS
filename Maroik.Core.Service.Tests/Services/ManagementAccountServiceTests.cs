@@ -343,6 +343,42 @@ public class ManagementAccountServiceTests
         Assert.Contains("wrong", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>An administrator sets the account's File Manager quota (Q2); a request without one keeps the current quota.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_SetsTheFileManagerQuota_OnlyWhenGiven()
+    {
+        var account = ActiveAccount();
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        var sut = CreateSut();
+
+        ServiceResult set = await sut.UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = account.Email.Value, Role = "User", FileManagerQuotaBytes = 5_000 }, null, Actor, TestContext.Current.CancellationToken);
+        Assert.True(set.Success);
+        Assert.Equal(5_000, account.FileManagerQuotaBytes);
+
+        ServiceResult kept = await sut.UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = account.Email.Value, Role = "User", FileManagerQuotaBytes = null }, null, Actor, TestContext.Current.CancellationToken);
+        Assert.True(kept.Success);
+        Assert.Equal(5_000, account.FileManagerQuotaBytes);
+    }
+
+    /// <summary>A negative quota is refused with the domain's reason, rolled back and not saved.</summary>
+    [Fact]
+    public async Task UpdateAccountAsync_RefusesANegativeFileManagerQuota()
+    {
+        var account = ActiveAccount();
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+
+        ServiceResult result = await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = account.Email.Value, Role = "User", FileManagerQuotaBytes = -1 }, null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.Equal("Account.FileManagerQuotaNegative", result.ErrorCode);
+        Assert.Equal("The storage quota cannot be negative.", result.ErrorKey);
+        _accountRepo.Verify(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     /// <summary>Verifies that <c>UpdateAccountAsync</c> keeps existing password when new password is empty.</summary>
     [Fact]
     public async Task UpdateAccountAsync_KeepsExistingPassword_WhenNewPasswordIsEmpty()

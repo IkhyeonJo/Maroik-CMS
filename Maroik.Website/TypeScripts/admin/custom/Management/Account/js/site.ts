@@ -27,6 +27,8 @@
             email: check.string, nickname: check.string, role: check.string, timeZoneIanaId: check.string, locked: check.boolean,
             emailConfirmed: check.boolean, agreedServiceTerms: check.boolean, message: check.nullable(check.string), deleted: check.boolean,
         }),
+        // The account's File Manager quota in GB, converted by the server (FileManagerUploadPolicy.QuotaGbFromBytes).
+        fileManagerQuotaGb: check.number,
     });
     // Cached references: the jQuery-UI tab containers, the grid search box, and
     // every field of the creation / edit modals plus the anti-forgery input.
@@ -50,6 +52,7 @@
     const $editAccountAgreedServiceTerms = $("#editAccountAgreedServiceTerms");
     const $editMessage = $("#editMessage");
     const $editAccountDeleted = $("#editAccountDeleted");
+    const $editAccountFileManagerQuotaGb = $("#editAccountFileManagerQuotaGb");
     const $formEditAccount = $("#formEditAccount");
     const $editAccountPassword = $("#editAccountPassword");
     const $btnEditAccountGridRow = $("#btnEditAccountGridRow");
@@ -204,6 +207,7 @@
                     $editAccountAgreedServiceTerms.prop("checked", data.account.agreedServiceTerms);
                     $editMessage.val(data.account.message);
                     $editAccountDeleted.prop("checked", data.account.deleted);
+                    $editAccountFileManagerQuotaGb.val(data.fileManagerQuotaGb);
 
                     // Static backdrop + no keyboard dismiss; `toggle` then `show`
                     // forces it open even mid-transition.
@@ -237,6 +241,10 @@
         let agreedServiceTerms = $editAccountAgreedServiceTerms.is(":checked");
         let message = $editMessage.val();
         let deleted = $editAccountDeleted.is(":checked");
+        // An empty quota field sends none, so the server keeps the current quota. The server converts GB to bytes and
+        // refuses a negative or oversized quota (authoritative in FileManagerUploadPolicy.QuotaBytesFromGb).
+        let quotaText = fieldValue($editAccountFileManagerQuotaGb);
+        let fileManagerQuotaGb = quotaText === "" ? null : Number(quotaText);
 
         let paramValue = JSON.stringify({
             Email: email,
@@ -247,7 +255,8 @@
             EmailConfirmed: emailConfirmed,
             AgreedServiceTerms: agreedServiceTerms,
             Message: message,
-            Deleted: deleted
+            Deleted: deleted,
+            FileManagerQuotaGb: fileManagerQuotaGb
         });
 
         $.ajax({

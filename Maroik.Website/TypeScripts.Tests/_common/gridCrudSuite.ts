@@ -29,6 +29,8 @@ export interface GridCrudConfig {
     fixture: () => string;
     /** a complete record as the IsXExists endpoint returns it (every field the edit-fill code reads) */
     record: Record<string, unknown>;
+    /** fields the IsXExists reply carries beside the record (e.g. the account's quota in GB, computed by the server) */
+    existsExtra?: Record<string, unknown>;
     /** ids of the maturity-date inputs that get the "No maturity date" / "Today" button panel (Fixed* pages only) */
     maturityPickers?: string[];
     /** the value of the page's `#noMaturityDate` hidden field, e.g. "9999-12-31" */
@@ -123,7 +125,7 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
             expect(call.url).toBe(existsUrl(KEYS[0]));
             expect(call.headers).toEqual({ RequestVerificationToken: "tok" });
 
-            successOf(call)({ result: true, [c.existsKey]: c.record });
+            successOf(call)({ result: true, [c.existsKey]: c.record, ...c.existsExtra });
 
             expect(modal).toHaveBeenCalledWith({ keyboard: false, backdrop: "static" });
             expect(modal).toHaveBeenCalledWith("show");
@@ -240,7 +242,7 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
             expect(exists.url).toBe(existsUrl(KEYS[1]));
             // A key unlike the selected row's, typed like the real one (a numeric Id, or a name / e-mail).
             const returnedKey = c.rowKey === "Id" ? 424242 : "returned-key";
-            successOf(exists)({ result: true, [c.existsKey]: { ...c.record, [recordKey]: returnedKey } });
+            successOf(exists)({ result: true, [c.existsKey]: { ...c.record, [recordKey]: returnedKey }, ...c.existsExtra });
 
             const del = present(h.ajaxCalls.find((a) => a.url === `/${c.controller}/Delete${N}`));
             expect(JSON.parse(String(del.data))).toEqual(deleteBody(returnedKey));
@@ -261,7 +263,7 @@ export function describeGridCrudScript(c: GridCrudConfig): void {
 
             h.$(`#btnDelete${N}`).trigger("click");
             const exists = lastOf(h.ajaxCalls.filter((a) => String(a.url).includes(`Is${N}Exists`)));
-            successOf(exists)({ result: true, [c.existsKey]: c.record });
+            successOf(exists)({ result: true, [c.existsKey]: c.record, ...c.existsExtra });
             successOf(present(h.ajaxCalls.find((a) => a.url === `/${c.controller}/Delete${N}`)))({ result: false, error: "in use" });
             expect(h.toastr.error).toHaveBeenCalledWith("in use");
             expect(h.MvcGridInstances).toHaveLength(0);

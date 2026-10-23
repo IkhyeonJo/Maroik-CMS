@@ -6,6 +6,7 @@ using Maroik.Core.Contract.Settings;
 using Maroik.Core.Domain.Accounts;
 using Maroik.Core.Domain.Boards;
 using Maroik.Core.Domain.Extensions;
+using Maroik.Core.Domain.FileManagers;
 using Maroik.Core.Domain.Uploads;
 using Maroik.Website.Attributes;
 using Maroik.Website.Constants;
@@ -337,7 +338,7 @@ public class ManagementController(
                     result = false,
                     error = localizer["Fail to find the account by given email address"].Value
                 })
-                : (IActionResult)Json(new { result = true, account = tempAccount });
+                : (IActionResult)Json(new { result = true, account = tempAccount, fileManagerQuotaGb = FileManagerUploadPolicy.QuotaGbFromBytes(tempAccount.FileManagerQuotaBytes) });
         }
         catch (Exception ex)
         {
@@ -371,6 +372,19 @@ public class ManagementController(
             if (!ModelState.IsValid)
                 return Json(new { result = false, error = localizer["Input is invalid"].Value });
 
+            // The quota is typed in GB; the domain turns it into bytes and refuses a negative or oversized value.
+            long? quotaBytes = null;
+            if (accountInputViewModel.FileManagerQuotaGb is { } quotaGb)
+            {
+                var quotaResult = FileManagerUploadPolicy.QuotaBytesFromGb(quotaGb);
+                if (quotaResult.IsError)
+                {
+                    ServiceResult refusal = ServiceResult.FromError(quotaResult.FirstError);
+                    return Json(new { result = false, error = localizer[refusal.ErrorKey, refusal.ErrorArgs].ToPlainString() });
+                }
+                quotaBytes = quotaResult.Value;
+            }
+
             // Role validity is enforced by Account.ChangeRole in the Domain layer, which rejects
             // the request with a validation error below instead of the controller silently
             // coercing an invalid value.
@@ -384,7 +398,8 @@ public class ManagementController(
                     EmailConfirmed = accountInputViewModel.EmailConfirmed,
                     AgreedServiceTerms = accountInputViewModel.AgreedServiceTerms,
                     Message = accountInputViewModel.Message,
-                    Deleted = accountInputViewModel.Deleted
+                    Deleted = accountInputViewModel.Deleted,
+                    FileManagerQuotaBytes = quotaBytes
                 },
                 accountInputViewModel.Password, // new password (plain); service hashes it
                 AdminEmail, HttpContext.RequestAborted);

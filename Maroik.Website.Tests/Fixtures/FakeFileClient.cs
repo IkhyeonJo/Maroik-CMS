@@ -74,4 +74,60 @@ public sealed class FakeFileClient : IFileClient
         _files[path.TrimStart('/')] = (bytes, contentType);
         lock (UploadedPaths) UploadedPaths.Add(path.TrimStart('/'));
     }
+
+    // -- File Manager ------------------------------------------------------------------
+
+    /// <summary>The bytes received so far of each unfinished File Manager upload.</summary>
+    private readonly ConcurrentDictionary<Guid, byte[]> _staging = new();
+
+    /// <summary>What every File Manager upload completion reports; defaults to <see cref="FileUploadResult.Stored"/>.</summary>
+    public FileUploadResult FileManagerOutcome { get; set; } = FileUploadResult.Stored;
+
+    /// <summary>When true every File Manager delete fails, as an unreachable file-storage service would.</summary>
+    public bool FailFileManagerDeletes { get; set; }
+
+    /// <summary>Every File Manager path a caller asked to delete (in order).</summary>
+    public List<string> DeletedPaths { get; } = [];
+
+    /// <summary>Every File Manager upload a caller aborted (in order).</summary>
+    public List<Guid> AbortedUploads { get; } = [];
+
+    /// <summary>Whether bytes are being received for <paramref name="uploadId"/>.</summary>
+    public bool IsStaging(Guid uploadId) => _staging.ContainsKey(uploadId);
+
+    /// <inheritdoc />
+    public async Task<long?> AppendFileManagerChunkAsync(Guid uploadId, long offset, Stream chunk, string fileStorageBaseUrl, CancellationToken ct = default)
+    {
+        byte[] received = _staging.GetValueOrDefault(uploadId, []);
+        if (offset != received.Length) return null;
+        using var copy = new MemoryStream();
+        await chunk.CopyToAsync(copy, ct);
+        _staging[uploadId] = [.. received, .. copy.ToArray()];
+        return _staging[uploadId].Length;
+    }
+
+    /// <inheritdoc />
+    public Task<FileUploadResult> CompleteFileManagerUploadAsync(Guid uploadId, long expectedSize, string fileStorageBaseUrl, CancellationToken ct = default)
+    {
+        _staging.TryRemove(uploadId, out byte[]? received);
+        received ??= [];
+        if (received.Length != expectedSize) return Task.FromResult(FileUploadResult.Failed);
+        if (FileManagerOutcome == FileUploadResult.Stored) Store(received, "application/octet-stream", $"upload/FileManager/{uploadId:D}");
+        return Task.FromResult(FileManagerOutcome);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> AbortFileManagerUploadAsync(Guid uploadId, string fileStorageBaseUrl, CancellationToken ct = default)
+    {
+        _staging.TryRemove(uploadId, out _);
+        lock (AbortedUploads) AbortedUploads.Add(uploadId);
+        return Task.FromResult(true);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> DeleteFileManagerFileAsync(string storagePath, string fileStorageBaseUrl, CancellationToken ct = default)
+    {
+        lock (DeletedPaths) DeletedPaths.Add(storagePath);
+        return Task.FromResult(!FailFileManagerDeletes && _files.TryRemove(storagePath, out _));
+    }
 }

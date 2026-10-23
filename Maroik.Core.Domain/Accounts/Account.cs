@@ -88,6 +88,12 @@ public sealed class Account : AggregateRoot<string>
     /// </summary>
     public bool MustChangePassword { get; private set; }
 
+    /// <summary>
+    /// How many bytes the account may store in the File Manager. A new account has 0 (Q1): it can upload nothing until an
+    /// administrator grants a quota (<see cref="ChangeFileManagerQuota"/>).
+    /// </summary>
+    public long FileManagerQuotaBytes { get; private set; }
+
     /// <summary>Generates a fresh, unpredictable security stamp value.</summary>
     private static string GenerateSecurityStamp() => Guid.NewGuid().ToString("N");
 
@@ -138,7 +144,7 @@ public sealed class Account : AggregateRoot<string>
         Email email, string hashedPassword, string nickname, string? avatarImagePath, AccountRole role,
         TimeZoneId timeZone, CurrencyCode? defaultMonetaryUnit, bool locked, long loginAttempt, bool emailConfirmed,
         bool agreedServiceTerms, string? registrationToken, string? resetPasswordToken, DateTime created,
-        DateTime updated, string? message, bool deleted, string securityStamp, bool mustChangePassword) : base(email.Value)
+        DateTime updated, string? message, bool deleted, string securityStamp, bool mustChangePassword, long fileManagerQuotaBytes) : base(email.Value)
     {
         Email = email;
         HashedPassword = hashedPassword;
@@ -159,6 +165,7 @@ public sealed class Account : AggregateRoot<string>
         Deleted = deleted;
         SecurityStamp = securityStamp;
         MustChangePassword = mustChangePassword;
+        FileManagerQuotaBytes = fileManagerQuotaBytes;
     }
 
     // ------------------------------------------------------------------------
@@ -188,7 +195,8 @@ public sealed class Account : AggregateRoot<string>
         string? message,
         bool deleted,
         string securityStamp,
-        bool mustChangePassword)
+        bool mustChangePassword,
+        long fileManagerQuotaBytes = 0)
     {
         return new Account(
             Email.FromTrustedSource(email),
@@ -209,7 +217,8 @@ public sealed class Account : AggregateRoot<string>
             message,
             deleted,
             securityStamp,
-            mustChangePassword);
+            mustChangePassword,
+            fileManagerQuotaBytes);
     }
 
     /// <summary>
@@ -563,5 +572,19 @@ public sealed class Account : AggregateRoot<string>
     {
         Deleted = false;
         Updated = utcNow;
+    }
+
+    /// <summary>
+    /// Administrator operation: sets the account's File Manager quota. It may be set below the current usage (Q3): that only blocks
+    /// the account's new uploads.
+    /// </summary>
+    public ErrorOr<Success> ChangeFileManagerQuota(long quotaBytes, DateTime utcNow)
+    {
+        if (quotaBytes < 0)
+            return DomainError.Validation("Account.FileManagerQuotaNegative", "The storage quota cannot be negative.");
+
+        FileManagerQuotaBytes = quotaBytes;
+        Updated = utcNow;
+        return Result.Success;
     }
 }

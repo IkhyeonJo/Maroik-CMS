@@ -47,4 +47,24 @@ public interface IFileClient
     /// <param name="fileStorageBaseUrl">Base URL of the Maroik.FileStorage service.</param>
     /// <param name="ct">Cancellation token.</param>
     public Task<FileUploadResult> UploadWithResultAsync(byte[] fileData, string contentType, string filePath, string fileStorageBaseUrl, CancellationToken ct = default);
+
+    // -- File Manager (large files, in chunks; Maroik.FileStorage api/FileManager) -------------------------------
+
+    /// <summary>
+    /// Appends <paramref name="chunk"/> at <paramref name="offset"/> of the File Manager upload <paramref name="uploadId"/>. Returns the
+    /// length the storage service now holds, or null when it refused the chunk (a wrong offset) or could not be reached (logged).
+    /// </summary>
+    public Task<long?> AppendFileManagerChunkAsync(Guid uploadId, long offset, Stream chunk, string fileStorageBaseUrl, CancellationToken ct = default);
+
+    /// <summary>
+    /// Completes the File Manager upload <paramref name="uploadId"/> of <paramref name="expectedSize"/> bytes: the storage service scans
+    /// it and stores it under <c>upload/FileManager/{uploadId}</c>. The result says whether it was stored, infected, unscannable or failed.
+    /// </summary>
+    public Task<FileUploadResult> CompleteFileManagerUploadAsync(Guid uploadId, long expectedSize, string fileStorageBaseUrl, CancellationToken ct = default);
+
+    /// <summary>Drops what the storage service holds of an unfinished File Manager upload; false when refused or unreachable (logged).</summary>
+    public Task<bool> AbortFileManagerUploadAsync(Guid uploadId, string fileStorageBaseUrl, CancellationToken ct = default);
+
+    /// <summary>Deletes the stored File Manager file at <paramref name="storagePath"/>; false when refused, missing or unreachable (logged).</summary>
+    public Task<bool> DeleteFileManagerFileAsync(string storagePath, string fileStorageBaseUrl, CancellationToken ct = default);
 }

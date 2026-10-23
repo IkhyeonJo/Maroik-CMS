@@ -188,4 +188,135 @@ public class FileClient(IHttpClientFactory httpClientFactory, ILogger<FileClient
             return FileUploadResult.Failed;
         }
     }
+
+    /// <summary>Adds the text field <paramref name="name"/> to <paramref name="content"/> (which disposes it with itself).</summary>
+    private static void AddText(MultipartFormDataContent content, string name, string value)
+    {
+        StringContent? part = new(value);
+        try
+        {
+            content.Add(part, name);
+            part = null;
+        }
+        finally
+        {
+            part?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// POSTs <paramref name="content"/> (plus the correlation id) to <c>api/FileManager/{action}</c> and returns the response, which the
+    /// caller disposes.
+    /// </summary>
+    private async Task<HttpResponseMessage> PostFileManagerAsync(string action, MultipartFormDataContent content, string fileStorageBaseUrl, CancellationToken ct)
+    {
+        AddText(content, "correlationId", Activity.Current?.Id ?? "");
+        // Disposed, as in SendDownloadRequestAsync; the factory's pooled handler is not disposed with it.
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        return await httpClient.PostAsync($"{fileStorageBaseUrl}/api/FileManager/{action}", content, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<long?> AppendFileManagerChunkAsync(Guid uploadId, long offset, Stream chunk, string fileStorageBaseUrl, CancellationToken ct = default)
+    {
+        try
+        {
+            using MultipartFormDataContent content = [];
+            AddText(content, "uploadId", uploadId.ToString("D"));
+            AddText(content, "offset", offset.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            // The chunk is streamed into the request, not copied into memory first.
+            StreamContent? chunkPart = new(chunk);
+            try
+            {
+                content.Add(chunkPart, "chunk", "chunk");
+                chunkPart = null;
+            }
+            finally
+            {
+                chunkPart?.Dispose();
+            }
+
+            using HttpResponseMessage response = await PostFileManagerAsync("chunk", content, fileStorageBaseUrl, ct);
+            if (response.IsSuccessStatusCode && long.TryParse(await response.Content.ReadAsStringAsync(ct), System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out long length))
+                return length;
+
+            logger.LogWarning("File Manager chunk of {UploadId} at offset {Offset} returned {StatusCode}: {Reason}",
+                uploadId, offset, (int)response.StatusCode, await ReadReasonAsync(response, ct));
+            return null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "File Manager chunk request failed for {UploadId}", uploadId);
+            return null;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<FileUploadResult> CompleteFileManagerUploadAsync(Guid uploadId, long expectedSize, string fileStorageBaseUrl, CancellationToken ct = default)
+    {
+        try
+        {
+            using MultipartFormDataContent content = [];
+            AddText(content, "uploadId", uploadId.ToString("D"));
+            AddText(content, "expectedSize", expectedSize.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+            using HttpResponseMessage response = await PostFileManagerAsync("complete", content, fileStorageBaseUrl, ct);
+            if (response.IsSuccessStatusCode)
+                return FileUploadResult.Stored;
+
+            string reason = await ReadReasonAsync(response, ct);
+            logger.LogWarning("File Manager upload {UploadId} returned {StatusCode}: {Reason}", uploadId, (int)response.StatusCode, reason);
+            return ClassifyRefusal(reason);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "File Manager upload completion request failed for {UploadId}", uploadId);
+            return FileUploadResult.Failed;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> AbortFileManagerUploadAsync(Guid uploadId, string fileStorageBaseUrl, CancellationToken ct = default)
+    {
+        try
+        {
+            using MultipartFormDataContent content = [];
+            AddText(content, "uploadId", uploadId.ToString("D"));
+
+            using HttpResponseMessage response = await PostFileManagerAsync("abort", content, fileStorageBaseUrl, ct);
+            if (response.IsSuccessStatusCode)
+                return true;
+
+            logger.LogWarning("File Manager abort of {UploadId} returned {StatusCode}: {Reason}", uploadId, (int)response.StatusCode, await ReadReasonAsync(response, ct));
+            return false;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "File Manager abort request failed for {UploadId}", uploadId);
+            return false;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> DeleteFileManagerFileAsync(string storagePath, string fileStorageBaseUrl, CancellationToken ct = default)
+    {
+        try
+        {
+            using MultipartFormDataContent content = [];
+            AddText(content, "filePath", storagePath);
+
+            using HttpResponseMessage response = await PostFileManagerAsync("delete", content, fileStorageBaseUrl, ct);
+            if (response.IsSuccessStatusCode)
+                return true;
+
+            logger.LogWarning("File Manager delete of {FilePath} returned {StatusCode}: {Reason}", storagePath, (int)response.StatusCode, await ReadReasonAsync(response, ct));
+            return false;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "File Manager delete request failed for {FilePath}", storagePath);
+            return false;
+        }
+    }
 }

@@ -57,6 +57,9 @@ public partial class ApplicationDbContext : DbContext
     /// <summary>"Expenditure" table.</summary>
     public virtual DbSet<Expenditure> Expenditures { get; set; }
 
+    /// <summary>"FileManagerNode" table.</summary>
+    public virtual DbSet<FileManagerNode> FileManagerNodes { get; set; }
+
     /// <summary>"FixedExpenditure" table.</summary>
     public virtual DbSet<FixedExpenditure> FixedExpenditures { get; set; }
 
@@ -114,6 +117,9 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.LoginAttempt).HasComment("LoginAttempt");
             entity.Property(e => e.Message).HasComment("Message");
             entity.Property(e => e.MustChangePassword).HasComment("Forces a password change on next login (set by an admin password override)");
+            entity.Property(e => e.FileManagerQuotaBytes)
+                .HasDefaultValueSql("0")
+                .HasComment("File Manager storage quota in bytes (0 = no uploads)");
             entity.Property(e => e.Nickname)
                 .HasMaxLength(255)
                 .HasComment("Nickname");
@@ -556,6 +562,55 @@ public partial class ApplicationDbContext : DbContext
                 .HasForeignKey(d => new { d.PaymentMethod, d.AccountEmail })
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("Expenditure_fk_0");
+        });
+
+        modelBuilder.Entity<FileManagerNode>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("FileManagerNode_pk");
+
+            entity.ToTable("FileManagerNode", tb => tb.HasComment("FileManagerNode"));
+
+            entity.HasIndex(e => e.StoragePath, "FileManagerNode_StoragePath_unique").IsUnique();
+
+            entity.HasIndex(e => e.AccountEmail, "FileManagerNode_index_0");
+
+            entity.HasIndex(e => e.ParentId, "FileManagerNode_index_1");
+
+            entity.HasIndex(e => new { e.AccountEmail, e.ParentId, e.Name }, "FileManagerNode_unique_index_0")
+                .IsUnique()
+                .HasFilter("(NOT \"Uploading\")")
+                .AreNullsDistinct(false);
+
+            entity.Property(e => e.Id).HasComment("PK");
+            entity.Property(e => e.AccountEmail)
+                .HasMaxLength(255)
+                .HasComment("Account Email (ID)");
+            entity.Property(e => e.Created)
+                .HasComment("Created")
+                .HasColumnType("timestamp without time zone");
+            entity.Property(e => e.IsFolder).HasComment("Folder (true) or file (false)");
+            entity.Property(e => e.Name)
+                .HasMaxLength(255)
+                .HasComment("Name shown to the user");
+            entity.Property(e => e.ParentId).HasComment("Parent folder Id (NULL = the drive root)");
+            entity.Property(e => e.Size).HasComment("File size in bytes (0 for a folder)");
+            entity.Property(e => e.StoragePath)
+                .HasMaxLength(255)
+                .HasComment("upload/FileManager/{GUID} (NULL for a folder)");
+            entity.Property(e => e.Updated)
+                .HasComment("Updated")
+                .HasColumnType("timestamp without time zone");
+            entity.Property(e => e.Uploading).HasComment("Upload started but not completed");
+
+            entity.HasOne(d => d.AccountEmailNavigation).WithMany(p => p.FileManagerNodes)
+                .HasForeignKey(d => d.AccountEmail)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FileManagerNode_fk_0");
+
+            entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent)
+                .HasForeignKey(d => d.ParentId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FileManagerNode_fk_1");
         });
 
         modelBuilder.Entity<FixedExpenditure>(entity =>

@@ -313,3 +313,48 @@ interface Window {
     /** Re-formats `$input` with {@link formatAmountInput} on every keystroke, keeping the caret by the same digits. User role only. */
     bindAmountInput($input: JQuery, allowNegative: boolean): void;
 }
+
+// jsTree 3.3.17 — wwwroot/user/plugins/jstree (the File Manager's folder tree, FileManager/UserIndex). No @types package is used,
+// as with MvcGrid and FullCalendar: only the surface the page script touches is declared.
+/** One node as the page hands it to jsTree (`text` is HTML to jsTree, so the page escapes it). */
+interface JsTreeNodeData {
+    id: string;
+    parent: string;
+    text: string;
+    state?: { opened?: boolean };
+}
+
+/** A node as jsTree passes it to a callback. */
+interface JsTreeNode {
+    id: string;
+}
+
+/** The options the page initializes the tree with. */
+interface JsTreeSettings {
+    core: {
+        data: JsTreeNodeData[];
+        /** Allows (true) or refuses (false) each change; the page lets only a folder move into another folder or the root. */
+        check_callback: (operation: string, node: JsTreeNode, parent: JsTreeNode) => boolean;
+        multiple: boolean;
+        themes: { name: string; dots: boolean };
+    };
+    plugins: string[];
+    dnd: { is_draggable: (nodes: JsTreeNode[]) => boolean };
+}
+
+/** The tree instance (`$(el).jstree(true)`). */
+interface JsTreeInstance {
+    settings: { core: { data: JsTreeNodeData[] } };
+    refresh(): void;
+    deselect_all(suppressEvent: boolean): void;
+    select_node(id: string, suppressEvent: boolean): void;
+}
+
+// Augments jQuery's own interface with the jsTree plugin.
+interface JQuery<TElement = HTMLElement> {
+    /** Builds the tree. */
+    jstree(options: JsTreeSettings): this;
+
+    /** The tree instance of an element the tree was built on. */
+    jstree(getInstance: true): JsTreeInstance;
+}

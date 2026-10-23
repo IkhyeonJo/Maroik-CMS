@@ -32,4 +32,7 @@ public class AdminUpdateAccountRequest
 
     /// <summary>Soft-delete flag. True means the account is deleted but the row is kept.</summary>
     public bool Deleted { get; set; }
+
+    /// <summary>The account's File Manager quota in bytes (Q2). Null keeps the current quota.</summary>
+    public long? FileManagerQuotaBytes { get; set; }
 }

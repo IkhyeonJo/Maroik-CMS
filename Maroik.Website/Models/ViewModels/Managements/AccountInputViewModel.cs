@@ -70,4 +70,10 @@ public class AccountInputViewModel
     /// <summary>Soft-delete flag; when <see langword="true"/> the account is hidden from normal views.</summary>
     [Display(Name = "Deleted")]
     public bool Deleted { get; set; }
+
+    /// <summary>
+    /// The account's File Manager quota in GB as the administrator typed it (Q2); the server turns it into bytes
+    /// (<c>FileManagerUploadPolicy.QuotaBytesFromGb</c>). Null keeps the current quota.
+    /// </summary>
+    public decimal? FileManagerQuotaGb { get; set; }
 }

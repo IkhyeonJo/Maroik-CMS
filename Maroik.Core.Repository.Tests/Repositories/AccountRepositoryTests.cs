@@ -378,6 +378,24 @@ public sealed class AccountRepositoryTests(DatabaseFixture database) : Repositor
 
     // -- UpdateEntityAsync ---------------------------------------------------
 
+    /// <summary>The File Manager quota reads back from the column and an admin's update writes it; a new account's is 0.</summary>
+    [Fact]
+    public async Task TheFileManagerQuota_IsReadAndWritten()
+    {
+        OrmAccount row = NewAccount();
+        await SeedAsync(row);
+
+        Account account = (await Sut.FindByEmailAsync(row.Email, TestContext.Current.CancellationToken))!;
+        Assert.Equal(0, account.FileManagerQuotaBytes);
+
+        Assert.False(account.ChangeFileManagerQuota(30L * 1024 * 1024 * 1024, DateTime.UtcNow).IsError);
+        await Sut.UpdateEntityAsync(account, TestContext.Current.CancellationToken);
+        Context.ChangeTracker.Clear();
+
+        Assert.Equal(30L * 1024 * 1024 * 1024, (await Sut.FindByEmailAsync(row.Email, TestContext.Current.CancellationToken))!.FileManagerQuotaBytes);
+    }
+
+
     /// <summary>Verifies that <c>UpdateEntityAsync</c> persists changes to an existing account.</summary>
     [Fact]
     public async Task UpdateEntityAsync_UpdatesExistingAccount()

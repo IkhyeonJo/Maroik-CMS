@@ -341,6 +341,95 @@ public class ManagementControllerAccountTests(MaroikWebApplicationFactory factor
         Assert.Contains("Fail to find the account by given email address", json, StringComparison.Ordinal);
     }
 
+    // -- File Manager quota (Q2) --------------------------------------------------
+
+    /// <summary>Sets the stored File Manager quota of <paramref name="email"/>.</summary>
+    private void SetQuota(string email, long bytes)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.Accounts.Single(a => a.Email == email).FileManagerQuotaBytes = bytes;
+        db.SaveChanges();
+    }
+
+    /// <summary>The stored File Manager quota of <paramref name="email"/>.</summary>
+    private long QuotaOf(string email)
+    {
+        using var scope = factory.Services.CreateScope();
+        return scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Accounts.AsNoTracking().Single(a => a.Email == email).FileManagerQuotaBytes;
+    }
+
+    /// <summary>The account lookup the edit form fills from answers the quota in GB (computed by the server).</summary>
+    [Fact]
+    public async Task IsAccountExists_AnswersTheFileManagerQuotaInGb()
+    {
+        var session = await LoginAsAdminAsync();
+        const string email = "quota-lookup@test.com";
+        SeedAccount(email);
+        SetQuota(email, 32_212_254_720);
+
+        using var request = session.BuildJsonPostRequest($"/Management/IsAccountExists?email={email}");
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        using JsonDocument doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(30m, doc.RootElement.GetProperty("fileManagerQuotaGb").GetDecimal());
+    }
+
+    /// <summary>The admin's update request for <paramref name="email"/> with <paramref name="quotaGb"/> (omitted when null).</summary>
+    private static object QuotaUpdate(string email, decimal? quotaGb) => quotaGb is { } gb
+        ? new { Email = email, Password = "", Role = Role.User, TimeZoneIanaId = "UTC", Locked = false, EmailConfirmed = true, AgreedServiceTerms = true, Message = "", Deleted = false, FileManagerQuotaGb = gb }
+        : new { Email = email, Password = "", Role = Role.User, TimeZoneIanaId = "UTC", Locked = false, EmailConfirmed = true, AgreedServiceTerms = true, Message = "", Deleted = false };
+
+    /// <summary>An administrator sets a quota in GB (fractions allowed); the account then holds it in bytes.</summary>
+    [Fact]
+    public async Task UpdateAccount_SetsTheFileManagerQuota_FromGb()
+    {
+        var session = await LoginAsAdminAsync();
+        const string email = "quota-set@test.com";
+        SeedAccount(email);
+
+        using var request = session.BuildJsonPostRequest("/Management/UpdateAccount", QuotaUpdate(email, 1.5m));
+        string json = await (await _client.SendAsync(request, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"result\":true", json, StringComparison.Ordinal);
+        Assert.Equal(1_610_612_736, QuotaOf(email));
+    }
+
+    /// <summary>An update without a quota keeps the current one.</summary>
+    [Fact]
+    public async Task UpdateAccount_WithoutAQuota_KeepsTheCurrentOne()
+    {
+        var session = await LoginAsAdminAsync();
+        const string email = "quota-kept@test.com";
+        SeedAccount(email);
+        SetQuota(email, 1234);
+
+        using var request = session.BuildJsonPostRequest("/Management/UpdateAccount", QuotaUpdate(email, null));
+        await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1234, QuotaOf(email));
+    }
+
+    /// <summary>A negative quota is refused with a translated reason, and the quota is unchanged.</summary>
+    [Theory]
+    [InlineData("en-US", "The storage quota cannot be negative.")]
+    [InlineData("ko-KR", "저장 공간 할당량은 음수일 수 없습니다.")]
+    public async Task UpdateAccount_RefusesANegativeQuota(string culture, string expected)
+    {
+        var session = await LoginAsAdminAsync();
+        string email = $"quota-negative-{culture}@test.com".ToLowerInvariant();
+        SeedAccount(email);
+        SetQuota(email, 99);
+
+        using var request = session.BuildJsonPostRequest("/Management/UpdateAccount", QuotaUpdate(email, -1m));
+        request.Headers.AcceptLanguage.ParseAdd(culture);
+        using JsonDocument doc = JsonDocument.Parse(await (await _client.SendAsync(request, TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+        Assert.False(doc.RootElement.GetProperty("result").GetBoolean());
+        Assert.Equal(expected, doc.RootElement.GetProperty("error").GetString());
+        Assert.Equal(99, QuotaOf(email));
+    }
+
     // -- UpdateAccount ------------------------------------------------------------
 
     /// <summary>Update account existing account returns success result.</summary>
