@@ -2528,17 +2528,17 @@ COPY public."Category" ("Id", "Name", "DisplayName", "IconPath", "Controller", "
 1	Dashboard	Dashboard	nav-icon fas fa-tachometer-alt	Dashboard	AdminIndex	Admin	0
 3	Dashboard	Dashboard	nav-icon fas fa-tachometer-alt	Dashboard	UserIndex	User	0
 12	Dashboard	Dashboard	nav-icon fas fa-tachometer-alt	Dashboard	AnonymousIndex	Anonymous	0
-9	Notice	Notice	nav-icon fas fa-bell	Notice		User	4
-4	Management	Management	nav-icon fas fa-cog	Management		User	6
+9	Notice	Notice	nav-icon fas fa-bell	Notice		User	5
+4	Management	Management	nav-icon fas fa-cog	Management		User	7
 19	Calendar	Calendar	nav-icon far fa-calendar-alt	Calendar	AnonymousIndex	Anonymous	2
 18	Forum	Forum	nav-icon fas fa-comments	Forum		Anonymous	3
-20	Calendar	Calendar	nav-icon far fa-calendar-alt	Calendar	UserIndex	User	2
-17	Forum	Forum	nav-icon fas fa-comments	Forum		User	3
+20	Calendar	Calendar	nav-icon far fa-calendar-alt	Calendar	UserIndex	User	3
+17	Forum	Forum	nav-icon fas fa-comments	Forum		User	4
 21	Calendar	Calendar	nav-icon far fa-calendar-alt	Calendar	AdminIndex	Admin	2
 16	Forum	Forum	nav-icon fas fa-comments	Forum		Admin	3
 2	Management	Management	nav-icon fas fa-cog	Management		Admin	4
-8	AccountBook	AccountBook	nav-icon fa fa-wallet	AccountBook		User	5
-25	Kanban	Kanban Board	nav-icon fas fa-columns	Kanban	UserIndex	User	1
+8	AccountBook	AccountBook	nav-icon fa fa-wallet	AccountBook		User	6
+25	Kanban	Kanban Board	nav-icon fas fa-columns	Kanban	UserIndex	User	2
 26	FileManager	File Manager	nav-icon fas fa-folder-open	FileManager	UserIndex	User	1
 \.
 
