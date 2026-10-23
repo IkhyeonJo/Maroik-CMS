@@ -1907,6 +1907,110 @@ ALTER SEQUENCE public."Income_Id_seq" OWNED BY public."Income"."Id";
 
 
 --
+-- Name: KanbanCard; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."KanbanCard" (
+    "Id" bigint NOT NULL,
+    "AccountEmail" character varying(255) NOT NULL,
+    "Lane" character varying(255) NOT NULL,
+    "Title" character varying(100) NOT NULL,
+    "Description" text,
+    "DueDate" date,
+    "Created" timestamp without time zone NOT NULL,
+    "Updated" timestamp without time zone NOT NULL,
+    CONSTRAINT "KanbanCard_Lane_check" CHECK ((("Lane")::text = ANY (ARRAY[('Backlog'::character varying)::text, ('ToDo'::character varying)::text, ('InProgress'::character varying)::text, ('Done'::character varying)::text]))),
+    CONSTRAINT "KanbanCard_Title_check" CHECK ((("Title")::text ~ '\S'::text))
+);
+
+
+ALTER TABLE public."KanbanCard" OWNER TO postgres;
+
+--
+-- Name: TABLE "KanbanCard"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public."KanbanCard" IS 'KanbanCard';
+
+
+--
+-- Name: COLUMN "KanbanCard"."Id"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."KanbanCard"."Id" IS 'PK';
+
+
+--
+-- Name: COLUMN "KanbanCard"."AccountEmail"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."KanbanCard"."AccountEmail" IS 'Account Email (ID)';
+
+
+--
+-- Name: COLUMN "KanbanCard"."Lane"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."KanbanCard"."Lane" IS 'Lane (Backlog, ToDo, InProgress, Done)';
+
+
+--
+-- Name: COLUMN "KanbanCard"."Title"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."KanbanCard"."Title" IS 'Title';
+
+
+--
+-- Name: COLUMN "KanbanCard"."Description"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."KanbanCard"."Description" IS 'Description';
+
+
+--
+-- Name: COLUMN "KanbanCard"."DueDate"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."KanbanCard"."DueDate" IS 'DueDate';
+
+
+--
+-- Name: COLUMN "KanbanCard"."Created"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."KanbanCard"."Created" IS 'Created';
+
+
+--
+-- Name: COLUMN "KanbanCard"."Updated"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."KanbanCard"."Updated" IS 'Updated';
+
+
+--
+-- Name: KanbanCard_Id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public."KanbanCard_Id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public."KanbanCard_Id_seq" OWNER TO postgres;
+
+--
+-- Name: KanbanCard_Id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public."KanbanCard_Id_seq" OWNED BY public."KanbanCard"."Id";
+
+
+--
 -- Name: OtherCalendar; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2156,6 +2260,13 @@ ALTER TABLE ONLY public."Income" ALTER COLUMN "Id" SET DEFAULT nextval('public."
 
 
 --
+-- Name: KanbanCard Id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."KanbanCard" ALTER COLUMN "Id" SET DEFAULT nextval('public."KanbanCard_Id_seq"'::regclass);
+
+
+--
 -- Name: OtherCalendar CalendarId; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -2290,6 +2401,7 @@ COPY public."Category" ("Id", "Name", "DisplayName", "IconPath", "Controller", "
 16	Forum	Forum	nav-icon fas fa-comments	Forum		Admin	3
 2	Management	Management	nav-icon fas fa-cog	Management		Admin	4
 8	AccountBook	AccountBook	nav-icon fa fa-wallet	AccountBook		User	5
+25	Kanban	Kanban Board	nav-icon fas fa-columns	Kanban	UserIndex	User	1
 \.
 
 
@@ -2338,6 +2450,14 @@ COPY public."Income" ("Id", "AccountEmail", "MainClass", "SubClass", "Content", 
 396	demo@maroik.com	RegularIncome	LaborIncome	Wage	10.00	USA Bank	2025-06-17 10:00:11	2025-05-31 10:04:07.275671	
 395	demo@maroik.com	RegularIncome	LaborIncome	Wage	2000.00	Korea Wallet	2025-06-09 10:00:11	2025-05-31 10:04:13.355409	
 394	demo@maroik.com	RegularIncome	LaborIncome	Wage	1000.00	Korea Bank	2025-06-22 10:00:11	2025-05-31 10:04:20.48965	
+\.
+
+
+--
+-- Data for Name: KanbanCard; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."KanbanCard" ("Id", "AccountEmail", "Lane", "Title", "Description", "DueDate", "Created", "Updated") FROM stdin;
 \.
 
 
@@ -2431,7 +2551,7 @@ SELECT pg_catalog.setval('public."Calendar_Id_seq"', 6, true);
 -- Name: Category_Id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."Category_Id_seq"', 24, true);
+SELECT pg_catalog.setval('public."Category_Id_seq"', 25, true);
 
 
 --
@@ -2460,6 +2580,13 @@ SELECT pg_catalog.setval('public."FixedIncome_Id_seq"', 106, true);
 --
 
 SELECT pg_catalog.setval('public."Income_Id_seq"', 397, true);
+
+
+--
+-- Name: KanbanCard_Id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public."KanbanCard_Id_seq"', 1, false);
 
 
 --
@@ -2621,6 +2748,14 @@ ALTER TABLE ONLY public."Income"
 
 
 --
+-- Name: KanbanCard KanbanCard_pk; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."KanbanCard"
+    ADD CONSTRAINT "KanbanCard_pk" PRIMARY KEY ("Id");
+
+
+--
 -- Name: OtherCalendar OtherCalendar_pk; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2758,6 +2893,13 @@ CREATE INDEX "Income_index_0" ON public."Income" USING btree ("DepositMyAssetPro
 --
 
 CREATE INDEX "Income_index_1" ON public."Income" USING btree ("AccountEmail", "Created");
+
+
+--
+-- Name: KanbanCard_index_0; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX "KanbanCard_index_0" ON public."KanbanCard" USING btree ("AccountEmail");
 
 
 --
@@ -2915,6 +3057,14 @@ ALTER TABLE ONLY public."FixedIncome"
 
 ALTER TABLE ONLY public."Income"
     ADD CONSTRAINT "Income_fk_0" FOREIGN KEY ("DepositMyAssetProductName", "AccountEmail") REFERENCES public."Asset"("ProductName", "AccountEmail") ON UPDATE CASCADE;
+
+
+--
+-- Name: KanbanCard KanbanCard_fk_0; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."KanbanCard"
+    ADD CONSTRAINT "KanbanCard_fk_0" FOREIGN KEY ("AccountEmail") REFERENCES public."Account"("Email") ON UPDATE CASCADE;
 
 
 --

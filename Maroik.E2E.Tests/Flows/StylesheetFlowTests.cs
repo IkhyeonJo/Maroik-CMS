@@ -108,4 +108,31 @@ public class StylesheetFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture
         Assert.Equal("pointer", await StyleAsync(page, "#styleProbe", "cursor"));
         Assert.Equal("pointer", await StyleAsync(page, "#styleProbe .fc-event-title", "cursor"));
     }
+
+    /// <summary>
+    /// The Kanban board lays its lanes side by side (each at least 280px, scrolling sideways on a narrow screen), shows a pointer
+    /// over a card, keeps a description's line breaks and gives the card modal its full width (<c>user/custom/Kanban/UserIndex/css/site.css</c>).
+    /// </summary>
+    [Fact]
+    public async Task Kanban_LaysTheLanesSideBySide_AndKeepsLineBreaks()
+    {
+        var (page, account) = await NewSignedInPageAsync();
+        await Db.SeedKanbanCardAsync(account.Email, "ToDo", "Styled card", "line 1\nline 2");
+        await page.WaitForURLAsync(url => url.Contains("/Dashboard/", StringComparison.Ordinal), new PageWaitForURLOptions { Timeout = 30_000 });
+        await GotoAsync(page, "/Kanban/UserIndex");
+
+        Assert.Equal("flex", await StyleAsync(page, ".kanban-lanes", "display"));
+        Assert.Equal("auto", await StyleAsync(page, ".kanban-lanes", "overflow-x"));
+        Assert.Equal("280px", await StyleAsync(page, ".kanban-lane", "min-width"));
+        Assert.Equal("pointer", await StyleAsync(page, ".kanban-card-item", "cursor"));
+        Assert.Equal("pre-wrap", await StyleAsync(page, ".kanban-card-description", "white-space"));
+        Assert.Equal("anywhere", await StyleAsync(page, ".kanban-card-title", "overflow-wrap"));
+
+        // The card modal takes Bootstrap's full dialog width instead of shrinking to its content (the layout makes every
+        // .modal-dialog inline-block to centre it), and its Delete / Save buttons keep a gap between them.
+        await page.Locator(".kanban-card-item").First.ClickAsync();
+        await Assertions.Expect(page.Locator("#kanbanCardModal")).ToBeVisibleAsync();
+        Assert.Equal("500px", await StyleAsync(page, "#kanbanCardModal .modal-dialog", "width"));
+        Assert.Equal("8px", await StyleAsync(page, "#btnDeleteKanbanCard", "margin-right"));
+    }
 }

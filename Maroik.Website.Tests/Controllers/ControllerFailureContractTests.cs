@@ -34,7 +34,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
     [
         typeof(ICalendarService), typeof(IBoardService), typeof(IAssetService), typeof(IIncomeService),
         typeof(IExpenditureService), typeof(IFixedIncomeService), typeof(IFixedExpenditureService), typeof(IManagementAccountService),
-        typeof(IProfileService),
+        typeof(IProfileService), typeof(IKanbanService),
     ];
 
     /// <summary>Throws <see cref="InvalidOperationException"/> carrying <see cref="Secret"/> from every method it is asked to run.</summary>
@@ -89,6 +89,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         (Role.User, "/AccountBook/IsExpenditureExists?id=1", false),
         (Role.User, "/Forum/DownloadFreeBoardAttachedFile?boardId=1", false),
         (Role.User, "/Management/DownloadPrivateNoteAttachedFile?boardId=1", false),
+        (Role.User, "/Kanban/DeleteKanbanCard?id=1", false),
     ];
 
     /// <summary>The endpoints that return an amount label (currency) for the selected asset.</summary>
@@ -147,7 +148,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         foreach (string url in new[]
         {
             "/Calendar/IsCalendarExists?id=1", "/Forum/IsBoardExists?id=1", "/Management/IsBoardExists?id=1",
-            "/Notice/IsFixedIncomeExists?id=1", "/AccountBook/IsIncomeExists?id=1",
+            "/Notice/IsFixedIncomeExists?id=1", "/AccountBook/IsIncomeExists?id=1", "/Kanban/DeleteKanbanCard?id=1",
         })
         {
             using var request = session.BuildJsonPostRequest(url);
@@ -272,6 +273,8 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         (Role.User, "/Calendar/UpdateCalendarEvent", s => s.BuildFormPostRequest("/Calendar/UpdateCalendarEvent", EventForm(1))),
         (Role.Admin, "/Calendar/UpdateCalendarShared", s => s.BuildJsonPostRequest("/Calendar/UpdateCalendarShared", new[] { new { CalendarId = 1, User = true, Anonymous = false } })),
         (Role.User, "/Calendar/UpdateOtherCalendar", s => s.BuildJsonPostRequest("/Calendar/UpdateOtherCalendar", new[] { new { CalendarId = 1 } })),
+        (Role.User, "/Kanban/CreateKanbanCard", s => s.BuildJsonPostRequest("/Kanban/CreateKanbanCard", new { Lane = "ToDo", Title = "t", Description = "", DueDate = "2026-05-28" })),
+        (Role.User, "/Kanban/UpdateKanbanCard", s => s.BuildJsonPostRequest("/Kanban/UpdateKanbanCard", new { Id = 1, Title = "t", Description = "", DueDate = (string?)null })),
     ];
 
     /// <summary>The same guarantee for the write endpoints: a failing service never yields an error page or leaks the exception.</summary>
@@ -335,6 +338,48 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         }
 
         Assert.Equal(9, BodyEndpoints.Count(e => e.Url.StartsWith("/AccountBook/", StringComparison.Ordinal)));
+        Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
+    }
+
+    /// <summary>
+    /// Every Kanban write logs a service failure once, at Error, with the exception attached and the signed-in owner named, so an
+    /// operator sees the fault the user was only told was "temporary".
+    /// </summary>
+    [Fact]
+    public async Task AServiceFailure_InAKanbanWrite_IsLoggedAsAnErrorWithTheExceptionAndTheOwner()
+    {
+        var logger = new FakeLogger<KanbanController>();
+        await using var host = CreateBrokenHost().WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.AddSingleton<ILogger<KanbanController>>(logger)));
+        var client = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://www.localhost/"), AllowAutoRedirect = false, HandleCookies = false
+        });
+        const string email = "failure-kanban-log@test.com";
+        var session = await AuthenticatedSessionHelper.LoginAsync(host, client, email, "UserPassword1!", Role.User, TestContext.Current.CancellationToken);
+
+        List<(string Url, Func<HttpRequestMessage> Build)> requests =
+        [
+            .. BodyEndpoints.Where(e => e.Url.StartsWith("/Kanban/", StringComparison.Ordinal))
+                .Select(e => (e.Url, (Func<HttpRequestMessage>)(() => e.Build(session)))),
+            .. _endpoints.Where(e => e.Url.StartsWith("/Kanban/", StringComparison.Ordinal))
+                .Select(e => (e.Url, (Func<HttpRequestMessage>)(() => session.BuildJsonPostRequest(e.Url, null)))),
+        ];
+
+        List<string> failures = [];
+        foreach (var (url, build) in requests)
+        {
+            logger.Collector.Clear();
+            using var request = build();
+            _ = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+            var errors = logger.Collector.GetSnapshot().Where(r => r.Level == LogLevel.Error).ToList();
+            if (errors.Count != 1) { failures.Add($"{url}: {errors.Count} Error entries"); continue; }
+            if (errors[0].Exception?.Message != Secret) failures.Add($"{url}: the exception is not attached");
+            if (!errors[0].Message.Contains(email, StringComparison.Ordinal)) failures.Add($"{url}: the owner is not named ({errors[0].Message})");
+        }
+
+        Assert.Equal(3, requests.Count);
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
     }
 

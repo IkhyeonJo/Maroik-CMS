@@ -109,6 +109,10 @@ public static class ServiceErrorKeys
     /// <summary>The fixed expenditure does not exist.</summary>
     public const string FixedExpenditureNotFound = "The fixed-expenditure record could not be found.";
 
+    // --- Kanban
+    /// <summary>The Kanban card does not exist, or belongs to another account.</summary>
+    public const string KanbanCardNotFound = "The card could not be found.";
+
     /// <summary>
     /// Keys that are not resx keys: the controller that receives one compares <c>ErrorKey</c> against it and chooses its own
     /// response (another view, or a message of its own). Shared here so the service and the controller cannot drift apart.

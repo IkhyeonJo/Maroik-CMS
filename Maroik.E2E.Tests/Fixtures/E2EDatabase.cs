@@ -70,6 +70,16 @@ public sealed class E2EDatabase(string connectionString)
             """,
             ("email", email), ("content", content), ("asset", paymentAsset), ("unpunctuality", unpunctuality));
 
+    /// <summary>Inserts a Kanban card of <paramref name="email"/> in <paramref name="lane"/> and returns its id.</summary>
+    public Task<long> SeedKanbanCardAsync(string email, string lane, string title, string? description = null, DateOnly? dueDate = null) =>
+        ScalarAsync<long>(
+            """
+            INSERT INTO "KanbanCard" ("AccountEmail", "Lane", "Title", "Description", "DueDate", "Created", "Updated")
+            VALUES (@email, @lane, @title, @description, @dueDate, now(), now())
+            RETURNING "Id"
+            """,
+            ("email", email), ("lane", lane), ("title", title), ("description", description), ("dueDate", dueDate));
+
     /// <summary>
     /// Inserts a free-forum post by <paramref name="writer"/> whose body is <paramref name="contentHtml"/>
     /// (images reference their storage path in <c>alt</c>, as stored posts do) and, when

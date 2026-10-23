@@ -115,6 +115,9 @@ public partial class Account
     /// <summary>Calendars owned by this account (Calendar.AccountEmail).</summary>
     public virtual ICollection<Calendar> Calendars { get; set; } = new List<Calendar>();
 
+    /// <summary>Kanban cards owned by this account (KanbanCard.AccountEmail).</summary>
+    public virtual ICollection<KanbanCard> KanbanCards { get; set; } = new List<KanbanCard>();
+
     /// <summary>This account's subscriptions to other accounts' calendars (OtherCalendar.AccountEmail).</summary>
     public virtual ICollection<OtherCalendar> OtherCalendars { get; set; } = new List<OtherCalendar>();
 }

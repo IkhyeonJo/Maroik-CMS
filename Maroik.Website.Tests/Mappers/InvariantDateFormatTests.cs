@@ -3,6 +3,7 @@ using Maroik.Core.Contract.Dtos;
 using Maroik.Website.Mappers;
 using Maroik.Website.Models.ViewModels.AccountBooks;
 using Maroik.Website.Models.ViewModels.Calendars;
+using Maroik.Website.Models.ViewModels.Kanbans;
 
 namespace Maroik.Website.Tests.Mappers;
 
@@ -23,7 +24,7 @@ public sealed class InvariantDateFormatTests : IDisposable
     public void Dispose() => CultureInfo.CurrentCulture = _original;
 
     /// <summary>A fixed reading of the clock in 2025.</summary>
-    private static readonly DateTime UtcNow = new(2025, 6, 15, 3, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime _utcNow = new(2025, 6, 15, 3, 0, 0, DateTimeKind.Utc);
 
     /// <summary>The fixed-schedule maturity dates are Gregorian <c>yyyy-MM-dd</c>.</summary>
     [Fact]
@@ -32,8 +33,8 @@ public sealed class InvariantDateFormatTests : IDisposable
         var income = new FixedIncomeResponse { MaturityDate = new DateTime(2030, 12, 31), DepositMonth = 1, DepositDay = 1 };
         var expenditure = new FixedExpenditureResponse { MaturityDate = new DateTime(2030, 12, 31), DepositMonth = 1, DepositDay = 1 };
 
-        Assert.Equal("2030-12-31", Assert.Single(new[] { income }.ToDisplayViewModels([], k => k, "UTC", 3, UtcNow)).MaturityDate);
-        Assert.Equal("2030-12-31", Assert.Single(new[] { expenditure }.ToDisplayViewModels([], k => k, "UTC", 3, UtcNow)).MaturityDate);
+        Assert.Equal("2030-12-31", Assert.Single(new[] { income }.ToDisplayViewModels([], k => k, "UTC", 3, _utcNow)).MaturityDate);
+        Assert.Equal("2030-12-31", Assert.Single(new[] { expenditure }.ToDisplayViewModels([], k => k, "UTC", 3, _utcNow)).MaturityDate);
     }
 
     /// <summary>Calendar event display dates (all-day and timed) are Gregorian.</summary>
@@ -57,10 +58,21 @@ public sealed class InvariantDateFormatTests : IDisposable
         var calendar = new CalendarOutputViewModel();
         var accountBook = new AccountBookPageViewModel();
 
-        calendar.PopulateTimeData("UTC", UtcNow);
-        accountBook.PopulateTimeData("UTC", UtcNow);
+        calendar.PopulateTimeData("UTC", _utcNow);
+        accountBook.PopulateTimeData("UTC", _utcNow);
 
         Assert.Equal("2025-06-15", calendar.CurrentDate);
         Assert.Equal("2025-06-15", accountBook.CurrentDate);
+    }
+
+    /// <summary>A Kanban card's due date is shown as a Gregorian yyyy-MM-dd date for every culture (K10).</summary>
+    [Fact]
+    public void KanbanDueDates_AreGregorianIsoDates()
+    {
+        List<KanbanLaneResponse> board = [new KanbanLaneResponse { Lane = "ToDo", Cards = [new KanbanCardResponse { Title = "t", DueDate = new DateOnly(2025, 6, 15) }] }];
+
+        KanbanBoardViewModel vm = board.ToViewModel();
+
+        Assert.Equal("2025-06-15", vm.Lanes[0].Cards[0].DueDate);
     }
 }

@@ -16,7 +16,7 @@ public class EntityTests
     {
         var types = EntityTypes().ToList();
 
-        Assert.Equal(18, types.Count);
+        Assert.Equal(19, types.Count);
         foreach (Type type in types)
             Assert.NotNull(Activator.CreateInstance(type));
     }

@@ -66,6 +66,9 @@ public partial class ApplicationDbContext : DbContext
     /// <summary>"Income" table.</summary>
     public virtual DbSet<Income> Incomes { get; set; }
 
+    /// <summary>"KanbanCard" table.</summary>
+    public virtual DbSet<KanbanCard> KanbanCards { get; set; }
+
     /// <summary>"OtherCalendar" table.</summary>
     public virtual DbSet<OtherCalendar> OtherCalendars { get; set; }
 
@@ -715,6 +718,39 @@ public partial class ApplicationDbContext : DbContext
                 .HasForeignKey(d => new { d.DepositMyAssetProductName, d.AccountEmail })
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("Income_fk_0");
+        });
+
+        modelBuilder.Entity<KanbanCard>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("KanbanCard_pk");
+
+            entity.ToTable("KanbanCard", tb => tb.HasComment("KanbanCard"));
+
+            entity.HasIndex(e => e.AccountEmail, "KanbanCard_index_0");
+
+            entity.Property(e => e.Id).HasComment("PK");
+            entity.Property(e => e.AccountEmail)
+                .HasMaxLength(255)
+                .HasComment("Account Email (ID)");
+            entity.Property(e => e.Created)
+                .HasComment("Created")
+                .HasColumnType("timestamp without time zone");
+            entity.Property(e => e.Description).HasComment("Description");
+            entity.Property(e => e.DueDate).HasComment("DueDate");
+            entity.Property(e => e.Lane)
+                .HasMaxLength(255)
+                .HasComment("Lane (Backlog, ToDo, InProgress, Done)");
+            entity.Property(e => e.Title)
+                .HasMaxLength(100)
+                .HasComment("Title");
+            entity.Property(e => e.Updated)
+                .HasComment("Updated")
+                .HasColumnType("timestamp without time zone");
+
+            entity.HasOne(d => d.AccountEmailNavigation).WithMany(p => p.KanbanCards)
+                .HasForeignKey(d => d.AccountEmail)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("KanbanCard_fk_0");
         });
 
         modelBuilder.Entity<OtherCalendar>(entity =>

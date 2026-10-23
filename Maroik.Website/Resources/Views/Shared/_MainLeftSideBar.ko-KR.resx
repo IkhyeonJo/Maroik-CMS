@@ -150,6 +150,9 @@
   <data name="Income" xml:space="preserve">
     <value>수입</value>
   </data>
+  <data name="Kanban Board" xml:space="preserve">
+    <value>할 일</value>
+  </data>
   <data name="Management" xml:space="preserve">
     <value>관리</value>
   </data>
