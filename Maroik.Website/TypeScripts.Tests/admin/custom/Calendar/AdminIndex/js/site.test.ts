@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { describeMissingServerConstants, describeRequiredServerConstants } from "@tests/_common/missingConfigSuite";
-import { loadSite, antiForgery, hidden, eventProps, present, successOf, completeOf, errorOf, calendarSelect, calendarEventClick, firstCalendar } from "@tests/_common/harness";
+import { loadSite, antiForgery, hidden, eventProps, present, successOf, completeOf, errorOf, calendarSelect, calendarEventClick, clickLastAddedEvent, firstCalendar } from "@tests/_common/harness";
 import {
     describeCalendarCommon,
     describeEditFormDetail,
@@ -343,6 +343,24 @@ describe("admin/Calendar/AdminIndex — events on the grid", () => {
         successOf(second)({ result: true, calendarEvents: JSON.stringify([evt(20, 1)]) });
         successOf(first)({ result: true, calendarEvents: JSON.stringify([evt(10, 1)]) });
         expect(cal.addEvent.mock.calls.map((c) => c[0]["id"])).toEqual(["20"]);
+    });
+
+    // Regression (46ee495): the events the page added carried no `calendarType`, so the event's extendedProps
+    // failed the click handler's check and clicking an event opened no popup.
+    it("clicking a seeded event opens its popup", () => {
+        const h = build({ my: [evt(1, 1)] });
+        expect(clickLastAddedEvent(h)).toBe(false);
+        expect(h.$("#calendarEventPopupTitle").text()).toBe("Event 1");
+        expect(h.$("#calendarEventPopupStartAllDayUnchecked").text()).toBe("2024-05-01 10:00:00");
+        expect(h.$("#calendarEventPopupEndTimeZoneAllDayUnchecked").text()).toBe("(UTC)");
+    });
+
+    it("clicking an event reloaded by a calendar toggle opens its popup", () => {
+        const h = build();
+        h.$(".chkCalendar").first().trigger("change");
+        successOf(present(eventCalls(h)[0]))({ result: true, calendarEvents: JSON.stringify([evt(20, 1)]) });
+        expect(clickLastAddedEvent(h)).toBe(false);
+        expect(h.$("#calendarEventPopupTitle").text()).toBe("Event 20");
     });
 
     it("a refused reply adds nothing", () => {

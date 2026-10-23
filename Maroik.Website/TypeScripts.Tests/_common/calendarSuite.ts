@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import realMoment from "moment";
-import { hidden, type SiteHandle, stubPlugin, eventProps, present, lastOf, successOf, completeOf, errorOf, formDataOf, instanceOfType, calendarSelect, calendarEventClick, firstCalendar } from "@tests/_common/harness";
+import { hidden, type SiteHandle, stubPlugin, eventProps, present, lastOf, successOf, completeOf, errorOf, formDataOf, instanceOfType, calendarSelect, calendarEventClick, clickLastAddedEvent, firstCalendar } from "@tests/_common/harness";
 
 /** Short alias used by the calendar suites. */
 export type Handle = SiteHandle;
@@ -302,6 +302,8 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(JSON.parse(String(present(eventCalls(h)[0]).data))).toEqual({ Calendars: c.checkedIds });
             successOf(present(eventCalls(h)[0]))({ result: true, calendarEvents: JSON.stringify([evt(50, 1)]) });
             expect(lastOf(firstCalendar(h).addEvent.mock.calls)[0]["id"]).toBe("50");
+            expect(clickLastAddedEvent(h)).toBe(false); // the reloaded event's extendedProps pass the click handler's check (46ee495)
+            expect(h.$("#calendarEventPopupTitle").text()).toBe("Event 50");
             expect(h.toastr.success).toHaveBeenCalledWith("created");
             expect(modal).toHaveBeenCalledWith("hide");
             successOf(present(eventCalls(h)[0]))({ result: false, error: "no events for you" }); // the follow-up reload being refused is toasted with its own message
@@ -1470,6 +1472,8 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             const added = lastOf(firstCalendar(h).addEvent.mock.calls)[0];
             expect(added).toMatchObject({ id: "50", title: "Event 50", backgroundColor: "#123456" });
             expect(added.extendedProps).toMatchObject({ calendarId: 1, displayStartDate: "2024-05-01 10:00:00", displayEndDateTimeZone: "UTC" });
+            expect(clickLastAddedEvent(h)).toBe(false); // the reloaded event's extendedProps pass the click handler's check (46ee495)
+            expect(h.$("#calendarEventPopupTitle").text()).toBe("Event 50");
 
             successOf(reload)({ result: false, error: "no events for you" });
             expect(h.toastr.error).toHaveBeenCalledWith("no events for you"); // the reload's own message, not the (successful) edit reply's

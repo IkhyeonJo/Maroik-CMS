@@ -159,6 +159,18 @@ export function calendarEventClick(h: SiteHandle, arg: object): unknown {
     return present(present(h.calendarOptions[0], "the FullCalendar options").eventClick, "the eventClick callback")(arg);
 }
 
+/**
+ * Clicks the event a page last passed to `calendar.addEvent(...)`, handing `eventClick` the very `extendedProps`
+ * the page stored (as FullCalendar would), and returns what `eventClick` returns. Unlike a hand-made
+ * {@link eventProps}, this fails when a page adds an event its own click handler cannot read.
+ */
+export function clickLastAddedEvent(h: SiteHandle): unknown {
+    const added = lastOf(firstCalendar(h).addEvent.mock.calls)[0];
+    const el = h.win.document.createElement("div");
+    h.win.document.body.appendChild(el);
+    return calendarEventClick(h, { el, event: { id: added["id"], title: added["title"], allDay: added["allDay"], extendedProps: added.extendedProps } });
+}
+
 /** What {@link loadSite} returns: the page's window and every stub/capture a test asserts on. */
 export interface SiteHandle {
     /** the jQuery bound to the page window */
