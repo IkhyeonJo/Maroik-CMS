@@ -91,6 +91,9 @@ log "Deploying $NEW_SHA ($MAROIK_TAG, was $CURRENT_SHA)"
 if $COMPOSE -f "$COMPOSE_FILE" pull $APP_SERVICES >> "$LOG" 2>&1 \
    && $COMPOSE -f "$COMPOSE_FILE" up -d --no-deps $APP_SERVICES >> "$LOG" 2>&1; then
   echo "$NEW_SHA" > "$STATE_FILE"
+  # The previous deploys' app images are still tagged (sha-<commit>), so a plain `prune` (dangling images only) never
+  # removes them: drop every Maroik image no container uses (the label CI puts on them), then the dangling rest.
+  docker image prune -af --filter "label=org.opencontainers.image.source=https://github.com/IkhyeonJo/Maroik" > /dev/null 2>&1
   docker image prune -f > /dev/null 2>&1
   log "Deployed $NEW_SHA"
 else

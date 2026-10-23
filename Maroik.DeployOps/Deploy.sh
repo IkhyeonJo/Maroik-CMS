@@ -240,7 +240,10 @@ sudo env MAROIK_TAG="$MAROIK_TAG" $COMPOSE -f "$COMPOSE_PROD_PATH" up -d
 echo "$DEPLOY_SHA" | sudo tee "$REPO_DIR/.deployed-sha" > /dev/null
 sudo rm -f "$REPO_DIR/.failed-sha"
 
-# Drop the images earlier deploys left behind. Images in use by the running containers are kept.
+# Drop the images earlier deploys left behind. Images in use by the running containers are kept. The earlier app images
+# are still tagged (sha-<commit>), so a plain `prune` (dangling images only) never removes them: first every Maroik image
+# no container uses (the label CI puts on them), then the dangling rest.
+sudo docker image prune -af --filter "label=org.opencontainers.image.source=https://github.com/IkhyeonJo/Maroik"
 sudo docker image prune -f
 
 # Set up cron jobs
