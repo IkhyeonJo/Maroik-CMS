@@ -1,12 +1,13 @@
 #!/bin/bash
 
+# GitHub-based full deploy (Maroik.DeployOps/Deploy.sh builds on this server instead, without GitHub).
 # Full deploy of the latest main whose images CI/CD published (.github/workflows/ci-cd.yml: build-and-test -> publish).
 # The three app images (ghcr.io/ikhyeonjo/maroik-*:sha-<12-char commit>) are pulled, not built here.
 # /home/ubuntu/Maroik is a clone of github.com/IkhyeonJo/Maroik. docker-compose.prod.yml, Maroik.Crontab and
 # Maroik.DeployOps are tracked there and come with the checkout below. The server-only files (.env.prod, whose
 # template is .env.prod.example, the Production Init.sql and the upload folders) are git-ignored, so the checkout
 # never touches them.
-# SKIP_CI_CHECK=1 ./Deploy.sh skips the CI lookup (e.g. GitHub's API is down); the images must still exist.
+# SKIP_CI_CHECK=1 ./GitHubDeploy.sh skips the CI lookup (e.g. GitHub's API is down); the images must still exist.
 REPO_DIR="/home/ubuntu/Maroik"
 REPO_URL="https://github.com/IkhyeonJo/Maroik.git"
 APP_SERVICES="maroik.website maroik.filestorage maroik.worker"
@@ -14,7 +15,7 @@ APP_SERVICES="maroik.website maroik.filestorage maroik.worker"
 # Run as ubuntu, not with sudo: the clone must belong to ubuntu, because AutoDeploy.sh (root's cron) runs git as
 # ubuntu. The commands below that need root use sudo themselves.
 if [ "$(id -u)" = "0" ]; then
-  echo "[ERROR] Run Deploy.sh as ubuntu (bash Maroik.DeployOps/Deploy.sh), not as root or with sudo."
+  echo "[ERROR] Run GitHubDeploy.sh as ubuntu (bash Maroik.DeployOps/GitHubDeploy.sh), not as root or with sudo."
   exit 1
 fi
 cd "$REPO_DIR" || exit 1
@@ -77,7 +78,7 @@ if [ ! -d "$REPO_DIR/.git" ]; then
     || { echo "[ERROR] git init failed"; exit 1; }
 fi
 
-# Deploy.sh makes the tracked Maroik.Crontab/*.sh executable (chmod below), which git would otherwise report as a
+# GitHubDeploy.sh makes the tracked Maroik.Crontab/*.sh executable (chmod below), which git would otherwise report as a
 # local change; the next checkout of a commit that changes one of them would then refuse to run (AutoDeploy.sh).
 git -C "$REPO_DIR" config core.fileMode false
 
@@ -165,7 +166,7 @@ if ! sudo docker compose version > /dev/null 2>&1; then
   fi
 fi
 if ! sudo docker compose version > /dev/null 2>&1; then
-  echo "[ERROR] Docker Compose v2 (docker compose) is not available. Install it and run Deploy.sh again."
+  echo "[ERROR] Docker Compose v2 (docker compose) is not available. Install it and run GitHubDeploy.sh again."
   exit 1
 fi
 COMPOSE="docker compose"
