@@ -16,4 +16,11 @@ public interface IClamavClient
     /// Anything other than <see cref="ClamavScanResult.Clean"/> must be treated as a refusal.
     /// </summary>
     public Task<ClamavScanResult> ScanWithClamavAsync(Stream fileStream, string clamavHost, int clamavPort, CancellationToken ct = default);
+
+    /// <summary>
+    /// The same scan as <see cref="ScanWithClamavAsync(Stream, string, int, CancellationToken)"/>, bounded by
+    /// <paramref name="scanTimeout"/> instead of the default time limit — for a caller that scans files far larger than an
+    /// attachment (the File Manager's files reach 2 GB).
+    /// </summary>
+    public Task<ClamavScanResult> ScanWithClamavAsync(Stream fileStream, string clamavHost, int clamavPort, TimeSpan scanTimeout, CancellationToken ct = default);
 }

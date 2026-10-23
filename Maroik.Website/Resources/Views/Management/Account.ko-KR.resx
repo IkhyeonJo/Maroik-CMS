@@ -201,4 +201,7 @@
   <data name="TimeZone" xml:space="preserve">
     <value>시간대</value>
   </data>
+  <data name="File Manager quota (GB)" xml:space="preserve">
+    <value>내 드라이브 용량(GB)</value>
+  </data>
 </root>

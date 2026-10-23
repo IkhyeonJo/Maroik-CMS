@@ -168,11 +168,12 @@ unlike C#).
 | `plugins/chart.js/Chart.min.js`                     | Chart.js 2.9.4                    | `@types/chart.js@2.9.41` — the 2.9.x line targets Chart.js v2; `@types/chart.js@4` is for v3+.                                                                                                                                              |
 | `plugins/fullcalendar/main.js`                      | FullCalendar 5.5.1                | `@fullcalendar/core@5.5.1` (installed type-only; global `<script>` build is used at runtime)                                                                                                                                                |
 | `plugins/moment/moment.min.js`                      | moment 2.30.1                     | `moment@2.30.1` (ships its own `.d.ts`; installed type-only). Bumped from 2.29.1 for CVE-2022-24785 / CVE-2022-31129; 2.30.1 is the last 2.x and a drop-in for global `<script>` use.                                                       |
+| `plugins/jstree/jstree.min.js` (user only)          | jsTree 3.3.17                     | none — the File Manager uses a small part of the API, hand-typed in `global.d.ts` (`JsTree*`).                                                                                                                                              |
 | `js/mvc-grid/nonfactors-mvc-grid.js`                | NonFactors.Grid.Mvc6 companion JS | not on npm → hand-written ambient in `global.d.ts`                                                                                                                                                                                          |
 | `dist/js/adminlte.js`                               | AdminLTE 3.1.0                    | no types — the custom scripts never call the AdminLTE JS API directly                                                                                                                                                                       |
 
 `global.d.ts` declares the globals with no matching `@types`: `MvcGrid`, `FullCalendar`,
-and `moment`, plus a `JQuery.modal(...)` augmentation standing in for `@types/bootstrap`.
+`moment` and the jsTree plugin, plus a `JQuery.modal(...)` augmentation standing in for `@types/bootstrap`.
 
 ---
 

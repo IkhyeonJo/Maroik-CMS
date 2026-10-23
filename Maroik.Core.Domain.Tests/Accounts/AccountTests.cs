@@ -972,4 +972,53 @@ public class AccountTests
 
         Assert.Null(account.RegistrationToken);
     }
+
+    // -- File Manager quota ---------------------------------------------------------
+
+    /// <summary>A new account's File Manager quota is 0 bytes (Q1): it can upload nothing until an administrator grants some.</summary>
+    [Fact]
+    public void Create_StartsWithAZeroFileManagerQuota()
+    {
+        var account = Account.Create("quota@example.com", "hash", "QuotaUser", AccountRole.User, "UTC", null, null, true, DateTime.UtcNow).Value;
+
+        Assert.Equal(0, account.FileManagerQuotaBytes);
+    }
+
+    /// <summary>Reconstitute reads the stored quota; omitted, it is 0.</summary>
+    [Fact]
+    public void Reconstitute_ReadsTheFileManagerQuota()
+    {
+        DateTime t = new(2026, 1, 1);
+        var withQuota = Account.Reconstitute("q@example.com", "h", "Q", null, "User", "UTC", null, false, 0, true, true, null, null, t, t, null, false, "s", false, 42);
+        var withoutQuota = Account.Reconstitute("q@example.com", "h", "Q", null, "User", "UTC", null, false, 0, true, true, null, null, t, t, null, false, "s", false);
+
+        Assert.Equal(42, withQuota.FileManagerQuotaBytes);
+        Assert.Equal(0, withoutQuota.FileManagerQuotaBytes);
+    }
+
+    /// <summary>An administrator sets the quota (also below the current usage, Q3) and Updated is stamped.</summary>
+    [Fact]
+    public void ChangeFileManagerQuota_SetsTheQuota()
+    {
+        DateTime t = new(2026, 1, 1);
+        var account = Account.Reconstitute("q@example.com", "h", "Q", null, "User", "UTC", null, false, 0, true, true, null, null, t, t, null, false, "s", false, 10);
+
+        var result = account.ChangeFileManagerQuota(30L * 1024 * 1024 * 1024, t.AddDays(1));
+
+        Assert.False(result.IsError);
+        Assert.Equal(30L * 1024 * 1024 * 1024, account.FileManagerQuotaBytes);
+        Assert.Equal(t.AddDays(1), account.Updated);
+    }
+
+    /// <summary>A negative quota is refused and changes nothing.</summary>
+    [Fact]
+    public void ChangeFileManagerQuota_RefusesANegativeQuota()
+    {
+        DateTime t = new(2026, 1, 1);
+        var account = Account.Reconstitute("q@example.com", "h", "Q", null, "User", "UTC", null, false, 0, true, true, null, null, t, t, null, false, "s", false, 10);
+
+        Assert.Equal("Account.FileManagerQuotaNegative", account.ChangeFileManagerQuota(-1, t.AddDays(1)).FirstError.Code);
+        Assert.Equal(10, account.FileManagerQuotaBytes);
+        Assert.Equal(t, account.Updated);
+    }
 }

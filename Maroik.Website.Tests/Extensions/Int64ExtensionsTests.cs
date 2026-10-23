@@ -63,4 +63,19 @@ public class Int64ExtensionsTests
     {
         Assert.Equal("0", 0L.ToKilobytesLabel());
     }
+
+    // -- ToSizeLabel ----------------------------------------------------------------
+
+    /// <summary>A byte count is shown in the largest unit that keeps it at least 1 (1024-based), with up to one decimal place.</summary>
+    [Theory]
+    [InlineData(0L, "0 B")]
+    [InlineData(512L, "512 B")]
+    [InlineData(1536L, "1.5 KB")]
+    [InlineData(12L * 1024 * 1024 + 314573, "12.3 MB")]
+    [InlineData(30L * 1024 * 1024 * 1024, "30 GB")]
+    [InlineData(2L * 1024 * 1024 * 1024 * 1024, "2 TB")]
+    public void ToSizeLabel_UsesTheLargestFittingUnit(long bytes, string expected)
+    {
+        Assert.Equal(expected, bytes.ToSizeLabel());
+    }
 }

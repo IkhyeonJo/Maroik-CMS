@@ -33,7 +33,8 @@ public class AccountMapperTests
             message: "locked for review",
             deleted: false,
             securityStamp: "stamp",
-            mustChangePassword: false);
+            mustChangePassword: false,
+            fileManagerQuotaBytes: 42);
 
         AccountResponse response = AccountMapper.ToResponse(account);
 
@@ -51,5 +52,6 @@ public class AccountMapperTests
         Assert.Equal(updated, response.Updated);
         Assert.Equal("locked for review", response.Message);
         Assert.False(response.Deleted);
+        Assert.Equal(42, response.FileManagerQuotaBytes);
     }
 }

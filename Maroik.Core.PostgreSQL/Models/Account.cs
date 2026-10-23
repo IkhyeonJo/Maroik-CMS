@@ -103,6 +103,11 @@ public partial class Account
     /// </summary>
     public bool MustChangePassword { get; set; }
 
+    /// <summary>
+    /// File Manager storage quota in bytes (0 = no uploads)
+    /// </summary>
+    public long FileManagerQuotaBytes { get; set; }
+
     /// <summary>Assets owned by this account (Asset.AccountEmail).</summary>
     public virtual ICollection<Asset> Assets { get; set; } = new List<Asset>();
 
@@ -114,6 +119,9 @@ public partial class Account
 
     /// <summary>Calendars owned by this account (Calendar.AccountEmail).</summary>
     public virtual ICollection<Calendar> Calendars { get; set; } = new List<Calendar>();
+
+    /// <summary>File Manager folders and files owned by this account (FileManagerNode.AccountEmail).</summary>
+    public virtual ICollection<FileManagerNode> FileManagerNodes { get; set; } = new List<FileManagerNode>();
 
     /// <summary>Kanban cards owned by this account (KanbanCard.AccountEmail).</summary>
     public virtual ICollection<KanbanCard> KanbanCards { get; set; } = new List<KanbanCard>();

@@ -166,7 +166,8 @@ Files and content
   (`PrepareHtmlForDisplayAsync`). Keep that rendering path.
 - Replacing or clearing an attachment (post, private note, calendar event) only rewrites its database
   record; the old file stays in Maroik.FileStorage, as does a file uploaded by a write whose transaction
-  later rolls back. There is no delete API on purpose — do not add one or a cleanup job.
+  later rolls back. There is no delete API for them on purpose — do not add one or a cleanup job. (The File Manager's
+  `api/FileManager/delete` is the one exception, and it only accepts its own `upload/FileManager/{guid}` paths; see File Manager.)
 - `HtmlContentSanitizerService` starts from the original allow-list (Ganss defaults plus `class`) and narrows only
   three things: URL schemes to http/https, no `data-*` attributes, and no `position` / `top` / `left` / `right` /
   `bottom` / `z-index` / `opacity` in inline styles (so a post cannot overlay the page). The rest of that
@@ -193,6 +194,24 @@ Kanban
   deleting the card and creating a new one in the other lane. Do not add a "move" action or a sortable library.
 - Whether a due date is overdue is decided by the domain in the owner's time zone (`KanbanCard.DueStateAt`), not by the browser.
 - Card writes are single non-transactional writes, and the demo account may use the board (no write protection, as elsewhere).
+
+File Manager
+- One drive per user (`/FileManager/UserIndex`, User role only), a folder tree of `FileManagerNode` rows. The default quota is
+  0 GB (`Account.FileManagerQuotaBytes` = 0): nobody can upload until an administrator sets a quota in `Management/Account`.
+  The demo account is treated like any other account.
+- Every structural write (create folder, rename, move, delete, begin / complete upload) first locks the owner's `Account` row
+  (`FindByEmailForUpdateAsync`) inside its transaction, so concurrent writes of one user cannot overrun the quota or create twin
+  names. FileStorage calls (abort, delete of the replaced or deleted files) run after the commit; a failed delete leaves an orphan
+  file, which is logged, not retried.
+- `Maroik.FileStorage`'s `api/FileManager/delete` is the one delete API of the file storage, and it refuses any path that is not
+  `upload/FileManager/{guid}`. Board / note / calendar attachments still have none (see Files and content).
+- Uploads go in 16 MB chunks to a staging file, are scanned by ClamAV on completion, and a file is at most 2 GB (clamd clamps its
+  stream limit to 2,147,483,645 bytes; both compose files set `CLAMD_CONF_*` to 2048M and `MaxScanTime` to 10 minutes). A scan
+  that hits a clamd limit counts as "could not be scanned", not as clean. Uploads left unfinished for 24 hours are cleaned up.
+- An overwrite keeps the old row until the new upload completes: the unique name index is partial (`WHERE NOT "Uploading"`), so
+  the uploading twin may coexist with it.
+- Downloading several items downloads each file separately (no ZIP). Preview is images only (png / jpg / gif / webp, proven by
+  their header bytes) up to 100 MB.
 
 Client scripts
 - The front end is server-rendered Razor + jQuery + AdminLTE, chosen on purpose: for a CMS it is the simplest and

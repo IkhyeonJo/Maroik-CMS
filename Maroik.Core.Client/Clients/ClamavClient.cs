@@ -29,11 +29,25 @@ public class ClamavClient(ILogger<ClamavClient> logger) : IClamavClient
     /// </summary>
     private const int ChunkSize = 64 * 1024;
 
+    /// <summary>
+    /// The prefix of the signature clamd reports, with <c>AlertExceedsMax</c> on, for a stream it could not scan whole because a
+    /// size, recursion or time limit was reached (e.g. "Heuristics.Limits.Exceeded.MaxFileSize FOUND").
+    /// </summary>
+    private const string LimitsExceededSignature = "Heuristics.Limits.Exceeded";
+
     /// <inheritdoc />
-    public async Task<ClamavScanResult> ScanWithClamavAsync(Stream fileStream, string clamavHost, int clamavPort, CancellationToken ct = default)
+    public Task<ClamavScanResult> ScanWithClamavAsync(Stream fileStream, string clamavHost, int clamavPort, CancellationToken ct = default)
+        => ScanAsync(fileStream, clamavHost, clamavPort, ScanTimeout, ct);
+
+    /// <inheritdoc />
+    public Task<ClamavScanResult> ScanWithClamavAsync(Stream fileStream, string clamavHost, int clamavPort, TimeSpan scanTimeout, CancellationToken ct = default)
+        => ScanAsync(fileStream, clamavHost, clamavPort, scanTimeout, ct);
+
+    /// <summary>Streams <paramref name="fileStream"/> to clamd and reads its verdict, giving up after <paramref name="scanTimeout"/>.</summary>
+    private async Task<ClamavScanResult> ScanAsync(Stream fileStream, string clamavHost, int clamavPort, TimeSpan scanTimeout, CancellationToken ct)
     {
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeoutCts.CancelAfter(ScanTimeout);
+        timeoutCts.CancelAfter(scanTimeout);
         CancellationToken scanCt = timeoutCts.Token;
 
         try
@@ -89,6 +103,15 @@ public class ClamavClient(ILogger<ClamavClient> logger) : IClamavClient
                 && !response.Contains("FOUND", StringComparison.Ordinal)
                 && !response.Contains("ERROR", StringComparison.Ordinal))
                 return ClamavScanResult.Clean;
+
+            // A limit clamd hit (AlertExceedsMax): the stream was not scanned whole, so nothing is known about it. Refused, but
+            // reported as "could not be scanned", not as a virus (this is also how a zip bomb past the limits is refused).
+            if (response.Contains(LimitsExceededSignature, StringComparison.Ordinal))
+            {
+                logger.LogWarning("ClamAV at {ClamavHost}:{ClamavPort} could not scan the whole stream (a scan limit was exceeded): {Response}",
+                    clamavHost, clamavPort, response);
+                return ClamavScanResult.Unavailable;
+            }
 
             if (response.Contains("FOUND", StringComparison.Ordinal))
                 return ClamavScanResult.Infected;

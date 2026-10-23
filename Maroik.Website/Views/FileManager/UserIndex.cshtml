@@ -1,0 +1,227 @@
+@*
+    FileManager/UserIndex.cshtml
+    The signed-in user's File Manager ("My Drive"), laid out after AdminLTE v4's File Manager page in Bootstrap 4 / Font Awesome:
+    a left column (Upload / New folder buttons, the folder tree drawn by jsTree, the storage usage bar) and a right card
+    (breadcrumb, search box, grid / list toggle, the selection bar, the items, the item count).
+    This view renders only the shell and the texts: the page script fetches the drive and the folders from the controller's POST
+    actions (whose replies the server has already shaped — sizes, local times, icons, usage) and draws them. The limits the upload
+    code checks before it starts (2 GB per file, the name length) are rendered from the domain policies; the server re-checks every
+    file.
+*@
+@using Maroik.Core.Domain.FileManagers
+@using Maroik.Core.Domain.Primitives
+
+@Html.Hidden("maxFileBytes", FileManagerUploadPolicy.MaxFileBytes)
+@Html.Hidden("localizerMyDrive", Localizer["My Drive"].Value)
+@Html.Hidden("localizerItemCount", Localizer["{0} items"].Value)
+@Html.Hidden("localizerSelectedCount", Localizer["{0} selected"].Value)
+@Html.Hidden("localizerEmptyFolder", Localizer["This folder is empty."].Value)
+@Html.Hidden("localizerNoResults", Localizer["No matching files or folders."].Value)
+@Html.Hidden("localizerName", Localizer["Name"].Value)
+@Html.Hidden("localizerSize", Localizer["Size"].Value)
+@Html.Hidden("localizerModified", Localizer["Modified"].Value)
+@Html.Hidden("localizerLocation", Localizer["Location"].Value)
+@Html.Hidden("localizerActions", Localizer["Actions"].Value)
+@Html.Hidden("localizerDownload", Localizer["Download"].Value)
+@Html.Hidden("localizerPreview", Localizer["Preview"].Value)
+@Html.Hidden("localizerRename", Localizer["Rename"].Value)
+@Html.Hidden("localizerDelete", Localizer["Delete"].Value)
+@Html.Hidden("localizerConflict", Localizer["'{0}' already exists in this folder."].Value)
+@Html.Hidden("localizerUploading", Localizer["Uploading {0} of {1}: {2}"].Value)
+@Html.Hidden("localizerUploadSummary", Localizer["{0} uploaded, {1} failed, {2} skipped."].Value)
+@Html.Hidden("localizerUploaded", Localizer["Uploaded"].Value)
+@Html.Hidden("localizerSkipped", Localizer["Skipped"].Value)
+@Html.Hidden("localizerFileTooLarge", Localizer["A file larger than 2 GB cannot be uploaded."].Value)
+
+<section class="content">
+    <div class="row">
+        <div class="col-lg-3">
+            <div class="btn-group btn-block mb-2" role="group">
+                <button type="button" id="btnUploadFiles" class="btn btn-primary"><i class="fas fa-upload mr-1"></i>@Localizer["Upload files"].Value</button>
+                <button type="button" id="btnUploadFolder" class="btn btn-primary" title="@Localizer["Upload folder"].Value"><i class="fas fa-folder-plus"></i></button>
+            </div>
+            <input type="file" id="fileManagerFileInput" class="d-none" multiple />
+            <input type="file" id="fileManagerFolderInput" class="d-none" webkitdirectory multiple />
+            <button type="button" id="btnNewFolder" class="btn btn-outline-secondary btn-block mb-3"><i class="fas fa-folder mr-1"></i>@Localizer["New folder"].Value</button>
+
+            <div class="card">
+                <div class="card-body p-2">
+                    <div id="fileManagerTree" class="file-manager-tree"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">@Localizer["Storage"].Value</h3>
+                </div>
+                <div class="card-body">
+                    <div class="progress progress-sm mb-2">
+                        <div id="fileManagerUsageBar" class="progress-bar bg-primary" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <small id="fileManagerUsage" class="text-muted"></small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <div class="card file-manager-card">
+                <div class="card-header">
+                    <div class="d-flex flex-wrap align-items-center">
+                        <ol id="fileManagerBreadcrumb" class="breadcrumb bg-transparent p-0 m-0 mr-auto"></ol>
+                        <input type="search" id="fileManagerSearch" class="form-control form-control-sm file-manager-search mr-2" placeholder="@Localizer["Search..."].Value" />
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" id="btnGridView" class="btn btn-outline-secondary" title="@Localizer["Grid"].Value"><i class="fas fa-th-large"></i></button>
+                            <button type="button" id="btnListView" class="btn btn-outline-secondary" title="@Localizer["List"].Value"><i class="fas fa-list"></i></button>
+                        </div>
+                    </div>
+                    <div id="fileManagerSelectionBar" class="file-manager-selection-bar d-none mt-2">
+                        <span id="fileManagerSelectionCount" class="mr-3"></span>
+                        <button type="button" id="btnDownloadSelected" class="btn btn-sm btn-outline-primary mr-1"><i class="fas fa-download mr-1"></i>@Localizer["Download"].Value</button>
+                        <button type="button" id="btnMoveSelected" class="btn btn-sm btn-outline-secondary mr-1"><i class="fas fa-arrows-alt mr-1"></i>@Localizer["Move"].Value</button>
+                        <button type="button" id="btnDeleteSelected" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash mr-1"></i>@Localizer["Delete"].Value</button>
+                    </div>
+                </div>
+                <div id="fileManagerItems" class="card-body file-manager-items"></div>
+                <div class="card-footer">
+                    <small id="fileManagerItemCount" class="text-muted"></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@*<!--newFolderModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="newFolderModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="formNewFolder">
+                <div class="modal-header"><h5 class="modal-title">@Localizer["New folder"].Value</h5></div>
+                <div class="modal-body">
+                    <label for="newFolderName">@Localizer["Folder name"].Value</label>
+                    <input type="text" id="newFolderName" name="newFolderName" class="form-control form-control-sm" autocomplete="off"
+                           maxlength="@ShortTextPolicy.MaxLength" data-val="true" data-val-required="@Localizer["Please enter a name"].Value" />
+                    <span class="field-validation-valid text-danger" data-valmsg-for="newFolderName" data-valmsg-replace="true"></span>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer["Close"].Value</button>
+                    <input type="submit" class="btn btn-primary" value="@Localizer["Create"].Value" />
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@*<!--renameModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="renameModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="formRename">
+                <div class="modal-header"><h5 class="modal-title">@Localizer["Rename"].Value</h5></div>
+                <div class="modal-body">
+                    <input type="hidden" id="renameId" value="" />
+                    <label for="renameName">@Localizer["Name"].Value</label>
+                    <input type="text" id="renameName" name="renameName" class="form-control form-control-sm" autocomplete="off"
+                           maxlength="@ShortTextPolicy.MaxLength" data-val="true" data-val-required="@Localizer["Please enter a name"].Value" />
+                    <span class="field-validation-valid text-danger" data-valmsg-for="renameName" data-valmsg-replace="true"></span>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer["Close"].Value</button>
+                    <input type="submit" class="btn btn-primary" value="@Localizer["Save"].Value" />
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@*<!--moveModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="moveModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">@Localizer["Move to"].Value</h5></div>
+            <div class="modal-body">
+                <select id="moveTarget" class="form-control form-control-sm"></select>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer["Close"].Value</button>
+                <button type="button" id="btnConfirmMove" class="btn btn-primary">@Localizer["Move"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--conflictModal: Windows Explorer-style name conflict (F2-C)-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="conflictModal" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                <p id="conflictMessage"></p>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="conflictApplyToAll" />
+                    <label class="form-check-label" for="conflictApplyToAll">@Localizer["Apply to all"].Value</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnConflictOverwrite" class="btn btn-danger">@Localizer["Overwrite"].Value</button>
+                <button type="button" id="btnConflictKeepBoth" class="btn btn-primary">@Localizer["Keep both"].Value</button>
+                <button type="button" id="btnConflictSkip" class="btn btn-secondary">@Localizer["Skip"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--uploadModal: progress, then the success / failure list (F2)-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="uploadModal" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">@Localizer["Upload"].Value</h5></div>
+            <div class="modal-body">
+                <p id="uploadProgressText"></p>
+                <div class="progress mb-3">
+                    <div id="uploadProgressBar" class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <ul id="uploadResults" class="list-unstyled file-manager-upload-results"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnUploadClose" class="btn btn-secondary" data-dismiss="modal" disabled>@Localizer["Close"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--previewModal (images only, F9)-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="previewModal">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewTitle"></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="@Localizer["Close"].Value"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="previewImage" class="file-manager-preview" alt="" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<!--confirmDeleteModal-->*@
+<div class="modal" tabindex="-1" role="dialog" id="confirmDeleteModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">@Localizer["Are you sure to delete?"].Value</div>
+            <div class="modal-footer">
+                <button type="button" id="btnConfirmDelete" class="btn btn-danger">@Localizer["Delete"].Value</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer["Close"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/user/plugins/jstree/themes/default-dark/style.min.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/user/custom/FileManager/UserIndex/css/site.css" asp-append-version="true">
+}
+@* Page-specific JavaScript: jsTree, then site.js *@
+@section Scripts {
+    <script src="~/user/plugins/jstree/jstree.min.js" asp-append-version="true"></script>
+    <script src="~/user/custom/FileManager/UserIndex/js/site.js" asp-append-version="true"></script>
+}

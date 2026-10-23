@@ -42,6 +42,10 @@ public class FileSystemAccessArchitectureTests
         ["Maroik.FileStorage/Helpers/StorageFiles.cs::CreateDirectory"] = (["Directory.CreateDirectory"], "takes a StoragePath"),
         ["Maroik.FileStorage/Helpers/StorageFiles.cs::CreateNew"] = (["FileStream"], "takes a StoragePath"),
         ["Maroik.FileStorage/Helpers/StorageFiles.cs::MakeReadable"] = (["File.SetUnixFileMode"], "takes a StoragePath"),
+        ["Maroik.FileStorage/Helpers/StorageFiles.cs::Length"] = (["new FileInfo"], "takes a StoragePath"),
+        ["Maroik.FileStorage/Helpers/StorageFiles.cs::OpenAppend"] = (["FileStream"], "takes a StoragePath"),
+        ["Maroik.FileStorage/Helpers/StorageFiles.cs::Move"] = (["File.Move"], "takes two StoragePaths"),
+        ["Maroik.FileStorage/Helpers/StorageFiles.cs::Delete"] = (["File.Delete"], "takes a StoragePath"),
         ["Maroik.Website/Middlewares/AvatarCacheMiddleware.cs::InvokeAsync"] = (
             ["Directory.CreateDirectory", "File.Exists", "File.Move", "File.WriteAllBytesAsync"],
             "a fixed wwwroot folder, under a file name UploadedAvatarFileName accepted (a GUID with an allowed image extension)"),

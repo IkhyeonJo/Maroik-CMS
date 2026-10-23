@@ -201,4 +201,7 @@
   <data name="TimeZone" xml:space="preserve">
     <value>TimeZone</value>
   </data>
+  <data name="File Manager quota (GB)" xml:space="preserve">
+    <value>File Manager quota (GB)</value>
+  </data>
 </root>

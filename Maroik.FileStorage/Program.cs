@@ -55,6 +55,7 @@ try
     // FileController delegates to.
     builder.Services.AddScoped<IClamavClient, ClamavClient>();
     builder.Services.AddScoped<IFileValidationService, FileValidationService>();
+    builder.Services.AddScoped<IFileManagerStorageService, FileManagerStorageService>();
 
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     // Exposes the OpenAPI metadata endpoint consumed by SwaggerUI.

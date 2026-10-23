@@ -34,7 +34,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
     [
         typeof(ICalendarService), typeof(IBoardService), typeof(IAssetService), typeof(IIncomeService),
         typeof(IExpenditureService), typeof(IFixedIncomeService), typeof(IFixedExpenditureService), typeof(IManagementAccountService),
-        typeof(IProfileService), typeof(IKanbanService),
+        typeof(IProfileService), typeof(IKanbanService), typeof(IFileManagerService),
     ];
 
     /// <summary>Throws <see cref="InvalidOperationException"/> carrying <see cref="Secret"/> from every method it is asked to run.</summary>
@@ -90,6 +90,9 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         (Role.User, "/Forum/DownloadFreeBoardAttachedFile?boardId=1", false),
         (Role.User, "/Management/DownloadPrivateNoteAttachedFile?boardId=1", false),
         (Role.User, "/Kanban/DeleteKanbanCard?id=1", false),
+        (Role.User, "/FileManager/GetDrive", false),
+        (Role.User, "/FileManager/Download?id=1", false),
+        (Role.User, "/FileManager/Preview?id=1", false),
     ];
 
     /// <summary>The endpoints that return an amount label (currency) for the selected asset.</summary>
@@ -275,7 +278,36 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         (Role.User, "/Calendar/UpdateOtherCalendar", s => s.BuildJsonPostRequest("/Calendar/UpdateOtherCalendar", new[] { new { CalendarId = 1 } })),
         (Role.User, "/Kanban/CreateKanbanCard", s => s.BuildJsonPostRequest("/Kanban/CreateKanbanCard", new { Lane = "ToDo", Title = "t", Description = "", DueDate = "2026-05-28" })),
         (Role.User, "/Kanban/UpdateKanbanCard", s => s.BuildJsonPostRequest("/Kanban/UpdateKanbanCard", new { Id = 1, Title = "t", Description = "", DueDate = (string?)null })),
+        (Role.User, "/FileManager/GetFolder", s => s.BuildJsonPostRequest("/FileManager/GetFolder", new { FolderId = (long?)null })),
+        (Role.User, "/FileManager/Search", s => s.BuildJsonPostRequest("/FileManager/Search", new { Query = "a" })),
+        (Role.User, "/FileManager/ListDownloadFiles", s => s.BuildJsonPostRequest("/FileManager/ListDownloadFiles", new { Ids = new[] { 1 } })),
+        (Role.User, "/FileManager/CreateFolder", s => s.BuildJsonPostRequest("/FileManager/CreateFolder", new { ParentId = (long?)null, Name = "f", Merge = false })),
+        (Role.User, "/FileManager/Rename", s => s.BuildJsonPostRequest("/FileManager/Rename", new { Id = 1, Name = "f" })),
+        (Role.User, "/FileManager/Move", s => s.BuildJsonPostRequest("/FileManager/Move", new { Ids = new[] { 1 }, TargetFolderId = (long?)null })),
+        (Role.User, "/FileManager/Delete", s => s.BuildJsonPostRequest("/FileManager/Delete", new { Ids = new[] { 1 } })),
+        (Role.User, "/FileManager/CheckQuota", s => s.BuildJsonPostRequest("/FileManager/CheckQuota", new { TotalBytes = 1 })),
+        (Role.User, "/FileManager/BeginUpload", s => s.BuildJsonPostRequest("/FileManager/BeginUpload", new { Name = "a.txt", Size = 1, Conflict = "Ask" })),
+        (Role.User, "/FileManager/UploadChunk", s => s.BuildFormPostRequest("/FileManager/UploadChunk", ChunkForm())),
+        (Role.User, "/FileManager/CompleteUpload", s => s.BuildJsonPostRequest("/FileManager/CompleteUpload", new { UploadId = Guid.NewGuid(), Overwrite = false })),
+        (Role.User, "/FileManager/AbortUpload", s => s.BuildJsonPostRequest("/FileManager/AbortUpload", new { UploadId = Guid.NewGuid() })),
     ];
+
+    /// <summary>A File Manager chunk form (an upload id, an offset and one byte).</summary>
+    private static MultipartFormDataContent ChunkForm()
+    {
+        MultipartFormDataContent? form = Form(("UploadId", Guid.NewGuid().ToString()), ("Offset", "0"));
+        try
+        {
+            MultipartForm.AddFile(form, "Chunk", "blob", [1], "application/octet-stream");
+            MultipartFormDataContent built = form;
+            form = null;
+            return built;
+        }
+        finally
+        {
+            form?.Dispose();
+        }
+    }
 
     /// <summary>The same guarantee for the write endpoints: a failing service never yields an error page or leaks the exception.</summary>
     [Fact]

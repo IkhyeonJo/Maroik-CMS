@@ -171,4 +171,7 @@
   <data name="Profile" xml:space="preserve">
     <value>프로필</value>
   </data>
+  <data name="File Manager" xml:space="preserve">
+    <value>내 드라이브</value>
+  </data>
 </root>

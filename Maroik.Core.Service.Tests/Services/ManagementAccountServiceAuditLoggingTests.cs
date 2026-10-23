@@ -128,6 +128,20 @@ public class ManagementAccountServiceAuditLoggingTests
         Only(LogLevel.Information, "deleted True -> False");
     }
 
+    /// <summary>An administrator's quota change is an audit event (S8): the update log names the quota before and after, in bytes.</summary>
+    [Fact]
+    public async Task Update_LogsTheFileManagerQuotaBeforeAndAfter()
+    {
+        _accountRepo.Setup(r => r.FindByEmailForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Existing());
+        _accountRepo.Setup(r => r.UpdateEntityAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        await CreateSut().UpdateAccountAsync(
+            new AdminUpdateAccountRequest { Email = Email, Role = Role.User, EmailConfirmed = true, AgreedServiceTerms = true, FileManagerQuotaBytes = 32212254720 },
+            null, Actor, TestContext.Current.CancellationToken);
+
+        Assert.Contains("file manager quota 0 -> 32212254720", Only(LogLevel.Information, "Admin updated account").Message, StringComparison.Ordinal);
+    }
+
     /// <summary>Verifies that an admin update without a new password logs <c>password reset False</c>.</summary>
     [Fact]
     public async Task Update_LogsThatThePasswordWasNotReset_WhenNoNewPasswordIsGiven()

@@ -135,4 +135,26 @@ public class StylesheetFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture
         Assert.Equal("500px", await StyleAsync(page, "#kanbanCardModal .modal-dialog", "width"));
         Assert.Equal("8px", await StyleAsync(page, "#btnDeleteKanbanCard", "margin-right"));
     }
+
+    /// <summary>
+    /// The File Manager page scrolls a long folder tree, gives the item area room to drop files on, shows a pointer over a tile and keeps
+    /// a long name from widening it (<c>user/custom/FileManager/UserIndex/css/site.css</c>).
+    /// </summary>
+    [Fact]
+    public async Task FileManager_StylesTheTreeTilesAndDropArea()
+    {
+        var (page, account) = await NewSignedInPageAsync();
+        await Db.ExecuteAsync("""UPDATE "Account" SET "FileManagerQuotaBytes" = 1048576 WHERE "Email" = @email""", ("email", account.Email));
+        await page.WaitForURLAsync(url => url.Contains("/Dashboard/", StringComparison.Ordinal), new PageWaitForURLOptions { Timeout = 30_000 });
+        await GotoAsync(page, "/FileManager/UserIndex");
+        await page.Locator("#btnNewFolder").ClickAsync();
+        await page.Locator("#newFolderName").FillAsync("Styled");
+        await page.Locator("#formNewFolder input[type='submit']").ClickAsync();
+
+        Assert.Equal("auto", await StyleAsync(page, ".file-manager-tree", "overflow-y"));
+        Assert.Equal("240px", await StyleAsync(page, ".file-manager-items", "min-height"));
+        Assert.Equal("pointer", await StyleAsync(page, ".file-manager-tile", "cursor"));
+        Assert.Equal("anywhere", await StyleAsync(page, ".file-manager-tile-name", "overflow-wrap"));
+        Assert.Equal("220px", await StyleAsync(page, ".file-manager-search", "max-width"));
+    }
 }

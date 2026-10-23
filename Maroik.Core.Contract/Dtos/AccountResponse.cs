@@ -59,4 +59,7 @@ public class AccountResponse
 
     /// <summary>When true, the account must set a new password before it can do anything else.</summary>
     public bool MustChangePassword { get; set; }
+
+    /// <summary>The account's File Manager quota in bytes (0 = no uploads).</summary>
+    public long FileManagerQuotaBytes { get; set; }
 }

@@ -43,4 +43,20 @@ internal static class StorageFiles
             UnixFileMode.UserRead | UnixFileMode.UserWrite |
             UnixFileMode.GroupRead | UnixFileMode.OtherRead);
     }
+
+    /// <summary>The length of <paramref name="file"/> in bytes.</summary>
+    internal static long Length(StoragePath file) => new FileInfo(file.FullPath).Length;
+
+    /// <summary>
+    /// Opens <paramref name="file"/> for appending, creating it when it does not exist (a File Manager upload's staging file); the
+    /// caller owns and disposes the stream.
+    /// </summary>
+    internal static FileStream OpenAppend(StoragePath file) =>
+        new(file.FullPath, FileMode.Append, FileAccess.Write, FileShare.None, bufferSize: 81920, FileOptions.Asynchronous);
+
+    /// <summary>Moves <paramref name="source"/> to <paramref name="destination"/>, failing if the destination exists (never overwrites).</summary>
+    internal static void Move(StoragePath source, StoragePath destination) => File.Move(source.FullPath, destination.FullPath, overwrite: false);
+
+    /// <summary>Deletes <paramref name="file"/> (nothing happens when it does not exist).</summary>
+    internal static void Delete(StoragePath file) => File.Delete(file.FullPath);
 }
