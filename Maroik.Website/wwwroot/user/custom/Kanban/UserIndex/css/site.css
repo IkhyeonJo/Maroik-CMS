@@ -1,0 +1,30 @@
+.kanban-lanes {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+
+    & .kanban-lane {
+        flex: 1 0 280px;
+        min-width: 280px;
+        margin-bottom: 0;
+    }
+}
+
+.kanban-card-item {
+    cursor: pointer;
+
+    & .kanban-card-title {
+        overflow-wrap: anywhere;
+    }
+
+    & .kanban-card-description {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+}
+
+#kanbanCardModal .modal-dialog {
+    width: 100%;
+}

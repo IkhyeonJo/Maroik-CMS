@@ -153,7 +153,7 @@ unlike C#).
 | Type-check **and** emit | **TypeScript** (`tsc`)                         | **7.0.2**               | The native (Go) compiler — the whole `TypeScripts/` tree type-checks + emits in well under a second. No Babel, no bundler. |
 | Type-check-only gate    | `tsc --noEmit`                                 | —                       | `npm run check`.                                                                                                          |
 | Minify (release only)   | **terser** (`minify-client-scripts.mjs`)       | **5.51.2**              | Run by `npm run build` after `tsc`; top-level names kept, strings double-quoted. Not run by `build:debug` / `watch`.     |
-| Tests                   | **Vitest** + **jsdom** + real **jQuery 3.6.0** | 4.1.11 / 30.0.1 / 3.6.0 | See `../TypeScripts.Tests/`.                                                                                               |
+| Tests                   | **Vitest** + **jsdom** + real **jQuery 3.6.0** | 4.1.12 / 30.0.1 / 3.6.0 | See `../TypeScripts.Tests/`.                                                                                               |
 
 ### `@types/*` — pinned to the runtime versions actually loaded by `Views/Shared/_Layout.cshtml`
 

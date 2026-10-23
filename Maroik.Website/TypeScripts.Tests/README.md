@@ -60,7 +60,7 @@ TypeScripts.Tests/
   tsconfig.json           standalone (the main tsconfig excludes this tree)
 ```
 
-**Every `site.js` has exactly one `site.test.ts` at the matching path** (22 of each), and the only
+**Every `site.js` has exactly one `site.test.ts` at the matching path** (23 of each), and the only
 files that don't mirror a source path are under `_common/`. Each test file builds its own DOM fixture;
 scripts that share behavior (the two board scripts × 3 roles, the grid-CRUD finance pages, the two
 calendar scripts, the three layouts, the two profile pages) call a shared suite from `_common/` so the
@@ -140,7 +140,7 @@ when they are recorded.
 
 ## What is tested
 
-All 22 scripts, to **100 % of statements and functions** (and ~99.5 % of branches — the few left are arms
+All 23 scripts, to **100 % of statements and functions** (and ~99.5 % of branches — the few left are arms
 the UI cannot reach, e.g. an unknown reminder unit that form validation rejects first). Per script:
 
 * **server-policy UX mirrors** — income/expenditure subclass filtering (`ApplyAllowedOptions`),
@@ -181,8 +181,8 @@ npx vitest run TypeScripts.Tests/user/custom/AccountBook   # a subset
 the **compiled** `site.js`, then runs Vitest. A successful run ends with:
 
 ```
- Test Files  22 passed (22)
-      Tests  783 passed (783)
+ Test Files  26 passed (26)
+      Tests  1105 passed (1105)
 ```
 
 Expect ~30 lines of `Not implemented: HTMLCanvasElement's getContext() ...` to

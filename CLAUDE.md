@@ -185,6 +185,15 @@ Calendar
 - Event reminders are stored but never delivered, and `CalendarRecurrence` / `RecurrenceId` are unused.
   Both are unimplemented on purpose — do not implement delivery and do not drop the table.
 
+Kanban
+- One board per user (`/Kanban/UserIndex`, User role only): the four fixed lanes of `KanbanLanes` (Backlog, To do, In progress,
+  Done), which cannot be added, renamed, deleted or reordered, and no board table. A lane's cards are in creation order (ties by id);
+  no position is stored and the order is not user-changeable.
+- A card never changes lane: no drag-and-drop, and the edit request has no lane (`KanbanCardUpdateRequest`). Moving work means
+  deleting the card and creating a new one in the other lane. Do not add a "move" action or a sortable library.
+- Whether a due date is overdue is decided by the domain in the owner's time zone (`KanbanCard.DueStateAt`), not by the browser.
+- Card writes are single non-transactional writes, and the demo account may use the board (no write protection, as elsewhere).
+
 Client scripts
 - The front end is server-rendered Razor + jQuery + AdminLTE, chosen on purpose: for a CMS it is the simplest and
   fastest stack, has no build chain beyond `tsc`, and stays runnable for years. Do not propose replacing it with a SPA

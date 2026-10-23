@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
             services.AddScoped<IMenuService, MenuService>();
             services.AddScoped<IBoardService, BoardService>();
             services.AddScoped<ICalendarService, CalendarService>();
+            services.AddScoped<IKanbanService, KanbanService>();
             services.AddScoped<IAttachmentContentService, AttachmentContentService>();
 
             services.AddSingleton<IDataProtectionService, DataProtectionService>();

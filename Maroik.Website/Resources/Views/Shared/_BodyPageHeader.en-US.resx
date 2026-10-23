@@ -153,6 +153,9 @@
   <data name="Income" xml:space="preserve">
     <value>Income</value>
   </data>
+  <data name="Kanban Board" xml:space="preserve">
+    <value>Kanban Board</value>
+  </data>
   <data name="Management" xml:space="preserve">
     <value>Management</value>
   </data>

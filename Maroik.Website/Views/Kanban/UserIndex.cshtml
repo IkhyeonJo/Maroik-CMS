@@ -1,0 +1,83 @@
+@*
+    Kanban/UserIndex.cshtml
+    The signed-in user's personal Kanban board (the "Kanban Board" menu entry, User role only).
+    The board itself — the four fixed lanes and their cards — is the _KanbanBoard partial, which the page script
+    re-fetches (the AJAX form of this same GET) after every write and swaps into #kanbanBoard.
+    One modal both adds a card (opened by a lane's "+ Add card" button, which sets the hidden lane) and edits or
+    deletes one (opened by clicking the card); it has no lane field, because a card never changes lane.
+    The title / description length limits are rendered from TitledContentPolicy; the server re-validates every value.
+*@
+@using Maroik.Website.Models.ViewModels.Kanbans
+@model KanbanBoardViewModel
+
+@Html.Hidden("localizerAddCard", Localizer["Add card"].Value)
+@Html.Hidden("localizerEditCard", Localizer["Edit card"].Value)
+
+<section class="content pb-3">
+    <div id="kanbanBoard" class="kanban-board">
+        <partial name="_KanbanBoard" model="Model" />
+    </div>
+</section>
+
+@*<!--kanbanCardModal: add (lane set by the button) or edit / delete (id set by the card)-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="kanbanCardModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="formKanbanCard">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="kanbanCardModalTitle">@Localizer["Add card"].Value</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="@Localizer["Close"].Value"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="kanbanCardId" value="" />
+                    <input type="hidden" id="kanbanCardLane" value="" />
+                    <div class="form-group">
+                        <label for="kanbanCardTitle">@Localizer["Title"].Value</label>
+                        <input class="form-control form-control-sm" type="text" id="kanbanCardTitle" name="kanbanCardTitle" value="" autocomplete="off"
+                               maxlength="@TitledContentPolicy.MaxTitleLength" data-val="true" data-val-required="@Localizer["Please enter a title"].Value">
+                        <span class="field-validation-valid text-danger" data-valmsg-for="kanbanCardTitle" data-valmsg-replace="true"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="kanbanCardDescription">@Localizer["Description"].Value</label>
+                        <textarea class="form-control form-control-sm" id="kanbanCardDescription" name="kanbanCardDescription" rows="4"
+                                  maxlength="@TitledContentPolicy.MaxBodyLength"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="kanbanCardDueDate">@Localizer["Due date"].Value</label>
+                        <input class="form-control form-control-sm" type="date" id="kanbanCardDueDate" name="kanbanCardDueDate" value="">
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer["Close"].Value</button>
+                    <div>
+                        <button type="button" id="btnDeleteKanbanCard" class="btn btn-danger mr-2 d-none"><i class="fa fa-trash mr-1"></i>@Localizer["Delete"].Value</button>
+                        <input type="submit" class="btn btn-primary" value="@Localizer["Save"].Value" />
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@*<!--confirmDeleteKanbanCardModal-->*@
+<div class="modal" tabindex="-1" role="dialog" id="confirmDeleteKanbanCardModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                @Localizer["Are you sure to delete?"].Value
+            </div>
+            <div class="modal-footer">
+                <button id="btnConfirmDeleteKanbanCard" type="button" class="btn btn-danger">@Localizer["Delete"].Value</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer["Close"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/user/custom/Kanban/UserIndex/css/site.css" asp-append-version="true">
+}
+@* Page-specific JavaScript: site.js *@
+@section Scripts {
+    <script src="~/user/custom/Kanban/UserIndex/js/site.js" asp-append-version="true"></script>
+}

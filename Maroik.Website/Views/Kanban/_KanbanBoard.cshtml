@@ -1,0 +1,44 @@
+@*
+    Kanban/_KanbanBoard.cshtml
+    The four fixed lanes of the user's board, in the domain's order (KanbanLanes), each with its cards top to bottom
+    (creation order) and its own "+ Add card" button. A lane's label is its key looked up in this partial's resx.
+    A card shows its title, its description (plain text, line breaks kept by CSS) and, at the bottom right, its due date
+    as yyyy-MM-dd: grey, or red once the server has decided it is overdue. Every text is HTML-encoded by Razor; the card's
+    data-* attributes carry its values for the edit modal.
+    Rendered inside Kanban/UserIndex and on its own for the page script's AJAX refresh.
+*@
+@using Maroik.Website.Models.ViewModels.Kanbans
+@model KanbanBoardViewModel
+
+<div class="kanban-lanes">
+    @foreach (KanbanLaneViewModel lane in Model.Lanes)
+    {
+        <div class="card card-row card-secondary kanban-lane" data-lane="@lane.Lane">
+            <div class="card-header">
+                <h3 class="card-title">@Localizer[lane.Lane].Value</h3>
+            </div>
+            <div class="card-body">
+                @foreach (KanbanCardOutputViewModel card in lane.Cards)
+                {
+                    <div class="card kanban-card-item" role="button" tabindex="0"
+                         data-id="@card.Id" data-title="@card.Title" data-description="@card.Description" data-due-date="@card.DueDate">
+                        <div class="card-header">
+                            <h5 class="card-title kanban-card-title">@card.Title</h5>
+                        </div>
+                        @if (card.Description != null)
+                        {
+                            <div class="card-body kanban-card-description">@card.Description</div>
+                        }
+                        @if (card.DueDate != null)
+                        {
+                            <div class="card-footer text-right">
+                                <small class="kanban-due @(card.Overdue ? "text-danger" : "text-muted")"><i class="far fa-calendar-alt mr-1"></i>@card.DueDate</small>
+                            </div>
+                        }
+                    </div>
+                }
+                <button type="button" class="btn btn-block btn-light btn-sm kanban-add-card" data-lane="@lane.Lane"><i class="fas fa-plus mr-1"></i>@Localizer["Add card"].Value</button>
+            </div>
+        </div>
+    }
+</div>

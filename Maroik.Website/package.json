@@ -29,6 +29,6 @@
     "moment": "2.31.0",
     "terser": "5.51.2",
     "typescript": "7.0.2",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   }
 }
