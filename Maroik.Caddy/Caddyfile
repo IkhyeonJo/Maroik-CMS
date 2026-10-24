@@ -1,0 +1,11 @@
+# Caddy for Deploy.sh's port-forwarding mode (docker-compose.prod.portforward.yml): it ends HTTPS for the domain and its www
+# host with a Let's Encrypt certificate it gets and renews by itself (ACME e-mail and domain from the environment Deploy.sh
+# sets), redirects http to https, and hands each request to maroik.website over plain HTTP on `backend`. It sends the visitor's
+# scheme as X-Forwarded-Proto, which the website takes from a private-network peer (ServerSetting:HostingMode=PortForwarding).
+{
+	email {$MAROIK_ACME_EMAIL}
+}
+
+{$MAROIK_DOMAIN}, www.{$MAROIK_DOMAIN} {
+	reverse_proxy maroik.website:80
+}

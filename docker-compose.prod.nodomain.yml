@@ -1,0 +1,20 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Maroik — no-domain mode, laid over docker-compose.prod.yml by Deploy.sh (choice 1, "the site has no domain"):
+#   sudo env MAROIK_TAG=... MAROIK_HTTP_PORT=80 MAROIK_SITE_URL=http://192.168.0.10/ \
+#     docker compose -f docker-compose.prod.yml -f docker-compose.prod.nodomain.yml up -d
+# The website is published on MAROIK_HTTP_PORT over plain HTTP (no HTTPS, HSTS or redirects; cookies a browser keeps over
+# HTTP: ServerSetting:HostingMode=NoDomain), for a home network: passwords and sessions travel unencrypted. MAROIK_SITE_URL
+# is the address the mails link to. Neither cloudflared nor Caddy runs.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+    maroik.website:
+        ports:
+          - "${MAROIK_HTTP_PORT:?set MAROIK_HTTP_PORT or run Maroik.DeployOps/Deploy.sh}:80"
+        environment:
+          - ServerSetting__HostingMode=NoDomain
+          - ServerSetting__DomainName=${MAROIK_SITE_URL:?set MAROIK_SITE_URL or run Maroik.DeployOps/Deploy.sh}
+
+    # Not started in this mode (Deploy.sh also removes a container left from the tunnel mode).
+    cloudflared:
+        profiles: ["tunnel-only"]

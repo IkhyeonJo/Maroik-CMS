@@ -2,16 +2,16 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Maroik — PRODUCTION compose stack (maroik.com, home server behind Cloudflare).
 #
-# Brought up by Maroik.DeployOps/Deploy.sh (builds the app images on this server) or
-# Maroik.DeployOps/GitHubDeploy.sh (pulls the images CI published), the latter kept current by
-# Maroik.Crontab/AutoDeploy.sh (cron, app services only). All of them set MAROIK_TAG.
+# Brought up by Maroik.DeployOps/Deploy.sh — choice 1 builds the app images on this server, choice 2
+# pulls the images CI published and is kept current by Maroik.Crontab/AutoDeploy.sh (cron, app
+# services only). Both set MAROIK_TAG.
 # Differences from docker-compose.debug.yml: reads .env.prod (server-only, git-ignored;
 # template: .env.prod.example), seeds the DB from the Production SQL scripts (server-only:
 # the Init.sql of a Backup.sh archive), `restart: unless-stopped` on every long-running service,
 # a Cloudflare Tunnel (cloudflared) instead of published ports, and the three app
 # services have no build section: they run images tagged ${MAROIK_TAG} that already exist — built by
 # Deploy.sh (local-<commit>) or by CI/CD (.github/workflows/ci-cd.yml, publish job; sha-<12-char commit>,
-# pulled by GitHubDeploy.sh / AutoDeploy.sh). Either way a release build: minified site.js, no source maps.
+# pulled by Deploy.sh's choice 2 / AutoDeploy.sh). Either way a release build: minified site.js, no source maps.
 #
 # MAROIK_TAG has no default on purpose: run compose through the deploy scripts, or
 # set it yourself (e.g. MAROIK_TAG=sha-2ecebf469478), so a bare `up` can never pull some
@@ -21,6 +21,10 @@
 # maroik.website over plain HTTP on `backend`, so the host publishes no port at all and
 # needs no origin certificate. The tunnel's public hostnames (maroik.com, www.maroik.com
 # -> http://maroik.website:80) are configured in the Cloudflare dashboard.
+#
+# Deploy.sh choice 1 lays a mode file over this one, by how the site is reached: docker-compose.prod.tunnel.yml (this
+# stack, domain from the answer), docker-compose.prod.portforward.yml (Caddy on 80 / 443 instead of cloudflared) or
+# docker-compose.prod.nodomain.yml (the website published on a port, plain HTTP, no cloudflared).
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Container log rotation, applied to every service below. Every service logs to stdout (Serilog

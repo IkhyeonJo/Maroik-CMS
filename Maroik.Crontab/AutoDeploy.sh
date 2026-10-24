@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Code-only auto deploy: Maroik.Crontab/AutoDeploy.sh, run by root's cron every 5 minutes (Maroik.Crontab/InitCron,
-# installed by GitHubDeploy.sh, removed by Undeploy.sh and by Deploy.sh, which builds locally instead).
+# installed by Deploy.sh's choice 2 (GitHub), removed by Undeploy.sh and by Deploy.sh's choice 1, which builds locally).
 #
 # CI (build-and-test -> publish) builds the Website, FileStorage and Worker images for every commit on main and pushes
 # them to ghcr.io tagged sha-<12-char commit>. This script deploys the newest main commit whose publish job succeeded:
@@ -10,8 +10,8 @@
 # the database keeps its data, Init.sql is not run again and signed-in users stay signed in (sessions live in Valkey).
 #
 # A commit that changes Maroik.DB/ (Init.sql) is NOT deployed: that needs the manual
-# Maroik.DeployOps/Undeploy.sh -> GitHubDeploy.sh -> restore with the new columns. It is logged, and later commits wait behind it until
-# GitHubDeploy.sh has run (GitHubDeploy.sh writes .deployed-sha).
+# Maroik.DeployOps/Undeploy.sh -> Deploy.sh (choice 2) -> restore with the new columns. It is logged, and later commits wait behind it until
+# Deploy.sh (choice 2) has run (it writes .deployed-sha).
 
 REPO_DIR="/home/ubuntu/Maroik"
 COMPOSE_FILE="$REPO_DIR/docker-compose.prod.yml"
@@ -22,7 +22,7 @@ FAILED_FILE="$REPO_DIR/.failed-sha"
 APP_SERVICES="maroik.website maroik.filestorage maroik.worker"
 
 # Cron runs this as root (InitCron is root's crontab), but the clone belongs to ubuntu. Git as ubuntu, so git does not
-# refuse the repository ("dubious ownership") and .git never gets root-owned files that would break GitHubDeploy.sh later.
+# refuse the repository ("dubious ownership") and .git never gets root-owned files that would break Deploy.sh (choice 2) later.
 GIT="sudo -u ubuntu git -C $REPO_DIR"
 
 log() { echo "[$(date '+%F %T')] $*" >> "$LOG"; }
@@ -33,7 +33,7 @@ flock -n 9 || exit 0
 
 cd "$REPO_DIR" || exit 1
 
-# Not a deployed clone yet (docker-compose.prod.yml comes with the checkout GitHubDeploy.sh makes). Echo for a manual run;
+# Not a deployed clone yet (docker-compose.prod.yml comes with the checkout Deploy.sh (choice 2) makes). Echo for a manual run;
 # log once for cron.
 if [ ! -f "$COMPOSE_FILE" ]; then
   MSG="Deployment is not set up yet: $COMPOSE_FILE not found. Set up the deployment files first."
@@ -43,7 +43,7 @@ if [ ! -f "$COMPOSE_FILE" ]; then
   exit 1
 fi
 
-# No baseline yet: the first deploy after switching to the git clone is a manual GitHubDeploy.sh.
+# No baseline yet: the first deploy after switching to the git clone is a manual Deploy.sh (choice 2).
 [ -f "$STATE_FILE" ] || exit 0
 CURRENT_SHA=$(cat "$STATE_FILE")
 
@@ -65,15 +65,15 @@ esac
 # Schema change -> manual deploy. Logged once per commit.
 if ! $GIT diff --quiet "$CURRENT_SHA" "$NEW_SHA" -- Maroik.DB/; then
   grep -q "$NEW_SHA" "$LOG" 2>/dev/null || \
-    log "Maroik.DB/ changed between $CURRENT_SHA and $NEW_SHA. Run Maroik.DeployOps/Undeploy.sh -> GitHubDeploy.sh by hand."
+    log "Maroik.DB/ changed between $CURRENT_SHA and $NEW_SHA. Run Maroik.DeployOps/Undeploy.sh -> Deploy.sh (choice 2) by hand."
   exit 0
 fi
 
 # Keep the clone at the deployed commit, so the next run diffs Maroik.DB/ from here.
 if ! $GIT checkout -q --detach "$NEW_SHA"; then
-  # A tracked file edited on this box. Logged once; GitHubDeploy.sh (whose checkout overwrites such edits) clears it.
+  # A tracked file edited on this box. Logged once; Deploy.sh (choice 2) (whose checkout overwrites such edits) clears it.
   grep -q "checkout $NEW_SHA failed" "$LOG" 2>/dev/null || \
-    log "git checkout $NEW_SHA failed: a tracked file was changed on this box (git status). Fix it or run GitHubDeploy.sh."
+    log "git checkout $NEW_SHA failed: a tracked file was changed on this box (git status). Fix it or run Deploy.sh (choice 2)."
   exit 1
 fi
 
@@ -99,6 +99,6 @@ if $COMPOSE -f "$COMPOSE_FILE" pull $APP_SERVICES >> "$LOG" 2>&1 \
 else
   # A failed pull leaves the running containers alone, so the site stays up on the previous version.
   echo "$NEW_SHA" > "$FAILED_FILE"
-  log "Deploy of $NEW_SHA failed; see the compose output above. Not retried; a newer commit or GitHubDeploy.sh is."
+  log "Deploy of $NEW_SHA failed; see the compose output above. Not retried; a newer commit or Deploy.sh (choice 2) is."
   exit 1
 fi

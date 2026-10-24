@@ -11,6 +11,7 @@ using Maroik.Core.Service.Extensions;
 using Maroik.Website.Constants;
 using Maroik.Website.Extensions;
 using Maroik.Website.Filters;
+using Maroik.Website.HostingProfiles;
 using Maroik.Website.Middlewares;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.CookiePolicy;
@@ -41,8 +42,6 @@ try
         .Enrich.FromLogContext()
         .WriteTo.Console(outputTemplate: LogTemplates.Console, formatProvider: CultureInfo.InvariantCulture));
 
-    const string cookiePrefix = "__Secure-";
-
     #region ServerSettings
 
     // Strongly-typed binding of the whole "ServerSetting" section, plus the handful of values that
@@ -66,6 +65,10 @@ try
         throw new InvalidOperationException("ServerSetting:MaxLoginAttempt must be greater than zero.");
 
     var cfgDomainName = serverSetting.DomainName ?? "";
+    // How visitors reach the site (Deploy.sh's choice): Cloudflare Tunnel, port forwarding behind Caddy, or no domain over plain
+    // HTTP. It decides HTTPS / HSTS / redirects, the cookies and the trusted forwarded scheme below.
+    var hosting = HostingProfile.Create(builder.Configuration["ServerSetting:HostingMode"], cfgDomainName);
+    string cookiePrefix = hosting.CookiePrefix;
     var cfgSessionExpireMinutes = serverSetting.SessionExpireMinutes;
 
     // Register ServerSetting as IOptions<ServerSetting> for DI.
@@ -147,7 +150,7 @@ try
             keyRingPath);
     }
 
-    string cookieDomain = cfgDomainName.Replace("https://", "", StringComparison.Ordinal).Replace("/", "", StringComparison.Ordinal);
+    string? cookieDomain = hosting.CookieDomain;
 
     builder.Services.AddSession(options =>
     {
@@ -156,7 +159,7 @@ try
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
         options.Cookie.Domain = cookieDomain;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SecurePolicy = hosting.CookieSecurePolicy;
         options.Cookie.SameSite = SameSiteMode.Strict;
     });
 
@@ -170,7 +173,7 @@ try
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
         options.Cookie.Domain = cookieDomain;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SecurePolicy = hosting.CookieSecurePolicy;
         options.Cookie.SameSite = SameSiteMode.Strict;
     });
 
@@ -218,9 +221,10 @@ try
     // is taken (RemoteIpAddress stays the peer's), and only from a private-network peer: no port is
     // published, so on the server that is cloudflared — on the Docker bridge today, possibly a
     // VPC address on another host later. Loopback is in the defaults already.
+    // The same holds for Caddy under port forwarding. Without a domain there is no proxy, so nothing is taken.
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
-        options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
+        options.ForwardedHeaders = hosting.TrustsForwardedScheme ? ForwardedHeaders.XForwardedProto : ForwardedHeaders.None;
         options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("10.0.0.0/8"));
         options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("172.16.0.0/12"));
         options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("192.168.0.0/16"));
@@ -277,20 +281,21 @@ try
     app.UseCookiePolicy(new CookiePolicyOptions
     {
         HttpOnly = HttpOnlyPolicy.Always,
-        Secure = CookieSecurePolicy.Always,
+        Secure = hosting.CookieSecurePolicy,
     });
 
     app.UseExceptionHandler("/Exception/Error");
 
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    if (hosting.UsesHttps)
+        app.UseHsts();
 
     // /health bypasses HTTPS redirect and www-redirect so it is reachable on HTTP port 80
     // from the host (e.g. a post-deploy health probe). Ordinal: the probe hits the exact-case
     // "/health", matching StartsWithSegments' own default is not relied on (it is
     // OrdinalIgnoreCase).
     app.UseWhen(
-        ctx => !ctx.Request.Path.StartsWithSegments("/health", StringComparison.Ordinal),
+        ctx => hosting.UsesHttps && !ctx.Request.Path.StartsWithSegments("/health", StringComparison.Ordinal),
         pipeline =>
         {
             pipeline.UseHttpsRedirection();
