@@ -70,8 +70,8 @@
     }
 }
 
-/* A plain checkbox under its label ("all day" in the event dialogs, the calendar selection lists). As a form-control it
-   was drawn as a box as wide as its column. */
+/* A plain checkbox in the calendar selection lists. As a form-control it was drawn as a box as wide as its column. (The event
+   dialogs' "all day" checkbox keeps its form-control look.) */
 .calendar-checkbox {
     display: block;
     width: 1.1rem;

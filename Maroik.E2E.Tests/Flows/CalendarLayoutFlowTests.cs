@@ -6,9 +6,9 @@ namespace Maroik.E2E.Tests.Flows;
 /// <summary>
 /// The calendar pages laid out in a real browser: the event popup stays inside the window (it used to open past the right
 /// edge for an event in the last columns and pushed the whole page sideways), every week of the month shows on a phone (the
-/// grid used to keep a fixed height and hide the last weeks behind an inner scroll), the "all day" and selection checkboxes
-/// are plain checkboxes next to their labels (they carried <c>form-control</c> and were drawn as wide centred boxes), and the
-/// calendar dialogs line up their fields and keep a usable width.
+/// grid used to keep a fixed height and hide the last weeks behind an inner scroll), the calendar-selection checkboxes are plain
+/// checkboxes, and the calendar dialogs line up their fields and keep a usable width. The event dialogs' "all day" checkbox keeps its
+/// <c>form-control</c> look (the owner's choice, 2026-10-24).
 /// </summary>
 [Collection("E2E")]
 public class CalendarLayoutFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture)
@@ -93,21 +93,16 @@ public class CalendarLayoutFlowTests(E2ESharedFixture fixture) : E2ETestBase(fix
         Assert.NotEqual("rgb(255, 255, 255)", background);
     }
 
-    /// <summary>The "all day" checkbox of the event dialogs is a checkbox-sized box under the start of its label.</summary>
+    /// <summary>The event dialogs' "all day" checkbox keeps its form-control look (the owner's choice, 2026-10-24).</summary>
     [Theory]
     [InlineData("User")]
     [InlineData("Admin")]
-    public async Task TheAllDayCheckbox_IsAPlainCheckbox(string role)
+    public async Task TheAllDayCheckbox_KeepsItsFormControlLook(string role)
     {
         IPage page = await OpenAsync(role, 1400);
-        await page.Locator(".fc-day-today, .fc-daygrid-day:not(.fc-day-other)").First.ClickAsync();
-        await page.WaitForSelectorAsync("#createCalendarEventTaskDialogModal.show");
 
-        LocatorBoundingBoxResult box = await BoxAsync(page, "#createCalendarEventAllDay");
-        LocatorBoundingBoxResult label = await BoxAsync(page, "label[for=createCalendarEventAllDay]");
-
-        Assert.True(box.Width <= 24, $"the checkbox is {box.Width}px wide");
-        Assert.True(Math.Abs(box.X - label.X) <= 4, $"the checkbox starts at {box.X}, its label at {label.X}");
+        foreach (string id in new[] { "#createCalendarEventAllDay", "#editCalendarEventAllDay" })
+            await Assertions.Expect(page.Locator(id)).ToHaveClassAsync("form-control form-control-sm");
     }
 
     /// <summary>In the calendar dialog the time-zone select lines up with the name field (it sat outside the field grid).</summary>
