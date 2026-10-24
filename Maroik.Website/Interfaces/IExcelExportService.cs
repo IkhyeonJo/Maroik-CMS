@@ -56,4 +56,10 @@ public interface IExcelExportService
         IEnumerable<CategoryResponse> categories,
         IEnumerable<SubCategoryResponse> subCategories,
         Func<string, string> localize);
+
+    /// <summary>
+    /// Creates an Excel workbook of a budget sheet: its rows' localized labels and currencies, then each cell's calculated value
+    /// (months, year total, free columns); empty free rows are left out.
+    /// </summary>
+    MemoryStream CreateBudgetExcel(BudgetSheetResponse sheet, Func<string, string> localize);
 }

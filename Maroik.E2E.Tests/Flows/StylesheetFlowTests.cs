@@ -157,4 +157,23 @@ public class StylesheetFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture
         Assert.Equal("anywhere", await StyleAsync(page, ".file-manager-tile-name", "overflow-wrap"));
         Assert.Equal("220px", await StyleAsync(page, ".file-manager-search", "max-width"));
     }
+
+    /// <summary>
+    /// The budget sheet scrolls inside its frame with the column letters and the labels kept in view, and right-aligns numbers
+    /// (<c>user/custom/AccountBook/Budget/css/site.css</c>).
+    /// </summary>
+    [Fact]
+    public async Task Budget_KeepsTheHeadersInView_AndAlignsNumbers()
+    {
+        var (page, account) = await NewSignedInPageAsync();
+        await Db.SeedAssetAsync(account.Email, "Wallet", 0m);
+        await page.WaitForURLAsync(url => url.Contains("/Dashboard/", StringComparison.Ordinal), new PageWaitForURLOptions { Timeout = 30_000 });
+        await GotoAsync(page, "/AccountBook/IncomeBudget");
+        await Assertions.Expect(page.Locator("#budgetGrid td[data-address='N2']")).ToHaveTextAsync("0");
+
+        Assert.Equal("auto", await StyleAsync(page, ".budget-grid-wrap", "overflow-y"));
+        Assert.Equal("sticky", await StyleAsync(page, ".budget-grid thead th", "position"));
+        Assert.Equal("sticky", await StyleAsync(page, "#budgetGrid td[data-address='A2']", "position"));
+        Assert.Equal("right", await StyleAsync(page, "#budgetGrid td.budget-number", "text-align"));
+    }
 }

@@ -1,6 +1,7 @@
 using Maroik.Core.Contract.Dtos;
 using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Domain.Accounts;
+using Maroik.Core.Domain.Budgets;
 using Maroik.Core.Domain.Finances;
 using Maroik.Core.Domain.Extensions;
 using Maroik.Website.Attributes;
@@ -15,14 +16,15 @@ namespace Maroik.Website.Controllers;
 
 /// <summary>
 /// Manages account-book records: assets, income transactions, and expenditure transactions
-/// (create, read, update, delete, export).
+/// (create, read, update, delete, export), and the income / expenditure budget sheets.
 /// </summary>
 /// <param name="localizer">Localizer for this controller's user-facing messages.</param>
 /// <param name="logger">Logger for unexpected failures in the account-book actions.</param>
 /// <param name="assetService">Asset use cases.</param>
 /// <param name="incomeService">Income use cases.</param>
 /// <param name="expenditureService">Expenditure use cases.</param>
-/// <param name="excelExportService">Builds the asset / income / expenditure Excel exports.</param>
+/// <param name="budgetService">Budget sheet use cases (Income Budget / Expenditure Budget).</param>
+/// <param name="excelExportService">Builds the asset / income / expenditure / budget Excel exports.</param>
 /// <param name="timeProvider">The clock read for the pickers' current date/time and the export file name's timestamp.</param>
 public class AccountBookController(
     IHtmlLocalizer<AccountBookController> localizer,
@@ -30,6 +32,7 @@ public class AccountBookController(
     IAssetService assetService,
     IIncomeService incomeService,
     IExpenditureService expenditureService,
+    IBudgetService budgetService,
     IExcelExportService excelExportService,
     TimeProvider timeProvider) : Controller
 {
@@ -650,4 +653,200 @@ public class AccountBookController(
 
     #endregion
 
+
+    #region Budget
+
+    /// <summary>The Income Budget page (the budget sheet view, told its kind).</summary>
+    [HttpGet]
+    public async Task<IActionResult> IncomeBudget(CancellationToken ct)
+    {
+        AccountResponse account = HttpContext.GetLoggedInAccount();
+        var assets = await assetService.GetAssetsAsync(account.Email!, ct);
+        return View("Budget", BudgetViewModelMapper.Page(BudgetKind.Income, assets, timeProvider.GetUtcNow().UtcDateTime, account.TimeZoneIanaId ?? "UTC", key => localizer[key].Value));
+    }
+
+    /// <summary>The Expenditure Budget page (the budget sheet view, told its kind).</summary>
+    [HttpGet]
+    public async Task<IActionResult> ExpenditureBudget(CancellationToken ct)
+    {
+        AccountResponse account = HttpContext.GetLoggedInAccount();
+        var assets = await assetService.GetAssetsAsync(account.Email!, ct);
+        return View("Budget", BudgetViewModelMapper.Page(BudgetKind.Expenditure, assets, timeProvider.GetUtcNow().UtcDateTime, account.TimeZoneIanaId ?? "UTC", key => localizer[key].Value));
+    }
+
+    /// <summary>A budget sheet, ready to draw.</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequiredHttpPostAccess(Role = Role.User)]
+    public async Task<IActionResult> GetBudgetSheet([FromBody] BudgetSheetInputViewModel input, CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return Json(new { result = false, error = localizer["Input is invalid"].Value });
+        AccountResponse account = HttpContext.GetLoggedInAccount();
+        try
+        {
+            var (result, sheet) = await budgetService.GetSheetAsync(account.Email!, Enum.Parse<BudgetKind>(input.Kind), input.Year, account.TimeZoneIanaId ?? "UTC", ct);
+            return result.Success
+                ? Json(new { result = true, sheet = sheet!.ToViewModel(key => localizer[key].Value) })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to load the {Kind} budget sheet {Year} of {Email}", input.Kind, input.Year, account.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
+    }
+
+    /// <summary>The formula bar's colouring and preview of an input being typed (nothing is stored).</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequiredHttpPostAccess(Role = Role.User)]
+    public async Task<IActionResult> PreviewBudgetCell([FromBody] BudgetPreviewInputViewModel input, CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return Json(new { result = false, error = localizer["Input is invalid"].Value });
+        AccountResponse account = HttpContext.GetLoggedInAccount();
+        try
+        {
+            var (result, preview) = await budgetService.PreviewAsync(account.Email!, Enum.Parse<BudgetKind>(input.Kind), input.Year, account.TimeZoneIanaId ?? "UTC",
+                input.Address, input.Input ?? "", ct);
+            return result.Success
+                ? Json(new { result = true, preview = preview!.ToViewModel((key, args) => localizer[key, args].ToPlainString()) })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to preview a {Kind} budget cell {Year} of {Email}", input.Kind, input.Year, account.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
+    }
+
+    /// <summary>Stores typed cell edits; replies the changed cells.</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequiredHttpPostAccess(Role = Role.User)]
+    public async Task<IActionResult> SetBudgetCells([FromBody] BudgetEditsInputViewModel input, CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return Json(new { result = false, error = localizer["Input is invalid"].Value });
+        AccountResponse account = HttpContext.GetLoggedInAccount();
+        try
+        {
+            var (result, edit) = await budgetService.EditAsync(account.Email!, Enum.Parse<BudgetKind>(input.Kind), input.Year, account.TimeZoneIanaId ?? "UTC",
+                [.. input.Edits.Select(e => new BudgetCellEdit(e.Address, e.Input))], ct);
+            return result.Success
+                ? Json(new { result = true, changed = edit!.Changed.Select(c => c.ToViewModel(input.Kind)) })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to edit the {Kind} budget sheet {Year} of {Email}", input.Kind, input.Year, account.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
+    }
+
+    /// <summary>Pastes or fills a block of cells, as Excel does; replies the changed cells.</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequiredHttpPostAccess(Role = Role.User)]
+    public async Task<IActionResult> CopyBudgetCells([FromBody] BudgetCopyInputViewModel input, CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return Json(new { result = false, error = localizer["Input is invalid"].Value });
+        AccountResponse account = HttpContext.GetLoggedInAccount();
+        try
+        {
+            var (result, edit) = await budgetService.CopyAsync(account.Email!, Enum.Parse<BudgetKind>(input.Kind), input.Year, account.TimeZoneIanaId ?? "UTC",
+                input.Source, input.Target, ct);
+            return result.Success
+                ? Json(new { result = true, changed = edit!.Changed.Select(c => c.ToViewModel(input.Kind)) })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to paste into the {Kind} budget sheet {Year} of {Email}", input.Kind, input.Year, account.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
+    }
+
+    /// <summary>Adds a line (a class in a currency); replies the sheet.</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequiredHttpPostAccess(Role = Role.User)]
+    public async Task<IActionResult> AddBudgetLine([FromBody] BudgetLineInputViewModel input, CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return Json(new { result = false, error = localizer["Input is invalid"].Value });
+        AccountResponse account = HttpContext.GetLoggedInAccount();
+        try
+        {
+            var (result, sheet) = await budgetService.AddLineAsync(account.Email!, Enum.Parse<BudgetKind>(input.Kind), input.Year, account.TimeZoneIanaId ?? "UTC",
+                input.MainClass, input.SubClass, input.Currency, ct);
+            return result.Success
+                ? Json(new { result = true, message = localizer["The line was added."].Value, sheet = sheet!.ToViewModel(key => localizer[key].Value) })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to add a line to the {Kind} budget sheet {Year} of {Email}", input.Kind, input.Year, account.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
+    }
+
+    /// <summary>Removes a line and its inputs; replies the sheet.</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequiredHttpPostAccess(Role = Role.User)]
+    public async Task<IActionResult> RemoveBudgetLine([FromBody] BudgetLineInputViewModel input, CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return Json(new { result = false, error = localizer["Input is invalid"].Value });
+        AccountResponse account = HttpContext.GetLoggedInAccount();
+        try
+        {
+            var (result, sheet) = await budgetService.RemoveLineAsync(account.Email!, Enum.Parse<BudgetKind>(input.Kind), input.Year, account.TimeZoneIanaId ?? "UTC",
+                input.MainClass, input.SubClass, input.Currency, ct);
+            return result.Success
+                ? Json(new { result = true, message = localizer["The line was removed."].Value, sheet = sheet!.ToViewModel(key => localizer[key].Value) })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to remove a line from the {Kind} budget sheet {Year} of {Email}", input.Kind, input.Year, account.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
+    }
+
+    /// <summary>Fills the sheet's empty budget cells from last year's sheet; replies the sheet and how many cells were filled.</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequiredHttpPostAccess(Role = Role.User)]
+    public async Task<IActionResult> CarryOverBudget([FromBody] BudgetSheetInputViewModel input, CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return Json(new { result = false, error = localizer["Input is invalid"].Value });
+        AccountResponse account = HttpContext.GetLoggedInAccount();
+        try
+        {
+            var (result, sheet, copied) = await budgetService.CarryOverAsync(account.Email!, Enum.Parse<BudgetKind>(input.Kind), input.Year, account.TimeZoneIanaId ?? "UTC", ct);
+            return result.Success
+                ? Json(new { result = true, message = localizer["{0} cells were filled from last year.", copied].ToPlainString(), sheet = sheet!.ToViewModel(key => localizer[key].Value) })
+                : Json(new { result = false, error = localizer[result.ErrorKey, result.ErrorArgs].ToPlainString() });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to carry the {Kind} budget over into {Year} for {Email}", input.Kind, input.Year, account.Email);
+            return Json(new { result = false, error = localizer[ServiceResult.TemporaryErrorKey].Value });
+        }
+    }
+
+    /// <summary>Exports a budget sheet to an Excel file (its calculated values).</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequiredHttpPostAccess(Role = Role.User)]
+    public async Task<IActionResult> ExportExcelBudget(string kind, int year, string fileName = "", CancellationToken ct = default)
+    {
+        if (!Enum.TryParse(kind, out BudgetKind budgetKind) || !Enum.IsDefined(budgetKind)) return BadRequest();
+        AccountResponse account = HttpContext.GetLoggedInAccount();
+        var (result, sheet) = await budgetService.GetSheetAsync(account.Email!, budgetKind, year, account.TimeZoneIanaId ?? "UTC", ct);
+        if (!result.Success) return BadRequest();
+        var stream = excelExportService.CreateBudgetExcel(sheet!, key => localizer[key].Value);
+        string name = fileName.ToExcelFileName(account.TimeZoneIanaId!, timeProvider.GetUtcNow().UtcDateTime);
+        return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
+    }
+
+    #endregion
 }

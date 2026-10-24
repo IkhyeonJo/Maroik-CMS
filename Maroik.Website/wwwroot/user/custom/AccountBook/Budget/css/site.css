@@ -1,0 +1,274 @@
+/* The Income Budget / Expenditure Budget sheet (Views/AccountBook/Budget.cshtml): a spreadsheet grid with a formula bar.
+   The site is always in AdminLTE's dark mode, so the colours are picked for a dark background. */
+
+:root {
+    --budget-line: rgba(255, 255, 255, 0.12);
+    --budget-readonly: rgba(255, 255, 255, 0.04);
+    --budget-header: #3f474e;
+    --budget-select: rgba(0, 123, 255, 0.18);
+    --budget-active: #007bff;
+    --budget-editing: #ffc107;
+    --budget-copied: #17a2b8;
+    /* Reference colours, as Excel cycles them; the formula bar's reference tokens use the same ones. */
+    --budget-ref-0: #4fc1ff;
+    --budget-ref-1: #e06c75;
+    --budget-ref-2: #98c379;
+    --budget-ref-3: #c678dd;
+    --budget-ref-4: #e5c07b;
+    --budget-ref-5: #56b6c2;
+    --budget-ref-6: #ff9f43;
+    --budget-ref-7: #f78fb3;
+}
+
+.budget-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+
+    & .budget-year-label {
+        min-width: 4.5rem;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.budget-formula-bar {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--budget-line);
+
+    & .budget-name-box {
+        min-width: 4.5rem;
+        padding: 0 0.5rem;
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        border-right: 1px solid var(--budget-line);
+    }
+
+    & .budget-fx {
+        padding: 0 0.5rem;
+        font-style: italic;
+        color: #adb5bd;
+    }
+
+    & .budget-formula-input {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+
+        & .CodeMirror {
+            height: auto;
+            min-height: 1.9rem;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            background: transparent;
+            color: inherit;
+        }
+
+        & .CodeMirror-cursor {
+            border-left-color: #fff;
+        }
+    }
+
+    & .budget-preview-value {
+        min-width: 8rem;
+        padding: 0 0.75rem;
+        text-align: right;
+        color: #adb5bd;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.budget-autocomplete {
+    position: absolute;
+    z-index: 20;
+    min-width: 20rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: #343a40;
+    border: 1px solid #6c757d;
+
+    & li {
+        padding: 0.15rem 0.5rem;
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        cursor: pointer;
+
+        &.active {
+            background: var(--budget-active);
+            color: #fff;
+        }
+    }
+}
+
+.budget-problems {
+    margin: 0;
+    padding: 0 0.75rem;
+    list-style: none;
+    font-size: 0.85rem;
+}
+
+.budget-grid-wrap {
+    overflow: auto;
+    max-height: calc(100vh - 280px);
+    outline: none;
+}
+
+.budget-grid {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.85rem;
+
+    & th,
+    & td {
+        border-right: 1px solid var(--budget-line);
+        border-bottom: 1px solid var(--budget-line);
+    }
+
+    & thead th {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        padding: 0.1rem 0.35rem;
+        text-align: center;
+        background: var(--budget-header);
+    }
+
+    & .budget-corner,
+    & .budget-row-number {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        min-width: 2.5rem;
+        text-align: center;
+        background: var(--budget-header);
+    }
+
+    & .budget-corner {
+        z-index: 4;
+    }
+
+    & .budget-cell {
+        min-width: 6.5rem;
+        max-width: 12rem;
+        height: 1.75rem;
+        padding: 0.1rem 0.35rem;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        cursor: cell;
+    }
+
+    /* Column A holds the labels: wider, and kept in view while the months scroll. */
+    & td[data-address^="A"] {
+        position: sticky;
+        left: 2.5rem;
+        z-index: 1;
+        min-width: 13rem;
+        max-width: 16rem;
+        background: #343a40;
+    }
+
+    & .budget-number {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    & .budget-readonly {
+        background-color: var(--budget-readonly);
+    }
+
+    & .budget-error {
+        color: #e74c3c;
+    }
+
+    & .budget-selected {
+        background-color: var(--budget-select);
+    }
+
+    & .budget-active {
+        outline: 2px solid var(--budget-active);
+        outline-offset: -2px;
+    }
+
+    & .budget-editing {
+        outline-color: var(--budget-editing);
+    }
+
+    & .budget-copied {
+        outline: 2px dashed var(--budget-copied);
+        outline-offset: -2px;
+    }
+
+    & .budget-row-header td,
+    & .budget-row-subtotal td,
+    & .budget-row-total td {
+        font-weight: 600;
+    }
+
+    & .budget-row-total td {
+        border-top: 2px solid var(--budget-line);
+    }
+
+    & .budget-currency {
+        margin-left: 0.35rem;
+        font-size: 0.75rem;
+        color: #adb5bd;
+    }
+
+    & .budget-remove-line {
+        float: right;
+        padding: 0 0.25rem;
+        line-height: 1;
+        opacity: 0.5;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+
+    & .budget-state-good { color: #28a745; }
+    & .budget-state-warn { color: #ffc107; }
+    & .budget-state-bad { color: #dc3545; }
+    & .budget-state-unbudgeted { color: #fd7e14; font-style: italic; }
+
+    & .budget-ref-0 { box-shadow: inset 0 0 0 2px var(--budget-ref-0); }
+    & .budget-ref-1 { box-shadow: inset 0 0 0 2px var(--budget-ref-1); }
+    & .budget-ref-2 { box-shadow: inset 0 0 0 2px var(--budget-ref-2); }
+    & .budget-ref-3 { box-shadow: inset 0 0 0 2px var(--budget-ref-3); }
+    & .budget-ref-4 { box-shadow: inset 0 0 0 2px var(--budget-ref-4); }
+    & .budget-ref-5 { box-shadow: inset 0 0 0 2px var(--budget-ref-5); }
+    & .budget-ref-6 { box-shadow: inset 0 0 0 2px var(--budget-ref-6); }
+    & .budget-ref-7 { box-shadow: inset 0 0 0 2px var(--budget-ref-7); }
+}
+
+/* The formula bar's colouring (the server's token classes). */
+.cm-budget-function { color: #4fc1ff; font-weight: 600; }
+.cm-budget-unknown-function,
+.cm-budget-name,
+.cm-budget-error,
+.cm-budget-error-literal { color: #f44747; }
+.cm-budget-number { color: #b5cea8; }
+.cm-budget-string { color: #ce9178; }
+.cm-budget-boolean { color: #c586c0; }
+.cm-budget-sheet { opacity: 0.7; }
+.cm-budget-paren-match { background: rgba(255, 255, 255, 0.2); }
+.cm-budget-problem { text-decoration: underline wavy #ffc107; }
+.cm-budget-problem.cm-budget-blocking { text-decoration-color: #f44747; }
+.cm-budget-ref-0 { color: var(--budget-ref-0); }
+.cm-budget-ref-1 { color: var(--budget-ref-1); }
+.cm-budget-ref-2 { color: var(--budget-ref-2); }
+.cm-budget-ref-3 { color: var(--budget-ref-3); }
+.cm-budget-ref-4 { color: var(--budget-ref-4); }
+.cm-budget-ref-5 { color: var(--budget-ref-5); }
+.cm-budget-ref-6 { color: var(--budget-ref-6); }
+.cm-budget-ref-7 { color: var(--budget-ref-7); }
+
+.budget-unbudgeted-table {
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+
+    & caption {
+        caption-side: top;
+        padding: 0.25rem 0.75rem;
+        color: #fd7e14;
+    }
+}

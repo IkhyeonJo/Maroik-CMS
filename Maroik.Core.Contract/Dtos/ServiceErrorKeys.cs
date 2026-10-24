@@ -126,6 +126,10 @@ public static class ServiceErrorKeys
     public const string FileManagerScanUnavailable = "The file could not be scanned for viruses.";
     /// <summary>The file has no preview (not a png / jpg / gif / webp image of at most 100 MB).</summary>
     public const string FileManagerNoPreview = "This file cannot be previewed.";
+    /// <summary>A budget line that the sheet does not have.</summary>
+    public const string BudgetLineNotFound = "The line could not be found.";
+    /// <summary>A budget line the sheet already has.</summary>
+    public const string BudgetLineExists = "This sheet already has that line.";
 
     /// <summary>
     /// Keys that are not resx keys: the controller that receives one compares <c>ErrorKey</c> against it and chooses its own

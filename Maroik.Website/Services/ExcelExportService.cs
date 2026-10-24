@@ -335,6 +335,37 @@ public class ExcelExportService(TimeProvider timeProvider) : IExcelExportService
         return BuildExcel(headers, rows);
     }
 
+    /// <summary>The resx keys of the month column headers of a budget export (January .. December).</summary>
+    private static readonly string[] BudgetMonthKeys =
+        ["Month1", "Month2", "Month3", "Month4", "Month5", "Month6", "Month7", "Month8", "Month9", "Month10", "Month11", "Month12"];
+
+    /// <inheritdoc />
+    public MemoryStream CreateBudgetExcel(BudgetSheetResponse sheet, Func<string, string> localize)
+    {
+        // Columns A..Z of the sheet: A is the label (split here into label and currency), B..M the months, N the year total, O..Z free.
+        string[] columns = [.. Enumerable.Range(0, 26).Select(i => ((char)('A' + i)).ToString())];
+        var headers = new List<string> { localize("Item"), localize("Currency") };
+        headers.AddRange(BudgetMonthKeys.Select(localize));
+        headers.Add(localize("Year total"));
+        headers.AddRange(columns.Skip(14));
+
+        Dictionary<string, BudgetValueResponse> values = sheet.Cells.ToDictionary(c => c.Address, c => c.Value, StringComparer.Ordinal);
+        BudgetSheetViewModel labelled = sheet.ToViewModel(localize);
+        var rows = labelled.Rows.Select(row =>
+        {
+            string number = row.Number.ToString(CultureInfo.InvariantCulture);
+            XlsxCell Value(string column) => values.TryGetValue(column + number, out BudgetValueResponse? value)
+                ? value.Number is { } n ? XlsxCell.Number(n) : (XlsxCell)(value.Text ?? "")
+                : "";
+            XlsxCell label = row.Kind == "Free" ? Value("A") : row.Label;
+            return (Cells: (IEnumerable<XlsxCell>)[label, row.Currency, .. columns.Skip(1).Select(Value)], row.Kind);
+        })
+        .Where(r => r.Kind != "Free" || r.Cells.Any(c => c.Text.Length > 0))
+        .Select(r => r.Cells);
+
+        return BuildExcel(headers, rows);
+    }
+
     /// <summary>
     /// Writes a single-sheet ("Sheet1") workbook: one header row, then one row per entry of
     /// <paramref name="rows"/>, each cell as a number or a string as the <see cref="XlsxCell"/> says. Returns the stream rewound to position 0.

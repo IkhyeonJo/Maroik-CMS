@@ -631,6 +631,272 @@ ALTER SEQUENCE public."Board_Id_seq" OWNED BY public."Board"."Id";
 
 
 --
+-- Name: BudgetSheet; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."BudgetSheet" (
+    "Id" bigint NOT NULL,
+    "AccountEmail" character varying(255) NOT NULL,
+    "Kind" character varying(255) NOT NULL,
+    "Year" integer NOT NULL,
+    "Created" timestamp without time zone NOT NULL,
+    "Updated" timestamp without time zone NOT NULL,
+    CONSTRAINT "BudgetSheet_Kind_check" CHECK (((("Kind")::text = ANY (ARRAY[('Income'::character varying)::text, ('Expenditure'::character varying)::text])))),
+    CONSTRAINT "BudgetSheet_Year_check" CHECK ((("Year" >= 1) AND ("Year" <= 9999)))
+);
+
+
+ALTER TABLE public."BudgetSheet" OWNER TO postgres;
+
+--
+-- Name: TABLE "BudgetSheet"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public."BudgetSheet" IS 'BudgetSheet';
+
+
+--
+-- Name: COLUMN "BudgetSheet"."Id"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheet"."Id" IS 'PK';
+
+
+--
+-- Name: COLUMN "BudgetSheet"."AccountEmail"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheet"."AccountEmail" IS 'Account Email (ID)';
+
+
+--
+-- Name: COLUMN "BudgetSheet"."Kind"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheet"."Kind" IS 'Income or Expenditure';
+
+
+--
+-- Name: COLUMN "BudgetSheet"."Year"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheet"."Year" IS 'Year of the sheet';
+
+
+--
+-- Name: COLUMN "BudgetSheet"."Created"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheet"."Created" IS 'Created';
+
+
+--
+-- Name: COLUMN "BudgetSheet"."Updated"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheet"."Updated" IS 'Updated (last edit of its lines or cells)';
+
+
+--
+-- Name: BudgetSheet_Id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public."BudgetSheet_Id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public."BudgetSheet_Id_seq" OWNER TO postgres;
+
+--
+-- Name: BudgetSheet_Id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public."BudgetSheet_Id_seq" OWNED BY public."BudgetSheet"."Id";
+
+
+--
+-- Name: BudgetSheetCell; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."BudgetSheetCell" (
+    "Id" bigint NOT NULL,
+    "SheetId" bigint NOT NULL,
+    "RowKey" character varying(255) NOT NULL,
+    "Column" character varying(1) NOT NULL,
+    "Input" text NOT NULL,
+    "Updated" timestamp without time zone NOT NULL,
+    CONSTRAINT "BudgetSheetCell_Column_check" CHECK ((("Column")::text ~ '^[A-Z]$'::text)),
+    CONSTRAINT "BudgetSheetCell_Input_check" CHECK ((("Input" <> ''::text) AND (length("Input") <= 100000))),
+    CONSTRAINT "BudgetSheetCell_RowKey_check" CHECK ((("RowKey")::text ~ '^[A-Za-z0-9.]+$'::text))
+);
+
+
+ALTER TABLE public."BudgetSheetCell" OWNER TO postgres;
+
+--
+-- Name: TABLE "BudgetSheetCell"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public."BudgetSheetCell" IS 'BudgetSheetCell';
+
+
+--
+-- Name: COLUMN "BudgetSheetCell"."Id"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheetCell"."Id" IS 'PK';
+
+
+--
+-- Name: COLUMN "BudgetSheetCell"."SheetId"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheetCell"."SheetId" IS 'BudgetSheet Id';
+
+
+--
+-- Name: COLUMN "BudgetSheetCell"."RowKey"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheetCell"."RowKey" IS 'Stable row key (L.<main>.<sub>.<currency hex>, F.<n>, ...)';
+
+
+--
+-- Name: COLUMN "BudgetSheetCell"."Column"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheetCell"."Column" IS 'Column letter (A..Z)';
+
+
+--
+-- Name: COLUMN "BudgetSheetCell"."Input"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheetCell"."Input" IS 'Stored input (a number, text, TRUE/FALSE, or a formula with row keys)';
+
+
+--
+-- Name: COLUMN "BudgetSheetCell"."Updated"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheetCell"."Updated" IS 'Updated';
+
+
+--
+-- Name: BudgetSheetCell_Id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public."BudgetSheetCell_Id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public."BudgetSheetCell_Id_seq" OWNER TO postgres;
+
+--
+-- Name: BudgetSheetCell_Id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public."BudgetSheetCell_Id_seq" OWNED BY public."BudgetSheetCell"."Id";
+
+
+--
+-- Name: BudgetSheetLine; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."BudgetSheetLine" (
+    "Id" bigint NOT NULL,
+    "SheetId" bigint NOT NULL,
+    "MainClass" character varying(255) NOT NULL,
+    "SubClass" character varying(255) NOT NULL,
+    "MonetaryUnit" character varying(45) NOT NULL,
+    "Created" timestamp without time zone NOT NULL,
+    CONSTRAINT "BudgetSheetLine_MainClass_check" CHECK (((("MainClass")::text = ANY (ARRAY[('RegularIncome'::character varying)::text, ('IrregularIncome'::character varying)::text, ('RegularSavings'::character varying)::text, ('NonConsumerSpending'::character varying)::text, ('ConsumerSpending'::character varying)::text])))),
+    CONSTRAINT "BudgetSheetLine_MonetaryUnit_check" CHECK ((("MonetaryUnit")::text ~ '\S'::text)),
+    CONSTRAINT "BudgetSheetLine_SubClass_check" CHECK (((("SubClass")::text = ANY (ARRAY[('LaborIncome'::character varying)::text, ('BusinessIncome'::character varying)::text, ('PensionIncome'::character varying)::text, ('FinancialIncome'::character varying)::text, ('RentalIncome'::character varying)::text, ('OtherIncome'::character varying)::text, ('Deposit'::character varying)::text, ('Investment'::character varying)::text, ('PublicPension'::character varying)::text, ('DebtRepayment'::character varying)::text, ('Tax'::character varying)::text, ('SocialInsurance'::character varying)::text, ('InterHouseholdTransferExpenses'::character varying)::text, ('NonProfitOrganizationTransfer'::character varying)::text, ('MealOrEatOutExpenses'::character varying)::text, ('HousingOrSuppliesCost'::character varying)::text, ('EducationExpenses'::character varying)::text, ('MedicalExpenses'::character varying)::text, ('TransportationCost'::character varying)::text, ('CommunicationCost'::character varying)::text, ('LeisureOrCulture'::character varying)::text, ('ClothingOrShoes'::character varying)::text, ('PinMoney'::character varying)::text, ('ProtectionTypeInsurance'::character varying)::text, ('OtherExpenses'::character varying)::text, ('UnknownExpenditure'::character varying)::text]))))
+);
+
+
+ALTER TABLE public."BudgetSheetLine" OWNER TO postgres;
+
+--
+-- Name: TABLE "BudgetSheetLine"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public."BudgetSheetLine" IS 'BudgetSheetLine';
+
+
+--
+-- Name: COLUMN "BudgetSheetLine"."Id"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheetLine"."Id" IS 'PK';
+
+
+--
+-- Name: COLUMN "BudgetSheetLine"."SheetId"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheetLine"."SheetId" IS 'BudgetSheet Id';
+
+
+--
+-- Name: COLUMN "BudgetSheetLine"."MainClass"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheetLine"."MainClass" IS 'Main class';
+
+
+--
+-- Name: COLUMN "BudgetSheetLine"."SubClass"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheetLine"."SubClass" IS 'Sub class';
+
+
+--
+-- Name: COLUMN "BudgetSheetLine"."MonetaryUnit"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheetLine"."MonetaryUnit" IS 'Currency label';
+
+
+--
+-- Name: COLUMN "BudgetSheetLine"."Created"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."BudgetSheetLine"."Created" IS 'Created';
+
+
+--
+-- Name: BudgetSheetLine_Id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public."BudgetSheetLine_Id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public."BudgetSheetLine_Id_seq" OWNER TO postgres;
+
+--
+-- Name: BudgetSheetLine_Id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public."BudgetSheetLine_Id_seq" OWNED BY public."BudgetSheetLine"."Id";
+
+
+--
 -- Name: Calendar; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2320,6 +2586,27 @@ ALTER TABLE ONLY public."BoardComment" ALTER COLUMN "Id" SET DEFAULT nextval('pu
 
 
 --
+-- Name: BudgetSheet Id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BudgetSheet" ALTER COLUMN "Id" SET DEFAULT nextval('public."BudgetSheet_Id_seq"'::regclass);
+
+
+--
+-- Name: BudgetSheetCell Id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BudgetSheetCell" ALTER COLUMN "Id" SET DEFAULT nextval('public."BudgetSheetCell_Id_seq"'::regclass);
+
+
+--
+-- Name: BudgetSheetLine Id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BudgetSheetLine" ALTER COLUMN "Id" SET DEFAULT nextval('public."BudgetSheetLine_Id_seq"'::regclass);
+
+
+--
 -- Name: Calendar Id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -2464,6 +2751,30 @@ COPY public."BoardAttachedFile" ("Id", "BoardId", "Size", "Name", "Extension", "
 --
 
 COPY public."BoardComment" ("Id", "BoardId", "Order", "AvatarImagePath", "Writer", "Content", "Created", "Deleted") FROM stdin;
+\.
+
+
+--
+-- Data for Name: BudgetSheet; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."BudgetSheet" ("Id", "AccountEmail", "Kind", "Year", "Created", "Updated") FROM stdin;
+\.
+
+
+--
+-- Data for Name: BudgetSheetCell; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."BudgetSheetCell" ("Id", "SheetId", "RowKey", "Column", "Input", "Updated") FROM stdin;
+\.
+
+
+--
+-- Data for Name: BudgetSheetLine; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."BudgetSheetLine" ("Id", "SheetId", "MainClass", "SubClass", "MonetaryUnit", "Created") FROM stdin;
 \.
 
 
@@ -2625,8 +2936,8 @@ COPY public."SubCategory" ("Id", "CategoryId", "Name", "DisplayName", "IconPath"
 3	2	Menu	Menu	far fa-circle nav-icon	Menu	Admin	3
 4	4	Profile	Profile	far fa-circle nav-icon	Profile	User	1
 12	8	Asset	Asset	far fa-circle nav-icon	Asset	User	0
-14	8	Income	Income	far fa-circle nav-icon	Income	User	1
-15	8	Expenditure	Expenditure	far fa-circle nav-icon	Expenditure	User	2
+14	8	Income	Income	far fa-circle nav-icon	Income	User	2
+15	8	Expenditure	Expenditure	far fa-circle nav-icon	Expenditure	User	4
 16	9	FixedIncome	FixedIncome	far fa-circle nav-icon	FixedIncome	User	0
 17	9	FixedExpenditure	FixedExpenditure	far fa-circle nav-icon	FixedExpenditure	User	1
 21	16	Free Forum	Free Forum	far fa-circle nav-icon	FreeForum	Admin	0
@@ -2634,6 +2945,8 @@ COPY public."SubCategory" ("Id", "CategoryId", "Name", "DisplayName", "IconPath"
 23	18	Free Forum	Free Forum	far fa-circle nav-icon	FreeForum	Anonymous	0
 24	2	Private Note	Private Note	far fa-circle nav-icon	PrivateNote	Admin	0
 25	4	Private Note	Private Note	far fa-circle nav-icon	PrivateNote	User	0
+26	8	IncomeBudget	Income Budget	far fa-circle nav-icon	IncomeBudget	User	1
+27	8	ExpenditureBudget	Expenditure Budget	far fa-circle nav-icon	ExpenditureBudget	User	3
 \.
 
 
@@ -2656,6 +2969,27 @@ SELECT pg_catalog.setval('public."BoardComment_Id_seq"', 1, false);
 --
 
 SELECT pg_catalog.setval('public."Board_Id_seq"', 250, true);
+
+
+--
+-- Name: BudgetSheetCell_Id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public."BudgetSheetCell_Id_seq"', 1, false);
+
+
+--
+-- Name: BudgetSheetLine_Id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public."BudgetSheetLine_Id_seq"', 1, false);
+
+
+--
+-- Name: BudgetSheet_Id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public."BudgetSheet_Id_seq"', 1, false);
 
 
 --
@@ -2753,7 +3087,7 @@ SELECT pg_catalog.setval('public."OtherCalendar_CalendarId_seq"', 1, false);
 -- Name: SubCategory_Id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public."SubCategory_Id_seq"', 26, false);
+SELECT pg_catalog.setval('public."SubCategory_Id_seq"', 28, false);
 
 
 --
@@ -2802,6 +3136,54 @@ ALTER TABLE ONLY public."BoardComment"
 
 ALTER TABLE ONLY public."Board"
     ADD CONSTRAINT "Board_pk" PRIMARY KEY ("Id");
+
+
+--
+-- Name: BudgetSheetCell BudgetSheetCell_pk; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BudgetSheetCell"
+    ADD CONSTRAINT "BudgetSheetCell_pk" PRIMARY KEY ("Id");
+
+
+--
+-- Name: BudgetSheetCell BudgetSheetCell_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BudgetSheetCell"
+    ADD CONSTRAINT "BudgetSheetCell_unique" UNIQUE ("SheetId", "RowKey", "Column");
+
+
+--
+-- Name: BudgetSheetLine BudgetSheetLine_pk; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BudgetSheetLine"
+    ADD CONSTRAINT "BudgetSheetLine_pk" PRIMARY KEY ("Id");
+
+
+--
+-- Name: BudgetSheetLine BudgetSheetLine_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BudgetSheetLine"
+    ADD CONSTRAINT "BudgetSheetLine_unique" UNIQUE ("SheetId", "MainClass", "SubClass", "MonetaryUnit");
+
+
+--
+-- Name: BudgetSheet BudgetSheet_pk; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BudgetSheet"
+    ADD CONSTRAINT "BudgetSheet_pk" PRIMARY KEY ("Id");
+
+
+--
+-- Name: BudgetSheet BudgetSheet_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BudgetSheet"
+    ADD CONSTRAINT "BudgetSheet_unique" UNIQUE ("AccountEmail", "Kind", "Year");
 
 
 --
@@ -3151,6 +3533,30 @@ ALTER TABLE ONLY public."BoardComment"
 
 ALTER TABLE ONLY public."BoardComment"
     ADD CONSTRAINT "BoardComment_fk_1" FOREIGN KEY ("Writer") REFERENCES public."Account"("Nickname") ON UPDATE CASCADE;
+
+
+--
+-- Name: BudgetSheetCell BudgetSheetCell_fk_0; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BudgetSheetCell"
+    ADD CONSTRAINT "BudgetSheetCell_fk_0" FOREIGN KEY ("SheetId") REFERENCES public."BudgetSheet"("Id") ON DELETE CASCADE;
+
+
+--
+-- Name: BudgetSheetLine BudgetSheetLine_fk_0; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BudgetSheetLine"
+    ADD CONSTRAINT "BudgetSheetLine_fk_0" FOREIGN KEY ("SheetId") REFERENCES public."BudgetSheet"("Id") ON DELETE CASCADE;
+
+
+--
+-- Name: BudgetSheet BudgetSheet_fk_0; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BudgetSheet"
+    ADD CONSTRAINT "BudgetSheet_fk_0" FOREIGN KEY ("AccountEmail") REFERENCES public."Account"("Email") ON UPDATE CASCADE;
 
 
 --

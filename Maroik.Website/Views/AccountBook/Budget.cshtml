@@ -1,0 +1,133 @@
+@*
+    AccountBook/Budget.cshtml
+    The Income Budget and Expenditure Budget pages (two menu entries, one view told its kind): the account's budget sheet of a
+    year, handled like a spreadsheet. The grid, the formula bar's colouring and every value come from the server (the page
+    script only draws them): the script asks for the sheet (GetBudgetSheet), sends each typed edit (SetBudgetCells) or paste /
+    fill (CopyBudgetCells) and paints the changed cells it gets back, and asks for the colouring of the input being typed
+    (PreviewBudgetCell). The function list, the class taxonomy and the class names are rendered from the domain policies.
+*@
+@using Maroik.Core.Domain.Formulas
+@using Maroik.Website.Models.ViewModels.AccountBooks
+@using Maroik.Website.Serializers
+@model BudgetPageViewModel
+
+@Html.Hidden("budgetKind", Model.Kind)
+@Html.Hidden("budgetYear", Model.Year)
+@Html.Hidden("budgetFunctions", ClientJsonSerializer.Serialize(FormulaFunctions.All))
+@Html.Hidden("budgetSubClassMap", ClientJsonSerializer.Serialize(Model.SubClassesByMainClass))
+@Html.Hidden("budgetClassLabels", ClientJsonSerializer.Serialize(Model.ClassLabels))
+@Html.Hidden("localizerConfirmRemoveLine", Localizer["Remove the line {0} ({1})? Its inputs are deleted."].Value)
+@Html.Hidden("localizerNotBudgeted", Localizer["Recorded without a budget"].Value)
+@Html.Hidden("localizerAddLine", Localizer["Add line"].Value)
+@Html.Hidden("localizerRemoveLine", Localizer["Remove line"].Value)
+
+<section class="content pb-3">
+    <div class="card budget-card">
+        <div class="card-header budget-toolbar">
+            <div class="btn-group btn-group-sm mr-2" role="group" aria-label="@Localizer["Year"].Value">
+                <button type="button" id="btnBudgetPrevYear" class="btn btn-default" title="@Localizer["Previous year"].Value"><i class="fas fa-chevron-left"></i></button>
+                <span id="budgetYearLabel" class="btn btn-default disabled budget-year-label">@Model.Year</span>
+                <button type="button" id="btnBudgetNextYear" class="btn btn-default" title="@Localizer["Next year"].Value"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <button type="button" id="btnBudgetThisYear" class="btn btn-sm btn-default mr-3">@Localizer["This year"].Value</button>
+            <div class="btn-group btn-group-sm mr-3" role="group" id="budgetViewSwitch">
+                <button type="button" class="btn btn-default active" data-view="budget">@Localizer["Budget"].Value</button>
+                <button type="button" class="btn btn-default" data-view="actual">@Localizer["Actual"].Value</button>
+                <button type="button" class="btn btn-default" data-view="remaining">@Localizer["Remaining"].Value</button>
+            </div>
+            <div class="ml-auto">
+                <button type="button" id="btnBudgetCarryOver" class="btn btn-sm btn-default"><i class="fas fa-history mr-1"></i>@Localizer["Copy from last year"].Value</button>
+                <button type="button" id="btnBudgetAddLine" class="btn btn-sm btn-default"><i class="fas fa-plus mr-1"></i>@Localizer["Add currency line"].Value</button>
+                <button type="button" id="btnBudgetExcel" class="btn btn-sm btn-success"><i class="fas fa-file-excel mr-1"></i>Excel</button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="budget-formula-bar">
+                <span id="budgetNameBox" class="budget-name-box">B2</span>
+                <span class="budget-fx">fx</span>
+                <div class="budget-formula-input">
+                    <textarea id="budgetFormula" rows="1" aria-label="@Localizer["Formula"].Value"></textarea>
+                    <ul id="budgetAutocomplete" class="budget-autocomplete d-none"></ul>
+                </div>
+                <span id="budgetPreviewValue" class="budget-preview-value" title="@Localizer["Value"].Value"></span>
+            </div>
+            <div id="budgetProblems" class="budget-problems"></div>
+            <div class="budget-grid-wrap" tabindex="0" id="budgetGridWrap">
+                <table id="budgetGrid" class="budget-grid"></table>
+            </div>
+            <div id="budgetUnbudgeted" class="budget-unbudgeted"></div>
+        </div>
+    </div>
+</section>
+
+@*<!--budgetLineModal: add a line (a class in a currency)-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="budgetLineModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="formBudgetLine">
+                <div class="modal-header">
+                    <h5 class="modal-title">@Localizer["Add currency line"].Value</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="@Localizer["Close"].Value"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="budgetLineMainClass">@Localizer["MainClass"].Value</label>
+                        <select id="budgetLineMainClass" class="form-control form-control-sm">
+                            @foreach (string mainClass in Model.MainClasses)
+                            {
+                                <option value="@mainClass">@Model.ClassLabels[mainClass]</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="budgetLineSubClass">@Localizer["SubClass"].Value</label>
+                        <select id="budgetLineSubClass" class="form-control form-control-sm"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="budgetLineCurrency">@Localizer["Currency"].Value</label>
+                        <input class="form-control form-control-sm" type="text" id="budgetLineCurrency" name="budgetLineCurrency" list="budgetCurrencies" maxlength="45" autocomplete="off"
+                               data-val="true" data-val-required="@Localizer["Please enter a currency"].Value">
+                        <datalist id="budgetCurrencies">
+                            @foreach (string currency in Model.Currencies)
+                            {
+                                <option value="@currency"></option>
+                            }
+                        </datalist>
+                        <span class="field-validation-valid text-danger" data-valmsg-for="budgetLineCurrency" data-valmsg-replace="true"></span>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer["Close"].Value</button>
+                    <input type="submit" class="btn btn-primary" value="@Localizer["Add"].Value" />
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@*<!--confirmRemoveLineModal-->*@
+<div class="modal fade" tabindex="-1" role="dialog" id="confirmRemoveLineModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Localizer["Remove line"].Value</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="@Localizer["Close"].Value"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body"><p id="confirmRemoveLineText"></p></div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">@Localizer["Close"].Value</button>
+                <button type="button" id="btnConfirmRemoveLine" class="btn btn-danger">@Localizer["Remove line"].Value</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/user/plugins/codemirror/codemirror.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/user/custom/AccountBook/Budget/css/site.css" asp-append-version="true">
+}
+
+@section Scripts {
+    <script src="~/user/plugins/codemirror/codemirror.js" asp-append-version="true"></script>
+    <script src="~/user/custom/AccountBook/Budget/js/site.js" asp-append-version="true"></script>
+}
