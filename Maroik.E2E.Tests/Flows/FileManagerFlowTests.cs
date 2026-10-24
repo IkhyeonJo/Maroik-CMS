@@ -119,4 +119,34 @@ public class FileManagerFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixtur
         await Assertions.Expect(page.Locator(".file-manager-list")).ToHaveCountAsync(0);
         Assert.Equal(0L, await Db.ScalarAsync<long>("""SELECT count(*) FROM "FileManagerNode" WHERE "AccountEmail" = @email""", ("email", account.Email)));
     }
+
+    /// <summary>
+    /// Cancel stops a batch: the file being sent is aborted before its next chunk (nothing of it is kept) and the files after it are
+    /// not started; both are listed as cancelled. The first chunk's reply is held back until Cancel was clicked, so the test does not race.
+    /// </summary>
+    [Fact]
+    public async Task Cancel_StopsTheUpload()
+    {
+        var (page, account) = await OpenAsync();
+        var release = new TaskCompletionSource();
+        await page.RouteAsync("**/FileManager/UploadChunk", async route =>
+        {
+            await release.Task;
+            await route.ContinueAsync();
+        });
+
+        await page.Locator("#fileManagerFileInput").SetInputFilesAsync(
+        [
+            new FilePayload { Name = "big.bin", MimeType = "application/octet-stream", Buffer = new byte[(16 * 1024 * 1024) + 10] },
+            new FilePayload { Name = "next.txt", MimeType = "text/plain", Buffer = "x"u8.ToArray() },
+        ]);
+        await Assertions.Expect(page.Locator("#btnUploadCancel")).ToBeEnabledAsync();
+        await page.Locator("#btnUploadCancel").ClickAsync();
+        release.SetResult();
+
+        await Assertions.Expect(page.Locator("#btnUploadClose")).ToBeEnabledAsync(new LocatorAssertionsToBeEnabledOptions { Timeout = 30_000 });
+        await Assertions.Expect(page.Locator("#uploadResults li")).ToHaveTextAsync(["big.bin — 취소됨", "next.txt — 취소됨"]);
+        await Assertions.Expect(page.Locator("#btnUploadCancel")).ToBeDisabledAsync();
+        Assert.Equal(0L, await Db.ScalarAsync<long>("""SELECT count(*) FROM "FileManagerNode" WHERE "AccountEmail" = @email""", ("email", account.Email)));
+    }
 }

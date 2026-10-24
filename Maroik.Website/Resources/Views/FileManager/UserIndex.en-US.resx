@@ -237,4 +237,10 @@
   <data name="{0} uploaded, {1} failed, {2} skipped." xml:space="preserve">
     <value>{0} uploaded, {1} failed, {2} skipped.</value>
   </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Canceled" xml:space="preserve">
+    <value>Canceled</value>
+  </data>
 </root>

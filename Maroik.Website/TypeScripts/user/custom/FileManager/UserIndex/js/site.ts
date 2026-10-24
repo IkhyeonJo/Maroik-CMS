@@ -18,7 +18,7 @@
  */
 (function() {
     // The runtime-check helpers the _Layout script defines (see TypeScripts/global.d.ts).
-    const { check, replies, onReply, onReplyText, fieldValue, conform, escapeHtml } = window;
+    const { check, replies, onReply, onReplyText, fieldValue, attribute, conform, escapeHtml } = window;
 
     // The replies this page reads, mirroring the controller's Json(...) results.
     const itemCheck = check.object({
@@ -76,6 +76,7 @@
     const $uploadProgressBar = $("#uploadProgressBar");
     const $uploadResults = $("#uploadResults");
     const $btnUploadClose = $("#btnUploadClose");
+    const $btnUploadCancel = $("#btnUploadCancel");
     const $previewModal = $("#previewModal");
     const $previewTitle = $("#previewTitle");
     const $previewImage = $("#previewImage");
@@ -103,6 +104,7 @@
         conflict: fieldValue($("#localizerConflict")),
         uploading: fieldValue($("#localizerUploading")),
         uploadSummary: fieldValue($("#localizerUploadSummary")),
+        canceled: fieldValue($("#localizerCanceled")),
         uploaded: fieldValue($("#localizerUploaded")),
         skipped: fieldValue($("#localizerSkipped")),
         fileTooLarge: fieldValue($("#localizerFileTooLarge")),
@@ -279,7 +281,7 @@
     /** Reloads the drive and the open folder (or the search results) after a change. */
     async function Refresh() {
         await LoadDrive();
-        const query = String($search.val() ?? "").trim();
+        const query = fieldValue($search).trim();
         if (searching && query !== "") {
             await Search(query);
         } else {
@@ -352,15 +354,20 @@
             if (item.location !== "") {
                 $("<small>").addClass("text-muted d-block file-manager-location").text(item.location).appendTo($tile);
             }
+            $tile.on("dblclick", () => OpenItem(item));
             $("<div>").addClass("col-6 col-sm-4 col-md-3 col-xl-2 mb-2").append($tile).appendTo($row);
         }
         $items.append($row);
     }
 
-    /** One action button of a list row. */
-    function actionButton(action: string, icon: string, title: string): JQuery {
+    /** One action button of a list row; a click runs `act` (and does not select the row). */
+    function actionButton(action: string, icon: string, title: string, act: () => void): JQuery {
         return $("<button>").attr("type", "button").attr("title", title).attr("data-action", action)
-            .addClass("btn btn-sm btn-outline-secondary mr-1 file-manager-action").append($("<i>").addClass(icon));
+            .addClass("btn btn-sm btn-outline-secondary mr-1 file-manager-action").append($("<i>").addClass(icon))
+            .on("click", function(event) {
+                event.stopPropagation();
+                act();
+            });
     }
 
     /** The list view: a table with a checkbox, name, (location,) size, modified date and the action buttons. */
@@ -383,10 +390,11 @@
             $("<td>").text(item.size).appendTo($row);
             $("<td>").text(item.modified).appendTo($row);
             const $actions = $("<td>").addClass("text-nowrap");
-            if (!item.isFolder) $actions.append(actionButton("download", "fas fa-download", text.download));
-            if (item.previewable) $actions.append(actionButton("preview", "fas fa-eye", text.preview));
-            $actions.append(actionButton("rename", "fas fa-pen", text.rename), actionButton("delete", "fas fa-trash", text.delete));
-            $row.append($actions);
+            if (!item.isFolder) $actions.append(actionButton("download", "fas fa-download", text.download, () => void DownloadOne(item.id, item.name)));
+            if (item.previewable) $actions.append(actionButton("preview", "fas fa-eye", text.preview, () => void Preview(item)));
+            $actions.append(actionButton("rename", "fas fa-pen", text.rename, () => OpenRename(item)),
+                actionButton("delete", "fas fa-trash", text.delete, () => ConfirmDelete([item.id])));
+            $row.append($actions).on("dblclick", () => OpenItem(item));
             $body.append($row);
         }
         $table.append($body);
@@ -565,6 +573,9 @@
     /** The outcome of one file: stored (no error), skipped, or the reason it failed; and the conflict answer it was given. */
     interface FileOutcome { error: string | null; skipped: boolean; choice: ConflictChoice | null; applyToAll: boolean; }
 
+    /** True once the running batch was cancelled: the file being sent is aborted before its next chunk, the rest are not started. */
+    let cancelled = false;
+
     /**
      * Uploads one file: starts it (with the batch's remembered conflict answer, if any), asks on a name conflict, sends its chunks
      * and completes it. A chunk that fails aborts the upload.
@@ -584,13 +595,17 @@
                 applyToAll = answer.applyToAll;
             }
             if (choice === "Skip") return { error: null, skipped: true, choice: choice, applyToAll: applyToAll };
-            started = await begin(choice ?? "Ask");
+            started = await begin(choice);
         }
         if (started === null) return fail("");
         if (!started.result) return fail(started.error);
         if (started.conflict) return fail(format(text.conflict, entry.file.name));
 
         for (let offset = 0; offset < entry.file.size; offset += started.chunkBytes) {
+            if (cancelled) {
+                await post("/FileManager/AbortUpload", { UploadId: started.uploadId }, doneReply);
+                return { error: null, skipped: true, choice: choice, applyToAll: applyToAll };
+            }
             const form = new FormData();
             form.append("UploadId", started.uploadId);
             form.append("Offset", String(offset));
@@ -623,7 +638,9 @@
 
         $uploadResults.empty();
         $uploadProgressBar.css("width", "0%");
+        cancelled = false;
         $btnUploadClose.prop("disabled", true);
+        $btnUploadCancel.prop("disabled", false);
         $uploadModal.modal("show");
 
         // The folders of a folder upload, created from the top down (an existing folder of the same name is reused, F2-C).
@@ -654,6 +671,11 @@
         let skipped = 0;
         let rememberedChoice: ConflictChoice | null = null;
         for (const [index, entry] of entries.entries()) {
+            if (cancelled) {
+                skipped++;
+                report(entry.file.name, text.canceled, false);
+                continue;
+            }
             $uploadProgressText.text(format(text.uploading, index + 1, entries.length, entry.file.name));
             $uploadProgressBar.css("width", "0%");
             // Authoritative in FileManagerUploadPolicy.MaxFileBytes (server); mirrored here for form UX only.
@@ -676,7 +698,7 @@
         function count(entry: UploadEntry, outcome: FileOutcome) {
             if (outcome.skipped) {
                 skipped++;
-                report(entry.file.name, text.skipped, false);
+                report(entry.file.name, cancelled ? text.canceled : text.skipped, false);
             } else if (outcome.error === null) {
                 uploaded++;
                 report(entry.file.name, text.uploaded, false);
@@ -689,6 +711,7 @@
         $uploadProgressText.text(format(text.uploadSummary, uploaded, failed, skipped));
         $uploadProgressBar.css("width", "100%");
         $btnUploadClose.prop("disabled", false);
+        $btnUploadCancel.prop("disabled", true);
         await Refresh();
     }
 
@@ -810,12 +833,12 @@
 
     $breadcrumb.on("click", ".file-manager-crumb", function(event) {
         event.preventDefault();
-        const id = String($(this).attr("data-folder-id") ?? "");
+        const id = attribute($(this), "data-folder-id");
         void OpenFolder(id === "" ? null : Number(id));
     });
 
     $search.on("input", function() {
-        const query = String($search.val() ?? "").trim();
+        const query = fieldValue($search).trim();
         if (query === "") {
             void OpenFolder(currentFolderId);
         } else {
@@ -839,10 +862,6 @@
     $items.on("click", ".file-manager-tile", function(event) {
         SelectByClick(idOf(this), event.ctrlKey || event.metaKey, event.shiftKey);
     });
-    $items.on("dblclick", ".file-manager-item", function() {
-        const item = itemById(idOf(this));
-        if (item) OpenItem(item);
-    });
     $items.on("change", ".file-manager-check", function() {
         const id = idOf(this);
         if ($(this).is(":checked")) selected.add(id); else selected.delete(id);
@@ -852,17 +871,6 @@
         selected.clear();
         if ($(this).is(":checked")) shownItems.forEach((i) => selected.add(i.id));
         RenderSelection();
-    });
-    $items.on("click", ".file-manager-action", function(event) {
-        event.stopPropagation();
-        const item = itemById(idOf(this));
-        if (!item) return;
-        switch ($(this).attr("data-action")) {
-            case "download": void DownloadOne(item.id, item.name); break;
-            case "preview": void Preview(item); break;
-            case "rename": OpenRename(item); break;
-            case "delete": ConfirmDelete([item.id]); break;
-        }
     });
 
     $items.on("dragstart", ".file-manager-item", function(event) {
@@ -884,6 +892,10 @@
         DropOn(transfer, folder && folder.isFolder ? folder.id : currentFolderId);
     });
 
+    $btnUploadCancel.on("click", function() {
+        cancelled = true;
+        $btnUploadCancel.prop("disabled", true);
+    });
     $("#btnUploadFiles").on("click", () => $fileInput.trigger("click"));
     $("#btnUploadFolder").on("click", () => $folderInput.trigger("click"));
     $fileInput.on("change", function() {

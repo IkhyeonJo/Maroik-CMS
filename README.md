@@ -350,8 +350,10 @@ One workflow, `.github/workflows/ci-cd.yml`, with two jobs.
 `sha-<commit>`, `latest` and, when the version moved, `X.Y.Z`. The assemblies carry `X.Y.Z+<commit>` as their
 InformationalVersion; a local or debug build, which gets no version from CI, keeps the one in `Directory.Build.props`.
 
-**Deployment.** The server never builds. Every five minutes `Maroik.Crontab/AutoDeploy.sh` looks at the newest commit on
-`main`; once its `publish` job has succeeded it pulls that commit's three images and replaces only the app containers, so
+**Deployment.** There are two ways. `Maroik.DeployOps/Deploy.sh` needs no GitHub: it builds the three images from the
+source on the server and starts the stack (see How to Deploy). `Maroik.DeployOps/GitHubDeploy.sh` deploys what CI
+published, and keeps it current: every five minutes `Maroik.Crontab/AutoDeploy.sh` (installed by `GitHubDeploy.sh` only)
+looks at the newest commit on `main`; once its `publish` job has succeeded it pulls that commit's three images and replaces only the app containers, so
 the database, Valkey (sessions) and RabbitMQ keep running. A deploy whose pull fails leaves the running containers alone
 and is not retried. A release that changes `Maroik.DB/` (the schema) is not deployed automatically: it is logged, and the
 full deploy below is run by hand, because it rebuilds the database from `Init.sql` and restores the backup.
@@ -359,10 +361,15 @@ full deploy below is run by hand, because it rebuilds the database from `Init.sq
 ## How to Deploy
 
 The server runs Ubuntu Server 24.04 and Maroik lives in `/home/ubuntu/Maroik`. Run every command below **as `ubuntu`,
-not with `sudo`**: `Deploy.sh` refuses to run as root, because the clone must belong to `ubuntu` (the scripts call `sudo`
-themselves where they need it).
+not with `sudo`**: both deploy scripts refuse to run as root, because the folder must belong to `ubuntu` (the scripts call
+`sudo` themselves where they need it).
 
-`Deploy.sh` needs three server-only things the repository does not carry (all git-ignored). It checks for them before it
+| Script | What it deploys |
+|---|---|
+| `Maroik.DeployOps/Deploy.sh` | The source in `/home/ubuntu/Maroik` as it is (a clone on any branch, or source copied by hand). Builds the three app images on the server (release build, as CI does), starts the stack. No GitHub, no ghcr.io, no CI check; does not install `AutoDeploy.sh` (and removes it from the cron jobs). |
+| `Maroik.DeployOps/GitHubDeploy.sh` | The newest `main` whose CI `publish` job succeeded: checks it out, pulls its three images from ghcr.io, starts the stack and installs `AutoDeploy.sh`, so merged changes reach production by themselves. |
+
+Both need three server-only things the repository does not carry (all git-ignored). It checks for them before it
 does anything and lists whatever is missing:
 
 | Item | What it is |
@@ -372,13 +379,13 @@ does anything and lists whatever is missing:
 | `Maroik.FileStorage/upload/` | Uploaded attachments. Empty is allowed only on a new server: `Deploy.sh` asks first (`ALLOW_EMPTY_UPLOAD=1` skips the question). |
 
 Every backup `Maroik.Crontab/Backup.sh` makes (`Maroik-Backup-YYYY-MM-DD-HH-MM-SS.tar.xz`, hourly) holds exactly these
-three, laid out like the clone, so extracting it into the clone puts each one where `Deploy.sh` looks. The archives are
+three, laid out like the clone, so extracting it into the clone puts each one where the deploy scripts look. The archives are
 on the backup drive in `BACKUP_BASE_DIR` (`/home/ubuntu/512GB/Maroik-Backup` by default), and the newest one is also kept
 next to the clone, in `/home/ubuntu`.
 
-`Deploy.sh` then checks out the newest `main` whose CI `publish` job succeeded, pulls its three images, starts the whole
-stack, mounts the backup drive, installs the cron jobs (hourly backup, resource monitoring, auto deploy) and closes every
-inbound port. From then on, merged changes reach production by themselves (`AutoDeploy.sh`, every five minutes).
+Either script then starts the whole stack, mounts the backup drive, installs the cron jobs (hourly backup, resource
+monitoring, and with `GitHubDeploy.sh` the auto deploy) and closes every inbound port. The commands below use `Deploy.sh`;
+`GitHubDeploy.sh` takes its place wherever production should follow GitHub's `main`.
 
 ### Restore from a backup (a new server, or after losing the old one)
 
@@ -412,7 +419,8 @@ ALLOW_EMPTY_UPLOAD=1 bash Maroik.DeployOps/Deploy.sh
 
 ### Redeploy after a schema change
 
-A release that changes `Maroik.DB/` is not deployed automatically (`AutoDeploy.sh` logs it and waits), because the database
+A release that changes `Maroik.DB/` is not deployed automatically (`AutoDeploy.sh` logs it and waits; `Deploy.sh` deploys
+whatever source it finds, so the same steps apply before it), because the database
 has to be rebuilt from `Init.sql`. `Undeploy.sh` removes **every** Docker volume, the database's included, so take a fresh
 backup right before it:
 

@@ -10,12 +10,12 @@ function fixture(maxFileBytes = 2147483647): string {
         MyDrive: "My Drive", ItemCount: "{0} items", SelectedCount: "{0} selected", EmptyFolder: "Empty", NoResults: "Nothing",
         Name: "Name", Size: "Size", Modified: "Modified", Location: "Location", Actions: "Actions", Download: "Download",
         Preview: "Preview", Rename: "Rename", Delete: "Delete", Conflict: "'{0}' exists", Uploading: "Uploading {0}/{1}: {2}",
-        UploadSummary: "{0} up, {1} failed, {2} skipped", Uploaded: "Uploaded", Skipped: "Skipped", FileTooLarge: "Too large",
+        UploadSummary: "{0} up, {1} failed, {2} skipped", Uploaded: "Uploaded", Skipped: "Skipped", FileTooLarge: "Too large", Canceled: "Canceled",
     };
     return (
         antiForgery +
         hidden("maxFileBytes", String(maxFileBytes)) +
-        Object.entries(texts).map(([key, value]) => hidden(`localizer${key}`, value)).join("") +
+        Object.keys(texts).map((key) => hidden(`localizer${key}`, texts[key] ?? "")).join("") +
         `<button id="btnUploadFiles"></button><button id="btnUploadFolder"></button>
          <input type="file" id="fileManagerFileInput" multiple /><input type="file" id="fileManagerFolderInput" multiple />
          <button id="btnNewFolder"></button>
@@ -32,7 +32,7 @@ function fixture(maxFileBytes = 2147483647): string {
          <div id="conflictModal"><p id="conflictMessage"></p><input type="checkbox" id="conflictApplyToAll" />
            <button id="btnConflictOverwrite"></button><button id="btnConflictKeepBoth"></button><button id="btnConflictSkip"></button></div>
          <div id="uploadModal"><p id="uploadProgressText"></p><div id="uploadProgressBar"></div><ul id="uploadResults"></ul>
-           <button id="btnUploadClose" disabled></button></div>
+           <button id="btnUploadCancel"></button><button id="btnUploadClose" disabled></button></div>
          <div id="previewModal"><h5 id="previewTitle"></h5><img id="previewImage" /></div>
          <div id="confirmDeleteModal"><button id="btnConfirmDelete"></button></div>`
     );
@@ -847,5 +847,140 @@ describe("FileManager/UserIndex — storage", () => {
         } finally {
             if (original) Object.defineProperty(window, "localStorage", original);
         }
+    });
+});
+
+describe("FileManager/UserIndex — the less common paths", () => {
+    it("a folder the server refuses to open is toasted and the shown items stay", async () => {
+        const { h } = await load([item(8, "a.txt")]);
+        h.$(".file-manager-crumb").trigger("click");
+        h.$("#fileManagerTree").trigger("select_node.jstree", [{ node: { id: "7" } }]);
+        await answer(h, "/FileManager/GetFolder", { result: false, error: "gone" });
+
+        expect(h.toastr.error).toHaveBeenCalledWith("gone");
+        expect(h.$(".file-manager-tile")).toHaveLength(1);
+    });
+
+    it("a change while search results are shown searches again instead of reopening the folder", async () => {
+        const { h } = await load([item(8, "a.txt")], "list");
+        h.$("#fileManagerSearch").val("rep").trigger("input");
+        await answer(h, "/FileManager/Search", { result: true, items: [item(5, "report.txt", { location: "My Drive" })] });
+        const searches = callsTo(h, "/FileManager/Search").length;
+
+        h.$(".file-manager-action[data-action='delete']").trigger("click");
+        h.$("#btnConfirmDelete").trigger("click");
+        await answer(h, "/FileManager/Delete", { result: true, message: "gone" });
+        await answer(h, "/FileManager/GetDrive", { result: true, drive: { usage: "", usedPercent: 0, rootItemCount: 0, folders: [] } });
+
+        expect(callsTo(h, "/FileManager/Search")).toHaveLength(searches + 1);
+        expect(bodyOf(callTo(h, "/FileManager/Search"))).toEqual({ Query: "rep" });
+    });
+
+    it("a preview the server refuses is toasted and opens nothing", async () => {
+        const { h, modals } = await load([item(8, "a.png", { previewable: true })], "list");
+        h.$(".file-manager-action[data-action='preview']").trigger("click");
+        successOf(callTo(h, "/FileManager/Preview"))(new Blob([JSON.stringify({ result: false, error: "too big" })], { type: "application/json" }));
+        await flush();
+
+        expect(h.toastr.error).toHaveBeenCalledWith("too big");
+        expect(modals).not.toContainEqual(["previewModal", "show"]);
+    });
+
+    it("the grid button switches back from the list", async () => {
+        const { h } = await load([item(8, "a.txt")], "list");
+        h.$("#btnGridView").trigger("click");
+
+        expect(h.$(".file-manager-tile")).toHaveLength(1);
+        expect(window.localStorage.getItem("maroik.fileManager.view")).toBe("grid");
+    });
+
+    it("drag events without drag data do nothing", async () => {
+        const { h } = await load();
+        const before = h.ajaxCalls.length;
+
+        h.$(".file-manager-tile[data-id='8']").trigger("dragstart");
+        h.$("#fileManagerItems").trigger("drop");
+        h.$("#fileManagerTree .jstree-anchor").trigger("drop");
+        h.$("#fileManagerItems").trigger(h.$.Event("drop", { originalEvent: { dataTransfer: "not a transfer", preventDefault: () => undefined } }));
+        h.$("#fileManagerItems").trigger(h.$.Event("drop", { originalEvent: { preventDefault: () => undefined } }));
+
+        expect(h.ajaxCalls).toHaveLength(before);
+    });
+
+    it("a double click on a list row opens it as a tile does", async () => {
+        const { h } = await load([folder(7, "Docs")], "list");
+        h.$(".file-manager-list tbody tr").trigger("dblclick");
+
+        expect(bodyOf(callTo(h, "/FileManager/GetFolder"))).toEqual({ FolderId: 7 });
+    });
+});
+
+describe("FileManager/UserIndex — cancelling an upload", () => {
+    it("the cancel button is on while a batch runs and off once it ends", async () => {
+        const { h } = await load();
+        pick(h, "fileManagerFileInput", [file("a.txt")]);
+        await flush();
+        await answer(h, "/FileManager/CheckQuota", { result: true });
+        expect(h.$("#btnUploadCancel").prop("disabled")).toBe(false);
+
+        await answer(h, "/FileManager/BeginUpload", { result: true, conflict: false, uploadId: "u-a", name: "a.txt", chunkBytes: 16 });
+        await answer(h, "/FileManager/UploadChunk", { result: true, length: 3 });
+        await answer(h, "/FileManager/CompleteUpload", { result: true, message: "ok" });
+
+        expect(h.$("#btnUploadCancel").prop("disabled")).toBe(true);
+    });
+
+    it("cancelling aborts the file being sent before its next chunk and does not start the rest", async () => {
+        const { h } = await load();
+        pick(h, "fileManagerFileInput", [file("a.txt", 3), file("b.txt"), file("c.txt")]);
+        await flush();
+        await answer(h, "/FileManager/CheckQuota", { result: true });
+        await answer(h, "/FileManager/BeginUpload", { result: true, conflict: false, uploadId: "u-a", name: "a.txt", chunkBytes: 2 });
+
+        h.$("#btnUploadCancel").trigger("click");
+        expect(h.$("#btnUploadCancel").prop("disabled")).toBe(true);
+        await answer(h, "/FileManager/UploadChunk", { result: true, length: 2 });
+
+        expect(bodyOf(callTo(h, "/FileManager/AbortUpload"))).toEqual({ UploadId: "u-a" });
+        await answer(h, "/FileManager/AbortUpload", { result: true });
+        expect(callsTo(h, "/FileManager/UploadChunk")).toHaveLength(1);
+        expect(callsTo(h, "/FileManager/CompleteUpload")).toHaveLength(0);
+        expect(callsTo(h, "/FileManager/BeginUpload")).toHaveLength(1);
+        expect(h.$("#uploadResults li").map((_, el) => h.$(el).text()).get()).toEqual(["a.txt — Canceled", "b.txt — Canceled", "c.txt — Canceled"]);
+        expect(h.$("#uploadProgressText").text()).toBe("0 up, 0 failed, 3 skipped");
+        expect(h.$("#btnUploadClose").prop("disabled")).toBe(false);
+        expect(callsTo(h, "/FileManager/GetDrive")).toHaveLength(2);
+    });
+
+    it("a file already stored stays uploaded; only the rest is cancelled", async () => {
+        const { h } = await load();
+        pick(h, "fileManagerFileInput", [file("a.txt"), file("b.txt")]);
+        await flush();
+        await answer(h, "/FileManager/CheckQuota", { result: true });
+        await answer(h, "/FileManager/BeginUpload", { result: true, conflict: false, uploadId: "u-a", name: "a.txt", chunkBytes: 16 });
+        await answer(h, "/FileManager/UploadChunk", { result: true, length: 3 });
+        h.$("#btnUploadCancel").trigger("click");
+        await answer(h, "/FileManager/CompleteUpload", { result: true, message: "ok" });
+
+        expect(h.$("#uploadResults li").map((_, el) => h.$(el).text()).get()).toEqual(["a.txt — Uploaded", "b.txt — Canceled"]);
+        expect(callsTo(h, "/FileManager/BeginUpload")).toHaveLength(1);
+    });
+
+    it("a cancelled batch does not cancel the next one", async () => {
+        const { h } = await load();
+        pick(h, "fileManagerFileInput", [file("a.txt")]);
+        await flush();
+        await answer(h, "/FileManager/CheckQuota", { result: true });
+        h.$("#btnUploadCancel").trigger("click");
+        await answer(h, "/FileManager/BeginUpload", { result: true, conflict: false, uploadId: "u-a", name: "a.txt", chunkBytes: 16 });
+        await answer(h, "/FileManager/AbortUpload", { result: true });
+
+        pick(h, "fileManagerFileInput", [file("b.txt")]);
+        await flush();
+        await answer(h, "/FileManager/CheckQuota", { result: true });
+        await answer(h, "/FileManager/BeginUpload", { result: true, conflict: false, uploadId: "u-b", name: "b.txt", chunkBytes: 16 });
+
+        expect(bodyOf(callTo(h, "/FileManager/BeginUpload"))).toMatchObject({ Name: "b.txt" });
+        expect(callsTo(h, "/FileManager/UploadChunk")).toHaveLength(1);
     });
 });
