@@ -187,6 +187,22 @@ public sealed class CalendarRepositoryTests(DatabaseFixture database) : Reposito
             () => Sut.CreateAsync(calendar, TestContext.Current.CancellationToken));
     }
 
+    // -- FindByIdAsync ------------------------------------------------------------
+
+    /// <summary>Verifies that the plain lookup returns the calendar by id, and null for an unknown id.</summary>
+    [Fact]
+    public async Task FindByIdAsync_ReturnsTheCalendar_OrNull()
+    {
+        var seed = MakeCalendar(UniqueEmail("carol"), Unique("Home"));
+        await SeedAsync(seed);
+
+        Calendar? found = await Sut.FindByIdAsync(seed.Id, TestContext.Current.CancellationToken);
+        Calendar? missing = await Sut.FindByIdAsync(long.MaxValue, TestContext.Current.CancellationToken);
+
+        Assert.Equal(seed.Name, found?.Name);
+        Assert.Null(missing);
+    }
+
     // -- FindByIdForUpdateAsync (SELECT ... FOR UPDATE) --------------------------
 
     /// <summary>Verifies that the row-locking lookup returns the calendar when it exists.</summary>

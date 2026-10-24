@@ -355,7 +355,7 @@ public class CalendarController(
             List<CalendarResponse> calendars = await calendarService.GetCalendarsAsync(loggedInAccount.Email!, HttpContext.RequestAborted);
 
             CalendarEventOutputViewModel? calendarEvent = await calendarService.GetCalendarEventDetailViewModelAsync(
-                calendars, loggedInAccount.TimeZoneIanaId ?? "UTC", id, HttpContext.RequestAborted);
+                calendars, loggedInAccount.TimeZoneIanaId ?? "UTC", id, includeReminders: true, HttpContext.RequestAborted);
 
             return calendarEvent == null
                 ? Json(new { result = false, error = localizer["Input is invalid"].Value })
@@ -386,7 +386,7 @@ public class CalendarController(
                 await calendarService.GetVisibleOtherCalendarsAsync(sessionAccount, HttpContext.RequestAborted);
 
             CalendarEventOutputViewModel? calendarEvent = await calendarService.GetCalendarEventDetailViewModelAsync(
-                calendars, loggedInAccount.TimeZoneIanaId ?? "UTC", id, HttpContext.RequestAborted);
+                calendars, loggedInAccount.TimeZoneIanaId ?? "UTC", id, includeReminders: false, HttpContext.RequestAborted);
 
             return calendarEvent == null
                 ? Json(new { result = false, error = localizer["Input is invalid"].Value })

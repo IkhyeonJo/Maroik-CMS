@@ -15,6 +15,11 @@ services:
           - ServerSetting__HostingMode=NoDomain
           - ServerSetting__DomainName=${MAROIK_SITE_URL:?set MAROIK_SITE_URL or run Maroik.DeployOps/Deploy.sh}
 
+    # The calendar reminder e-mails link to the site.
+    maroik.worker:
+        environment:
+          - ServerSetting__DomainName=${MAROIK_SITE_URL:?set MAROIK_SITE_URL or run Maroik.DeployOps/Deploy.sh}
+
     # Not started in this mode (Deploy.sh also removes a container left from the tunnel mode).
     cloudflared:
         profiles: ["tunnel-only"]

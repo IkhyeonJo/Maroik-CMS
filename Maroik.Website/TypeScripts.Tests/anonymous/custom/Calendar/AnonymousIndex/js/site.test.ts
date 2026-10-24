@@ -12,8 +12,7 @@ function fixture(): string {
         hidden("maxDaysBeforeEvent", "28") + hidden("maxWeeksBeforeEvent", "4") +
         hidden("reminderTimeIntervals", "[&quot;09:00&quot;,&quot;18:30&quot;]") +
         hidden("otherCalendarEventOutputViewModels", "[]") +
-        ["localizerIETFLanguageTag", "localizerToday", "localizerMonth", "localizerEmail", "localizerNotification",
-            "localizerFailedToLoadCalendars"]
+        ["localizerIETFLanguageTag", "localizerToday", "localizerMonth", "localizerFailedToLoadCalendars"]
             .map((id) => hidden(id, "x")).join("") +
         `<div id="calendar"></div><div id="viewCalendarEventTaskTabs"></div>
      <div id="otherCalendarEventPopup"></div>
@@ -506,30 +505,31 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         expect(modal).toHaveBeenCalledWith("show");
     });
 
-    it("timed reminders are shown read-only with the right unit selected; Email reminders are never shown to a visitor", () => {
+    // The server sends a visitor no reminders (they are e-mails to the calendar's owner); whatever it sends is shown read-only.
+    it("timed reminders the server sends are shown read-only with the right unit selected", () => {
         const h = load();
         open(h);
         const reminders = [
-            { Method: "Email", MinutesBeforeEvent: 5, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: null },
-            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: 2, DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: null },
-            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 3, WeeksBeforeEvent: null, TimesBeforeEvent: null },
-            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: 1, TimesBeforeEvent: null },
-            { Method: "Notification", MinutesBeforeEvent: 15, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: null },
+            { MinutesBeforeEvent: 5, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: null },
+            { MinutesBeforeEvent: null, HoursBeforeEvent: 2, DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: null },
+            { MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 3, WeeksBeforeEvent: null, TimesBeforeEvent: null },
+            { MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: 1, TimesBeforeEvent: null },
+            { MinutesBeforeEvent: 15, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: null },
         ];
         successOf(h.lastAjax())(reply({ serializedCalendarReminders: JSON.stringify(reminders) }));
         finish(h);
 
         const rows = h.$(".divViewEventNotificationAllDayUncheckedRow");
-        expect(rows).toHaveLength(4); // the Email one is skipped
+        expect(rows).toHaveLength(5);
         const units = rows.map((_, r) => h.$(r).find(".viewCalendarEventSelNotificationTimeTypeAllDayUnchecked option[selected]").val()).get();
-        expect(units).toEqual(["Hours", "Days", "Weeks", "Minutes"]);
-        expect(rows.find("input").map((_, i) => (instanceOfType(i, HTMLInputElement)).value).get()).toEqual(["2", "3", "1", "15"]);
-        expect(rows.find("input").map((_, i) => (instanceOfType(i, HTMLInputElement)).max).get()).toEqual(["672", "28", "4", "40320"]);
+        expect(units).toEqual(["Minutes", "Hours", "Days", "Weeks", "Minutes"]);
+        expect(rows.find("input").map((_, i) => (instanceOfType(i, HTMLInputElement)).value).get()).toEqual(["5", "2", "3", "1", "15"]);
+        expect(rows.find("input").map((_, i) => (instanceOfType(i, HTMLInputElement)).max).get()).toEqual(["40320", "672", "28", "4", "40320"]);
         expect(rows.find("select, input").toArray().every((e) => e.matches(":disabled"))).toBe(true);
     });
 
     it("reminder rows take their lower bound from the server's minLeadTimeBeforeEvent, not a number of their own", () => {
-        const notification = { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 2, WeeksBeforeEvent: null, TimesBeforeEvent: "09:00:00" };
+        const notification = { MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 2, WeeksBeforeEvent: null, TimesBeforeEvent: "09:00:00" };
         const withMin = () => loadSite("anonymous", "Calendar", "AnonymousIndex",
             fixtureWith().replace(hidden("minLeadTimeBeforeEvent", "0"), hidden("minLeadTimeBeforeEvent", "2")));
 
@@ -546,14 +546,14 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         expect(h2.$(".divViewEventNotificationAllDayUncheckedRow input").attr("min")).toBe("2");
     });
 
-    it("all-day reminders show days/weeks lead time and the chosen HH:mm; Email ones are skipped", () => {
+    it("all-day reminders show days/weeks lead time and the chosen HH:mm", () => {
         const h = loadSite("anonymous", "Calendar", "AnonymousIndex",
             fixtureWith().replace(hidden("reminderTimeIntervals", "[&quot;09:00&quot;,&quot;18:30&quot;]"), hidden("reminderTimeIntervals", "[&quot;08:00&quot;,&quot;09:30&quot;]")));
         open(h);
         const reminders = [
-            { Method: "Email", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 1, WeeksBeforeEvent: null, TimesBeforeEvent: "08:00:00" },
-            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 2, WeeksBeforeEvent: null, TimesBeforeEvent: "09:30:00" },
-            { Method: "Notification", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: 3, TimesBeforeEvent: "08:00:00" },
+            { MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 1, WeeksBeforeEvent: null, TimesBeforeEvent: "08:00:00" },
+            { MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: 2, WeeksBeforeEvent: null, TimesBeforeEvent: "09:30:00" },
+            { MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: 3, TimesBeforeEvent: "08:00:00" },
         ];
         successOf(h.lastAjax())(reply({
             allDay: true,
@@ -564,10 +564,10 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
         finish(h);
 
         const rows = h.$(".divViewEventNotificationAllDayCheckedRow");
-        expect(rows).toHaveLength(2);
-        expect(rows.map((_, r) => h.$(r).find(".viewCalendarEventSelNotificationTimeAllDayChecked option[selected]").val()).get()).toEqual(["09:30", "08:00"]);
-        expect(rows.map((_, r) => h.$(r).find(".viewCalendarEventSelNotificationTimeTypeAllDayChecked option[selected]").val()).get()).toEqual(["Days", "Weeks"]);
-        expect(rows.find("input").map((_, i) => (instanceOfType(i, HTMLInputElement)).max).get()).toEqual(["28", "4"]);
+        expect(rows).toHaveLength(3);
+        expect(rows.map((_, r) => h.$(r).find(".viewCalendarEventSelNotificationTimeAllDayChecked option[selected]").val()).get()).toEqual(["08:00", "09:30", "08:00"]);
+        expect(rows.map((_, r) => h.$(r).find(".viewCalendarEventSelNotificationTimeTypeAllDayChecked option[selected]").val()).get()).toEqual(["Days", "Days", "Weeks"]);
+        expect(rows.find("input").map((_, i) => (instanceOfType(i, HTMLInputElement)).max).get()).toEqual(["28", "28", "4"]);
     });
 });
 

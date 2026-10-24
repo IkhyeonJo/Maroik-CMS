@@ -4,13 +4,10 @@ namespace Maroik.Core.Contract.Dtos;
 
 /// <summary>
 /// Lightweight reminder descriptor passed from the view/controller to the service layer
-/// when creating or updating calendar events.
+/// when creating or updating calendar events. A reminder is always an e-mail, so it carries no method.
 /// </summary>
 public class CalendarReminderDto
 {
-    /// <summary>Notification delivery method — see <c>Maroik.Core.Domain.Calendars.ReminderMethods</c> for the allowed values.</summary>
-    public string Method { get; init; } = "";
-
     /// <summary>Minutes before the event to fire the reminder. Null if another unit is used.</summary>
     public long? MinutesBeforeEvent { get; init; }
 

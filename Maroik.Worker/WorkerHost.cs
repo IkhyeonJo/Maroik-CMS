@@ -55,6 +55,9 @@ internal static class WorkerHost
             cfg.SmtpSsl = Convert.ToBoolean(smtp["smtpSsl"]);
             cfg.FromEmail = smtp["fromEmail"];
             cfg.FromFullName = smtp["fromFullName"];
+            // The calendar reminders' link base and the account they never go to (CalendarReminderDispatchService).
+            cfg.DomainName = section["DomainName"];
+            cfg.DemoAccountEmail = section["DemoAccountEmail"];
         });
 
         #endregion
@@ -82,6 +85,20 @@ internal static class WorkerHost
                 ClientProvidedName = "maroik-worker-email-consumer"
             });
         builder.Services.AddHostedService<EmailConsumerWorker>();
+
+        // Calendar reminders: once a minute the scheduler sends the due ones, queued as e-mails on the same broker (consumed by
+        // EmailConsumerWorker above, so they share its retry and dead-letter path). The publisher keeps its own connection.
+        builder.Services.AddSingleton<IEmailPublisher>(sp => new RabbitMqEmailPublisher(
+            new ConnectionFactory
+            {
+                Uri = new Uri(rabbitMqConnectionString),
+                AutomaticRecoveryEnabled = true,
+                TopologyRecoveryEnabled = true,
+                ClientProvidedName = "maroik-worker-reminder-publisher"
+            },
+            sp.GetRequiredService<ILogger<RabbitMqEmailPublisher>>()));
+        builder.Services.AddScoped<ICalendarReminderDispatchService, CalendarReminderDispatchService>();
+        builder.Services.AddHostedService<CalendarReminderScheduler>();
         builder.Services.AddSingleton<EmailDeadLetterRedriver>();
 
         return builder.Build();

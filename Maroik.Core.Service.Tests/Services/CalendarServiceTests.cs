@@ -643,27 +643,31 @@ public class CalendarServiceTests
         _unitOfWork.Verify(u => u.RollbackAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    /// <summary>Verifies that <c>CreateCalendarEventAsync</c> creates reminders when provided.</summary>
+    /// <summary>
+    /// The event's reminders are created for the saved event id as e-mails, each scheduled from the event's start: a timed event's
+    /// lead time before its start instant; an all-day event's at its time of day in the calendar's time zone.
+    /// </summary>
     [Fact]
-    public async Task CreateCalendarEventAsync_CreatesReminders_WhenProvided()
+    public async Task CreateCalendarEventAsync_CreatesScheduledEmailReminders_ForTheSavedEvent()
     {
-        _calendarRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([MakeCalendar(id: 1)]);
-        _eventRepo.Setup(r => r.CreateCalendarEventAsync(It.IsAny<CalendarEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(1L);
-        _reminderRepo.Setup(r => r.CreateAsync(It.IsAny<CalendarEventReminder>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        var sut = CreateSut();
+        Calendar seoul = Calendar.Reconstitute(1, "user@example.com", "Mine", null, "Asia/Seoul", "#3788d8", Now, Now);
+        _calendarRepo.Setup(r => r.GetByAccountEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([seoul]);
+        _eventRepo.Setup(r => r.CreateCalendarEventAsync(It.IsAny<CalendarEvent>(), It.IsAny<CancellationToken>())).ReturnsAsync(41L);
+        List<CalendarEventReminder> created = [];
+        _reminderRepo.Setup(r => r.CreateAsync(It.IsAny<CalendarEventReminder>(), It.IsAny<CancellationToken>()))
+            .Callback<CalendarEventReminder, CancellationToken>((r, _) => created.Add(r)).Returns(Task.CompletedTask);
+        DateTime start = Now.AddDays(10);
 
-        var reminders = new List<CalendarReminderDto>
-        {
-            new() { Method = "Email", MinutesBeforeEvent = 30 },
-            new() { Method = "Notification", MinutesBeforeEvent = 10 }
-        };
+        ServiceResult timed = await CreateSut().CreateCalendarEventAsync(
+            new CalendarEventRequest { CalendarId = 1, Title = "Meeting", StartDate = start, EndDate = start, StartDateTimeZoneIanaId = "UTC", EndDateTimeZoneIanaId = "UTC" },
+            "user@example.com", "1", [new() { MinutesBeforeEvent = 30 }, new() { HoursBeforeEvent = 2 }], null, TestContext.Current.CancellationToken);
+        ServiceResult allDay = await CreateSut().CreateCalendarEventAsync(
+            new CalendarEventRequest { CalendarId = 1, Title = "Trip", AllDay = true, StartDate = start.Date, EndDate = start.Date },
+            "user@example.com", "1", [new() { DaysBeforeEvent = 1, TimesBeforeEvent = new TimeOnly(9, 0) }], null, TestContext.Current.CancellationToken);
 
-        ServiceResult result = await sut.CreateCalendarEventAsync(
-            new CalendarEventRequest { CalendarId = 1, Title = "Meeting" }, "user@example.com", "1", reminders, null, TestContext.Current.CancellationToken);
-
-        Assert.True(result.Success);
-        _reminderRepo.Verify(r => r.CreateAsync(It.IsAny<CalendarEventReminder>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        Assert.True(timed.Success && allDay.Success);
+        Assert.All(created, r => Assert.Equal((41L, ReminderMethods.Email, (DateTime?)null), (r.CalendarEventId, r.Method, r.HandledAt)));
+        Assert.Equal([start.AddMinutes(-30), start.AddHours(-2), start.Date.AddDays(-1)] /* 09:00 in Seoul */, created.Select(r => r.FireAtUtc));
     }
 
     /// <summary>Verifies that <c>CreateCalendarEventAsync</c> rolls back and fails, rather than silently
@@ -679,12 +683,12 @@ public class CalendarServiceTests
 
         var reminders = new List<CalendarReminderDto>
         {
-            new() { Method = "Email", MinutesBeforeEvent = 30 },
-            new() { Method = "Email", DaysBeforeEvent = 29 } // exceeds the 28-day ceiling
+            new() { MinutesBeforeEvent = 30 },
+            new() { DaysBeforeEvent = 29 } // exceeds the 28-day ceiling
         };
 
         ServiceResult result = await sut.CreateCalendarEventAsync(
-            new CalendarEventRequest { CalendarId = 1, Title = "Meeting" }, "user@example.com", "1", reminders, null, TestContext.Current.CancellationToken);
+            new CalendarEventRequest { CalendarId = 1, Title = "Meeting", StartDate = Now.AddDays(40), EndDate = Now.AddDays(40) }, "user@example.com", "1", reminders, null, TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Contains("range", result.ErrorKey, StringComparison.OrdinalIgnoreCase);
@@ -842,7 +846,7 @@ public class CalendarServiceTests
 
         var reminders = new List<CalendarReminderDto>
         {
-            new() { Method = "Email", WeeksBeforeEvent = 5 } // exceeds the 4-week ceiling
+            new() { WeeksBeforeEvent = 5 } // exceeds the 4-week ceiling
         };
 
         ServiceResult result = await sut.UpdateCalendarEventAsync(
@@ -2029,6 +2033,26 @@ public class CalendarServiceTests
         _reminderRepo.Verify(r => r.DeleteByCalendarEventIdAsync(5, It.IsAny<CancellationToken>()), Times.Once);
         _attachmentContent.Verify(a => a.SanitizeAndDecryptContent(""), Times.Once);
         AssertCommitted();
+    }
+
+    /// <summary>An edited all-day event's new reminders are scheduled in the time zone of the calendar it now belongs to.</summary>
+    [Fact]
+    public async Task UpdateCalendarEventAsync_SchedulesTheNewReminders_InTheTargetCalendarsTimeZone()
+    {
+        GivenOwnedCalendars(MakeCalendar(1, "Home"), Calendar.Reconstitute(2, Owner, "Work", null, "Asia/Seoul", "#3788d8", Now, Now));
+        _eventRepo.Setup(r => r.FindByIdForUpdateAsync(5, It.IsAny<CancellationToken>())).ReturnsAsync(MakeCalendarEvent(5, calendarId: 1));
+        _attachmentContent.Setup(a => a.SanitizeAndDecryptContent(It.IsAny<string>())).Returns<string>(h => h);
+        CalendarEventReminder? created = null;
+        _reminderRepo.Setup(r => r.CreateAsync(It.IsAny<CalendarEventReminder>(), It.IsAny<CancellationToken>()))
+            .Callback<CalendarEventReminder, CancellationToken>((r, _) => created = r).Returns(Task.CompletedTask);
+        DateTime day = Now.Date.AddDays(10);
+
+        ServiceResult result = await CreateSut().UpdateCalendarEventAsync(
+            new CalendarEventRequest { Id = 5, CalendarId = 2, Title = "T", AllDay = true, StartDate = day, EndDate = day }, Owner, "UserIndex",
+            [new() { DaysBeforeEvent = 2, TimesBeforeEvent = new TimeOnly(9, 0) }], null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.Equal((5L, day.AddDays(-2)), (created!.CalendarEventId, created.FireAtUtc)); // 09:00 in Seoul is 00:00 UTC
     }
 
     /// <summary>Moving an event into someone else's calendar is the "calendar does not exist" NotFound.</summary>

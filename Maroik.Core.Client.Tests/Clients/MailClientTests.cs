@@ -21,6 +21,41 @@ public class MailClientTests
     /// <summary>The client under test (logging discarded).</summary>
     private readonly MailClient _sut = new(NullLogger<MailClient>.Instance);
 
+    // -- GetCalendarReminderBody ----------------------------------------------
+
+    /// <summary>
+    /// The reminder mail shows the event's title, time, place and calendar under Korean and English labels, and links to the
+    /// owner's calendar page; every value is HTML-encoded (the title and place are user text).
+    /// </summary>
+    [Fact]
+    public void GetCalendarReminderBody_ShowsTheEvent_AndLinksToTheCalendar_EncodingEveryValue()
+    {
+        string body = _sut.GetCalendarReminderBody(
+            new CalendarReminderMail("<b>Dentist</b>", "2026-11-02 18:00 – 19:00 (Asia/Seoul)", "Room \"A\"", "Home & Work", "Calendar/UserIndex"),
+            "https://www.maroik.com/");
+
+        Assert.Contains("&lt;b&gt;Dentist&lt;/b&gt;", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("<b>Dentist", body, StringComparison.Ordinal);
+        Assert.Contains("일시 / When: 2026-11-02 18:00 – 19:00 (Asia/Seoul)", body, StringComparison.Ordinal);
+        Assert.Contains("장소 / Where: Room &quot;A&quot;", body, StringComparison.Ordinal);
+        Assert.Contains("달력 / Calendar: Home &amp; Work", body, StringComparison.Ordinal);
+        Assert.Contains("href='https://www.maroik.com/Calendar/UserIndex'", body, StringComparison.Ordinal);
+        Assert.Contains("일정 알림 / Event reminder", body, StringComparison.Ordinal);
+    }
+
+    /// <summary>An event without a place leaves the place line out.</summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("  ")]
+    public void GetCalendarReminderBody_LeavesOutAMissingPlace(string? location)
+    {
+        string body = _sut.GetCalendarReminderBody(
+            new CalendarReminderMail("T", "2026-11-02", location, "Home", "Calendar/AdminIndex"), "http://192.168.0.10:8080");
+
+        Assert.DoesNotContain("Where", body, StringComparison.Ordinal);
+        Assert.Contains("href='http://192.168.0.10:8080/Calendar/AdminIndex'", body, StringComparison.Ordinal);
+    }
+
     // -- GetMailConfirmationBody ----------------------------------------------
 
     /// <summary>Verifies that <c>GetMailConfirmationBody</c> contains title and contents.</summary>

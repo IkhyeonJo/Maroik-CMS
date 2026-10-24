@@ -13,9 +13,6 @@ public class CalendarEventReminderDto
     /// <summary>ID of the associated calendar event.</summary>
     public long CalendarEventId { get; set; }
 
-    /// <summary>Notification delivery method — see <c>Maroik.Core.Domain.Calendars.ReminderMethods</c> for the allowed values.</summary>
-    public string? Method { get; set; }
-
     /// <summary>Minutes before the event to trigger the reminder.</summary>
     public long? MinutesBeforeEvent { get; set; }
 

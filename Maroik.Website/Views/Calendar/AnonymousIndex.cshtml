@@ -24,8 +24,6 @@
 @Html.Hidden("maxWeeksBeforeEvent", CalendarReminderPolicy.MaxWeeksBeforeEvent)
 @Html.Hidden("reminderTimeIntervals", ClientJsonSerializer.Serialize(Model.TimeIntervals))
 
-@Html.Hidden("localizerEmail", Localizer["Email"].Value)
-@Html.Hidden("localizerNotification", Localizer["Notification"].Value)
 @Html.Hidden("localizerMinutes", Localizer["Minutes"].Value)
 @Html.Hidden("localizerHours", Localizer["Hours"].Value)
 @Html.Hidden("localizerDays", Localizer["Days"].Value)

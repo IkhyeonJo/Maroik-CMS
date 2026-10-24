@@ -21,13 +21,14 @@ public class CalendarEventReminderMapperTests
             hoursBefore: 1,
             daysBefore: 2,
             weeksBefore: 1,
-            timesBefore: timeOfDay);
+            timesBefore: timeOfDay,
+            fireAtUtc: new DateTime(2030, 1, 1),
+            handledAt: null);
 
         CalendarEventReminderDto dto = CalendarEventReminderMapper.ToResponse(reminder);
 
         Assert.Equal(8, dto.Id);
         Assert.Equal(20, dto.CalendarEventId);
-        Assert.Equal("Email", dto.Method);
         Assert.Equal(15, dto.MinutesBeforeEvent);
         Assert.Equal(1, dto.HoursBeforeEvent);
         Assert.Equal(2, dto.DaysBeforeEvent);

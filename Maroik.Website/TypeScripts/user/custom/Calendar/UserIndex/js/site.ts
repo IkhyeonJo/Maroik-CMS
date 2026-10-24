@@ -56,7 +56,7 @@
         DisplayEndDateTimeZone: check.string, CalendarType: check.nullable(check.string),
     });
     const calendarReminderJson = check.object({
-        Method: check.string, MinutesBeforeEvent: check.nullable(check.number), HoursBeforeEvent: check.nullable(check.number),
+        MinutesBeforeEvent: check.nullable(check.number), HoursBeforeEvent: check.nullable(check.number),
         DaysBeforeEvent: check.nullable(check.number), WeeksBeforeEvent: check.nullable(check.number), TimesBeforeEvent: check.nullable(check.string),
     });
     const calendarEventReply = replies.read({
@@ -269,8 +269,6 @@
     // — each from a hidden input the view rendered from the resource files (asserted
     // `Record<string, string>`: each holds a string, which `.val()` types as a wider union).
     const localizer = {
-        Email: fieldValue($("#localizerEmail")),
-        Notification: fieldValue($("#localizerNotification")),
         Minutes: fieldValue($("#localizerMinutes")),
         Hours: fieldValue($("#localizerHours")),
         Days: fieldValue($("#localizerDays")),
@@ -927,10 +925,6 @@
 
                                                 parseJson(calendarEvent.serializedCalendarReminders, check.array(calendarReminderJson), "the event\'s reminders").forEach((reminder) => {
 
-                                                    const selectedMethodOption = `
-                                                <option value='Email' ${reminder.Method === "Email" ? "selected" : ""}>${localizer.Email}</option>
-                                                <option value='Notification' ${reminder.Method === "Notification" ? "selected" : ""}>${localizer.Notification}</option>
-                                            `;
 
                                                     let value = reminder.DaysBeforeEvent !== null ? reminder.DaysBeforeEvent : reminder.WeeksBeforeEvent;
                                                     let max = reminder.DaysBeforeEvent !== null ? maxDaysBeforeEvent : maxWeeksBeforeEvent;
@@ -946,9 +940,6 @@
 
                                                     const htmlString = String.raw`
                                             <div class="divEditEventNotificationAllDayCheckedRow">
-                                                <select class='form-control-sm editCalendarEventSelNotificationMethodAllDayChecked' style='width:20%;text-overflow:ellipsis;'>
-                                                    ${selectedMethodOption}
-                                                </select>
 
                                                 ${selNotificationTimeTypeAllDayChecked}
 
@@ -976,10 +967,6 @@
 
                                                 parseJson(calendarEvent.serializedCalendarReminders, check.array(calendarReminderJson), "the event\'s reminders").forEach((reminder) => {
 
-                                                    const selectedMethodOption = `
-                                                <option value='Email' ${reminder.Method === "Email" ? "selected" : ""}>${localizer.Email}</option>
-                                                <option value='Notification' ${reminder.Method === "Notification" ? "selected" : ""}>${localizer.Notification}</option>
-                                            `;
 
                                                     let value = reminder.MinutesBeforeEvent !== null ? reminder.MinutesBeforeEvent : reminder.HoursBeforeEvent !== null ? reminder.HoursBeforeEvent : reminder.DaysBeforeEvent !== null ? reminder.DaysBeforeEvent : reminder.WeeksBeforeEvent;
                                                     let max = reminder.MinutesBeforeEvent !== null ? maxMinutesBeforeEvent : reminder.HoursBeforeEvent !== null ? maxHoursBeforeEvent : reminder.DaysBeforeEvent !== null ? maxDaysBeforeEvent : maxWeeksBeforeEvent;
@@ -1000,9 +987,6 @@
 
                                                     const htmlString = String.raw`
                                             <div class="divEditEventNotificationAllDayUncheckedRow" style="padding-bottom:5px;">
-                                                <select class='form-control-sm editCalendarEventSelNotificationMethodAllDayUnchecked' style='width:20%;text-overflow:ellipsis;'>
-                                                    ${selectedMethodOption}
-                                                </select>
 
                                                 ${selNotificationTimeTypeAllDayUnchecked}
 
@@ -1224,10 +1208,6 @@
 
                                                 parseJson(calendarEvent.serializedCalendarReminders, check.array(calendarReminderJson), "the event\'s reminders").forEach((reminder) => {
 
-                                                    const selectedMethodOption = `
-                                                    <option value='Email' ${reminder.Method === "Email" ? "selected" : ""}>${localizer.Email}</option>
-                                                    <option value='Notification' ${reminder.Method === "Notification" ? "selected" : ""}>${localizer.Notification}</option>
-                                                `;
 
                                                     let value = reminder.DaysBeforeEvent !== null ? reminder.DaysBeforeEvent : reminder.WeeksBeforeEvent;
                                                     let max = reminder.DaysBeforeEvent !== null ? maxDaysBeforeEvent : maxWeeksBeforeEvent;
@@ -1243,9 +1223,6 @@
 
                                                     const htmlString = String.raw`
                                                     <div class="divViewEventNotificationAllDayCheckedRow">
-                                                        <select class='form-control-sm viewCalendarEventSelNotificationMethodAllDayChecked' style='width:20%;text-overflow:ellipsis;' disabled>
-                                                            ${selectedMethodOption}
-                                                        </select>
 
                                                         ${selNotificationTimeTypeAllDayChecked}
 
@@ -1270,10 +1247,6 @@
 
                                                 parseJson(calendarEvent.serializedCalendarReminders, check.array(calendarReminderJson), "the event\'s reminders").forEach((reminder) => {
 
-                                                    const selectedMethodOption = `
-                                                    <option value='Email' ${reminder.Method === "Email" ? "selected" : ""}>${localizer.Email}</option>
-                                                    <option value='Notification' ${reminder.Method === "Notification" ? "selected" : ""}>${localizer.Notification}</option>
-                                                `;
 
                                                     let value = reminder.MinutesBeforeEvent !== null ? reminder.MinutesBeforeEvent : reminder.HoursBeforeEvent !== null ? reminder.HoursBeforeEvent : reminder.DaysBeforeEvent !== null ? reminder.DaysBeforeEvent : reminder.WeeksBeforeEvent;
                                                     let max = reminder.MinutesBeforeEvent !== null ? maxMinutesBeforeEvent : reminder.HoursBeforeEvent !== null ? maxHoursBeforeEvent : reminder.DaysBeforeEvent !== null ? maxDaysBeforeEvent : maxWeeksBeforeEvent;
@@ -1294,9 +1267,6 @@
 
                                                     const htmlString = String.raw`
                                                     <div class="divViewEventNotificationAllDayUncheckedRow" style="padding-bottom:5px;">
-                                                        <select class='form-control-sm viewCalendarEventSelNotificationMethodAllDayUnchecked' style='width:20%;text-overflow:ellipsis;' disabled>
-                                                            ${selectedMethodOption}
-                                                        </select>
 
                                                         ${selNotificationTimeTypeAllDayUnchecked}
 
@@ -1783,14 +1753,12 @@
 
             if ($createCalendarEventAllDay.is(":checked")) {
                 $(".divCreateEventNotificationAllDayCheckedRow").each(function() {
-                    let method = $(this).find(".createCalendarEventSelNotificationMethodAllDayChecked").val();
                     let number = $(this).find(".createCalendarEventSelNotificationNumberAllDayChecked").val();
                     let timeType = $(this).find(".createCalendarEventSelNotificationTimeTypeAllDayChecked").val();
                     let time = $(this).find(".createCalendarEventSelNotificationTimeAllDayChecked").val();
 
                     if (timeType === "Days") {
                         calendarReminders.push({
-                            Method: method,
                             MinutesBeforeEvent: null,
                             HoursBeforeEvent: null,
                             DaysBeforeEvent: number,
@@ -1799,7 +1767,6 @@
                         });
                     } else if (timeType === "Weeks") {
                         calendarReminders.push({
-                            Method: method,
                             MinutesBeforeEvent: null,
                             HoursBeforeEvent: null,
                             DaysBeforeEvent: null,
@@ -1810,13 +1777,11 @@
                 });
             } else {
                 $(".divCreateEventNotificationAllDayUncheckedRow").each(function() {
-                    let method = $(this).find(".createCalendarEventSelNotificationMethodAllDayUnchecked").val();
                     let number = $(this).find(".createCalendarEventSelNotificationNumberAllDayUnchecked").val();
                     let timeType = $(this).find(".createCalendarEventSelNotificationTimeTypeAllDayUnchecked").val();
 
                     if (timeType === "Minutes") {
                         calendarReminders.push({
-                            Method: method,
                             MinutesBeforeEvent: number,
                             HoursBeforeEvent: null,
                             DaysBeforeEvent: null,
@@ -1825,7 +1790,6 @@
                         });
                     } else if (timeType === "Hours") {
                         calendarReminders.push({
-                            Method: method,
                             MinutesBeforeEvent: null,
                             HoursBeforeEvent: number,
                             DaysBeforeEvent: null,
@@ -1834,7 +1798,6 @@
                         });
                     } else if (timeType === "Days") {
                         calendarReminders.push({
-                            Method: method,
                             MinutesBeforeEvent: null,
                             HoursBeforeEvent: null,
                             DaysBeforeEvent: number,
@@ -1843,7 +1806,6 @@
                         });
                     } else if (timeType === "Weeks") {
                         calendarReminders.push({
-                            Method: method,
                             MinutesBeforeEvent: null,
                             HoursBeforeEvent: null,
                             DaysBeforeEvent: null,
@@ -2018,14 +1980,12 @@
 
             if ($editCalendarEventAllDay.is(":checked")) {
                 $(".divEditEventNotificationAllDayCheckedRow").each(function() {
-                    let method = $(this).find(".editCalendarEventSelNotificationMethodAllDayChecked").val();
                     let number = $(this).find(".editCalendarEventSelNotificationNumberAllDayChecked").val();
                     let timeType = $(this).find(".editCalendarEventSelNotificationTimeTypeAllDayChecked").val();
                     let time = $(this).find(".editCalendarEventSelNotificationTimeAllDayChecked").val();
 
                     if (timeType === "Days") {
                         calendarReminders.push({
-                            Method: method,
                             MinutesBeforeEvent: null,
                             HoursBeforeEvent: null,
                             DaysBeforeEvent: number,
@@ -2034,7 +1994,6 @@
                         });
                     } else if (timeType === "Weeks") {
                         calendarReminders.push({
-                            Method: method,
                             MinutesBeforeEvent: null,
                             HoursBeforeEvent: null,
                             DaysBeforeEvent: null,
@@ -2045,13 +2004,11 @@
                 });
             } else {
                 $(".divEditEventNotificationAllDayUncheckedRow").each(function() {
-                    let method = $(this).find(".editCalendarEventSelNotificationMethodAllDayUnchecked").val();
                     let number = $(this).find(".editCalendarEventSelNotificationNumberAllDayUnchecked").val();
                     let timeType = $(this).find(".editCalendarEventSelNotificationTimeTypeAllDayUnchecked").val();
 
                     if (timeType === "Minutes") {
                         calendarReminders.push({
-                            Method: method,
                             MinutesBeforeEvent: number,
                             HoursBeforeEvent: null,
                             DaysBeforeEvent: null,
@@ -2060,7 +2017,6 @@
                         });
                     } else if (timeType === "Hours") {
                         calendarReminders.push({
-                            Method: method,
                             MinutesBeforeEvent: null,
                             HoursBeforeEvent: number,
                             DaysBeforeEvent: null,
@@ -2069,7 +2025,6 @@
                         });
                     } else if (timeType === "Days") {
                         calendarReminders.push({
-                            Method: method,
                             MinutesBeforeEvent: null,
                             HoursBeforeEvent: null,
                             DaysBeforeEvent: number,
@@ -2078,7 +2033,6 @@
                         });
                     } else if (timeType === "Weeks") {
                         calendarReminders.push({
-                            Method: method,
                             MinutesBeforeEvent: null,
                             HoursBeforeEvent: null,
                             DaysBeforeEvent: null,
@@ -2577,17 +2531,13 @@
     });
 
     // "Add reminder" buttons (one per create/edit × all-day/timed): build a new
-    // reminder row (method select, number input capped at the relevant max, unit
+    // reminder row (an e-mail: number input capped at the relevant max, unit
     // select, and for all-day a "notify at" select defaulted to `defaultBeforeAt`)
     // and insert it before the button. Removed by the `.a*DeleteNotification*`
     // delegated handlers below.
     $createCalendarEventNotificationAllDayChecked.off("click").on("click", function() {
         const htmlString = String.raw`
         <div class="divCreateEventNotificationAllDayCheckedRow">
-            <select class='form-control-sm createCalendarEventSelNotificationMethodAllDayChecked' style='width:20%;text-overflow:ellipsis;'>
-                <option value='Email'>${localizer.Email}</option>
-                <option value='Notification'>${localizer.Notification}</option>
-            </select>
 
             <input type='number' class='form-control-sm createCalendarEventSelNotificationNumberAllDayChecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='${minLeadTimeBeforeEvent}' max='${maxDaysBeforeEvent}'>
 
@@ -2614,10 +2564,6 @@
     $createCalendarEventNotificationAllDayUnchecked.off("click").on("click", function() {
         const htmlString = String.raw`
         <div class="divCreateEventNotificationAllDayUncheckedRow" style="padding-bottom:5px;">
-            <select class='form-control-sm createCalendarEventSelNotificationMethodAllDayUnchecked' style='width:20%;text-overflow:ellipsis;'>
-                <option value='Email'>${localizer.Email}</option>
-                <option value='Notification'>${localizer.Notification}</option>
-            </select>
 
             <input type='number' class='form-control-sm createCalendarEventSelNotificationNumberAllDayUnchecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='${minLeadTimeBeforeEvent}' max='${maxMinutesBeforeEvent}'>
 
@@ -2642,10 +2588,6 @@
     $editCalendarEventNotificationAllDayChecked.off("click").on("click", function() {
         const htmlString = String.raw`
         <div class="divEditEventNotificationAllDayCheckedRow">
-            <select class='form-control-sm editCalendarEventSelNotificationMethodAllDayChecked' style='width:20%;text-overflow:ellipsis;'>
-                <option value='Email'>${localizer.Email}</option>
-                <option value='Notification'>${localizer.Notification}</option>
-            </select>
 
             <input type='number' class='form-control-sm editCalendarEventSelNotificationNumberAllDayChecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='${minLeadTimeBeforeEvent}' max='${maxDaysBeforeEvent}'>
 
@@ -2673,10 +2615,6 @@
 
         const htmlString = String.raw`
         <div class="divEditEventNotificationAllDayUncheckedRow" style="padding-bottom:5px;">
-            <select class='form-control-sm editCalendarEventSelNotificationMethodAllDayUnchecked' style='width:20%;text-overflow:ellipsis;'>
-                <option value='Email'>${localizer.Email}</option>
-                <option value='Notification'>${localizer.Notification}</option>
-            </select>
 
             <input type='number' class='form-control-sm editCalendarEventSelNotificationNumberAllDayUnchecked' style='width:20%;text-overflow:ellipsis; background-color:#343a40; color:#fff; border-color:#6c757d;' min='${minLeadTimeBeforeEvent}' max='${maxMinutesBeforeEvent}'>
 

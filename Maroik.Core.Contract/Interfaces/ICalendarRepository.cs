@@ -9,6 +9,9 @@ public interface ICalendarRepository : IGenericRepository<Calendar>
     /// <summary>Returns calendars owned by the given account.</summary>
     Task<List<Calendar>> GetByAccountEmailAsync(string accountEmail, CancellationToken ct = default);
 
+    /// <summary>Returns the calendar with the given ID (not locked), or <see langword="null"/> if it doesn't exist.</summary>
+    Task<Calendar?> FindByIdAsync(long id, CancellationToken ct = default);
+
     /// <summary>
     /// Returns the calendar with the given ID, row-locked (<c>FOR UPDATE</c>) for the rest of the
     /// caller's transaction, or <see langword="null"/> if it doesn't exist. Callers must still

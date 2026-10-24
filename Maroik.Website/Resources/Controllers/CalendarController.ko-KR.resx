@@ -246,12 +246,6 @@
   <data name="No calendar exists." xml:space="preserve">
     <value>달력이 존재하지 않습니다.</value>
   </data>
-  <data name="Notification method cannot be empty." xml:space="preserve">
-    <value>알림 방법은 비워둘 수 없습니다.</value>
-  </data>
-  <data name="Notification method is not a recognised value." xml:space="preserve">
-    <value>알림 방법이 인식할 수 없는 값입니다.</value>
-  </data>
   <data name="Reminder lead time is outside the allowed range (0 to 28 days before the event)." xml:space="preserve">
     <value>알림 시간이 허용 범위(이벤트 0~28일 전)를 벗어났습니다.</value>
   </data>

@@ -1,6 +1,10 @@
 using System.Text.Json;
 using Maroik.Core.Client.Tests.Fixtures;
+using Maroik.Core.Client.Clients;
+using Maroik.Core.Contract.Interfaces;
 using Maroik.Core.Contract.Messages;
+using Maroik.Core.Service.Services;
+using Maroik.Worker.Workers;
 using Maroik.Core.Contract.Settings;
 using Maroik.Worker.Handlers;
 using Maroik.Worker.Tests.Fixtures;
@@ -32,6 +36,8 @@ public class WorkerHostTests(WorkerBrokerFixture broker) : IClassFixture<WorkerB
         $"--ServerSetting:SmtpOptions:smtpSsl={smtpSsl}",
         "--ServerSetting:SmtpOptions:fromEmail=noreply@maroik.test",
         "--ServerSetting:SmtpOptions:fromFullName=Maroik Test",
+        "--ServerSetting:DomainName=https://www.maroik.test/",
+        "--ServerSetting:DemoAccountEmail=demo@maroik.test",
     ];
 
     /// <summary>The SMTP settings are read from <c>ServerSetting:SmtpOptions</c> with their types converted (port → int, ssl → bool).</summary>
@@ -49,6 +55,36 @@ public class WorkerHostTests(WorkerBrokerFixture broker) : IClassFixture<WorkerB
         Assert.True(settings.SmtpSsl);
         Assert.Equal("noreply@maroik.test", settings.FromEmail);
         Assert.Equal("Maroik Test", settings.FromFullName);
+    }
+
+    /// <summary>The calendar reminders' settings: the site's address (the mail's link) and the demo account (never mailed).</summary>
+    [Fact]
+    public void Build_BindsTheReminderSettings()
+    {
+        using IHost host = WorkerHost.Build(Args("amqp://guest:guest@127.0.0.1:5672/"));
+
+        ServerSetting settings = host.Services.GetRequiredService<IOptions<ServerSetting>>().Value;
+
+        Assert.Equal(("https://www.maroik.test/", "demo@maroik.test"), (settings.DomainName, settings.DemoAccountEmail));
+    }
+
+    /// <summary>
+    /// The calendar reminders are wired: the scheduler runs as a hosted service, the dispatch service is scoped (it uses the
+    /// DbContext), and it queues its mails through a RabbitMQ publisher.
+    /// </summary>
+    [Fact]
+    public async Task Build_WiresTheCalendarReminderScheduler()
+    {
+        // Disposed asynchronously: the publisher and the unit of work are IAsyncDisposable only, as when the executable's
+        // RunAsync ends.
+        IHost host = WorkerHost.Build(Args("amqp://guest:guest@127.0.0.1:5672/"));
+        await using var hostLifetime = (IAsyncDisposable)host;
+
+        await using AsyncServiceScope scope = host.Services.CreateAsyncScope();
+
+        Assert.Contains(host.Services.GetServices<IHostedService>(), s => s is CalendarReminderScheduler);
+        Assert.IsType<CalendarReminderDispatchService>(scope.ServiceProvider.GetRequiredService<ICalendarReminderDispatchService>());
+        Assert.IsType<RabbitMqEmailPublisher>(host.Services.GetRequiredService<IEmailPublisher>());
     }
 
     /// <summary>The RabbitMQ connection is the configured one, with automatic and topology recovery on and a recognizable client name.</summary>

@@ -16,7 +16,7 @@ public sealed class CalendarEventReminder : AggregateRoot<long>
     /// <summary>ID of the parent calendar event.</summary>
     public long CalendarEventId { get; private set; }
 
-    /// <summary>Notification delivery method — see <see cref="ReminderMethods"/> for the allowed values.</summary>
+    /// <summary>Delivery method: always <see cref="ReminderMethods.Email"/>.</summary>
     public string Method { get; private set; }
 
     /// <summary>Minutes before the event to send the reminder.</summary>
@@ -31,8 +31,17 @@ public sealed class CalendarEventReminder : AggregateRoot<long>
     /// <summary>Weeks before the event to send the reminder.</summary>
     public long? WeeksBeforeEvent { get; private set; }
 
-    /// <summary>Time-of-day at which the reminder fires on the target day.</summary>
+    /// <summary>Time-of-day at which the reminder fires on the target day (all-day events).</summary>
     public TimeOnly? TimesBeforeEvent { get; private set; }
+
+    /// <summary>When the reminder is due (UTC), worked out by <see cref="ReminderSchedule"/> when it is saved.</summary>
+    public DateTime FireAtUtc { get; private set; }
+
+    /// <summary>
+    /// When the reminder was handled (UTC): sent, or skipped because it could not or should not be sent. Null while it waits;
+    /// the scheduler only ever looks at unhandled reminders.
+    /// </summary>
+    public DateTime? HandledAt { get; private set; }
 
     /// <summary>Sets every field; reached only through <see cref="Reconstitute"/> / <see cref="Create"/>.</summary>
     private CalendarEventReminder(
@@ -43,7 +52,9 @@ public sealed class CalendarEventReminder : AggregateRoot<long>
         long? hoursBefore,
         long? daysBefore,
         long? weeksBefore,
-        TimeOnly? timesBefore) : base(id)
+        TimeOnly? timesBefore,
+        DateTime fireAtUtc,
+        DateTime? handledAt) : base(id)
     {
         CalendarEventId = calendarEventId;
         Method = method;
@@ -52,40 +63,40 @@ public sealed class CalendarEventReminder : AggregateRoot<long>
         DaysBeforeEvent = daysBefore;
         WeeksBeforeEvent = weeksBefore;
         TimesBeforeEvent = timesBefore;
+        FireAtUtc = DateTime.SpecifyKind(fireAtUtc, DateTimeKind.Utc);
+        HandledAt = handledAt is { } handled ? DateTime.SpecifyKind(handled, DateTimeKind.Utc) : null;
     }
 
     /// <summary>
-    /// Rebuilds a <see cref="CalendarEventReminder"/> from trusted data from the repository layer.
+    /// Rebuilds a <see cref="CalendarEventReminder"/> from trusted data from the repository layer (Npgsql hands the
+    /// <c>timestamp without time zone</c> columns back as <see cref="DateTimeKind.Unspecified"/>; they are UTC).
     /// Bypasses validation — use only with data from the trusted repository layer.
     /// </summary>
     public static CalendarEventReminder Reconstitute(
         long id, long calendarEventId, string? method,
-        long? minutesBefore, long? hoursBefore, long? daysBefore, long? weeksBefore, TimeOnly? timesBefore)
-        => new(id, calendarEventId, method ?? "", minutesBefore, hoursBefore, daysBefore, weeksBefore, timesBefore);
+        long? minutesBefore, long? hoursBefore, long? daysBefore, long? weeksBefore, TimeOnly? timesBefore,
+        DateTime fireAtUtc, DateTime? handledAt)
+        => new(id, calendarEventId, method ?? ReminderMethods.Email, minutesBefore, hoursBefore, daysBefore, weeksBefore, timesBefore,
+            fireAtUtc, handledAt);
 
     /// <summary>
-    /// Creates a new reminder.
-    /// Exactly one of the "before" parameters must be non-null, and it must sit within the
-    /// lead-time range allowed by <see cref="CalendarReminderPolicy"/>.
+    /// Creates an e-mail reminder for event <paramref name="calendarEventId"/>, scheduled from <paramref name="calendarEvent"/>'s
+    /// start (a new event has no id of its own until it is saved, hence the separate id). Exactly one of the "before" parameters must be non-null, and
+    /// it must sit within the lead-time range allowed by <see cref="CalendarReminderPolicy"/>. Its fire time comes from
+    /// <see cref="ReminderSchedule"/> (an all-day event in <paramref name="calendarTimeZoneIanaId"/>); a fire time already before
+    /// <paramref name="utcNow"/> is handled at once, as sending it now would arrive late.
     /// </summary>
     public static ErrorOr<CalendarEventReminder> Create(
         long calendarEventId,
-        string? method,
+        CalendarEvent calendarEvent,
+        string calendarTimeZoneIanaId,
         long? minutesBefore,
         long? hoursBefore,
         long? daysBefore,
         long? weeksBefore,
-        TimeOnly? timesBefore)
+        TimeOnly? timesBefore,
+        DateTime utcNow)
     {
-        if (string.IsNullOrWhiteSpace(method))
-            return DomainError.Validation("Reminder.MethodEmpty", "Notification method cannot be empty.");
-
-        // Constrain to the known taxonomy here rather than trusting the caller: otherwise the DB
-        // CalendarEventReminder_Method_check constraint would be the only thing rejecting
-        // anything else, which surfaces as a raw DB exception instead of this validation error.
-        if (!ReminderMethods.IsKnown(method))
-            return DomainError.Validation("Reminder.MethodInvalid", "Notification method is not a recognised value.");
-
         // The client models each reminder as a single unit+value pair (a dropdown picks minutes/
         // hours/days/weeks, then one value field) — multiple simultaneous lead-time fields have no
         // defined meaning, so exactly one must be set.
@@ -99,7 +110,13 @@ public sealed class CalendarEventReminder : AggregateRoot<long>
             return DomainError.Validation("Reminder.LeadTimeOutOfRange",
                 "Reminder lead time is outside the allowed range (0 to 28 days before the event).");
 
-        return new CalendarEventReminder(0, calendarEventId, method,
+        DateTime fireAtUtc = ReminderSchedule.FireAtUtc(calendarEvent.AllDay, calendarEvent.StartDate, calendarTimeZoneIanaId,
             minutesBefore, hoursBefore, daysBefore, weeksBefore, timesBefore);
+
+        return new CalendarEventReminder(0, calendarEventId, ReminderMethods.Email,
+            minutesBefore, hoursBefore, daysBefore, weeksBefore, timesBefore, fireAtUtc, fireAtUtc < utcNow ? utcNow : null);
     }
+
+    /// <summary>Records that the reminder was handled (sent, or skipped) at <paramref name="utcNow"/>.</summary>
+    public void MarkHandled(DateTime utcNow) => HandledAt = DateTime.SpecifyKind(utcNow, DateTimeKind.Utc);
 }

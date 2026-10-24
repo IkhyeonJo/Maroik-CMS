@@ -19,7 +19,7 @@ public class CalendarEventReminderRepository(ApplicationDbContext context)
     protected override CalendarEventReminder ToDomain(OrmCalendarEventReminder e) => CalendarEventReminder.Reconstitute(
         e.Id, e.CalendarEventId, e.Method,
         e.MinutesBeforeEvent, e.HoursBeforeEvent,
-        e.DaysBeforeEvent, e.WeeksBeforeEvent, e.TimesBeforeEvent);
+        e.DaysBeforeEvent, e.WeeksBeforeEvent, e.TimesBeforeEvent, e.FireAtUtc, e.HandledAt);
 
     /// <summary>Maps a <see cref="CalendarEventReminder"/> domain object to its <see cref="OrmCalendarEventReminder"/> persistence representation.</summary>
     protected override OrmCalendarEventReminder ToEntity(CalendarEventReminder r) => new()
@@ -31,12 +31,34 @@ public class CalendarEventReminderRepository(ApplicationDbContext context)
         HoursBeforeEvent = r.HoursBeforeEvent,
         DaysBeforeEvent = r.DaysBeforeEvent,
         WeeksBeforeEvent = r.WeeksBeforeEvent,
-        TimesBeforeEvent = r.TimesBeforeEvent
+        TimesBeforeEvent = r.TimesBeforeEvent,
+        FireAtUtc = r.FireAtUtc,
+        HandledAt = r.HandledAt
     };
 
     /// <inheritdoc />
     public Task<List<CalendarEventReminder>> GetByCalendarEventIdAsync(long calendarEventId, CancellationToken ct = default)
         => QueryAsync(e => e.CalendarEventId == calendarEventId, ct: ct);
+
+    /// <inheritdoc />
+    public async Task<List<CalendarEventReminder>> LockDueAsync(DateTime nowUtc, int limit, CancellationToken ct = default)
+    {
+        // Raw SQL because EF Core LINQ cannot emit FOR UPDATE. This is a work queue, not a balance lock: SKIP LOCKED lets a second
+        // worker take the next due rows instead of waiting for (and then re-sending) the ones the first holds, and the LIMIT bounds
+        // one run. The "LIMIT with ORDER BY ... FOR UPDATE" caveat (a row changed by a concurrent commit can be dropped from the
+        // page) only delays such a row to the next run. The partial index CalendarEventReminder_index_1 serves the range scan.
+        DateTime now = DateTime.SpecifyKind(nowUtc, DateTimeKind.Unspecified);
+        var entities = await Set.FromSqlInterpolated(
+            $"""
+             SELECT *
+             FROM "CalendarEventReminder"
+             WHERE "HandledAt" IS NULL AND "FireAtUtc" <= {now}
+             ORDER BY "FireAtUtc", "Id"
+             LIMIT {limit}
+             FOR UPDATE SKIP LOCKED
+             """).AsNoTracking().ToListAsync(ct);
+        return [.. entities.Select(ToDomain)];
+    }
 
     /// <inheritdoc />
     public Task DeleteByCalendarEventIdAsync(long calendarEventId, CancellationToken ct = default)

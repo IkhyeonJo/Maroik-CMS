@@ -504,9 +504,17 @@ public partial class ApplicationDbContext : DbContext
 
             entity.HasIndex(e => e.CalendarEventId, "CalendarEventReminder_index_0");
 
+            entity.HasIndex(e => e.FireAtUtc, "CalendarEventReminder_index_1").HasFilter("(\"HandledAt\" IS NULL)");
+
             entity.Property(e => e.Id).HasComment("PK");
             entity.Property(e => e.CalendarEventId).HasComment("Parent Calendar Event Id");
             entity.Property(e => e.DaysBeforeEvent).HasComment("DaysBeforeEvent");
+            entity.Property(e => e.FireAtUtc)
+                .HasComment("When the reminder e-mail is due (UTC)")
+                .HasColumnType("timestamp without time zone");
+            entity.Property(e => e.HandledAt)
+                .HasComment("When the reminder was sent or skipped (UTC); NULL while it waits")
+                .HasColumnType("timestamp without time zone");
             entity.Property(e => e.HoursBeforeEvent).HasComment("HoursBeforeEvent");
             entity.Property(e => e.Method)
                 .HasMaxLength(255)

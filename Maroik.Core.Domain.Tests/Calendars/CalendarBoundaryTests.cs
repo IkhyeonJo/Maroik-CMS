@@ -45,15 +45,16 @@ public class CalendarBoundaryTests
         Assert.True(ev.Updated >= before);
     }
 
-    /// <summary>Verifies the method and lead-time errors of <c>CalendarEventReminder.Create</c>.</summary>
+    /// <summary>Verifies the lead-time errors of <c>CalendarEventReminder.Create</c>.</summary>
     [Fact]
     public void Reminder_Create_ErrorContract()
     {
-        ErrorAssert.Validation(CalendarEventReminder.Create(1, " ", 5, null, null, null, null), "Reminder.MethodEmpty", "Notification method cannot be empty.");
-        ErrorAssert.Validation(CalendarEventReminder.Create(1, "nonsense", 5, null, null, null, null), "Reminder.MethodInvalid", "Notification method is not a recognised value.");
-        ErrorAssert.Validation(CalendarEventReminder.Create(1, "Email", null, null, null, null, null), "Reminder.InvalidLeadTime", "Exactly one lead-time field (minutes/hours/days/weeks) must be set.");
-        ErrorAssert.Validation(CalendarEventReminder.Create(1, "Email", 5, 1, null, null, null), "Reminder.InvalidLeadTime", "Exactly one lead-time field (minutes/hours/days/weeks) must be set.");
-        ErrorAssert.Validation(CalendarEventReminder.Create(1, "Email", null, null, null, 5, null), "Reminder.LeadTimeOutOfRange",
+        DateTime now = new(2026, 10, 24, 0, 0, 0, DateTimeKind.Utc);
+        CalendarEvent ev = CalendarEvent.Reconstitute(1, 1, "T", null, false, now.AddDays(1), now.AddDays(1), "UTC", "UTC", null, "Busy", null, now, now);
+
+        ErrorAssert.Validation(CalendarEventReminder.Create(1, ev, "UTC", null, null, null, null, null, now), "Reminder.InvalidLeadTime", "Exactly one lead-time field (minutes/hours/days/weeks) must be set.");
+        ErrorAssert.Validation(CalendarEventReminder.Create(1, ev, "UTC", 5, 1, null, null, null, now), "Reminder.InvalidLeadTime", "Exactly one lead-time field (minutes/hours/days/weeks) must be set.");
+        ErrorAssert.Validation(CalendarEventReminder.Create(1, ev, "UTC", null, null, null, 5, null, now), "Reminder.LeadTimeOutOfRange",
             "Reminder lead time is outside the allowed range (0 to 28 days before the event).");
     }
 

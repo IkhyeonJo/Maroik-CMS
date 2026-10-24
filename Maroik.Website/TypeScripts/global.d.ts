@@ -123,9 +123,8 @@ interface CalendarEventsRequest {
     Calendars: { Id: number }[];
 }
 
-/** A reminder row as an event form posts it in `SerializedCalendarReminders`. Exactly one `*BeforeEvent` is set. */
+/** A reminder row as an event form posts it in `SerializedCalendarReminders` (always an e-mail). Exactly one `*BeforeEvent` is set. */
 interface CalendarReminderFormValue {
-    Method: FormFieldValue;
     MinutesBeforeEvent: FormFieldValue | null;
     HoursBeforeEvent: FormFieldValue | null;
     DaysBeforeEvent: FormFieldValue | null;

@@ -18,6 +18,11 @@ services:
           - ServerSetting__HostingMode=PortForwarding
           - ServerSetting__DomainName=https://www.${MAROIK_DOMAIN:?set MAROIK_DOMAIN or run Maroik.DeployOps/Deploy.sh}/
 
+    # The calendar reminder e-mails link to the site.
+    maroik.worker:
+        environment:
+          - ServerSetting__DomainName=https://www.${MAROIK_DOMAIN:?set MAROIK_DOMAIN or run Maroik.DeployOps/Deploy.sh}/
+
     caddy:
         image: caddy:2.10-alpine
         container_name: Maroik.Caddy

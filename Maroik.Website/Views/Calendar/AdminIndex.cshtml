@@ -31,8 +31,6 @@
 @Html.Hidden("defaultReminderTimeOfDay", CalendarReminderPolicy.DefaultReminderTimeOfDay)
 @* The culture CalendarService orders the "my calendars" list under, so the client re-sorts it the same way. *@
 @Html.Hidden("calendarNameCulture", System.Globalization.CultureInfo.CurrentCulture.Name)
-@Html.Hidden("localizerEmail", Localizer["Email"].Value)
-@Html.Hidden("localizerNotification", Localizer["Notification"].Value)
 @Html.Hidden("localizerMinutes", Localizer["Minutes"].Value)
 @Html.Hidden("localizerHours", Localizer["Hours"].Value)
 @Html.Hidden("localizerDays", Localizer["Days"].Value)

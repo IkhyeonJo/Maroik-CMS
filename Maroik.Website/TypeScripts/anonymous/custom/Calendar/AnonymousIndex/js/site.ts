@@ -39,7 +39,7 @@
         DisplayEndDateTimeZone: check.string, CalendarType: check.nullable(check.string),
     });
     const calendarReminderJson = check.object({
-        Method: check.string, MinutesBeforeEvent: check.nullable(check.number), HoursBeforeEvent: check.nullable(check.number),
+        MinutesBeforeEvent: check.nullable(check.number), HoursBeforeEvent: check.nullable(check.number),
         DaysBeforeEvent: check.nullable(check.number), WeeksBeforeEvent: check.nullable(check.number), TimesBeforeEvent: check.nullable(check.string),
     });
     const calendarEventReply = replies.read({
@@ -141,8 +141,6 @@
     // hidden input the view rendered from the resource files (asserted `Record<string, string>`:
     // each holds a string, which `.val()` types as a wider union).
     const localizer = {
-        Email: fieldValue($("#localizerEmail")),
-        Notification: fieldValue($("#localizerNotification")),
         Minutes: fieldValue($("#localizerMinutes")),
         Hours: fieldValue($("#localizerHours")),
         Days: fieldValue($("#localizerDays")),
@@ -432,12 +430,6 @@
                                                 const timeIntervals = reminderTimeIntervals;
 
                                                 parseJson(calendarEvent.serializedCalendarReminders, check.array(calendarReminderJson), "the event\'s reminders").forEach((reminder) => {
-                                                    if (reminder.Method !== "Email") {
-                                                        // (a visitor only ever sees Notification reminders, so that is the method shown)
-                                                        const selectedMethodOption = `
-                                                        <option value='Email'>${localizer.Email}</option>
-                                                        <option value='Notification' selected>${localizer.Notification}</option>
-                                                    `;
 
                                                         // All-day reminders use days / weeks lead time.
                                                         let value = reminder.DaysBeforeEvent !== null ? reminder.DaysBeforeEvent : reminder.WeeksBeforeEvent;
@@ -454,9 +446,6 @@
 
                                                         const htmlString = String.raw`
                                                         <div class="divViewEventNotificationAllDayCheckedRow">
-                                                            <select class='form-control-sm viewCalendarEventSelNotificationMethodAllDayChecked' style='width:20%;text-overflow:ellipsis;' disabled>
-                                                                ${selectedMethodOption}
-                                                            </select>
 
                                                             ${selNotificationTimeTypeAllDayChecked}
 
@@ -471,7 +460,6 @@
                                                     `;
 
                                                         $(htmlString).insertBefore($viewCalendarEventNotificationAllDayChecked);
-                                                    }
                                                 });
                                             }
                                         } else {
@@ -481,12 +469,6 @@
                                             if (calendarEvent.serializedCalendarReminders !== "[]") {
 
                                                 parseJson(calendarEvent.serializedCalendarReminders, check.array(calendarReminderJson), "the event\'s reminders").forEach((reminder) => {
-                                                    if (reminder.Method !== "Email") {
-                                                        // (a visitor only ever sees Notification reminders, so that is the method shown)
-                                                        const selectedMethodOption = `
-                                                        <option value='Email'>${localizer.Email}</option>
-                                                        <option value='Notification' selected>${localizer.Notification}</option>
-                                                    `;
 
                                                         // Timed reminders can be minutes / hours / days / weeks;
                                                         // pick the first non-null and its matching max.
@@ -509,9 +491,6 @@
 
                                                         const htmlString = String.raw`
                                                         <div class="divViewEventNotificationAllDayUncheckedRow" style="padding-bottom:5px;">
-                                                            <select class='form-control-sm viewCalendarEventSelNotificationMethodAllDayUnchecked' style='width:20%;text-overflow:ellipsis;' disabled>
-                                                                ${selectedMethodOption}
-                                                            </select>
 
                                                             ${selNotificationTimeTypeAllDayUnchecked}
 
@@ -521,7 +500,6 @@
                                                     `;
 
                                                         $(htmlString).insertBefore($viewCalendarEventNotificationAllDayUnchecked);
-                                                    }
                                                 });
                                             }
                                         }

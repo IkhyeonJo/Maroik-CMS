@@ -1211,10 +1211,12 @@ CREATE TABLE public."CalendarEventReminder" (
     "DaysBeforeEvent" bigint,
     "WeeksBeforeEvent" bigint,
     "TimesBeforeEvent" time without time zone,
+    "FireAtUtc" timestamp without time zone NOT NULL,
+    "HandledAt" timestamp without time zone,
     CONSTRAINT "CalendarEventReminder_BeforeEvent_check" CHECK ((num_nonnulls("MinutesBeforeEvent", "HoursBeforeEvent", "DaysBeforeEvent", "WeeksBeforeEvent") = 1)),
     CONSTRAINT "CalendarEventReminder_DaysBeforeEvent_check" CHECK ((("DaysBeforeEvent" IS NULL) OR (("DaysBeforeEvent" >= 0) AND ("DaysBeforeEvent" <= 28)))),
     CONSTRAINT "CalendarEventReminder_HoursBeforeEvent_check" CHECK ((("HoursBeforeEvent" IS NULL) OR (("HoursBeforeEvent" >= 0) AND ("HoursBeforeEvent" <= 672)))),
-    CONSTRAINT "CalendarEventReminder_Method_check" CHECK ((("Method")::text = ANY (ARRAY[('Email'::character varying)::text, ('Notification'::character varying)::text]))),
+    CONSTRAINT "CalendarEventReminder_Method_check" CHECK ((("Method")::text = 'Email'::text)),
     CONSTRAINT "CalendarEventReminder_MinutesBeforeEvent_check" CHECK ((("MinutesBeforeEvent" IS NULL) OR (("MinutesBeforeEvent" >= 0) AND ("MinutesBeforeEvent" <= 40320)))),
     CONSTRAINT "CalendarEventReminder_WeeksBeforeEvent_check" CHECK ((("WeeksBeforeEvent" IS NULL) OR (("WeeksBeforeEvent" >= 0) AND ("WeeksBeforeEvent" <= 4))))
 );
@@ -1283,6 +1285,20 @@ COMMENT ON COLUMN public."CalendarEventReminder"."WeeksBeforeEvent" IS 'WeeksBef
 --
 
 COMMENT ON COLUMN public."CalendarEventReminder"."TimesBeforeEvent" IS 'TimesBeforeEvent';
+
+
+--
+-- Name: COLUMN "CalendarEventReminder"."FireAtUtc"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."CalendarEventReminder"."FireAtUtc" IS 'When the reminder e-mail is due (UTC)';
+
+
+--
+-- Name: COLUMN "CalendarEventReminder"."HandledAt"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."CalendarEventReminder"."HandledAt" IS 'When the reminder was sent or skipped (UTC); NULL while it waits';
 
 
 --
@@ -2811,7 +2827,7 @@ COPY public."CalendarEventAttachedFile" ("Id", "CalendarEventId", "Size", "Name"
 -- Data for Name: CalendarEventReminder; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public."CalendarEventReminder" ("Id", "CalendarEventId", "Method", "MinutesBeforeEvent", "HoursBeforeEvent", "DaysBeforeEvent", "WeeksBeforeEvent", "TimesBeforeEvent") FROM stdin;
+COPY public."CalendarEventReminder" ("Id", "CalendarEventId", "Method", "MinutesBeforeEvent", "HoursBeforeEvent", "DaysBeforeEvent", "WeeksBeforeEvent", "TimesBeforeEvent", "FireAtUtc", "HandledAt") FROM stdin;
 \.
 
 
@@ -3374,6 +3390,13 @@ CREATE INDEX "CalendarEventAttachedFile_index_0" ON public."CalendarEventAttache
 --
 
 CREATE INDEX "CalendarEventReminder_index_0" ON public."CalendarEventReminder" USING btree ("CalendarEventId");
+
+
+--
+-- Name: CalendarEventReminder_index_1; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX "CalendarEventReminder_index_1" ON public."CalendarEventReminder" USING btree ("FireAtUtc") WHERE ("HandledAt" IS NULL);
 
 
 --

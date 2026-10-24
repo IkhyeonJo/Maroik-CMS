@@ -233,7 +233,6 @@ public class CalendarViewModelMapperTests
         [
             new()
             {
-                Method = "Email",
                 MinutesBeforeEvent = 30,
                 HoursBeforeEvent = 1,
                 DaysBeforeEvent = 2,
@@ -245,24 +244,12 @@ public class CalendarViewModelMapperTests
         string json = reminders.ToSerializedReminders();
         var roundTripped = JsonSerializer.Deserialize<List<CalendarReminderDto>>(json)!;
 
-        Assert.Equal("Email", roundTripped[0].Method);
+        Assert.DoesNotContain("Method", json, StringComparison.Ordinal); // a reminder is always an e-mail
         Assert.Equal(30, roundTripped[0].MinutesBeforeEvent);
         Assert.Equal(1, roundTripped[0].HoursBeforeEvent);
         Assert.Equal(2, roundTripped[0].DaysBeforeEvent);
         Assert.Equal(1, roundTripped[0].WeeksBeforeEvent);
         Assert.Equal(new TimeOnly(9, 0), roundTripped[0].TimesBeforeEvent);
-    }
-
-    /// <summary>To serialized reminders null method defaults to empty string.</summary>
-    [Fact]
-    public void ToSerializedReminders_NullMethod_DefaultsToEmptyString()
-    {
-        List<CalendarEventReminderDto> reminders = [new() { Method = null }];
-
-        string json = reminders.ToSerializedReminders();
-        var roundTripped = JsonSerializer.Deserialize<List<CalendarReminderDto>>(json)!;
-
-        Assert.Equal("", roundTripped[0].Method);
     }
 
     // -- PopulateTimeData ---------------------------------------------------------
@@ -413,7 +400,7 @@ public class CalendarViewModelMapperTests
         Assert.Empty("".ToReminderInfoList());
     }
 
-    /// <summary>To reminder info list parses fields and time of day.</summary>
+    /// <summary>To reminder info list parses fields and time of day; a posted method is ignored (a reminder is always an e-mail).</summary>
     [Fact]
     public void ToReminderInfoList_ParsesFieldsAndTimeOfDay()
     {
@@ -432,8 +419,7 @@ public class CalendarViewModelMapperTests
 
         var reminders = json.ToReminderInfoList();
 
-        var item = Assert.Single(reminders);
-        Assert.Equal("Push", item.Method);
+        Assert.Single(reminders);
         Assert.Equal(15, reminders[0].MinutesBeforeEvent);
         Assert.Equal(1, reminders[0].DaysBeforeEvent);
         Assert.Equal(new TimeOnly(9, 30), reminders[0].TimesBeforeEvent);

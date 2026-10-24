@@ -19,7 +19,7 @@ import {
 
 /** Suffixes of the `localizer*` hidden inputs the page publishes. */
 const LOCALIZERS = [
-    "Email", "Notification", "Minutes", "Hours", "Days", "Weeks", "BeforeAt", "IETFLanguageTag",
+    "Minutes", "Hours", "Days", "Weeks", "BeforeAt", "IETFLanguageTag",
     "Today", "Month", "ConfirmDelete", "ThisFieldRequired", "ErrorInvalidNumber",
     "ErrorRangeMinute", "ErrorRangeHour", "ErrorRangeDay", "ErrorRangeWeek", "FailedToLoadCalendars",
 ];
@@ -664,7 +664,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
     });
     /** A stored e-mail reminder (all offsets empty, 09:00) with `over` merged in. */
     const reminder = (over: Record<string, unknown>) => ({
-        Method: "Email", MinutesBeforeEvent: null, HoursBeforeEvent: null,
+        MinutesBeforeEvent: null, HoursBeforeEvent: null,
         DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: "09:00:00", ...over
     });
 
@@ -723,7 +723,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
             const h = setup();
             openView(h, {
                 allDay: true, displayStartDate: "2024-05-01", displayEndDate: "2024-05-03",
-                serializedCalendarReminders: JSON.stringify([reminder({ DaysBeforeEvent: 5 }), reminder({ Method: "Notification", WeeksBeforeEvent: 1 })])
+                serializedCalendarReminders: JSON.stringify([reminder({ DaysBeforeEvent: 5 }), reminder({ WeeksBeforeEvent: 1 })])
             });
             const checked = h.$("#divViewEventNotificationAllDayChecked > div").not("#viewCalendarEventNotificationAllDayChecked");
             expect(checked).toHaveLength(2);
@@ -734,7 +734,6 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
             openView(h2, {
                 serializedCalendarReminders: JSON.stringify([
                     reminder({ MinutesBeforeEvent: 10 }), reminder({
-                        Method: "Notification",
                         HoursBeforeEvent: 3
                     }), reminder({ DaysBeforeEvent: 2 }), reminder({ WeeksBeforeEvent: 4 })])
             });
@@ -797,17 +796,17 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
             expect(String(present(code).args[1])).toContain("data-file");
         });
 
-        it("shows a shared event's reminders with their own method selected (email and notification alike)", () => {
+        it("shows a shared event's reminders without a method choice (a reminder is always an e-mail)", () => {
             const h = setup();
             openView(h, {
                 allDay: true, displayStartDate: "2024-05-01", displayEndDate: "2024-05-03",
-                serializedCalendarReminders: JSON.stringify([reminder({ Method: "Email", DaysBeforeEvent: 1 }), reminder({
-                    Method: "Notification",
+                serializedCalendarReminders: JSON.stringify([reminder({ DaysBeforeEvent: 1 }), reminder({
                     DaysBeforeEvent: 2
                 })])
             });
             const rows = h.$("#divViewEventNotificationAllDayChecked > div").not("#viewCalendarEventNotificationAllDayChecked");
-            expect(rows.map((_, r) => h.$(r).find("select").first().val()).get()).toEqual(["Email", "Notification"]);
+            expect(rows).toHaveLength(2);
+            expect(rows.find("[class*=SelNotificationMethod]")).toHaveLength(0);
         });
 
         it("a refused lookup toasts the server's message and opens nothing", () => {

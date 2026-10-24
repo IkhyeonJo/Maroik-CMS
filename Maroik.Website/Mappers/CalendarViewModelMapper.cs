@@ -130,7 +130,6 @@ public static class CalendarViewModelMapper
         public string ToSerializedReminders()
             => ClientJsonSerializer.Serialize(reminders.Select(x => new CalendarReminderDto
             {
-                Method = x.Method ?? "",
                 MinutesBeforeEvent = x.MinutesBeforeEvent,
                 HoursBeforeEvent = x.HoursBeforeEvent,
                 DaysBeforeEvent = x.DaysBeforeEvent,
@@ -217,7 +216,6 @@ public static class CalendarViewModelMapper
 
             return [.. raw.Select(r => new CalendarReminderDto
             {
-                Method = r.Method ?? "",
                 MinutesBeforeEvent = r.MinutesBeforeEvent,
                 HoursBeforeEvent = r.HoursBeforeEvent,
                 DaysBeforeEvent = r.DaysBeforeEvent,
@@ -251,13 +249,14 @@ public static class CalendarViewModelMapper
         return TimeOnly.TryParse(value, out TimeOnly result) ? result : null;
     }
 
-    /// <summary>Wire shape of one reminder row in the calendar edit form's hidden JSON field.</summary>
+    /// <summary>
+    /// Wire shape of one reminder row in the calendar edit form's hidden JSON field. A reminder is always an e-mail, so a posted
+    /// method is ignored.
+    /// </summary>
     // ReSharper disable once ClassNeverInstantiated.Local
-    private sealed class ReminderFormItem(string? method, int? weeksBeforeEvent, int? daysBeforeEvent, 
+    private sealed class ReminderFormItem(int? weeksBeforeEvent, int? daysBeforeEvent,
         int? hoursBeforeEvent, int? minutesBeforeEvent, string? timesBeforeEvent)
     {
-        /// <summary>Delivery method as posted by the form (validated later by the domain reminder policy).</summary>
-        public string? Method { get; } = method;
         /// <summary>Minutes before the event to send the reminder.</summary>
         public int? MinutesBeforeEvent { get; } = minutesBeforeEvent;
         /// <summary>Hours before the event to send the reminder.</summary>

@@ -1,61 +1,65 @@
+using ErrorOr;
 using Maroik.Core.Domain.Calendars;
 namespace Maroik.Core.Domain.Tests.Calendars;
 
 /// <summary>
-/// Unit tests for <see cref="CalendarEventReminder"/>.
-/// Covers creation validation (method empty guard, exactly-one-lead-time guard, lead-time range guard) and reconstitution from trusted data.
+/// Unit tests for <see cref="CalendarEventReminder"/>: creation validation (exactly one lead time, within range), the fire time it
+/// is scheduled for (<see cref="ReminderSchedule"/>), a reminder whose time has already passed being handled at once (it would
+/// arrive late), marking a reminder handled, and reconstitution from trusted data. A reminder is always an e-mail.
 /// </summary>
 public class CalendarEventReminderTests
 {
+    /// <summary>"Now" in these tests.</summary>
+    private static readonly DateTime _now = new(2026, 10, 24, 12, 0, 0, DateTimeKind.Utc);
+
+    /// <summary>Event 1, timed, starting 2026-11-02 09:00 UTC.</summary>
+    private static readonly CalendarEvent _event = CalendarEvent.Reconstitute(1, 7, "Dentist", null, false,
+        new DateTime(2026, 11, 2, 9, 0, 0), new DateTime(2026, 11, 2, 10, 0, 0), "UTC", "UTC", null, "Busy", null, _now, _now);
+
+    /// <summary>Creates a reminder for <see cref="_event"/> in a UTC calendar.</summary>
+    private static ErrorOr<CalendarEventReminder> Create(long? minutes, long? hours, long? days, long? weeks, TimeOnly? time = null) =>
+        CalendarEventReminder.Create(1, _event, "UTC", minutes, hours, days, weeks, time, _now);
+
     // -- Create ---------------------------------------------------------------
 
-    /// <summary>Create returns reminder, when valid.</summary>
+    /// <summary>A valid reminder is an e-mail for its event, scheduled by <see cref="ReminderSchedule"/>, not yet handled.</summary>
     [Fact]
-    public void Create_ReturnsReminder_WhenValid()
+    public void Create_ReturnsAnEmailReminder_ScheduledBeforeTheEvent()
     {
-        var result = CalendarEventReminder.Create(1, "Email", 30, null, null, null, null);
+        var result = Create(30, null, null, null);
 
         Assert.False(result.IsError);
         Assert.Equal(1, result.Value.CalendarEventId);
-        Assert.Equal("Email", result.Value.Method);
+        Assert.Equal(ReminderMethods.Email, result.Value.Method);
         Assert.Equal(30, result.Value.MinutesBeforeEvent);
+        Assert.Equal(new DateTime(2026, 11, 2, 8, 30, 0, DateTimeKind.Utc), result.Value.FireAtUtc);
+        Assert.Null(result.Value.HandledAt);
     }
 
-    /// <summary>Create returns error, when method empty.</summary>
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Create_ReturnsError_WhenMethodEmpty(string? method)
+    /// <summary>A reminder whose time has already passed when it is saved is handled at once: sending it now would arrive late.</summary>
+    [Fact]
+    public void Create_HandlesAtOnce_AReminderWhoseTimeHasPassed()
     {
-        var result = CalendarEventReminder.Create(1, method, 30, null, null, null, null);
+        var result = Create(null, null, null, 2); // 2026-10-19, before "now"
 
-        Assert.True(result.IsError);
-        Assert.Equal("Reminder.MethodEmpty", result.FirstError.Code);
+        Assert.Equal(_now, result.Value.HandledAt);
     }
 
-    /// <summary>
-    /// Regression: Create rejects a <c>Method</c> value outside <see cref="ReminderMethods"/>'s known
-    /// members — previously any non-empty string was accepted here and would only fail later with a
-    /// raw DB <c>CalendarEventReminder_Method_check</c> exception on save.
-    /// </summary>
-    [Theory]
-    [InlineData("Push")]
-    [InlineData("SMS")]
-    [InlineData("email")]
-    public void Create_ReturnsError_WhenMethodNotRecognised(string method)
+    /// <summary>A reminder due exactly now is still sent.</summary>
+    [Fact]
+    public void Create_DoesNotHandle_AReminderDueNow()
     {
-        var result = CalendarEventReminder.Create(1, method, 30, null, null, null, null);
+        var result = Create(12_780, null, null, null); // 8 days 21 hours before: 2026-10-24 12:00
 
-        Assert.True(result.IsError);
-        Assert.Equal("Reminder.MethodInvalid", result.FirstError.Code);
+        Assert.Equal(_now, result.Value.FireAtUtc);
+        Assert.Null(result.Value.HandledAt);
     }
 
     /// <summary>Create returns error, when no lead time set.</summary>
     [Fact]
     public void Create_ReturnsError_WhenNoLeadTimeSet()
     {
-        var result = CalendarEventReminder.Create(1, "Email", null, null, null, null, null);
+        var result = Create(null, null, null, null);
 
         Assert.True(result.IsError);
         Assert.Equal("Reminder.InvalidLeadTime", result.FirstError.Code);
@@ -65,7 +69,7 @@ public class CalendarEventReminderTests
     [Fact]
     public void Create_ReturnsError_WhenMultipleLeadTimeFieldsSet()
     {
-        var result = CalendarEventReminder.Create(1, "Email", 30, 2, null, null, null);
+        var result = Create(30, 2, null, null);
 
         Assert.True(result.IsError);
         Assert.Equal("Reminder.InvalidLeadTime", result.FirstError.Code);
@@ -79,7 +83,7 @@ public class CalendarEventReminderTests
     [InlineData(null, null, null, 5L)]
     public void Create_ReturnsError_WhenLeadTimeOutOfRange(long? minutes, long? hours, long? days, long? weeks)
     {
-        var result = CalendarEventReminder.Create(1, "Email", minutes, hours, days, weeks, null);
+        var result = Create(minutes, hours, days, weeks);
 
         Assert.True(result.IsError);
         Assert.Equal("Reminder.LeadTimeOutOfRange", result.FirstError.Code);
@@ -89,7 +93,7 @@ public class CalendarEventReminderTests
     [Fact]
     public void Create_ReturnsError_WhenLeadTimeNegative()
     {
-        var result = CalendarEventReminder.Create(1, "Email", -1, null, null, null, null);
+        var result = Create(-1, null, null, null);
 
         Assert.True(result.IsError);
         Assert.Equal("Reminder.LeadTimeOutOfRange", result.FirstError.Code);
@@ -103,51 +107,44 @@ public class CalendarEventReminderTests
     [InlineData(null, null, null, 4L)]
     public void Create_Succeeds_WhenLeadTimeAtMaxBoundary(long? minutes, long? hours, long? days, long? weeks)
     {
-        var result = CalendarEventReminder.Create(1, "Notification", minutes, hours, days, weeks, null);
-
-        Assert.False(result.IsError);
+        Assert.False(Create(minutes, hours, days, weeks).IsError);
     }
 
-    /// <summary>Create succeeds, when only hours before set.</summary>
+    /// <summary>Create keeps each unit's value.</summary>
     [Fact]
-    public void Create_Succeeds_WhenOnlyHoursBeforeSet()
-    {
-        var result = CalendarEventReminder.Create(1, "Notification", null, 2, null, null, null);
-
-        Assert.False(result.IsError);
-        Assert.Equal(2, result.Value.HoursBeforeEvent);
-    }
-
-    /// <summary>Create succeeds, when only days before set.</summary>
-    [Fact]
-    public void Create_Succeeds_WhenOnlyDaysBeforeSet()
-    {
-        var result = CalendarEventReminder.Create(1, "Notification", null, null, 1, null, null);
-
-        Assert.False(result.IsError);
-        Assert.Equal(1, result.Value.DaysBeforeEvent);
-    }
-
-    /// <summary>Create succeeds, when only weeks before set.</summary>
-    [Fact]
-    public void Create_Succeeds_WhenOnlyWeeksBeforeSet()
-    {
-        var result = CalendarEventReminder.Create(1, "Notification", null, null, null, 1, null);
-
-        Assert.False(result.IsError);
-        Assert.Equal(1, result.Value.WeeksBeforeEvent);
-    }
-
-    /// <summary>Create allows optional times before event.</summary>
-    [Fact]
-    public void Create_AllowsOptionalTimesBeforeEvent()
+    public void Create_KeepsTheLeadTimeAndTheTimeOfDay()
     {
         var time = new TimeOnly(9, 0);
 
-        var result = CalendarEventReminder.Create(1, "Email", 30, null, null, null, time);
+        Assert.Equal(2, Create(null, 2, null, null).Value.HoursBeforeEvent);
+        Assert.Equal(1, Create(null, null, 1, null).Value.DaysBeforeEvent);
+        Assert.Equal(1, Create(null, null, null, 1).Value.WeeksBeforeEvent);
+        Assert.Equal(time, Create(30, null, null, null, time).Value.TimesBeforeEvent);
+    }
 
-        Assert.False(result.IsError);
-        Assert.Equal(time, result.Value.TimesBeforeEvent);
+    /// <summary>An all-day event's reminder is scheduled in the calendar's time zone.</summary>
+    [Fact]
+    public void Create_SchedulesAnAllDayEvent_InTheCalendarsTimeZone()
+    {
+        var allDay = CalendarEvent.Reconstitute(2, 7, "Trip", null, true,
+            new DateTime(2026, 11, 2), new DateTime(2026, 11, 3), null, null, null, "Busy", null, _now, _now);
+
+        var result = CalendarEventReminder.Create(2, allDay, "Asia/Seoul", null, null, 1, null, new TimeOnly(9, 0), _now);
+
+        Assert.Equal(new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc), result.Value.FireAtUtc);
+    }
+
+    // -- MarkHandled -------------------------------------------------------------
+
+    /// <summary>MarkHandled records when the reminder was handled.</summary>
+    [Fact]
+    public void MarkHandled_RecordsTheTime()
+    {
+        var reminder = Create(30, null, null, null).Value;
+
+        reminder.MarkHandled(_now.AddDays(9));
+
+        Assert.Equal(_now.AddDays(9), reminder.HandledAt);
     }
 
     // -- Reconstitute -----------------------------------------------------------
@@ -156,20 +153,22 @@ public class CalendarEventReminderTests
     [Fact]
     public void Reconstitute_RebuildsReminder_WithoutValidation()
     {
-        var reminder = CalendarEventReminder.Reconstitute(5, 1, "Email", 30, null, null, null, null);
+        DateTime fire = new(2026, 11, 2, 8, 30, 0), handled = new(2026, 11, 2, 8, 31, 0);
 
-        Assert.Equal(5, reminder.Id);
-        Assert.Equal(1, reminder.CalendarEventId);
-        Assert.Equal("Email", reminder.Method);
-        Assert.Equal(30, reminder.MinutesBeforeEvent);
+        var reminder = CalendarEventReminder.Reconstitute(5, 1, "Email", 30, null, null, null, null, fire, handled);
+
+        Assert.Equal((5L, 1L, "Email", (long?)30), (reminder.Id, reminder.CalendarEventId, reminder.Method, reminder.MinutesBeforeEvent));
+        Assert.Equal((DateTimeKind.Utc, DateTimeKind.Utc), (reminder.FireAtUtc.Kind, reminder.HandledAt!.Value.Kind));
+        Assert.Equal((fire, handled), (reminder.FireAtUtc, reminder.HandledAt.Value));
     }
 
-    /// <summary>Reconstitute defaults null method to empty string.</summary>
+    /// <summary>Reconstitute defaults a null method to an e-mail.</summary>
     [Fact]
-    public void Reconstitute_DefaultsNullMethod_ToEmptyString()
+    public void Reconstitute_DefaultsNullMethod_ToEmail()
     {
-        var reminder = CalendarEventReminder.Reconstitute(1, 1, null, null, null, null, null, null);
+        var reminder = CalendarEventReminder.Reconstitute(1, 1, null, 5, null, null, null, null, _now, null);
 
-        Assert.Equal("", reminder.Method);
+        Assert.Equal(ReminderMethods.Email, reminder.Method);
+        Assert.Null(reminder.HandledAt);
     }
 }

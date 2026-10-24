@@ -29,6 +29,14 @@ public interface IMailClient
     public string GetMailConfirmationBody(string registrationToken, string title, string content0, string content1, string domainName);
 
     /// <summary>
+    /// Builds the HTML body of a calendar reminder e-mail: the event's title, time, place and calendar under Korean and English
+    /// labels (an account stores no language), and a link to the owner's calendar page. Every value is HTML-encoded.
+    /// </summary>
+    /// <param name="mail">What the mail shows.</param>
+    /// <param name="domainName">The site's public address, the base of the link.</param>
+    public string GetCalendarReminderBody(CalendarReminderMail mail, string domainName);
+
+    /// <summary>
     /// Sends an HTML email via SMTP. Returns a successful <see cref="ServiceResult"/>, or a
     /// <see cref="ServiceErrorType.Failure"/> carrying a generic message (the exception itself is logged,
     /// never returned, so SMTP server details cannot reach a caller).

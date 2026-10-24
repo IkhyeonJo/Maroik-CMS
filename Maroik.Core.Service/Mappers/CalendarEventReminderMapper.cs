@@ -11,7 +11,6 @@ internal static class CalendarEventReminderMapper
     {
         Id = reminder.Id,
         CalendarEventId = reminder.CalendarEventId,
-        Method = reminder.Method,
         MinutesBeforeEvent = reminder.MinutesBeforeEvent,
         HoursBeforeEvent = reminder.HoursBeforeEvent,
         DaysBeforeEvent = reminder.DaysBeforeEvent,

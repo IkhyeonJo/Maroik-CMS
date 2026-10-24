@@ -526,7 +526,8 @@ public class CalendarService(
                 }
             }
 
-            var remindersResult = await CreateEventRemindersAsync(eventId, reminders, ct);
+            var remindersResult = await CreateEventRemindersAsync(eventId, calendarEvent,
+                calendars.First(c => c.Id == request.CalendarId).TimeZone.Value, reminders, utcNow, ct);
             if (!remindersResult.Success)
             {
                 await unitOfWork.RollbackAsync(ct);
@@ -603,7 +604,8 @@ public class CalendarService(
 
             // Replace reminders: delete all existing then re-create from the updated list.
             await calendarEventReminderRepository.DeleteByCalendarEventIdAsync(existing.Id, ct);
-            var remindersResult = await CreateEventRemindersAsync(existing.Id, reminders, ct);
+            var remindersResult = await CreateEventRemindersAsync(existing.Id, existing,
+                calendars.First(c => c.Id == request.CalendarId).TimeZone.Value, reminders, utcNow, ct);
             if (!remindersResult.Success)
             {
                 await unitOfWork.RollbackAsync(ct);
@@ -737,16 +739,18 @@ public class CalendarService(
     }
 
     /// <summary>
-    /// Creates a <see cref="CalendarEventReminder"/> for each entry in <paramref name="reminders"/> for
-    /// <paramref name="calendarEventId"/>. Any invalid reminder (empty method, wrong lead-time field
-    /// count, or an out-of-range lead time — see CalendarEventReminder.Create / CalendarReminderPolicy)
-    /// stops immediately so the caller can roll back instead of silently dropping a reminder.
+    /// Creates an e-mail <see cref="CalendarEventReminder"/> for each entry in <paramref name="reminders"/> for
+    /// <paramref name="calendarEventId"/>, scheduled from <paramref name="calendarEvent"/>'s start (an all-day event in
+    /// <paramref name="calendarTimeZoneIanaId"/>, its calendar's zone). Any invalid reminder (wrong lead-time field count, or an
+    /// out-of-range lead time — see CalendarEventReminder.Create / CalendarReminderPolicy) stops immediately so the caller can
+    /// roll back instead of silently dropping a reminder.
     /// </summary>
-    private async Task<ServiceResult> CreateEventRemindersAsync(long calendarEventId, List<CalendarReminderDto> reminders, CancellationToken ct)
+    private async Task<ServiceResult> CreateEventRemindersAsync(long calendarEventId, CalendarEvent calendarEvent, string calendarTimeZoneIanaId,
+        List<CalendarReminderDto> reminders, DateTime utcNow, CancellationToken ct)
     {
-        foreach (var reminderResult in reminders.Select(reminderDto => CalendarEventReminder.Create(calendarEventId, reminderDto.Method,
-                     reminderDto.MinutesBeforeEvent, reminderDto.HoursBeforeEvent, reminderDto.DaysBeforeEvent, reminderDto.WeeksBeforeEvent,
-                     reminderDto.TimesBeforeEvent)))
+        foreach (var reminderResult in reminders.Select(reminderDto => CalendarEventReminder.Create(calendarEventId, calendarEvent,
+                     calendarTimeZoneIanaId, reminderDto.MinutesBeforeEvent, reminderDto.HoursBeforeEvent, reminderDto.DaysBeforeEvent,
+                     reminderDto.WeeksBeforeEvent, reminderDto.TimesBeforeEvent, utcNow)))
         {
             if (reminderResult.IsError)
                 return ServiceResult.FromError(reminderResult.FirstError);

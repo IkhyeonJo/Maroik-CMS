@@ -18,7 +18,7 @@ import {
 
 /** Suffixes of the `localizer*` hidden inputs the page publishes. */
 const LOCALIZERS = [
-    "Email", "Notification", "Minutes", "Hours", "Days", "Weeks", "BeforeAt", "IETFLanguageTag",
+    "Minutes", "Hours", "Days", "Weeks", "BeforeAt", "IETFLanguageTag",
     "Today", "Month", "ConfirmDelete", "ThisFieldRequired", "ErrorInvalidNumber",
     "ErrorRangeMinute", "ErrorRangeHour", "ErrorRangeDay", "ErrorRangeWeek", "FailedToLoadCalendars",
 ];

@@ -61,6 +61,10 @@ public class CalendarRepository(ApplicationDbContext context)
         => [.. (await query.AsNoTracking().ToListAsync(ct)).Select(ToDomain)];
 
     /// <inheritdoc />
+    public Task<Calendar?> FindByIdAsync(long id, CancellationToken ct = default)
+        => QueryFirstAsync(e => e.Id == id, ct: ct);
+
+    /// <inheritdoc />
     public async Task<Calendar?> FindByIdForUpdateAsync(long id, CancellationToken ct = default)
     {
         // Raw SQL is required because EF Core LINQ cannot emit FOR UPDATE. AsNoTracking so a

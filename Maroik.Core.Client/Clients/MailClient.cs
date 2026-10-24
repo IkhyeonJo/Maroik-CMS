@@ -124,6 +124,25 @@ public class MailClient(ILogger<MailClient> logger) : IMailClient
     }
 
     /// <inheritdoc />
+    public string GetCalendarReminderBody(CalendarReminderMail mail, string domainName)
+    {
+        string link = WebUtility.HtmlEncode(BuildUrl(domainName, mail.CalendarPath));
+        string where = string.IsNullOrWhiteSpace(mail.Location)
+            ? ""
+            : $"<p>장소 / Where: {WebUtility.HtmlEncode(mail.Location)}</p>";
+        return $"""
+                <div style='text-align:center;'>
+                                        <h1>{WebUtility.HtmlEncode(mail.Title)}</h1>
+                                        <h3>일정 알림 / Event reminder</h3>
+                                        <p>일시 / When: {WebUtility.HtmlEncode(mail.When)}</p>
+                                        {where}
+                                        <p>달력 / Calendar: {WebUtility.HtmlEncode(mail.CalendarName)}</p>
+                                        <a href='{link}' target='_blank' rel='noopener noreferrer'>{link}</a>
+                                      </div>
+                """;
+    }
+
+    /// <inheritdoc />
     public async Task<ServiceResult> SendMailAsync(string toEmail, string subject, string body, ServerSetting settings, CancellationToken ct = default)
     {
         try

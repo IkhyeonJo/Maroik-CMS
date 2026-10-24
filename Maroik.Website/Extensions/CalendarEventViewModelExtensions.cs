@@ -52,11 +52,16 @@ public static class CalendarEventViewModelExtensions
         /// <param name="calendars">Calendars the caller is authorized to see.</param>
         /// <param name="userTimeZoneIanaId">Viewer's IANA timezone ID for date conversion.</param>
         /// <param name="calendarEventId">ID of the calendar event to load.</param>
+        /// <param name="includeReminders">
+        /// Whether the detail carries the event's reminders: true for the owner's own event, false for one seen through a shared or
+        /// subscribed calendar, or by a visitor (the reminders are e-mails to the owner, an empty list is sent instead).
+        /// </param>
         /// <param name="ct">Cancellation token.</param>
         public async Task<CalendarEventOutputViewModel?> GetCalendarEventDetailViewModelAsync(
             IEnumerable<CalendarResponse> calendars,
             string userTimeZoneIanaId,
             int calendarEventId,
+            bool includeReminders,
             CancellationToken ct)
         {
             List<CalendarResponse> calendarList = [.. calendars];
@@ -78,7 +83,10 @@ public static class CalendarEventViewModelExtensions
 
             calendarEvent.Calendars =
                 [.. calendarList.Select(x => new CalendarResponse { Id = x.Id, Name = x.Name }).OrderBy(x => x.Name)];
-            calendarEvent.SerializedCalendarReminders = (await calendarService.GetCalendarEventRemindersAsync(tempCalendarEvent.Id, ct)).ToSerializedReminders();
+            // A reminder is an e-mail to the calendar's owner: only the owner's detail carries them.
+            calendarEvent.SerializedCalendarReminders = includeReminders
+                ? (await calendarService.GetCalendarEventRemindersAsync(tempCalendarEvent.Id, ct)).ToSerializedReminders()
+                : "[]";
             calendarEvent.HtmlColorCode = calendarList.FirstOrDefault(x => x.Id == tempCalendarEvent.CalendarId)?.HtmlColorCode;
 
             return calendarEvent;

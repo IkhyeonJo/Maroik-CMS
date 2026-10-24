@@ -48,6 +48,16 @@ public partial class CalendarEventReminder
     /// </summary>
     public TimeOnly? TimesBeforeEvent { get; set; }
 
+    /// <summary>
+    /// When the reminder e-mail is due (UTC)
+    /// </summary>
+    public DateTime FireAtUtc { get; set; }
+
+    /// <summary>
+    /// When the reminder was sent or skipped (UTC); NULL while it waits
+    /// </summary>
+    public DateTime? HandledAt { get; set; }
+
     /// <summary>The event this reminder belongs to.</summary>
     public virtual CalendarEvent CalendarEvent { get; set; } = null!;
 }

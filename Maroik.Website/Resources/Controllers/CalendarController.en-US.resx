@@ -246,12 +246,6 @@
   <data name="No calendar exists." xml:space="preserve">
     <value>No calendar exists.</value>
   </data>
-  <data name="Notification method cannot be empty." xml:space="preserve">
-    <value>Notification method cannot be empty.</value>
-  </data>
-  <data name="Notification method is not a recognised value." xml:space="preserve">
-    <value>Notification method is not a recognised value.</value>
-  </data>
   <data name="Reminder lead time is outside the allowed range (0 to 28 days before the event)." xml:space="preserve">
     <value>Reminder lead time is outside the allowed range (0 to 28 days before the event).</value>
   </data>

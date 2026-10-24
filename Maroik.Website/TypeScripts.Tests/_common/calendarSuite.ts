@@ -161,12 +161,10 @@ export function describeCalendarCommon(c: CalendarCommon): void {
     describe(`${label} — create-event form`, () => {
         const withRows = (rows: string) => (html: string) => html + rows;
         const timedRows = `<div class="divCreateEventNotificationAllDayUncheckedRow">
-    <select class="createCalendarEventSelNotificationMethodAllDayUnchecked"><option value="Notification" selected>N</option></select>
     <input class="createCalendarEventSelNotificationNumberAllDayUnchecked" value="15" />
     <select class="createCalendarEventSelNotificationTimeTypeAllDayUnchecked"><option value="Minutes" selected>m</option></select>
     <div class="error-message" style="display:none"></div></div>
    <div class="divCreateEventNotificationAllDayUncheckedRow">
-    <select class="createCalendarEventSelNotificationMethodAllDayUnchecked"><option value="Email" selected>E</option></select>
     <input class="createCalendarEventSelNotificationNumberAllDayUnchecked" value="2" />
     <select class="createCalendarEventSelNotificationTimeTypeAllDayUnchecked"><option value="Weeks" selected>w</option></select>
     <div class="error-message" style="display:none"></div></div>`;
@@ -203,20 +201,18 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(data.get("Status")).toBe("Busy");
             expect(JSON.parse(String(data.get("SerializedCalendarReminders")))).toEqual([
                 {
-                    Method: "Notification",
                     MinutesBeforeEvent: "15",
                     HoursBeforeEvent: null,
                     DaysBeforeEvent: null,
                     WeeksBeforeEvent: null,
                     TimesBeforeEvent: null
                 },
-                { Method: "Email", MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: "2", TimesBeforeEvent: null },
+                { MinutesBeforeEvent: null, HoursBeforeEvent: null, DaysBeforeEvent: null, WeeksBeforeEvent: "2", TimesBeforeEvent: null },
             ]);
         });
 
         it("an all-day event posts plain dates, blank zones and days/weeks reminders with their time of day", () => {
             const rows = `<div class="divCreateEventNotificationAllDayCheckedRow">
-      <select class="createCalendarEventSelNotificationMethodAllDayChecked"><option value="Notification" selected>N</option></select>
       <input class="createCalendarEventSelNotificationNumberAllDayChecked" value="3" />
       <select class="createCalendarEventSelNotificationTimeTypeAllDayChecked"><option value="Days" selected>d</option></select>
       <select class="createCalendarEventSelNotificationTimeAllDayChecked"><option value="08:30" selected>t</option></select>
@@ -232,7 +228,6 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(data.get("StartDateTimeZoneIanaId")).toBe("");
             expect(JSON.parse(String(data.get("SerializedCalendarReminders")))).toEqual([
                 {
-                    Method: "Notification",
                     MinutesBeforeEvent: null,
                     HoursBeforeEvent: null,
                     DaysBeforeEvent: "3",
@@ -243,20 +238,17 @@ export function describeCalendarCommon(c: CalendarCommon): void {
         });
 
         it("every reminder unit in the create form maps to its own field (minutes, hours, days, weeks — timed and all-day)", () => {
-            const timedRow = (method: string, unit: string, n: string) => `<div class="divCreateEventNotificationAllDayUncheckedRow">
-      <select class="createCalendarEventSelNotificationMethodAllDayUnchecked"><option value="${method}" selected>m</option></select>
+            const timedRow = (unit: string, n: string) => `<div class="divCreateEventNotificationAllDayUncheckedRow">
       <input class="createCalendarEventSelNotificationNumberAllDayUnchecked" value="${n}" />
       <select class="createCalendarEventSelNotificationTimeTypeAllDayUnchecked"><option value="${unit}" selected>u</option></select>
       <div class="error-message" style="display:none"></div></div>`;
             const dayRow = (unit: string, n: string, time: string) => `<div class="divCreateEventNotificationAllDayCheckedRow">
-      <select class="createCalendarEventSelNotificationMethodAllDayChecked"><option value="Email" selected>E</option></select>
       <input class="createCalendarEventSelNotificationNumberAllDayChecked" value="${n}" />
       <select class="createCalendarEventSelNotificationTimeTypeAllDayChecked"><option value="${unit}" selected>u</option></select>
       <select class="createCalendarEventSelNotificationTimeAllDayChecked"><option value="${time}" selected>t</option></select>
       <div class="error-message" style="display:none"></div></div>`;
             const strip = (html: string) => html.replace(/<div class="divCreateEventNotificationAllDayCheckedRow">[\s\S]*?<\/div>\s*<\/div>/, "");
             const shape = (o: Record<string, unknown>) => ({
-                Method: "Email",
                 MinutesBeforeEvent: null,
                 HoursBeforeEvent: null,
                 DaysBeforeEvent: null,
@@ -264,11 +256,11 @@ export function describeCalendarCommon(c: CalendarCommon): void {
                 TimesBeforeEvent: null, ...o
             });
 
-            const timed = build({ body: (html) => html + timedRow("Email", "Hours", "2") + timedRow("Notification", "Days", "3") });
+            const timed = build({ body: (html) => html + timedRow("Hours", "2") + timedRow("Days", "3") });
             setDates(timed);
             submit(timed);
             expect(JSON.parse(String(formDataOf(created(timed)).get("SerializedCalendarReminders")))).toEqual([
-                shape({ HoursBeforeEvent: "2" }), shape({ Method: "Notification", DaysBeforeEvent: "3" })]);
+                shape({ HoursBeforeEvent: "2" }), shape({ DaysBeforeEvent: "3" })]);
 
             const allDay = build({ body: (html) => strip(html) + dayRow("Days", "1", "07:00") + dayRow("Weeks", "2", "21:15") });
             setDates(allDay);
@@ -635,7 +627,6 @@ export function describeCalendarCommon(c: CalendarCommon): void {
 
         // ---- edit-event submit ----------------------------------------------------------------------------
         const editRow = `<div class="divEditEventNotificationAllDayUncheckedRow">
-      <select class="editCalendarEventSelNotificationMethodAllDayUnchecked"><option value="Notification" selected>N</option></select>
       <input class="editCalendarEventSelNotificationNumberAllDayUnchecked" value="30" />
       <select class="editCalendarEventSelNotificationTimeTypeAllDayUnchecked"><option value="Hours" selected>h</option></select>
       <div class="error-message" style="display:none"></div></div>`;
@@ -662,7 +653,6 @@ export function describeCalendarCommon(c: CalendarCommon): void {
             expect(data.get("Location")).toBe("Room 2");
             expect(JSON.parse(String(data.get("SerializedCalendarReminders")))).toEqual([
                 {
-                    Method: "Notification",
                     MinutesBeforeEvent: null,
                     HoursBeforeEvent: "30",
                     DaysBeforeEvent: null,
@@ -1144,7 +1134,6 @@ export function describeCalendarExtras(c: { label: string; build: Build }): void
                 const sfx = checked ? "AllDayChecked" : "AllDayUnchecked";
                 const lower = kind.toLowerCase();
                 return `<div class="div${kind}EventNotification${sfx}Row">
-          <select class="${lower}CalendarEventSelNotificationMethod${sfx}"><option value="Email" selected>m</option></select>
           <input class="${lower}CalendarEventSelNotificationNumber${sfx}" value="1" />
           <select class="${lower}CalendarEventSelNotificationTimeType${sfx}"><option value="Years" selected>y</option></select>
           <select class="${lower}CalendarEventSelNotificationTime${sfx}"><option value="09:00" selected>t</option></select>
@@ -1253,7 +1242,7 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
     });
     /** A stored e-mail reminder (all offsets empty, 09:00) with `over` merged in. */
     const reminder = (over: Record<string, unknown>) => ({
-        Method: "Email", MinutesBeforeEvent: null, HoursBeforeEvent: null,
+        MinutesBeforeEvent: null, HoursBeforeEvent: null,
         DaysBeforeEvent: null, WeeksBeforeEvent: null, TimesBeforeEvent: "09:00:00", ...over
     });
 
@@ -1268,19 +1257,18 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
     };
 
     describe(`${label} — edit form in detail`, () => {
-        it("an all-day event rebuilds its day/week reminder rows (replacing stale ones) with the stored method, number, unit and time", () => {
+        it("an all-day event rebuilds its day/week reminder rows (replacing stale ones) with the stored number, unit and time", () => {
             const h = setup();
             openEdit(h, {
                 allDay: true, displayStartDate: "2024-05-01", displayEndDate: "2024-05-03", serializedCalendarReminders: JSON.stringify([
-                    reminder({ Method: "Notification", DaysBeforeEvent: 3, TimesBeforeEvent: "09:00:00" }), reminder({ WeeksBeforeEvent: 2 })])
+                    reminder({ DaysBeforeEvent: 3, TimesBeforeEvent: "09:00:00" }), reminder({ WeeksBeforeEvent: 2 })])
             });
             const rows = h.$("#divEditEventNotificationAllDayChecked .divEditEventNotificationAllDayCheckedRow");
             expect(rows).toHaveLength(2); // the "stale" row is gone
-            expect(rows.eq(0).find(".editCalendarEventSelNotificationMethodAllDayChecked").val()).toBe("Notification");
+            expect(rows.find("[class*=SelNotificationMethod]")).toHaveLength(0); // a reminder is always an e-mail: no method choice
             expect(rows.eq(0).find(".editCalendarEventSelNotificationNumberAllDayChecked").val()).toBe("3");
             expect(rows.eq(0).find(".editCalendarEventSelNotificationTimeTypeAllDayChecked").val()).toBe("Days");
             expect(rows.eq(0).find(".editCalendarEventSelNotificationTimeAllDayChecked").val()).toBe("09:00");
-            expect(rows.eq(1).find(".editCalendarEventSelNotificationMethodAllDayChecked").val()).toBe("Email");
             expect(rows.eq(1).find(".editCalendarEventSelNotificationNumberAllDayChecked").val()).toBe("2");
             expect(rows.eq(1).find(".editCalendarEventSelNotificationTimeTypeAllDayChecked").val()).toBe("Weeks");
             expect(h.$("#editCalendarEventAllDay").prop("checked")).toBe(true);
@@ -1305,13 +1293,14 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             const h = setup();
             openEdit(h, {
                 serializedCalendarReminders: JSON.stringify([
-                    reminder({ MinutesBeforeEvent: 15 }), reminder({ Method: "Notification", HoursBeforeEvent: 2 }),
+                    reminder({ MinutesBeforeEvent: 15 }), reminder({ HoursBeforeEvent: 2 }),
                     reminder({ DaysBeforeEvent: 1 }), reminder({ WeeksBeforeEvent: 4 })])
             });
             const rows = h.$("#divEditEventNotificationAllDayUnchecked .divEditEventNotificationAllDayUncheckedRow");
             expect(rows).toHaveLength(4);
-            const summary = rows.map((_, r) => `${h.$(r).find(".editCalendarEventSelNotificationTimeTypeAllDayUnchecked").val()}:${h.$(r).find(".editCalendarEventSelNotificationNumberAllDayUnchecked").val()}:${h.$(r).find(".editCalendarEventSelNotificationMethodAllDayUnchecked").val()}`).get();
-            expect(summary).toEqual(["Minutes:15:Email", "Hours:2:Notification", "Days:1:Email", "Weeks:4:Email"]);
+            const summary = rows.map((_, r) => `${h.$(r).find(".editCalendarEventSelNotificationTimeTypeAllDayUnchecked").val()}:${h.$(r).find(".editCalendarEventSelNotificationNumberAllDayUnchecked").val()}`).get();
+            expect(summary).toEqual(["Minutes:15", "Hours:2", "Days:1", "Weeks:4"]);
+            expect(rows.find("[class*=SelNotificationMethod]")).toHaveLength(0);
         });
 
         it("a timed event with no reminders leaves only the (cleared) container", () => {
@@ -1404,14 +1393,12 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
     });
 
     describe(`${label} — edit submit with every reminder shape, the event reload, the attachment download and the calendar menu`, () => {
-        const timedRow = (method: string, unit: string, n: string, time = "") => `<div class="divEditEventNotificationAllDayUncheckedRow">
-      <select class="editCalendarEventSelNotificationMethodAllDayUnchecked"><option value="${method}" selected>m</option></select>
+        const timedRow = (unit: string, n: string, time = "") => `<div class="divEditEventNotificationAllDayUncheckedRow">
       <input class="editCalendarEventSelNotificationNumberAllDayUnchecked" value="${n}" />
       <select class="editCalendarEventSelNotificationTimeTypeAllDayUnchecked"><option value="${unit}" selected>u</option></select>
       ${time ? `<select class="editCalendarEventSelNotificationTimeAllDayUnchecked"><option value="${time}" selected>t</option></select>` : ""}
       <div class="error-message" style="display:none"></div></div>`;
-        const allDayRow = (method: string, unit: string, n: string, time: string) => `<div class="divEditEventNotificationAllDayCheckedRow">
-      <select class="editCalendarEventSelNotificationMethodAllDayChecked"><option value="${method}" selected>m</option></select>
+        const allDayRow = (unit: string, n: string, time: string) => `<div class="divEditEventNotificationAllDayCheckedRow">
       <input class="editCalendarEventSelNotificationNumberAllDayChecked" value="${n}" />
       <select class="editCalendarEventSelNotificationTimeTypeAllDayChecked"><option value="${unit}" selected>u</option></select>
       <select class="editCalendarEventSelNotificationTimeAllDayChecked"><option value="${time}" selected>t</option></select>
@@ -1432,7 +1419,6 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
             return { h, call, reminders: call ? JSON.parse(String((instanceOfType(call.data, FormData)).get("SerializedCalendarReminders"))) : undefined };
         };
         const shape = (o: Record<string, unknown>) => ({
-            Method: "Email",
             MinutesBeforeEvent: null,
             HoursBeforeEvent: null,
             DaysBeforeEvent: null,
@@ -1442,30 +1428,29 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
 
         it("a timed edit maps minute, hour, day and week rows each to its own field", () => {
             const { reminders } = submitEdit(
-                timedRow("Email", "Minutes", "15") + timedRow("Notification", "Hours", "2") + timedRow("Email", "Days", "3") + timedRow("Email", "Weeks", "1"), false);
+                timedRow("Minutes", "15") + timedRow("Hours", "2") + timedRow("Days", "3") + timedRow("Weeks", "1"), false);
             expect(reminders).toEqual([
-                shape({ MinutesBeforeEvent: "15" }), shape({ Method: "Notification", HoursBeforeEvent: "2" }),
+                shape({ MinutesBeforeEvent: "15" }), shape({ HoursBeforeEvent: "2" }),
                 shape({ DaysBeforeEvent: "3" }), shape({ WeeksBeforeEvent: "1" })]);
         });
 
         it("an all-day edit maps day and week rows with their time of day", () => {
-            const { reminders } = submitEdit(allDayRow("Email", "Days", "3", "09:00") + allDayRow("Notification", "Weeks", "2", "18:30"), true);
+            const { reminders } = submitEdit(allDayRow("Days", "3", "09:00") + allDayRow("Weeks", "2", "18:30"), true);
             expect(reminders).toEqual([
                 shape({ DaysBeforeEvent: "3", TimesBeforeEvent: "09:00" }), shape({
-                    Method: "Notification",
                     WeeksBeforeEvent: "2",
                     TimesBeforeEvent: "18:30"
                 })]);
         });
 
         it("an all-day edit with an out-of-range reminder is blocked and flags the row", () => {
-            const { call, h } = submitEdit(allDayRow("Email", "Days", "99", "09:00"), true);
+            const { call, h } = submitEdit(allDayRow("Days", "99", "09:00"), true);
             expect(call).toBeUndefined();
             expect(h.$(".divEditEventNotificationAllDayCheckedRow").last().find(".error-message").text()).toBe("L_ErrorRangeDay");
         });
 
         it("after an accepted edit the reloaded events are added to the grid with their display fields; an empty reload only toasts", () => {
-            const { h, call } = submitEdit(timedRow("Email", "Hours", "1"), false);
+            const { h, call } = submitEdit(timedRow("Hours", "1"), false);
             successOf(present(call))({ result: true, message: "updated" });
             const reload = present(eventCalls(h)[0]);
             successOf(reload)({ result: true, calendarEvents: JSON.stringify([evt(50, 1)]) });

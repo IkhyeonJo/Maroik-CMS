@@ -190,8 +190,17 @@ Calendar
 - `GetCalendarEvents` loads every event of the selected calendars at once and the client pages through
   them locally; `CalendarController` filters the requested calendars down to the ones the viewer may
   see. No date-range querying.
-- Event reminders are stored but never delivered, and `CalendarRecurrence` / `RecurrenceId` are unused.
-  Both are unimplemented on purpose — do not implement delivery and do not drop the table.
+- Event reminders are e-mails only (`ReminderMethods.Email`; the DB CHECK allows nothing else) and are delivered since
+  2026-10-24 (owner's request): the domain works out each reminder's fire time when it is saved (`ReminderSchedule`: a timed
+  event's start minus the lead time; an all-day event's day minus N days / weeks at its time of day in the calendar's zone;
+  daylight-saving gaps move forward, overlaps take the earlier instant) and stores it with `HandledAt`. One already past is
+  handled at once (it would arrive late). The worker's `CalendarReminderScheduler` runs `CalendarReminderDispatchService` at
+  start-up and every minute: each due reminder in its own transaction (`LockDueAsync`, `FOR UPDATE SKIP LOCKED`), e-mailed to the
+  calendar's owner through the mail queue or skipped per `ReminderDeliveryPolicy` (owner gone / deleted / locked / unconfirmed /
+  the demo account, or over an hour late), then marked handled; a queue failure rolls back and is retried next minute. Viewers
+  of a shared calendar and visitors get no reminders and are not shown them (`IsOtherCalendarEventExists` sends `[]`). The mail
+  is Korean and English together (an account stores no language). Editing an event recreates its reminders, so a moved event's
+  reminder can be sent again for the new time. `CalendarRecurrence` / `RecurrenceId` stay unused on purpose — do not drop the table.
 
 Kanban
 - One board per user (`/Kanban/UserIndex`, User role only): the four fixed lanes of `KanbanLanes` (Backlog, To do, In progress,
