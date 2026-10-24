@@ -216,6 +216,88 @@ export interface SiteHandle {
     summernoteInits: { el: Element | undefined; options: CapturedSummernoteOptions }[];
     /** every other `$(el).summernote("cmd", ...args)` call (insertNode, code setter, …) */
     summernoteCalls: { el: Element | undefined; args: unknown[] }[];
+    /** every editor `CodeMirror.fromTextArea(...)` made (AccountBook/Budget's formula bar) */
+    codeMirrors: FakeCodeMirror[];
+}
+
+/** A painted mark of a {@link FakeCodeMirror}: its character range, class, tooltip and whether it was cleared. */
+export interface FakeMark {
+    from: number;
+    to: number;
+    className: string;
+    title: string | undefined;
+    cleared: boolean;
+}
+
+/**
+ * A one-line stand-in for a CodeMirror 5 editor: it keeps the text, the caret (as a character index), the marks painted on it and the
+ * handlers the page registered; {@link type} and {@link key} play what a user does.
+ */
+export class FakeCodeMirror {
+    value = "";
+    cursor = 0;
+    readOnly = false;
+    focusCount = 0;
+    marks: FakeMark[] = [];
+    readonly wrapper: HTMLDivElement;
+    private readonly handlers = new Map<string, ((editor: FakeCodeMirror, event: KeyboardEvent) => void)[]>();
+
+    constructor(readonly textarea: HTMLTextAreaElement) {
+        this.wrapper = textarea.ownerDocument.createElement("div");
+        this.wrapper.className = "CodeMirror";
+        textarea.after(this.wrapper);
+    }
+
+    getValue(): string { return this.value; }
+    /** As CodeMirror 5 does, the caret goes to the start of the new text. */
+    setValue(value: string): void { this.value = value; this.cursor = 0; this.fire("change"); }
+    focus(): void { this.focusCount++; this.fire("focus"); }
+    hasFocus(): boolean { return this.focusCount > 0; }
+    getCursor(): CodeMirrorPosition { return { line: 0, ch: this.cursor }; }
+    setCursor(position: CodeMirrorPosition): void { this.cursor = position.ch; this.fire("cursorActivity"); }
+    indexFromPos(position: CodeMirrorPosition): number { return position.ch; }
+    posFromIndex(index: number): CodeMirrorPosition { return { line: 0, ch: index }; }
+    markText(from: CodeMirrorPosition, to: CodeMirrorPosition, options: CodeMirrorMarkOptions): CodeMirrorTextMarker {
+        const mark: FakeMark = { from: from.ch, to: to.ch, className: options.className, title: options.title, cleared: false };
+        this.marks.push(mark);
+        return { clear: () => { mark.cleared = true; } };
+    }
+    getAllMarks(): CodeMirrorTextMarker[] {
+        return this.marks.filter((m) => !m.cleared).map((m) => ({ clear: () => { m.cleared = true; } }));
+    }
+    replaceRange(text: string, from: CodeMirrorPosition, to?: CodeMirrorPosition): void {
+        const end = to?.ch ?? from.ch;
+        this.value = this.value.slice(0, from.ch) + text + this.value.slice(end);
+        this.cursor = from.ch + text.length;
+        this.fire("change");
+    }
+    setOption(_name: "readOnly", value: boolean): void { this.readOnly = value; }
+    on(event: string, handler: (editor: FakeCodeMirror, event: KeyboardEvent) => void): void {
+        this.handlers.set(event, [...(this.handlers.get(event) ?? []), handler]);
+    }
+    getWrapperElement(): HTMLElement { return this.wrapper; }
+
+    /** The marks still painted. */
+    liveMarks(): FakeMark[] { return this.marks.filter((m) => !m.cleared); }
+
+    /** Plays typing: the text becomes `text` with the caret at its end. */
+    type(text: string): void {
+        this.value = text;
+        this.cursor = text.length;
+        this.fire("change");
+        this.fire("cursorActivity");
+    }
+
+    /** Plays a key press in the editor; returns the event (to see whether the page prevented its default). */
+    key(key: string, init: KeyboardEventInit = {}): KeyboardEvent {
+        const event = new KeyboardEvent("keydown", { key, cancelable: true, ...init });
+        this.fire("keydown", event);
+        return event;
+    }
+
+    private fire(name: string, event: KeyboardEvent = new KeyboardEvent("keydown")): void {
+        for (const handler of this.handlers.get(name) ?? []) handler(this, event);
+    }
 }
 
 /** jQuery's real `$.ajax`, kept before {@link loadSite} replaces it with a capturing stub. */
@@ -391,6 +473,16 @@ export function loadSite(
     moment.utc = (_d?: unknown) => moment();
     Object.assign(win, { moment });
 
+    // CodeMirror 5 — the budget sheet's formula bar.
+    const codeMirrors: FakeCodeMirror[] = [];
+    Object.assign(win, { CodeMirror: {
+        fromTextArea(textarea: HTMLTextAreaElement): FakeCodeMirror {
+            const editor = new FakeCodeMirror(textarea);
+            codeMirrors.push(editor);
+            return editor;
+        },
+    } });
+
     // Chart.js 2.x — Dashboard builds ~10 of these in its $(function).
     const charts: SiteHandle["charts"] = [];
     Object.assign(win, { Chart: class {
@@ -499,6 +591,7 @@ export function loadSite(
         calendarInstances,
         datepickerStatics,
         datepickerInits,
+        codeMirrors,
     };
 }
 

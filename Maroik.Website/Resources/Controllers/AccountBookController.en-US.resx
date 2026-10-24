@@ -423,4 +423,148 @@
   <data name="A temporary error occurred. Please try again later." xml:space="preserve">
     <value>A temporary error occurred. Please try again later.</value>
   </data>
+  <data name="The line was added." xml:space="preserve">
+    <value>The line was added.</value>
+  </data>
+  <data name="The line was removed." xml:space="preserve">
+    <value>The line was removed.</value>
+  </data>
+  <data name="{0} cells were filled from last year." xml:space="preserve">
+    <value>{0} cells were filled from last year.</value>
+  </data>
+  <data name="Subtotal" xml:space="preserve">
+    <value>Subtotal</value>
+  </data>
+  <data name="Total" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="Currency" xml:space="preserve">
+    <value>Currency</value>
+  </data>
+  <data name="Year total" xml:space="preserve">
+    <value>Year total</value>
+  </data>
+  <data name="Month1" xml:space="preserve">
+    <value>January</value>
+  </data>
+  <data name="Month2" xml:space="preserve">
+    <value>February</value>
+  </data>
+  <data name="Month3" xml:space="preserve">
+    <value>March</value>
+  </data>
+  <data name="Month4" xml:space="preserve">
+    <value>April</value>
+  </data>
+  <data name="Month5" xml:space="preserve">
+    <value>May</value>
+  </data>
+  <data name="Month6" xml:space="preserve">
+    <value>June</value>
+  </data>
+  <data name="Month7" xml:space="preserve">
+    <value>July</value>
+  </data>
+  <data name="Month8" xml:space="preserve">
+    <value>August</value>
+  </data>
+  <data name="Month9" xml:space="preserve">
+    <value>September</value>
+  </data>
+  <data name="Month10" xml:space="preserve">
+    <value>October</value>
+  </data>
+  <data name="Month11" xml:space="preserve">
+    <value>November</value>
+  </data>
+  <data name="Month12" xml:space="preserve">
+    <value>December</value>
+  </data>
+  <data name="This sheet already has that line." xml:space="preserve">
+    <value>This sheet already has that line.</value>
+  </data>
+  <data name="The line could not be found." xml:space="preserve">
+    <value>The line could not be found.</value>
+  </data>
+  <data name="The year must be between {0} and {1}." xml:space="preserve">
+    <value>The year must be between {0} and {1}.</value>
+  </data>
+  <data name="Unknown budget kind." xml:space="preserve">
+    <value>Unknown budget kind.</value>
+  </data>
+  <data name="This cell cannot be edited." xml:space="preserve">
+    <value>This cell cannot be edited.</value>
+  </data>
+  <data name="A cell can hold at most {0} characters." xml:space="preserve">
+    <value>A cell can hold at most {0} characters.</value>
+  </data>
+  <data name="A budget cell takes a number or a formula." xml:space="preserve">
+    <value>A budget cell takes a number or a formula.</value>
+  </data>
+  <data name="There is no cell {0} in this sheet." xml:space="preserve">
+    <value>There is no cell {0} in this sheet.</value>
+  </data>
+  <data name="There is no sheet {0}." xml:space="preserve">
+    <value>There is no sheet {0}.</value>
+  </data>
+  <data name="The paste does not fit in the sheet." xml:space="preserve">
+    <value>The paste does not fit in the sheet.</value>
+  </data>
+  <data name="&#x27;{0}&#x27; cannot be used in a formula." xml:space="preserve">
+    <value>&#x27;{0}&#x27; cannot be used in a formula.</value>
+  </data>
+  <data name="The text is not closed with a double quote." xml:space="preserve">
+    <value>The text is not closed with a double quote.</value>
+  </data>
+  <data name="&#x27;{0}&#x27; is not an error value." xml:space="preserve">
+    <value>&#x27;{0}&#x27; is not an error value.</value>
+  </data>
+  <data name="&#x27;$&#x27; must be followed by a cell reference." xml:space="preserve">
+    <value>&#x27;$&#x27; must be followed by a cell reference.</value>
+  </data>
+  <data name="The formula is empty." xml:space="preserve">
+    <value>The formula is empty.</value>
+  </data>
+  <data name="&#x27;{0}&#x27; is not expected here." xml:space="preserve">
+    <value>&#x27;{0}&#x27; is not expected here.</value>
+  </data>
+  <data name="A value or reference is expected here." xml:space="preserve">
+    <value>A value or reference is expected here.</value>
+  </data>
+  <data name="&#x27;)&#x27; is expected here." xml:space="preserve">
+    <value>&#x27;)&#x27; is expected here.</value>
+  </data>
+  <data name="A cell reference is expected after &#x27;:&#x27;." xml:space="preserve">
+    <value>A cell reference is expected after &#x27;:&#x27;.</value>
+  </data>
+  <data name="A cell reference is expected after &#x27;{0}&#x27;." xml:space="preserve">
+    <value>A cell reference is expected after &#x27;{0}&#x27;.</value>
+  </data>
+  <data name="The number {0} is too large." xml:space="preserve">
+    <value>The number {0} is too large.</value>
+  </data>
+  <data name="The formula is nested more than {0} levels deep." xml:space="preserve">
+    <value>The formula is nested more than {0} levels deep.</value>
+  </data>
+  <data name="A function can take at most {0} arguments." xml:space="preserve">
+    <value>A function can take at most {0} arguments.</value>
+  </data>
+  <data name="&#x27;{0}&#x27; is not a known name." xml:space="preserve">
+    <value>&#x27;{0}&#x27; is not a known name.</value>
+  </data>
+  <data name="There is no function named {0}." xml:space="preserve">
+    <value>There is no function named {0}.</value>
+  </data>
+  <data name="{0} takes {1} to {2} arguments." xml:space="preserve">
+    <value>{0} takes {1} to {2} arguments.</value>
+  </data>
+  <data name="There is no sheet named &#x27;{0}&#x27;." xml:space="preserve">
+    <value>There is no sheet named &#x27;{0}&#x27;.</value>
+  </data>
+  <data name="The column {0} is outside the sheet." xml:space="preserve">
+    <value>The column {0} is outside the sheet.</value>
+  </data>
+  <data name="The reference {0} is outside the sheet." xml:space="preserve">
+    <value>The reference {0} is outside the sheet.</value>
+  </data>
 </root>

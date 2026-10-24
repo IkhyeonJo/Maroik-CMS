@@ -174,4 +174,10 @@
   <data name="File Manager" xml:space="preserve">
     <value>내 드라이브</value>
   </data>
+  <data name="Income Budget" xml:space="preserve">
+    <value>수입 예산</value>
+  </data>
+  <data name="Expenditure Budget" xml:space="preserve">
+    <value>지출 예산</value>
+  </data>
 </root>

@@ -68,11 +68,11 @@ describe("Management/Account (admin)", () => {
 
         h.$("#editAccountFileManagerQuotaGb").val("1.5");
         h.$("#formEditAccount").trigger("submit");
-        expect(JSON.parse(String(h.lastAjax().data)).FileManagerQuotaGb).toBe(1.5);
+        expect(JSON.parse(String(h.lastAjax().data))).toMatchObject({ FileManagerQuotaGb: 1.5 });
 
         h.$("#editAccountFileManagerQuotaGb").val("");
         h.$("#formEditAccount").trigger("submit");
-        expect(JSON.parse(String(h.lastAjax().data)).FileManagerQuotaGb).toBeNull();
+        expect(JSON.parse(String(h.lastAjax().data))).toMatchObject({ FileManagerQuotaGb: null });
     });
 
     it("a lookup reply without the quota is not trusted (the generic error, nothing filled)", () => {

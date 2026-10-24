@@ -722,4 +722,48 @@ public class ExcelExportServiceTests
 
         Assert.Equal("abcd", row[6]);
     }
+
+    /// <summary>
+    /// A budget sheet exports its rows with their localized labels and currencies, the months, the year total and the free columns, each
+    /// calculated value typed (numbers as numbers, text and errors as text); empty free rows are left out.
+    /// </summary>
+    [Fact]
+    public void CreateBudgetExcel_WritesTheSheetsValues()
+    {
+        var sheet = new BudgetSheetResponse
+        {
+            Kind = "Expenditure",
+            Year = 2026,
+            Rows =
+            [
+                new BudgetRowResponse { Number = 1, Kind = "Header", MainClass = "ConsumerSpending" },
+                new BudgetRowResponse { Number = 2, Kind = "Line", MainClass = "ConsumerSpending", SubClass = "PinMoney", Currency = "KRW" },
+                new BudgetRowResponse { Number = 3, Kind = "Free" },
+                new BudgetRowResponse { Number = 4, Kind = "Free" },
+            ],
+            Cells =
+            [
+                new BudgetCellResponse { Address = "B2", Role = "Budget", Value = new BudgetValueResponse { Kind = "Number", Number = 300000.5m } },
+                new BudgetCellResponse { Address = "N2", Role = "Computed", Value = new BudgetValueResponse { Kind = "Number", Number = 300000.5m } },
+                new BudgetCellResponse { Address = "C2", Role = "Budget", Value = new BudgetValueResponse { Kind = "Error", Text = "#NUM!" } },
+                new BudgetCellResponse { Address = "A4", Role = "Free", Value = new BudgetValueResponse { Kind = "Text", Text = "Tax rate" } },
+                new BudgetCellResponse { Address = "B4", Role = "Free", Value = new BudgetValueResponse { Kind = "Boolean", Text = "TRUE" } },
+                new BudgetCellResponse { Address = "D2", Role = "Budget", Value = new BudgetValueResponse { Kind = "Empty" } },
+            ],
+        };
+
+        var rows = ReadTypedRows(_sut.CreateBudgetExcel(sheet, _localize));
+
+        Assert.Equal(["L:Item", "L:Currency", "L:Month1", "L:Month12", "L:Year total", "O", "Z"],
+            new[] { 0, 1, 2, 13, 14, 15, 26 }.Select(i => rows[0][i].Text));
+        Assert.Equal(27, rows[0].Count);
+        Assert.Equal(["L:ConsumerSpending", "L:PinMoney", "Tax rate"], rows.Skip(1).Select(r => r[0].Text));
+        Assert.Equal(3, rows.Count - 1);
+        Assert.Equal("KRW", rows[2][1].Text);
+        AssertNumberCell(300000.5m, rows[2][2]);
+        Assert.Equal("#NUM!", rows[2][3].Text);
+        Assert.Equal("", rows[2][4].Text);
+        AssertNumberCell(300000.5m, rows[2][14]);
+        Assert.Equal("TRUE", rows[3][2].Text);
+    }
 }

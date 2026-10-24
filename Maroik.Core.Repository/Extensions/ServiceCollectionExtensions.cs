@@ -68,6 +68,9 @@ public static class ServiceCollectionExtensions
             services.AddScoped<ICalendarEventReminderRepository, CalendarEventReminderRepository>();
             services.AddScoped<ICalendarSharedRepository, CalendarSharedRepository>();
             services.AddScoped<IKanbanCardRepository, KanbanCardRepository>();
+            services.AddScoped<IBudgetSheetRepository, BudgetSheetRepository>();
+            services.AddScoped<IBudgetSheetLineRepository, BudgetSheetLineRepository>();
+            services.AddScoped<IBudgetSheetCellRepository, BudgetSheetCellRepository>();
             services.AddScoped<IFileManagerNodeRepository, FileManagerNodeRepository>();
         }
     }

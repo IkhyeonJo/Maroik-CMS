@@ -32,6 +32,7 @@ public class ServiceCollectionExtensionsTests
         { typeof(IBoardService), typeof(BoardService), ServiceLifetime.Scoped },
         { typeof(ICalendarService), typeof(CalendarService), ServiceLifetime.Scoped },
         { typeof(IKanbanService), typeof(KanbanService), ServiceLifetime.Scoped },
+        { typeof(IBudgetService), typeof(BudgetService), ServiceLifetime.Scoped },
         { typeof(IFileManagerService), typeof(FileManagerService), ServiceLifetime.Scoped },
         { typeof(IAttachmentContentService), typeof(AttachmentContentService), ServiceLifetime.Scoped },
         { typeof(IDataProtectionService), typeof(DataProtectionService), ServiceLifetime.Singleton },

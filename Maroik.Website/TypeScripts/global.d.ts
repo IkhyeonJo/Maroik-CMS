@@ -358,3 +358,48 @@ interface JQuery<TElement = HTMLElement> {
     /** The tree instance of an element the tree was built on. */
     jstree(getInstance: true): JsTreeInstance;
 }
+
+// CodeMirror 5.60.0 — wwwroot/user/plugins/codemirror (the budget sheet's formula bar, AccountBook/Budget). Only the surface the page script
+// touches is declared; the formula language has no CodeMirror mode — the server's tokens are painted with markText.
+/** A position in a one-line CodeMirror document. */
+interface CodeMirrorPosition {
+    line: number;
+    ch: number;
+}
+
+/** A mark painted on the text. */
+interface CodeMirrorTextMarker {
+    clear(): void;
+}
+
+/** How a mark looks: its CSS class and, optionally, its tooltip. */
+interface CodeMirrorMarkOptions {
+    className: string;
+    title?: string;
+}
+
+/** The editor a textarea becomes. */
+interface CodeMirrorEditor {
+    getValue(): string;
+    setValue(value: string): void;
+    focus(): void;
+    hasFocus(): boolean;
+    getCursor(): CodeMirrorPosition;
+    setCursor(position: CodeMirrorPosition): void;
+    indexFromPos(position: CodeMirrorPosition): number;
+    posFromIndex(index: number): CodeMirrorPosition;
+    markText(from: CodeMirrorPosition, to: CodeMirrorPosition, options: CodeMirrorMarkOptions): CodeMirrorTextMarker;
+    getAllMarks(): CodeMirrorTextMarker[];
+    replaceRange(text: string, from: CodeMirrorPosition, to?: CodeMirrorPosition): void;
+    setOption(name: "readOnly", value: boolean): void;
+    on(event: "change" | "cursorActivity" | "focus", handler: () => void): void;
+    on(event: "keydown", handler: (editor: CodeMirrorEditor, event: KeyboardEvent) => void): void;
+    getWrapperElement(): HTMLElement;
+}
+
+/** The `CodeMirror` global. */
+interface CodeMirrorStatic {
+    fromTextArea(textarea: HTMLTextAreaElement, options: { lineWrapping: boolean; viewportMargin: number }): CodeMirrorEditor;
+}
+
+declare const CodeMirror: CodeMirrorStatic;

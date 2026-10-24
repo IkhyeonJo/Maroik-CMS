@@ -34,7 +34,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
     [
         typeof(ICalendarService), typeof(IBoardService), typeof(IAssetService), typeof(IIncomeService),
         typeof(IExpenditureService), typeof(IFixedIncomeService), typeof(IFixedExpenditureService), typeof(IManagementAccountService),
-        typeof(IProfileService), typeof(IKanbanService), typeof(IFileManagerService),
+        typeof(IProfileService), typeof(IKanbanService), typeof(IFileManagerService), typeof(IBudgetService),
     ];
 
     /// <summary>Throws <see cref="InvalidOperationException"/> carrying <see cref="Secret"/> from every method it is asked to run.</summary>
@@ -278,6 +278,13 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         (Role.User, "/Calendar/UpdateOtherCalendar", s => s.BuildJsonPostRequest("/Calendar/UpdateOtherCalendar", new[] { new { CalendarId = 1 } })),
         (Role.User, "/Kanban/CreateKanbanCard", s => s.BuildJsonPostRequest("/Kanban/CreateKanbanCard", new { Lane = "ToDo", Title = "t", Description = "", DueDate = "2026-05-28" })),
         (Role.User, "/Kanban/UpdateKanbanCard", s => s.BuildJsonPostRequest("/Kanban/UpdateKanbanCard", new { Id = 1, Title = "t", Description = "", DueDate = (string?)null })),
+        (Role.User, "/AccountBook/GetBudgetSheet", s => s.BuildJsonPostRequest("/AccountBook/GetBudgetSheet", new { Kind = "Income", Year = 2026 })),
+        (Role.User, "/AccountBook/PreviewBudgetCell", s => s.BuildJsonPostRequest("/AccountBook/PreviewBudgetCell", new { Kind = "Income", Year = 2026, Address = "B2", Input = "=1" })),
+        (Role.User, "/AccountBook/SetBudgetCells", s => s.BuildJsonPostRequest("/AccountBook/SetBudgetCells", new { Kind = "Income", Year = 2026, Edits = new[] { new { Address = "B2", Input = "1" } } })),
+        (Role.User, "/AccountBook/CopyBudgetCells", s => s.BuildJsonPostRequest("/AccountBook/CopyBudgetCells", new { Kind = "Income", Year = 2026, Source = "B2", Target = "C2" })),
+        (Role.User, "/AccountBook/AddBudgetLine", s => s.BuildJsonPostRequest("/AccountBook/AddBudgetLine", new { Kind = "Income", Year = 2026, MainClass = "RegularIncome", SubClass = "LaborIncome", Currency = "USD" })),
+        (Role.User, "/AccountBook/RemoveBudgetLine", s => s.BuildJsonPostRequest("/AccountBook/RemoveBudgetLine", new { Kind = "Income", Year = 2026, MainClass = "RegularIncome", SubClass = "LaborIncome", Currency = "USD" })),
+        (Role.User, "/AccountBook/CarryOverBudget", s => s.BuildJsonPostRequest("/AccountBook/CarryOverBudget", new { Kind = "Income", Year = 2026 })),
         (Role.User, "/FileManager/GetFolder", s => s.BuildJsonPostRequest("/FileManager/GetFolder", new { FolderId = (long?)null })),
         (Role.User, "/FileManager/Search", s => s.BuildJsonPostRequest("/FileManager/Search", new { Query = "a" })),
         (Role.User, "/FileManager/ListDownloadFiles", s => s.BuildJsonPostRequest("/FileManager/ListDownloadFiles", new { Ids = new[] { 1 } })),
@@ -369,7 +376,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
             if (!errors[0].Message.Contains(email, StringComparison.Ordinal)) failures.Add($"{url}: the owner is not named ({errors[0].Message})");
         }
 
-        Assert.Equal(9, BodyEndpoints.Count(e => e.Url.StartsWith("/AccountBook/", StringComparison.Ordinal)));
+        Assert.Equal(16, BodyEndpoints.Count(e => e.Url.StartsWith("/AccountBook/", StringComparison.Ordinal)));
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
     }
 
@@ -699,6 +706,7 @@ public class ControllerFailureContractTests(MaroikWebApplicationFactory factory)
         ["/AccountBook/ExportExcelAsset"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
         ["/AccountBook/ExportExcelIncome"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
         ["/AccountBook/ExportExcelExpenditure"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
+        ["/AccountBook/ExportExcelBudget"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
         ["/Notice/ExportExcelFixedIncome"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
         ["/Notice/ExportExcelFixedExpenditure"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",
         ["/Management/ExportExcelAccount"] = "plain form download (the page navigates to the file): a failure goes to the global exception page",

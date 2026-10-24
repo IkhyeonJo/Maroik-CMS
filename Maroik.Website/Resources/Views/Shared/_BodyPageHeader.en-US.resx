@@ -174,4 +174,10 @@
   <data name="File Manager" xml:space="preserve">
     <value>File Manager</value>
   </data>
+  <data name="Income Budget" xml:space="preserve">
+    <value>Income Budget</value>
+  </data>
+  <data name="Expenditure Budget" xml:space="preserve">
+    <value>Expenditure Budget</value>
+  </data>
 </root>

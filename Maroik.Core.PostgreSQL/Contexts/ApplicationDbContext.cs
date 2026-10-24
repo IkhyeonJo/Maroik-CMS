@@ -33,6 +33,15 @@ public partial class ApplicationDbContext : DbContext
     /// <summary>"BoardComment" table.</summary>
     public virtual DbSet<BoardComment> BoardComments { get; set; }
 
+    /// <summary>"BudgetSheet" table.</summary>
+    public virtual DbSet<BudgetSheet> BudgetSheets { get; set; }
+
+    /// <summary>"BudgetSheetCell" table.</summary>
+    public virtual DbSet<BudgetSheetCell> BudgetSheetCells { get; set; }
+
+    /// <summary>"BudgetSheetLine" table.</summary>
+    public virtual DbSet<BudgetSheetLine> BudgetSheetLines { get; set; }
+
     /// <summary>"Calendar" table.</summary>
     public virtual DbSet<Calendar> Calendars { get; set; }
 
@@ -281,6 +290,89 @@ public partial class ApplicationDbContext : DbContext
                 .HasForeignKey(d => d.Writer)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("BoardComment_fk_1");
+        });
+
+        modelBuilder.Entity<BudgetSheet>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("BudgetSheet_pk");
+
+            entity.ToTable("BudgetSheet", tb => tb.HasComment("BudgetSheet"));
+
+            entity.HasIndex(e => new { e.AccountEmail, e.Kind, e.Year }, "BudgetSheet_unique").IsUnique();
+
+            entity.Property(e => e.Id).HasComment("PK");
+            entity.Property(e => e.AccountEmail)
+                .HasMaxLength(255)
+                .HasComment("Account Email (ID)");
+            entity.Property(e => e.Created)
+                .HasComment("Created")
+                .HasColumnType("timestamp without time zone");
+            entity.Property(e => e.Kind)
+                .HasMaxLength(255)
+                .HasComment("Income or Expenditure");
+            entity.Property(e => e.Updated)
+                .HasComment("Updated (last edit of its lines or cells)")
+                .HasColumnType("timestamp without time zone");
+            entity.Property(e => e.Year).HasComment("Year of the sheet");
+
+            entity.HasOne(d => d.AccountEmailNavigation).WithMany(p => p.BudgetSheets)
+                .HasForeignKey(d => d.AccountEmail)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("BudgetSheet_fk_0");
+        });
+
+        modelBuilder.Entity<BudgetSheetCell>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("BudgetSheetCell_pk");
+
+            entity.ToTable("BudgetSheetCell", tb => tb.HasComment("BudgetSheetCell"));
+
+            entity.HasIndex(e => new { e.SheetId, e.RowKey, e.Column }, "BudgetSheetCell_unique").IsUnique();
+
+            entity.Property(e => e.Id).HasComment("PK");
+            entity.Property(e => e.Column)
+                .HasMaxLength(1)
+                .HasComment("Column letter (A..Z)");
+            entity.Property(e => e.Input).HasComment("Stored input (a number, text, TRUE/FALSE, or a formula with row keys)");
+            entity.Property(e => e.RowKey)
+                .HasMaxLength(255)
+                .HasComment("Stable row key (L.<main>.<sub>.<currency hex>, F.<n>, ...)");
+            entity.Property(e => e.SheetId).HasComment("BudgetSheet Id");
+            entity.Property(e => e.Updated)
+                .HasComment("Updated")
+                .HasColumnType("timestamp without time zone");
+
+            entity.HasOne(d => d.Sheet).WithMany(p => p.BudgetSheetCells)
+                .HasForeignKey(d => d.SheetId)
+                .HasConstraintName("BudgetSheetCell_fk_0");
+        });
+
+        modelBuilder.Entity<BudgetSheetLine>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("BudgetSheetLine_pk");
+
+            entity.ToTable("BudgetSheetLine", tb => tb.HasComment("BudgetSheetLine"));
+
+            entity.HasIndex(e => new { e.SheetId, e.MainClass, e.SubClass, e.MonetaryUnit }, "BudgetSheetLine_unique").IsUnique();
+
+            entity.Property(e => e.Id).HasComment("PK");
+            entity.Property(e => e.Created)
+                .HasComment("Created")
+                .HasColumnType("timestamp without time zone");
+            entity.Property(e => e.MainClass)
+                .HasMaxLength(255)
+                .HasComment("Main class");
+            entity.Property(e => e.MonetaryUnit)
+                .HasMaxLength(45)
+                .HasComment("Currency label");
+            entity.Property(e => e.SheetId).HasComment("BudgetSheet Id");
+            entity.Property(e => e.SubClass)
+                .HasMaxLength(255)
+                .HasComment("Sub class");
+
+            entity.HasOne(d => d.Sheet).WithMany(p => p.BudgetSheetLines)
+                .HasForeignKey(d => d.SheetId)
+                .HasConstraintName("BudgetSheetLine_fk_0");
         });
 
         modelBuilder.Entity<Calendar>(entity =>

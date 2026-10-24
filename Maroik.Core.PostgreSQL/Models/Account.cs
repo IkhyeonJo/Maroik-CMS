@@ -123,6 +123,9 @@ public partial class Account
     /// <summary>File Manager folders and files owned by this account (FileManagerNode.AccountEmail).</summary>
     public virtual ICollection<FileManagerNode> FileManagerNodes { get; set; } = new List<FileManagerNode>();
 
+    /// <summary>Budget sheets owned by this account (BudgetSheet.AccountEmail).</summary>
+    public virtual ICollection<BudgetSheet> BudgetSheets { get; set; } = new List<BudgetSheet>();
+
     /// <summary>Kanban cards owned by this account (KanbanCard.AccountEmail).</summary>
     public virtual ICollection<KanbanCard> KanbanCards { get; set; } = new List<KanbanCard>();
 
