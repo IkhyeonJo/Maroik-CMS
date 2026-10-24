@@ -12,6 +12,12 @@ public sealed class BudgetSheetViewModel
     /// <summary>False until the sheet is first edited.</summary>
     public bool Exists { get; init; }
 
+    /// <summary>
+    /// False while the sheet has no line: its default lines need a currency, and a new account with no asset has none yet (the page
+    /// then says how lines come about).
+    /// </summary>
+    public bool HasLines { get; init; }
+
     /// <summary>The rows.</summary>
     public List<BudgetRowViewModel> Rows { get; init; } = [];
 

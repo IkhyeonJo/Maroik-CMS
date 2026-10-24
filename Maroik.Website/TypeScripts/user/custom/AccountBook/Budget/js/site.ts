@@ -35,7 +35,7 @@
     const unbudgetedCheck = check.object({ label: check.string, mainClass: check.string, subClass: check.string, currency: check.string, months: check.array(check.string) });
     type Unbudgeted = Checked<typeof unbudgetedCheck>;
     const sheetCheck = check.object({
-        kind: check.string, year: check.number, exists: check.boolean, rows: check.array(rowCheck), cells: check.array(cellCheck), unbudgeted: check.array(unbudgetedCheck),
+        kind: check.string, year: check.number, exists: check.boolean, hasLines: check.boolean, rows: check.array(rowCheck), cells: check.array(cellCheck), unbudgeted: check.array(unbudgetedCheck),
     });
     type Sheet = Checked<typeof sheetCheck>;
     const previewCheck = check.object({
@@ -68,6 +68,7 @@
 
     // Cached references.
     const $grid = $("#budgetGrid");
+    const $noLines = $(byId("budgetNoLines", HTMLElement));
     const $wrap = $("#budgetGridWrap");
     const $nameBox = $("#budgetNameBox");
     const $yearLabel = $("#budgetYearLabel");
@@ -225,6 +226,8 @@
     /** Replaces the sheet on screen (the undo history and the copy do not survive it). */
     function ApplySheet(sheet: Sheet) {
         if (editing) EndEdit(editing);
+        // The server says when the sheet has no line yet (no currency known for the default lines): tell the user how they come about.
+        $noLines.toggle(!sheet.hasLines);
         rows = sheet.rows;
         cells.clear();
         for (const c of sheet.cells) cells.set(c.address, c);

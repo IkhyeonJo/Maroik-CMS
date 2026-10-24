@@ -52,6 +52,7 @@ public static class BudgetViewModelMapper
         Kind = sheet.Kind,
         Year = sheet.Year,
         Exists = sheet.Exists,
+        HasLines = sheet.Rows.Any(r => r.Kind == "Line"),
         Rows = [.. sheet.Rows.Select(r => new BudgetRowViewModel
         {
             Number = r.Number,

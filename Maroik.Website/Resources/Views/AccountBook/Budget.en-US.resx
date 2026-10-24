@@ -180,4 +180,7 @@
   <data name="Year" xml:space="preserve">
     <value>Year</value>
   </data>
+  <data name="This sheet has no lines yet. Register an asset and its currency&#x27;s lines appear for every class, or add one with &quot;Add currency line&quot;." xml:space="preserve">
+    <value>This sheet has no lines yet. Register an asset and its currency's lines appear for every class, or add one with "Add currency line".</value>
+  </data>
 </root>

@@ -45,6 +45,22 @@ public class BudgetFlowTests(E2ESharedFixture fixture) : E2ETestBase(fixture)
         await Assertions.Expect(page.Locator("#budgetGrid tbody tr")).ToHaveCountAsync(13 + 30);
         await Assertions.Expect(page.Locator("#budgetGrid tbody tr").Nth(12)).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("budget-row-total"));
         await Assertions.Expect(page.Locator("#budgetNameBox")).ToHaveTextAsync("B2");
+        await Assertions.Expect(page.Locator("#budgetNoLines")).ToBeHiddenAsync();
+    }
+
+    /// <summary>
+    /// An account with no asset has no currency for the default lines: instead of a bare grid the page says how lines come about.
+    /// </summary>
+    [Fact]
+    public async Task ASheetWithoutLines_SaysHowLinesComeAbout()
+    {
+        var (page, _) = await NewSignedInPageAsync();
+        await page.WaitForURLAsync(url => url.Contains("/Dashboard/", StringComparison.Ordinal), new PageWaitForURLOptions { Timeout = 30_000 });
+        await GotoAsync(page, "/AccountBook/IncomeBudget");
+
+        await Assertions.Expect(page.Locator("#budgetNoLines")).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator("#budgetNoLines")).ToContainTextAsync("통화 줄 추가");
+        await Assertions.Expect(page.Locator("#budgetGrid tbody tr.budget-row-line")).ToHaveCountAsync(0);
     }
 
     /// <summary>A typed budget is saved; the year total, the subtotal and the total follow.</summary>

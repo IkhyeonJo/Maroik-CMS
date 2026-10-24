@@ -180,4 +180,7 @@
   <data name="Year" xml:space="preserve">
     <value>연도</value>
   </data>
+  <data name="This sheet has no lines yet. Register an asset and its currency&#x27;s lines appear for every class, or add one with &quot;Add currency line&quot;." xml:space="preserve">
+    <value>아직 예산 줄이 없습니다. 자산을 등록하면 그 통화로 분류마다 줄이 생기고, "통화 줄 추가"로 직접 추가할 수도 있습니다.</value>
+  </data>
 </root>

@@ -28,6 +28,7 @@ function fixture(kind = "Expenditure", year = 2026): string {
          <button id="btnBudgetCarryOver"></button><button id="btnBudgetAddLine"></button><button id="btnBudgetExcel"></button>
          <span id="budgetNameBox"></span><textarea id="budgetFormula"></textarea><ul id="budgetAutocomplete" class="d-none"></ul>
          <span id="budgetPreviewValue"></span><div id="budgetProblems"></div>
+         <div id="budgetNoLines" style="display:none"></div>
          <div id="budgetGridWrap" tabindex="0"><table id="budgetGrid"></table></div><div id="budgetUnbudgeted"></div>
          <div id="budgetLineModal"><form id="formBudgetLine"><select id="budgetLineMainClass"><option value="ConsumerSpending">Consumer</option><option value="RegularSavings">Savings</option><option value="Unknown">?</option></select>
            <select id="budgetLineSubClass"></select><input id="budgetLineCurrency" /></form></div>
@@ -55,7 +56,7 @@ function cell(address: string, role: string, display: string, over: Record<strin
 /** The test sheet: 1 header, 2 Meal (KRW), 3 Pin (KRW), 4 subtotal, 5 total, 6 and 7 free rows. */
 function sheet(over: Record<string, unknown> = {}): Record<string, unknown> {
     return {
-        kind: "Expenditure", year: 2026, exists: true,
+        kind: "Expenditure", year: 2026, exists: true, hasLines: true,
         rows: [
             row(1, "Header", "Consumer", { mainClass: "ConsumerSpending" }),
             row(2, "Line", "Meal", { mainClass: "ConsumerSpending", subClass: "MealOrEatOutExpenses", currency: "KRW" }),
@@ -125,6 +126,15 @@ describe("AccountBook/Budget — loading and drawing", () => {
         expect(bodyOf(callTo(h, "/AccountBook/GetBudgetSheet"))).toEqual({ Kind: "Income", Year: 2030 });
         expect(callTo(h, "/AccountBook/GetBudgetSheet").headers).toEqual({ RequestVerificationToken: "tok" });
         expect(h.$("#budgetYearLabel").text()).toBe("2030");
+    });
+
+    // A new account without an asset has no currency for the default lines: the grid alone was empty with nothing saying why.
+    it("shows the 'no lines yet' notice for a sheet the server says has no lines", () => {
+        expect(load("Income", sheet({ hasLines: false })).$("#budgetNoLines").css("display")).not.toBe("none");
+    });
+
+    it("keeps the notice hidden for a sheet with lines", () => {
+        expect(load().$("#budgetNoLines").css("display")).toBe("none");
     });
 
     it("draws the column letters, the row numbers and every cell", () => {

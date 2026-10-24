@@ -36,10 +36,22 @@ public class BudgetViewModelMapperTests
 
         BudgetSheetViewModel vm = sheet.ToViewModel(L);
 
-        Assert.Equal(("Expenditure", 2026, true), (vm.Kind, vm.Year, vm.Exists));
+        Assert.Equal(("Expenditure", 2026, true, true), (vm.Kind, vm.Year, vm.Exists, vm.HasLines));
         Assert.Equal(["L:ConsumerSpending", "L:PinMoney", "L:Subtotal", "L:Total", ""], vm.Rows.Select(r => r.Label));
         Assert.Equal(("ConsumerSpending", "PinMoney", "KRW", "BC"), (vm.Rows[1].MainClass, vm.Rows[1].SubClass, vm.Rows[1].Currency, vm.Rows[1].Editable));
         Assert.Equal(("", "", ""), (vm.Rows[4].MainClass, vm.Rows[4].SubClass, vm.Rows[4].Currency));
+    }
+
+    /// <summary>
+    /// A sheet without a single line (a new account with no asset, so no currency for the default lines) says so, so the page can tell
+    /// the user how lines come about instead of showing an empty grid.
+    /// </summary>
+    [Fact]
+    public void ASheetWithoutLines_SaysSo()
+    {
+        var sheet = new BudgetSheetResponse { Kind = "Income", Year = 2026, Rows = [new BudgetRowResponse { Number = 1, Kind = "Free" }] };
+
+        Assert.False(sheet.ToViewModel(L).HasLines);
     }
 
     /// <summary>Values are shown in the amount format (every stored decimal, no trailing zeros); text, booleans and errors as their text.</summary>
