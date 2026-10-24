@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import realMoment from "moment";
-import { hidden, type SiteHandle, stubPlugin, eventProps, present, lastOf, successOf, completeOf, errorOf, formDataOf, instanceOfType, calendarSelect, calendarEventClick, clickLastAddedEvent, firstCalendar } from "@tests/_common/harness";
+import { hidden, type SiteHandle, stubPlugin, eventProps, present, lastOf, successOf, completeOf, errorOf, formDataOf, instanceOfType, calendarSelect, calendarEventClick, clickLastAddedEvent, firstCalendar, layOut, windowWidth } from "@tests/_common/harness";
 
 /** Short alias used by the calendar suites. */
 export type Handle = SiteHandle;
@@ -1552,6 +1552,50 @@ export function describeEditFormDetail(c: { label: string; build: Build }): void
 
             h.$("#aCreateCalendar").trigger("click");
             expect(modal).toHaveBeenCalledWith("show");
+        });
+    });
+}
+
+/**
+ * Where an event popup opens and how tall the grid is (each calendar page): right of the clicked event, or left of it when
+ * the right side would run past the window, never past either edge, below the event in document coordinates; and the grid
+ * grows with its weeks (`height: "auto"`) instead of hiding the last ones behind an inner scroll on a narrow screen.
+ */
+export function describeEventLayout(c: { label: string; build: () => Handle; popups: { calendarType: string; id: string }[] }): void {
+    describe(`${c.label} — event popup position and grid height`, () => {
+        /** Clicks an event of `calendarType` laid out at `left` (20px tall at y 300) in a `width`-wide window, the popup 200px wide. */
+        const clickAt = (calendarType: string, id: string, width: number, left: number, eventWidth: number) => {
+            const h = c.build();
+            windowWidth(h, width);
+            Object.defineProperty(h.win, "scrollY", { value: 40, configurable: true });
+            layOut(instanceOfType(h.$(id)[0], HTMLElement), { left: 0, top: 0, width: 200, height: 150 });
+            const el = h.win.document.createElement("div");
+            h.win.document.body.appendChild(el);
+            layOut(el, { left, top: 300, width: eventWidth, height: 20 });
+            calendarEventClick(h, { el, event: { id: "7", title: "T", allDay: false, extendedProps: eventProps({ calendarType }) } });
+            const popup = instanceOfType(h.$(id)[0], HTMLElement);
+            return { left: popup.style.left, top: popup.style.top, display: popup.style.display, visibility: popup.style.visibility };
+        };
+
+        for (const { calendarType, id } of c.popups) {
+            it(`${id} opens right of the event, below it (document coordinates), shown`, () => {
+                expect(clickAt(calendarType, id, 1000, 100, 120)).toEqual({ left: "220px", top: "360px", display: "block", visibility: "" });
+            });
+
+            it(`${id} opens left of an event whose right side has no room`, () => {
+                expect(clickAt(calendarType, id, 1000, 850, 120).left).toBe("650px");
+            });
+
+            it(`${id} keeps 8px inside the window when neither side has room`, () => {
+                expect(clickAt(calendarType, id, 300, 50, 240).left).toBe("8px");
+                expect(clickAt(calendarType, id, 300, 0, 40).left).toBe("40px");
+            });
+        }
+
+        it("the grid's height follows its weeks, and its weekday header is not made sticky (FullCalendar paints that white)", () => {
+            const options = present(c.build().calendarOptions[0], "the FullCalendar options");
+            expect(options.height).toBe("auto");
+            expect(options.stickyHeaderDates).toBe(false);
         });
     });
 }

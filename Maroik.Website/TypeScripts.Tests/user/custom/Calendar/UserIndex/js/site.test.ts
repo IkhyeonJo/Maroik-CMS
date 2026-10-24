@@ -5,6 +5,7 @@ import {
     describeCalendarCommon,
     describeEditFormDetail,
     describeCalendarExtras,
+    describeEventLayout,
     evt,
     mine,
     extras,
@@ -70,6 +71,7 @@ function fixture(): string {
      <form id="formCreateCalendarEvent"></form><form id="formEditCalendarEvent"></form>
      <div id="myCalendars"></div>
      <a id="aEditCalendarEventAttachedFile"></a><a id="aViewCalendarEventAttachedFile"></a>
+     <div id="calendarEventPopup"></div><div id="otherCalendarEventPopup"></div>
      <a id="editCalendarEventPopup" href="#"></a><input id="editCalendarEventStatus" />
      <a id="viewOtherCalendarEventPopup" href="#"></a><input id="viewCalendarEventStatus" />
      <select id="viewCalendarEventMyCalendar"></select>
@@ -428,6 +430,11 @@ function build(opts: { my?: unknown[]; other?: unknown[]; body?: (html: string) 
 describeCalendarCommon({ label: "user/Calendar/UserIndex", build, checkedIds: [{ Id: 1 }, { Id: 3 }, { Id: 9 }] });
 describeEditFormDetail({ label: "user/Calendar/UserIndex", build });
 describeCalendarExtras({ label: "user/Calendar/UserIndex", build });
+describeEventLayout({
+    label: "user/Calendar/UserIndex",
+    build: () => build(),
+    popups: [{ calendarType: "My", id: "#calendarEventPopup" }, { calendarType: "Other", id: "#otherCalendarEventPopup" }]
+});
 
 describe("user/Calendar/UserIndex — events on the grid", () => {
     it("seeds the grid with my events (typed 'My') and other calendars' events (typed 'Other')", () => {
@@ -488,6 +495,14 @@ describe("user/Calendar/UserIndex — calendars of interest", () => {
         expect(h.$("#allCheckBrowseCalendarsOfInterest").prop("checked")).toBe(true);
         h.$("#allCheckBrowseCalendarsOfInterest").prop("checked", false).trigger("change");
         expect(h.$(".checkBoxBrowseCalendarsOfInterest:checked")).toHaveLength(0);
+    });
+
+    // A `form-control` checkbox is drawn as a box as wide as its column; the entries are plain checkboxes (page CSS).
+    it("each entry's box is a plain checkbox", () => {
+        const h = build();
+        openDialog(h);
+        expect(h.$(".checkBoxBrowseCalendarsOfInterest").map((_, e) => e.className).get())
+            .toEqual(["calendar-checkbox checkBoxBrowseCalendarsOfInterest", "calendar-checkbox checkBoxBrowseCalendarsOfInterest"]);
     });
 
     it("saving posts the ids of the checked entries, then refreshes the sidebar and events, closes the dialog and toasts", () => {
@@ -606,7 +621,7 @@ describe("user/Calendar/UserIndex — edit form and shared-event view in detail"
     const png = "iVBORw0KGgo="; // any base64 — only decoded into a Blob
     /** The "other event" popup and the read-only view modal. */
     const detailDom = `
-    <div id="otherCalendarEventPopup"></div><div id="otherCalendarEventPopupTitle"></div>
+    <div id="otherCalendarEventPopupTitle"></div>
     <div id="divOtherCalendarEventPopupAllDayChecked"></div><div id="divOtherCalendarEventPopupAllDayUnchecked"></div>
     <span id="otherCalendarEventPopupStartAllDayChecked"></span><span id="otherCalendarEventPopupEndAllDayChecked"></span>
     <span id="otherCalendarEventPopupStartAllDayUnchecked"></span><span id="otherCalendarEventPopupStartTimeZoneAllDayUnchecked"></span>

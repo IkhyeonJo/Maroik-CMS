@@ -55,6 +55,8 @@ type WidgetCallback = (this: unknown, ...args: unknown[]) => unknown;
 export interface CapturedCalendarOptions {
     select?: (arg: { start: Date; end: Date }) => void;
     eventClick?: (arg: object) => unknown;
+    height?: string | number;
+    stickyHeaderDates?: boolean;
 }
 
 /** An event object a page passed to `calendar.addEvent(...)`. */
@@ -124,7 +126,10 @@ function isSummernoteOptions(value: unknown): value is CapturedSummernoteOptions
 /** Whether `value` is FullCalendar options whose `select` / `eventClick`, if any, are functions. */
 function isCalendarOptions(value: unknown): value is CapturedCalendarOptions {
     const fields = fieldsOf(value);
-    return fields !== null && isOptionalCallback(fields.get("select")) && isOptionalCallback(fields.get("eventClick"));
+    const height = fields?.get("height");
+    return fields !== null && isOptionalCallback(fields.get("select")) && isOptionalCallback(fields.get("eventClick"))
+        && (height === undefined || typeof height === "string" || typeof height === "number")
+        && (fields.get("stickyHeaderDates") === undefined || typeof fields.get("stickyHeaderDates") === "boolean");
 }
 
 /** Whether `value` is a doughnut config with the data, colours and tooltip callback the Dashboard tests read. */
@@ -152,6 +157,23 @@ export function firstCalendar(h: SiteHandle): FakeCalendar {
 /** Calls the `select` callback a page gave FullCalendar (a drag-selected date range). */
 export function calendarSelect(h: SiteHandle, arg: { start: Date; end: Date }): void {
     present(present(h.calendarOptions[0], "the FullCalendar options").select, "the select callback")(arg);
+}
+
+/**
+ * jsdom does no layout: gives `element` the box `{ left, top, width, height }` (viewport pixels) that
+ * `getBoundingClientRect` reports, and makes it count as rendered (`getClientRects`).
+ */
+export function layOut(element: Element, box: { left: number; top: number; width: number; height: number }): void {
+    const rect = {
+        x: box.left, y: box.top, left: box.left, top: box.top, width: box.width, height: box.height,
+        right: box.left + box.width, bottom: box.top + box.height, toJSON: () => ({})
+    };
+    Object.assign(element, { getBoundingClientRect: () => rect, getClientRects: () => [rect] });
+}
+
+/** jsdom does no layout: sets the width of the page's window (`document.documentElement.clientWidth`). */
+export function windowWidth(h: SiteHandle, width: number): void {
+    Object.defineProperty(h.win.document.documentElement, "clientWidth", { value: width, configurable: true });
 }
 
 /** Calls the `eventClick` callback a page gave FullCalendar, returning what it returns. */

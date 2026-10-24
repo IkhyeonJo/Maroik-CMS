@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { describeMissingServerConstants } from "@tests/_common/missingConfigSuite";
+import { describeEventLayout } from "@tests/_common/calendarSuite";
 import { loadSite, antiForgery, hidden, stubPlugin, eventProps, lastOf, successOf, completeOf, instanceOfType, calendarEventClick, firstCalendar, present } from "@tests/_common/harness";
 
 // wwwroot/anonymous/custom/Calendar/AnonymousIndex/js/site.js  (read-only calendar view)
@@ -571,3 +572,5 @@ describe("Calendar/AnonymousIndex — the read-only view modal", () => {
 });
 
 describeMissingServerConstants("anonymous", "Calendar", "AnonymousIndex", () => fixture());
+
+describeEventLayout({ label: "anonymous/Calendar/AnonymousIndex", build: () => load(), popups: [{ calendarType: "Other", id: "#otherCalendarEventPopup" }] });

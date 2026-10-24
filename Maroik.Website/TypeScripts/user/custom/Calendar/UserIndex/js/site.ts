@@ -684,6 +684,26 @@
             $divEditEventNotificationAllDayUnchecked.show();
         }
 
+        /**
+         * Opens an event popup next to the clicked event: right of it, or left of it when the right side would run past
+         * the window, and never past either edge (on a phone neither side may have room). The popup is positioned
+         * absolutely against the page, so the event's viewport box is shifted by the scroll. Measured while hidden
+         * (`visibility`), so it does not flash at its old place.
+         */
+        function placeEventPopup(popup: JQuery<HTMLElement>, eventEl: HTMLElement): JQuery<HTMLElement> {
+            const margin = 8;
+            popup.css({ visibility: "hidden", display: "block" });
+            const width = required(popup[0], "the event popup").getBoundingClientRect().width;
+            const event = eventEl.getBoundingClientRect();
+            const windowWidth = document.documentElement.clientWidth;
+            const left = event.right + width + margin <= windowWidth ? event.right : event.left - width;
+            return popup.css({
+                top: event.bottom + window.scrollY,
+                left: Math.max(margin, Math.min(left, windowWidth - width - margin)) + window.scrollX,
+                visibility: ""
+            });
+        }
+
         // --- The FullCalendar instance --------------------------------------
         // Read-only grid (`editable: false`) but `selectable` so a drag opens the
         // create-event modal. Events carry `calendarType` ('My' | 'Other') in
@@ -706,6 +726,12 @@
             editable: false,
             selectable: true,
             selectMirror: true,
+            // Grow with the weeks shown instead of keeping a fixed height and scrolling inside it, which on a phone hid the
+            // last weeks of the month.
+            height: "auto",
+            // With "auto" FullCalendar makes the weekday header sticky and paints it white (--fc-page-bg-color), which hid
+            // the weekday names on the dark theme; the grid is never taller than the page needs, so nothing to keep in view.
+            stickyHeaderDates: false,
             // Drag-select a date range: pre-fill the create-event start/end date
             // fields (UTC, +1 day on the start to match the grid), load the
             // user's calendars into the "my calendar" select, default the
@@ -768,8 +794,6 @@
             eventClick: function(arg: FullCalendarEventClickArg) {
                 if (conform(arg.event.extendedProps, calendarEventProps, "the event\'s extendedProps").calendarType === "My") {
 
-                    let eventEl = $(arg.el);
-                    let offset = required(eventEl.offset(), "the event element\'s position");
                     let popup = $calendarEventPopup;
                     let currentEventId = popup.data("event-id");
 
@@ -794,11 +818,7 @@
                         $divCalendarEventPopupAllDayUnchecked.show();
                     }
 
-                    popup.css({
-                        top: offset.top + required(eventEl.outerHeight(), "the event element\'s height"),
-                        left: offset.left + required(eventEl.outerWidth(), "the event element\'s width"),
-                        display: "block"
-                    }).data("event-id", arg.event.id);
+                    placeEventPopup(popup, arg.el).data("event-id", arg.event.id);
 
                     $editCalendarEventPopup.trigger("focus");
 
@@ -1071,8 +1091,6 @@
                     return false;
                     // --- "Other" (shared) event: read-only view path ---
                 } else if (conform(arg.event.extendedProps, calendarEventProps, "the event\'s extendedProps").calendarType === "Other") {
-                    let eventEl = $(arg.el);
-                    let offset = required(eventEl.offset(), "the event element\'s position");
                     let popup = $otherCalendarEventPopup;
                     let currentEventId = popup.data("event-id");
 
@@ -1097,11 +1115,7 @@
                         $divOtherCalendarEventPopupAllDayUnchecked.show();
                     }
 
-                    popup.css({
-                        top: offset.top + required(eventEl.outerHeight(), "the event element\'s height"),
-                        left: offset.left + required(eventEl.outerWidth(), "the event element\'s width"),
-                        display: "block"
-                    }).data("event-id", arg.event.id);
+                    placeEventPopup(popup, arg.el).data("event-id", arg.event.id);
 
                     $viewOtherCalendarEventPopup.trigger("focus");
 
@@ -2739,7 +2753,7 @@
                         htmlString += String.raw`
                             <div class="form-row browseCalendarsOfInterest" style="margin-top: 20px;">
                                 <div id="divBrowseCalendarsOfInterest${browseCalendarsOfInterest.id}" class="form-group col-md-3 mb-3 text-center">
-                                    <input class="form-control form-control-sm checkBoxBrowseCalendarsOfInterest" type="checkbox" ${browseCalendarsOfInterest.checked === true ? "checked" : ""}/>
+                                    <input class="calendar-checkbox checkBoxBrowseCalendarsOfInterest" type="checkbox" ${browseCalendarsOfInterest.checked === true ? "checked" : ""}/>
                                 </div>
                                 <div class="form-group col-md-9 mb-9 text-center">
                                     <label style="word-break: break-all;">${escapeHtml(browseCalendarsOfInterest.name)}</label>

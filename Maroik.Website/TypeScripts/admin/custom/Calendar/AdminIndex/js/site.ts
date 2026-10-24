@@ -639,6 +639,26 @@
             $divEditEventNotificationAllDayUnchecked.show();
         }
 
+        /**
+         * Opens an event popup next to the clicked event: right of it, or left of it when the right side would run past
+         * the window, and never past either edge (on a phone neither side may have room). The popup is positioned
+         * absolutely against the page, so the event's viewport box is shifted by the scroll. Measured while hidden
+         * (`visibility`), so it does not flash at its old place.
+         */
+        function placeEventPopup(popup: JQuery<HTMLElement>, eventEl: HTMLElement): JQuery<HTMLElement> {
+            const margin = 8;
+            popup.css({ visibility: "hidden", display: "block" });
+            const width = required(popup[0], "the event popup").getBoundingClientRect().width;
+            const event = eventEl.getBoundingClientRect();
+            const windowWidth = document.documentElement.clientWidth;
+            const left = event.right + width + margin <= windowWidth ? event.right : event.left - width;
+            return popup.css({
+                top: event.bottom + window.scrollY,
+                left: Math.max(margin, Math.min(left, windowWidth - width - margin)) + window.scrollX,
+                visibility: ""
+            });
+        }
+
         // --- The FullCalendar instance --------------------------------------
         // Read-only grid (`editable: false`) but `selectable` so a drag opens the
         // create-event modal. `calendar` is block-scoped here and closed over by
@@ -659,6 +679,12 @@
             editable: false,
             selectable: true,
             selectMirror: true,
+            // Grow with the weeks shown instead of keeping a fixed height and scrolling inside it, which on a phone hid the
+            // last weeks of the month.
+            height: "auto",
+            // With "auto" FullCalendar makes the weekday header sticky and paints it white (--fc-page-bg-color), which hid
+            // the weekday names on the dark theme; the grid is never taller than the page needs, so nothing to keep in view.
+            stickyHeaderDates: false,
             // Drag-select a date range: pre-fill the create-event start/end date
             // fields (UTC, +1 day on the start to match the grid), load the
             // user's calendars into the "my calendar" select, default the
@@ -719,8 +745,6 @@
             //   • delete -> `confirm()` then POST `DeleteCalendarEvent` and remove
             //     the event from the grid.
             eventClick: function(arg: FullCalendarEventClickArg) {
-                let eventEl = $(arg.el);
-                let offset = required(eventEl.offset(), "the event element\'s position");
                 let popup = $calendarEventPopup;
                 let currentEventId = popup.data("event-id");
 
@@ -745,11 +769,7 @@
                     $divCalendarEventPopupAllDayUnchecked.show();
                 }
 
-                popup.css({
-                    top: offset.top + required(eventEl.outerHeight(), "the event element\'s height"),
-                    left: offset.left + required(eventEl.outerWidth(), "the event element\'s width"),
-                    display: "block"
-                }).data("event-id", arg.event.id);
+                placeEventPopup(popup, arg.el).data("event-id", arg.event.id);
 
                 $editCalendarEventPopup.trigger("focus");
 
@@ -2374,10 +2394,10 @@
                                     <label class='shareToCalendar' style='word-break: break-all;'>${escapeHtml(setCalendarShared.name)}</label>
                                 </div>
                                 <div class='form-group col-md-4 mb-4 text-center'>
-                                    <input class='form-control form-control-sm shareToUser' type='checkbox' ${setCalendarShared.user === true ? "checked" : ""}/>
+                                    <input class='calendar-checkbox shareToUser' type='checkbox' ${setCalendarShared.user === true ? "checked" : ""}/>
                                 </div>
                                 <div class='form-group col-md-4 mb-4 text-center'>
-                                    <input class='form-control form-control-sm shareToGuest' type='checkbox' ${setCalendarShared.guest === true ? "checked" : ""}/>
+                                    <input class='calendar-checkbox shareToGuest' type='checkbox' ${setCalendarShared.guest === true ? "checked" : ""}/>
                                 </div>
                             </div>
 

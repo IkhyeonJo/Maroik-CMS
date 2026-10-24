@@ -68,3 +68,22 @@
         cursor: pointer;
     }
 }
+
+/* A plain checkbox under its label ("all day" in the event dialogs, the calendar selection lists). As a form-control it
+   was drawn as a box as wide as its column. */
+.calendar-checkbox {
+    display: block;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: 0.4rem;
+
+    .text-center > & {
+        margin-inline: auto;
+    }
+}
+
+/* The share dialog lists short rows, and a modal dialog shrinks to its content in this layout (_Layout site.css), so
+   without a width it collapsed to the width of its tab title. */
+#setCalendarSharedDialogModal .modal-dialog {
+    width: min(32rem, calc(100vw - 1rem));
+}

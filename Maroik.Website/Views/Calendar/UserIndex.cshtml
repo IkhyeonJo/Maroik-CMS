@@ -263,14 +263,15 @@
                         </div>
 
                         <div class="form-row">
-                            <label for="createCalendarTimeZone">@Localizer["TimeZone"].Value</label>
-                            <select id="createCalendarTimeZone" name="createCalendarTimeZone" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
-                                @foreach (var timeZoneOption in (IEnumerable<TimeZoneOptionDto>)ViewBag.TimeZoneOptions)
-                                {
-                                    <option value="@timeZoneOption.IanaId" selected="@(timeZoneOption.IanaId == loggedInAccount.TimeZoneIanaId ? "selected" : null)">@timeZoneOption.DisplayName</option>
-                                }
-                            </select>
-                            <br />
+                            <div class="form-group col-md-12 mb-3">
+                                <label for="createCalendarTimeZone">@Localizer["TimeZone"].Value</label>
+                                <select id="createCalendarTimeZone" name="createCalendarTimeZone" class="form-control form-control-sm" style="max-width:100%;text-overflow:ellipsis;">
+                                    @foreach (var timeZoneOption in (IEnumerable<TimeZoneOptionDto>)ViewBag.TimeZoneOptions)
+                                    {
+                                        <option value="@timeZoneOption.IanaId" selected="@(timeZoneOption.IanaId == loggedInAccount.TimeZoneIanaId ? "selected" : null)">@timeZoneOption.DisplayName</option>
+                                    }
+                                </select>
+                            </div>
                         </div>
 
                         <div class="modal-footer justify-content-between">
@@ -378,7 +379,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createCalendarEventAllDay">@Localizer["All day"].Value</label>
-                                <input class="form-control form-control-sm" type="checkbox" id="createCalendarEventAllDay" name="createCalendarEventAllDay" />
+                                <input class="calendar-checkbox" type="checkbox" id="createCalendarEventAllDay" name="createCalendarEventAllDay" />
                             </div>
                             <div class="form-group col-md-6 mb-3">
                                 <label for="createCalendarEventRepeatCycle">@Localizer["Repeat cycle"].Value</label>
@@ -578,7 +579,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editCalendarEventAllDay">@Localizer["All day"].Value</label>
-                                <input class="form-control form-control-sm" type="checkbox" id="editCalendarEventAllDay" name="editCalendarEventAllDay" />
+                                <input class="calendar-checkbox" type="checkbox" id="editCalendarEventAllDay" name="editCalendarEventAllDay" />
                             </div>
                             <div class="form-group col-md-6 mb-3">
                                 <label for="editCalendarEventRepeatCycle">@Localizer["Repeat cycle"].Value</label>
@@ -775,7 +776,7 @@
                         <div class="form-row">
                             <div class="form-group col-md-6 mb-3">
                                 <label for="viewCalendarEventAllDay">@Localizer["All day"].Value</label>
-                                <input class="form-control form-control-sm" type="checkbox" id="viewCalendarEventAllDay" name="viewCalendarEventAllDay" disabled/>
+                                <input class="calendar-checkbox" type="checkbox" id="viewCalendarEventAllDay" name="viewCalendarEventAllDay" disabled/>
                             </div>
                             <div class="form-group col-md-6 mb-3">
                                 <label for="viewCalendarEventRepeatCycle">@Localizer["Repeat cycle"].Value</label>
@@ -954,7 +955,7 @@
 
                         <div class="form-row">
                             <div class="form-group col-md-3 mb-3 text-center">
-                                <input id="allCheckBrowseCalendarsOfInterest" class="form-control form-control-sm" type="checkbox" />
+                                <input id="allCheckBrowseCalendarsOfInterest" class="calendar-checkbox" type="checkbox" />
                             </div>
                             <div class="form-group col-md-9 mb-9 text-center">
                                 <label style="word-break: break-all;">@Localizer["Name"].Value</label>

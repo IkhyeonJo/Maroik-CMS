@@ -5,6 +5,7 @@ import {
     describeCalendarCommon,
     describeEditFormDetail,
     describeCalendarExtras,
+    describeEventLayout,
     evt,
     mine,
     extras,
@@ -68,7 +69,7 @@ function fixture(): string {
      <form id="formCreateCalendarEvent"></form><form id="formEditCalendarEvent"></form>
      <div id="myCalendars"></div>
      <a id="aEditCalendarEventAttachedFile"></a>
-     <a id="editCalendarEventPopup" href="#"></a>
+     <div id="calendarEventPopup"></div><a id="editCalendarEventPopup" href="#"></a>
      <input id="editCalendarEventStatus" />
      <a id="aUpdateCalendarShared"></a><div id="setCalendarSharedDialogModal"></div><div id="divSetCalendarShared"></div>
      <div class="divCreateEventNotificationAllDayCheckedRow">
@@ -316,6 +317,7 @@ function build(opts: { my?: unknown[]; other?: unknown[]; body?: (html: string) 
 describeCalendarCommon({ label: "admin/Calendar/AdminIndex", build, checkedIds: [{ Id: 1 }, { Id: 3 }] });
 describeEditFormDetail({ label: "admin/Calendar/AdminIndex", build });
 describeCalendarExtras({ label: "admin/Calendar/AdminIndex", build });
+describeEventLayout({ label: "admin/Calendar/AdminIndex", build: () => build(), popups: [{ calendarType: "My", id: "#calendarEventPopup" }] });
 
 describe("admin/Calendar/AdminIndex — events on the grid", () => {
     it("seeds the grid with the admin's own events, coloured by their calendar", () => {
@@ -395,6 +397,8 @@ describe("admin/Calendar/AdminIndex — sharing settings", () => {
         expect(h.$(".setCalendarShared")).toHaveLength(2);
         expect(h.$(".setCalendarShared").map((_, r) => [h.$(r).find(".shareToUser").prop("checked"), h.$(r).find(".shareToGuest").prop("checked")].join()).get()).toEqual(["true,false", "false,true"]);
         expect(h.$("#divSetCalendarShared b")).toHaveLength(0); // escaped, not interpreted
+        // Plain checkboxes: a `form-control` one is drawn as a box as wide as its column.
+        expect(h.$(".shareToUser, .shareToGuest").map((_, e) => e.className.replace(/ share.*/, "")).get()).toEqual(Array(4).fill("calendar-checkbox"));
         expect(modal).toHaveBeenCalledWith("show");
     });
 
