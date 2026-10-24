@@ -16,6 +16,7 @@
 @Html.Hidden("budgetFunctions", ClientJsonSerializer.Serialize(FormulaFunctions.All))
 @Html.Hidden("budgetSubClassMap", ClientJsonSerializer.Serialize(Model.SubClassesByMainClass))
 @Html.Hidden("budgetClassLabels", ClientJsonSerializer.Serialize(Model.ClassLabels))
+@Html.Hidden("budgetColumnCaptions", ClientJsonSerializer.Serialize(Model.ColumnCaptions))
 @Html.Hidden("localizerConfirmRemoveLine", Localizer["Remove the line {0} ({1})? Its inputs are deleted."].Value)
 @Html.Hidden("localizerNotBudgeted", Localizer["Recorded without a budget"].Value)
 @Html.Hidden("localizerAddLine", Localizer["Add line"].Value)

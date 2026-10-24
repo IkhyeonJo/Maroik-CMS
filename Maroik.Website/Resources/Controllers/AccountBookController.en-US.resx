@@ -567,4 +567,40 @@
   <data name="The reference {0} is outside the sheet." xml:space="preserve">
     <value>The reference {0} is outside the sheet.</value>
   </data>
+  <data name="January" xml:space="preserve">
+    <value>January</value>
+  </data>
+  <data name="February" xml:space="preserve">
+    <value>February</value>
+  </data>
+  <data name="March" xml:space="preserve">
+    <value>March</value>
+  </data>
+  <data name="April" xml:space="preserve">
+    <value>April</value>
+  </data>
+  <data name="May" xml:space="preserve">
+    <value>May</value>
+  </data>
+  <data name="June" xml:space="preserve">
+    <value>June</value>
+  </data>
+  <data name="July" xml:space="preserve">
+    <value>July</value>
+  </data>
+  <data name="August" xml:space="preserve">
+    <value>August</value>
+  </data>
+  <data name="September" xml:space="preserve">
+    <value>September</value>
+  </data>
+  <data name="October" xml:space="preserve">
+    <value>October</value>
+  </data>
+  <data name="November" xml:space="preserve">
+    <value>November</value>
+  </data>
+  <data name="December" xml:space="preserve">
+    <value>December</value>
+  </data>
 </root>

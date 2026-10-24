@@ -567,4 +567,40 @@
   <data name="The reference {0} is outside the sheet." xml:space="preserve">
     <value>{0} 참조는 시트 밖에 있습니다.</value>
   </data>
+  <data name="January" xml:space="preserve">
+    <value>1월</value>
+  </data>
+  <data name="February" xml:space="preserve">
+    <value>2월</value>
+  </data>
+  <data name="March" xml:space="preserve">
+    <value>3월</value>
+  </data>
+  <data name="April" xml:space="preserve">
+    <value>4월</value>
+  </data>
+  <data name="May" xml:space="preserve">
+    <value>5월</value>
+  </data>
+  <data name="June" xml:space="preserve">
+    <value>6월</value>
+  </data>
+  <data name="July" xml:space="preserve">
+    <value>7월</value>
+  </data>
+  <data name="August" xml:space="preserve">
+    <value>8월</value>
+  </data>
+  <data name="September" xml:space="preserve">
+    <value>9월</value>
+  </data>
+  <data name="October" xml:space="preserve">
+    <value>10월</value>
+  </data>
+  <data name="November" xml:space="preserve">
+    <value>11월</value>
+  </data>
+  <data name="December" xml:space="preserve">
+    <value>12월</value>
+  </data>
 </root>

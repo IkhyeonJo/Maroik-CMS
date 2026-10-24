@@ -57,6 +57,8 @@
     const functions = parseJson(fieldValue($("#budgetFunctions")), check.array(check.object({ Name: check.string, Signature: check.string })), "#budgetFunctions");
     const subClassMap = parseJson(fieldValue($("#budgetSubClassMap")), check.record(check.array(check.string)), "#budgetSubClassMap");
     const classLabels = parseJson(fieldValue($("#budgetClassLabels")), check.record(check.string), "#budgetClassLabels");
+    // What the server says the columns hold (B..M the months, N the year total), shown under their letters.
+    const columnCaptions = parseJson(fieldValue($("#budgetColumnCaptions")), check.record(check.string), "#budgetColumnCaptions");
     const text = {
         confirmRemoveLine: fieldValue($("#localizerConfirmRemoveLine")),
         notBudgeted: fieldValue($("#localizerNotBudgeted")),
@@ -238,7 +240,12 @@
     function Render() {
         $grid.empty();
         const $head = $("<tr>").append($("<th>").addClass("budget-corner"));
-        for (const letter of COLUMNS) $head.append($("<th>").attr("data-column", letter).text(letter));
+        for (const letter of COLUMNS) {
+            const $th = $("<th>").attr("data-column", letter).text(letter);
+            const caption = columnCaptions[letter];
+            if (caption !== undefined) $th.append($("<div>").addClass("budget-column-caption").text(caption));
+            $head.append($th);
+        }
         const $body = $("<tbody>");
         for (const r of rows) {
             const $tr = $("<tr>").addClass(`budget-row-${r.kind.toLowerCase()}`).attr("data-row", String(r.number));

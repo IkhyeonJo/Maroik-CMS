@@ -153,4 +153,21 @@ public class BudgetViewModelMapperTests
         Assert.Equal("L:RentalIncome", page.ClassLabels["RentalIncome"]);
         Assert.Equal(["RegularSavings", "NonConsumerSpending", "ConsumerSpending"], BudgetViewModelMapper.Page(BudgetKind.Expenditure, [], DateTime.UnixEpoch, "UTC", L).MainClasses);
     }
+
+    /// <summary>
+    /// The column headers say what the columns hold: B..M the months (January..December) and N the year total, localized; the
+    /// label column A and the free columns O..Z have no caption.
+    /// </summary>
+    [Fact]
+    public void ThePage_CaptionsTheMonthAndYearTotalColumns()
+    {
+        BudgetPageViewModel page = BudgetViewModelMapper.Page(BudgetKind.Income, [], DateTime.UnixEpoch, "UTC", L);
+
+        Assert.Equal(new Dictionary<string, string>
+        {
+            ["B"] = "L:January", ["C"] = "L:February", ["D"] = "L:March", ["E"] = "L:April", ["F"] = "L:May", ["G"] = "L:June",
+            ["H"] = "L:July", ["I"] = "L:August", ["J"] = "L:September", ["K"] = "L:October", ["L"] = "L:November", ["M"] = "L:December",
+            ["N"] = "L:Year total",
+        }, page.ColumnCaptions);
+    }
 }

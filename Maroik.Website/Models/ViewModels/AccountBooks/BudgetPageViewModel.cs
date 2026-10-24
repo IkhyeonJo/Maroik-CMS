@@ -20,4 +20,7 @@ public sealed class BudgetPageViewModel
 
     /// <summary>The currency labels of the account's assets (the currency field's suggestions).</summary>
     public IReadOnlyList<string> Currencies { get; init; } = [];
+
+    /// <summary>The localized caption of each column that has one (B..M the months, N the year total), by column letter.</summary>
+    public IReadOnlyDictionary<string, string> ColumnCaptions { get; init; } = new Dictionary<string, string>();
 }

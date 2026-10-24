@@ -272,3 +272,10 @@
         color: #fd7e14;
     }
 }
+
+/* The caption under a column letter (B..M the months, N the year total). */
+.budget-column-caption {
+    font-size: 0.7rem;
+    font-weight: normal;
+    color: #adb5bd;
+}

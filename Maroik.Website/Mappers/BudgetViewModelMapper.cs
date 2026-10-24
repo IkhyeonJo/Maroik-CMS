@@ -15,7 +15,10 @@ namespace Maroik.Website.Mappers;
 /// </summary>
 public static class BudgetViewModelMapper
 {
-    /// <summary>The page model: the kind, the account's current year in its time zone, the kind's classes (localized) and the asset currencies.</summary>
+    /// <summary>
+    /// The page model: the kind, the account's current year in its time zone, the kind's classes (localized), the asset currencies, and
+    /// the captions of the month and year-total columns (localized; which column is which comes from <see cref="BudgetSheetLayout"/>).
+    /// </summary>
     public static BudgetPageViewModel Page(BudgetKind kind, IEnumerable<AssetResponse> assets, DateTime utcNow, string timeZoneIanaId, Func<string, string> localize) => new()
     {
         Kind = kind.ToString(),
@@ -25,7 +28,16 @@ public static class BudgetViewModelMapper
         ClassLabels = BudgetLine.MainClasses(kind).Concat(BudgetLine.Taxonomy(kind).Values.SelectMany(s => s)).Distinct(StringComparer.Ordinal)
             .ToDictionary(c => c, localize, StringComparer.Ordinal),
         Currencies = [.. assets.Select(a => a.MonetaryUnit).OfType<string>().Distinct(StringComparer.Ordinal)],
+        ColumnCaptions = Enumerable.Range(0, BudgetSheetLayout.ColumnCount).Select(i => ((char)('A' + i)).ToString())
+            .Select(column => (column, key: BudgetSheetLayout.MonthOf(column) is { } month ? MonthKeys[month - 1]
+                : column == BudgetSheetLayout.YearColumn ? "Year total" : null))
+            .Where(c => c.key is not null)
+            .ToDictionary(c => c.column, c => localize(c.key!), StringComparer.Ordinal),
     };
+
+    /// <summary>The resx keys of the month columns' captions, January first.</summary>
+    private static readonly string[] MonthKeys =
+        ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     /// <summary>A value as the grid shows it: a number in the amount format, any other value as its text, empty as nothing.</summary>
     public static string Display(BudgetValueResponse value) =>

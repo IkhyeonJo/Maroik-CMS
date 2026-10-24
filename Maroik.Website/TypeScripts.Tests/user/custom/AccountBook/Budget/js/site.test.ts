@@ -18,6 +18,7 @@ function fixture(kind = "Expenditure", year = 2026): string {
         ])}' />` +
         `<input type="hidden" id="budgetSubClassMap" value='${JSON.stringify({ ConsumerSpending: ["MealOrEatOutExpenses", "PinMoney"], RegularSavings: ["Deposit", "Investment"] })}' />` +
         `<input type="hidden" id="budgetClassLabels" value='${JSON.stringify({ ConsumerSpending: "Consumer", MealOrEatOutExpenses: "Meal", PinMoney: "Pin", RegularSavings: "Savings", Deposit: "Deposit" })}' />` +
+        `<input type="hidden" id="budgetColumnCaptions" value='${JSON.stringify({ B: "Jan", M: "Dec", N: "Total" })}' />` +
         hidden("localizerConfirmRemoveLine", "Remove {0} ({1})?") +
         hidden("localizerNotBudgeted", "Not budgeted") +
         hidden("localizerAddLine", "Add line") +
@@ -129,10 +130,20 @@ describe("AccountBook/Budget — loading and drawing", () => {
     it("draws the column letters, the row numbers and every cell", () => {
         const h = load();
 
-        expect(h.$("#budgetGrid thead th[data-column]").map((_, el) => h.$(el).text()).get().join("")).toBe("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        expect(h.$("#budgetGrid thead th[data-column]").map((_, el) => h.$(el).attr("data-column")).get().join("")).toBe("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        expect(h.$("#budgetGrid thead th[data-column]").map((_, el) => h.$(el).contents().first().text()).get().join("")).toBe("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
         expect(h.$("#budgetGrid tbody tr")).toHaveLength(7);
         expect(h.$("#budgetGrid tbody th.budget-row-number").map((_, el) => h.$(el).text()).get()).toEqual(["1", "2", "3", "4", "5", "6", "7"]);
         expect(h.$("#budgetGrid tbody tr").first().find("td")).toHaveLength(26);
+    });
+
+    // Without a caption the month columns were bare letters: nothing said B..M are January..December and N the year total.
+    it("captions the columns the server names (the months and the year total) under their letters; the others have none", () => {
+        const h = load();
+        const caption = (column: string) => h.$(`#budgetGrid thead th[data-column="${column}"] .budget-column-caption`);
+
+        expect([caption("B").text(), caption("M").text(), caption("N").text()]).toEqual(["Jan", "Dec", "Total"]);
+        expect([caption("A"), caption("O")].map((c) => c.length)).toEqual([0, 0]);
     });
 
     it("column A of a fixed row shows its label (and currency); of a free row, its cell", () => {
