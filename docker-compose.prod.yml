@@ -21,6 +21,10 @@
 # maroik.website over plain HTTP on `backend`, so the host publishes no port at all and
 # needs no origin certificate. The tunnel's public hostnames (maroik.com, www.maroik.com
 # -> http://maroik.website:80) are configured in the Cloudflare dashboard.
+#
+# Deploy.sh choice 1 lays a mode file over this one, by how the site is reached: docker-compose.prod.tunnel.yml (this
+# stack, domain from the answer), docker-compose.prod.portforward.yml (Caddy on 80 / 443 instead of cloudflared) or
+# docker-compose.prod.nodomain.yml (the website published on a port, plain HTTP, no cloudflared).
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Container log rotation, applied to every service below. Every service logs to stdout (Serilog

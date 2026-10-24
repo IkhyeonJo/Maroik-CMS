@@ -9,6 +9,16 @@
 #      SKIP_CI_CHECK=1 skips the CI lookup (e.g. GitHub's API is down); the images must still exist.
 #   3) Quit.
 # Without a terminal (or to skip the question) pass the choice: bash Maroik.DeployOps/Deploy.sh local | github.
+# Choice 1 then asks how visitors reach the site, and starts the stack for it (docker-compose.prod.<mode>.yml over
+# docker-compose.prod.yml; the website reads it as ServerSetting:HostingMode). Nothing is saved: it is asked on every deploy.
+#   no domain          -> plain HTTP on a port of this server, for a home network (no HTTPS)
+#   domain + tunnel    -> Cloudflare Tunnel (cloudflared, TUNNEL_TOKEN in .env.prod), no port opened
+#   domain + port fwd  -> Caddy on 80 / 443 with a Let's Encrypt certificate; the router forwards 80 / 443 here
+# Without a terminal pass the answers too:
+#   bash Maroik.DeployOps/Deploy.sh local nodomain [port] [mail-link address]
+#   bash Maroik.DeployOps/Deploy.sh local tunnel <domain>
+#   bash Maroik.DeployOps/Deploy.sh local portforward <domain> <Let's Encrypt e-mail>
+# Choice 2 always runs the Cloudflare Tunnel with .env.prod's domain, as AutoDeploy.sh does.
 # Either way the server-only files (.env.prod, whose template is .env.prod.example, the Production Init.sql and the upload folders)
 # are checked first; they are git-ignored, so a checkout never touches them.
 REPO_DIR="/home/ubuntu/Maroik"
@@ -43,9 +53,76 @@ case "$MODE" in
   *) echo "[ERROR] Unknown choice '$MODE': choose 1 (local), 2 (github) or 3 (quit)."; exit 1 ;;
 esac
 
+# ── How visitors reach the site (choice 1 only) ─────────────────────────────────────────────────────────────
+ENV_PROD_PATH="$REPO_DIR/.env.prod"
+env_value() { grep "^$1=" "$ENV_PROD_PATH" 2>/dev/null | head -1 | cut -d '=' -f2- | tr -d '\r'; }
+# Asks $1 with the default $2 (taken on Enter); without a terminal the default is the answer.
+ask() {
+  local answer=""
+  if [ -t 0 ]; then read -r -p "$1 [$2]: " answer; fi
+  echo "${answer:-$2}"
+}
+# maroik.com from "https://www.maroik.com/", "www.maroik.com" or "maroik.com".
+bare_domain() { echo "$1" | sed -E 's#^[a-zA-Z]+://##; s#/.*$##; s#^www\.##' | tr '[:upper:]' '[:lower:]'; }
+
+HOSTING="tunnel"
+MAROIK_DOMAIN=""
+if [ "$MODE" = "local" ]; then
+  HOSTING="${2:-}"
+  if [ -z "$HOSTING" ]; then
+    if [ ! -t 0 ]; then
+      echo "[ERROR] No terminal to ask how the site is reached: pass it (bash Maroik.DeployOps/Deploy.sh local nodomain | tunnel <domain> | portforward <domain> <email>)."
+      exit 1
+    fi
+    read -r -p "Does the site have a domain? [y/N] " has_domain
+    if [ "$has_domain" = "y" ] || [ "$has_domain" = "Y" ]; then
+      echo "How is it reached?"
+      echo "  1) Cloudflare Tunnel (cloudflared; no port is opened)"
+      echo "  2) Port forwarding (the router forwards 80 / 443 to this server; Let's Encrypt certificate)"
+      read -r -p "Choose [1-2]: " reach
+      case "$reach" in
+        1) HOSTING="tunnel" ;;
+        2) HOSTING="portforward" ;;
+        *) echo "[ERROR] Unknown choice '$reach': choose 1 (Cloudflare Tunnel) or 2 (port forwarding)."; exit 1 ;;
+      esac
+    else
+      HOSTING="nodomain"
+    fi
+  fi
+  case "$HOSTING" in
+    tunnel|portforward)
+      MAROIK_DOMAIN=$(bare_domain "${3:-$(ask "Domain (www.<domain> is served too)" "$(bare_domain "$(env_value ServerSetting__DomainName)")")}")
+      if ! echo "$MAROIK_DOMAIN" | grep -Eq '^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$'; then
+        echo "[ERROR] '$MAROIK_DOMAIN' is not a domain (e.g. maroik.com)."; exit 1
+      fi
+      if [ "$HOSTING" = "portforward" ]; then
+        MAROIK_ACME_EMAIL="${4:-$(ask "E-mail for Let's Encrypt (certificate expiry notices)" "$(env_value ServerSetting__SmtpOptions__fromEmail)")}"
+        case "$MAROIK_ACME_EMAIL" in
+          ?*@?*.?*) ;;
+          *) echo "[ERROR] '$MAROIK_ACME_EMAIL' is not an e-mail address."; exit 1 ;;
+        esac
+      fi
+      ;;
+    nodomain)
+      MAROIK_HTTP_PORT="${3:-$(ask "Port to serve the site on" "80")}"
+      if ! echo "$MAROIK_HTTP_PORT" | grep -Eq '^[0-9]+$' || [ "$MAROIK_HTTP_PORT" -lt 1 ] || [ "$MAROIK_HTTP_PORT" -gt 65535 ]; then
+        echo "[ERROR] '$MAROIK_HTTP_PORT' is not a port (1-65535)."; exit 1
+      fi
+      LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+      if [ "$MAROIK_HTTP_PORT" = "80" ]; then default_url="http://${LAN_IP:-localhost}/"; else default_url="http://${LAN_IP:-localhost}:$MAROIK_HTTP_PORT/"; fi
+      MAROIK_SITE_URL="${4:-$(ask "Address the mails link to" "$default_url")}"
+      case "$MAROIK_SITE_URL" in
+        http://?*) ;;
+        *) echo "[ERROR] '$MAROIK_SITE_URL' is not an http:// address."; exit 1 ;;
+      esac
+      echo "[WARN] Without a domain the site is plain HTTP: passwords and sessions travel unencrypted. Use it on a home network only."
+      ;;
+    *) echo "[ERROR] Unknown way to reach the site '$HOSTING': nodomain, tunnel or portforward."; exit 1 ;;
+  esac
+fi
+
 # ── Preflight: the server-only files this repository does not carry ─────────────────────────────────────────────────
 # Checked first, before git, apt or docker do anything, and reported all at once.
-ENV_PROD_PATH="$REPO_DIR/.env.prod"
 SQL_PROD_PATH="$REPO_DIR/Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql"
 UPLOAD_PATH="$REPO_DIR/Maroik.FileStorage/upload"
 missing=()
@@ -53,8 +130,8 @@ missing=()
 if [ ! -f "$ENV_PROD_PATH" ]; then
   missing+=(".env.prod not found: copy .env.prod.example to $ENV_PROD_PATH and fill in the real values.")
 else
-  env_value() { grep "^$1=" "$ENV_PROD_PATH" | head -1 | cut -d '=' -f2- | tr -d '\r'; }
-  [ -n "$(env_value TUNNEL_TOKEN)" ] \
+  # The tunnel's token: only the Cloudflare Tunnel needs it.
+  [ "$HOSTING" != "tunnel" ] || [ -n "$(env_value TUNNEL_TOKEN)" ] \
     || missing+=(".env.prod: TUNNEL_TOKEN is empty (Cloudflare Zero Trust > Networks > Tunnels > connector token).")
   case "$(env_value EXTERNAL_DRIVE_UUID)" in
     ""|"<CHANGE_ME>") missing+=(".env.prod: EXTERNAL_DRIVE_UUID is empty (the backup drive's UUID: sudo blkid).") ;;
@@ -220,8 +297,19 @@ if [ ! -f "$COMPOSE_PROD_PATH" ]; then
   exit 1
 fi
 
-# .env.prod, its TUNNEL_TOKEN (cloudflared is the site's only way in) and the Production Init.sql: checked in the
-# preflight at the top.
+# .env.prod, its TUNNEL_TOKEN (for the Cloudflare Tunnel) and the Production Init.sql: checked in the preflight at the top.
+
+# The compose files and the answers for the way the site is reached. Choice 2 runs docker-compose.prod.yml alone (the tunnel,
+# .env.prod's domain), as AutoDeploy.sh does; choice 1 lays the mode's file over it. `sudo env` hands the answers to compose.
+COMPOSE_FILES=(-f "$COMPOSE_PROD_PATH")
+[ "$MODE" = "local" ] && COMPOSE_FILES+=(-f "$REPO_DIR/docker-compose.prod.$HOSTING.yml")
+COMPOSE_ENV=(MAROIK_DOMAIN="$MAROIK_DOMAIN" MAROIK_ACME_EMAIL="${MAROIK_ACME_EMAIL:-}" MAROIK_HTTP_PORT="${MAROIK_HTTP_PORT:-}" MAROIK_SITE_URL="${MAROIK_SITE_URL:-}")
+# The edge container of another mode, left from an earlier deploy, would keep the old way in open: remove it.
+case "$HOSTING" in
+  tunnel)      stale_edges="Maroik.Caddy" ;;
+  portforward) stale_edges="Maroik.Cloudflared" ;;
+  nodomain)    stale_edges="Maroik.Cloudflared Maroik.Caddy" ;;
+esac
 
 # Read external drive configuration from .env.prod
 EXTERNAL_DRIVE_UUID=$(grep "^EXTERNAL_DRIVE_UUID=" "$ENV_PROD_PATH" | cut -d '=' -f2)
@@ -272,7 +360,9 @@ if [ "$MODE" = "github" ]; then
   # shellcheck disable=SC2086  # APP_SERVICES is a space-separated list on purpose
   sudo env MAROIK_TAG="$MAROIK_TAG" $COMPOSE -f "$COMPOSE_PROD_PATH" pull $APP_SERVICES \
     || { echo "[ERROR] Could not pull the $MAROIK_TAG images. Did the CI publish job push them, and are the packages public?"; exit 1; }
-  sudo env MAROIK_TAG="$MAROIK_TAG" $COMPOSE -f "$COMPOSE_PROD_PATH" up -d
+  # shellcheck disable=SC2086  # stale_edges is a space-separated list on purpose
+  sudo docker rm -f $stale_edges > /dev/null 2>&1
+  sudo env MAROIK_TAG="$MAROIK_TAG" "${COMPOSE_ENV[@]}" $COMPOSE "${COMPOSE_FILES[@]}" up -d
 
   # AutoDeploy.sh deploys only commits after this one. Through sudo: AutoDeploy.sh runs as root (cron) and may
   # have written these files last.
@@ -300,7 +390,9 @@ else
 
   # Start Docker Compose with the images just built (nothing is pulled for them: they exist locally under that tag).
   # `sudo env` because sudo drops the caller's environment.
-  sudo env MAROIK_TAG="$MAROIK_TAG" $COMPOSE -f "$COMPOSE_PROD_PATH" up -d \
+  # shellcheck disable=SC2086  # stale_edges is a space-separated list on purpose
+  sudo docker rm -f $stale_edges > /dev/null 2>&1
+  sudo env MAROIK_TAG="$MAROIK_TAG" "${COMPOSE_ENV[@]}" $COMPOSE "${COMPOSE_FILES[@]}" up -d \
     || { echo "[ERROR] docker compose up failed."; exit 1; }
 fi
 
@@ -323,14 +415,24 @@ fi
 # Reload cron service
 sudo systemctl reload cron
 
-# No inbound port at all: the site is reached only through the Cloudflare Tunnel, which
-# cloudflared opens outbound (docker-compose.prod.yml), and the server is managed physically.
+# Inbound ports by the way the site is reached: none for the Cloudflare Tunnel (cloudflared dials out), 80 / 443 for port
+# forwarding (Caddy), the chosen port without a domain. The server is managed physically (no SSH port).
 sudo apt install ufw -y
 
 echo "[+] Resetting firewall rules..."
 sudo ufw --force reset
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
+case "$HOSTING" in
+  portforward)
+    sudo ufw allow 80/tcp
+    sudo ufw allow 443/tcp
+    sudo ufw allow 443/udp
+    ;;
+  nodomain)
+    sudo ufw allow "$MAROIK_HTTP_PORT/tcp"
+    ;;
+esac
 
 # Ping (ICMP Echo Request) block
 if ! grep -q '^net.ipv4.icmp_echo_ignore_all = 1' /etc/sysctl.conf; then
@@ -349,6 +451,16 @@ sudo ufw --force enable
 
 # Adds the current user to the "docker" group,
 sudo usermod -a -G docker $USER
+
+case "$HOSTING" in
+  portforward)
+    echo "[INFO] Port forwarding: forward 80 and 443 (TCP, and UDP 443) on the router to this server, and point $MAROIK_DOMAIN and"
+    echo "[INFO] www.$MAROIK_DOMAIN (DNS A / AAAA) at its public IP. Caddy gets the certificate once both reach it."
+    ;;
+  nodomain)
+    echo "[INFO] The site is at $MAROIK_SITE_URL (plain HTTP)."
+    ;;
+esac
 
 # Starts a new shell session with the "docker" group applied.
 newgrp docker

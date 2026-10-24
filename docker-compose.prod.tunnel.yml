@@ -1,0 +1,14 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Maroik — Cloudflare Tunnel mode with the domain asked by Deploy.sh (choice 1, "the site has a domain", "Cloudflare
+# Tunnel"), laid over docker-compose.prod.yml:
+#   sudo env MAROIK_TAG=... MAROIK_DOMAIN=maroik.com \
+#     docker compose -f docker-compose.prod.yml -f docker-compose.prod.tunnel.yml up -d
+# The stack is docker-compose.prod.yml's (cloudflared, no published port); only the website's domain comes from the answer
+# instead of .env.prod. Choice 2 (GitHub) and AutoDeploy.sh use docker-compose.prod.yml alone, with .env.prod's domain.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+    maroik.website:
+        environment:
+          - ServerSetting__HostingMode=Tunnel
+          - ServerSetting__DomainName=https://www.${MAROIK_DOMAIN:?set MAROIK_DOMAIN or run Maroik.DeployOps/Deploy.sh}/

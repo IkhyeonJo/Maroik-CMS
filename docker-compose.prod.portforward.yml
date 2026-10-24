@@ -1,0 +1,48 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Maroik — port-forwarding mode, laid over docker-compose.prod.yml by Deploy.sh (choice 1, "the site has a domain",
+# "port forwarding"):
+#   sudo env MAROIK_TAG=... MAROIK_DOMAIN=maroik.com MAROIK_ACME_EMAIL=... \
+#     docker compose -f docker-compose.prod.yml -f docker-compose.prod.portforward.yml up -d
+# The router forwards 80 and 443 to this server and the domain's DNS points at its public IP (the owner's job). Caddy
+# (Maroik.Caddy/Caddyfile) publishes them, gets and renews the Let's Encrypt certificate for MAROIK_DOMAIN and
+# www.MAROIK_DOMAIN, and proxies to maroik.website; cloudflared does not run.
+# ─────────────────────────────────────────────────────────────────────────────
+
+volumes:
+      caddy-data:     # certificates and ACME account (kept across deploys, so Let's Encrypt is not asked again each time)
+      caddy-config:
+
+services:
+    maroik.website:
+        environment:
+          - ServerSetting__HostingMode=PortForwarding
+          - ServerSetting__DomainName=https://www.${MAROIK_DOMAIN:?set MAROIK_DOMAIN or run Maroik.DeployOps/Deploy.sh}/
+
+    caddy:
+        image: caddy:2.10-alpine
+        container_name: Maroik.Caddy
+        logging:                       # as x-logging in docker-compose.prod.yml (a YAML anchor does not reach another file)
+          driver: json-file
+          options:
+            max-size: "10m"
+            max-file: "3"
+        restart: unless-stopped
+        ports:
+          - "80:80"
+          - "443:443"
+          - "443:443/udp"              # HTTP/3
+        environment:
+          - MAROIK_DOMAIN=${MAROIK_DOMAIN:?set MAROIK_DOMAIN or run Maroik.DeployOps/Deploy.sh}
+          - MAROIK_ACME_EMAIL=${MAROIK_ACME_EMAIL:?set MAROIK_ACME_EMAIL or run Maroik.DeployOps/Deploy.sh}
+        volumes:
+          - ./Maroik.Caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+          - caddy-data:/data
+          - caddy-config:/config
+        networks:
+          - backend
+        depends_on:
+          - maroik.website
+
+    # Not started in this mode (Deploy.sh also removes a container left from the tunnel mode).
+    cloudflared:
+        profiles: ["tunnel-only"]

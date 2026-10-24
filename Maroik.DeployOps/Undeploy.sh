@@ -1,11 +1,12 @@
 #!/bin/bash
 
 # Bring down the Docker containers defined in docker-compose.prod.yml. MAROIK_TAG only has to be set for the file to
-# parse (its app images have no default tag); `down` removes the containers whatever image they run.
+# parse (its app images have no default tag); `down` removes the containers whatever image they run. --remove-orphans also
+# removes the containers of a mode file Deploy.sh laid over it (Caddy of docker-compose.prod.portforward.yml).
 if sudo docker compose version > /dev/null 2>&1; then
-  sudo env MAROIK_TAG=down docker compose -f /home/ubuntu/Maroik/docker-compose.prod.yml down
+  sudo env MAROIK_TAG=down docker compose -f /home/ubuntu/Maroik/docker-compose.prod.yml down --remove-orphans
 else
-  sudo env MAROIK_TAG=down docker-compose -f /home/ubuntu/Maroik/docker-compose.prod.yml down
+  sudo env MAROIK_TAG=down docker-compose -f /home/ubuntu/Maroik/docker-compose.prod.yml down --remove-orphans
 fi
 
 # Stop and remove all Docker containers

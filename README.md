@@ -181,7 +181,8 @@ flowchart LR
 
 Every service runs as a container under Docker Compose. Uploads are scanned by ClamAV before they are stored, the
 file storage is reachable only on the internal network, and outgoing mail is queued in RabbitMQ and sent by the
-worker. In production the site is reached through a Cloudflare Tunnel, so the host publishes no port.
+worker. In production the site is reached through a Cloudflare Tunnel, so the host publishes no port (a build deployed with
+`Deploy.sh` choice 1 can instead use port forwarding behind Caddy, or plain HTTP without a domain).
 
 ### Client scripts
 
@@ -366,16 +367,28 @@ or `github`):
 
 | Choice | What it deploys |
 |---|---|
-| `1` / `local` — build here | The source in `/home/ubuntu/Maroik` as it is (a clone on any branch, or source copied by hand). Builds the three app images on the server (release build, as CI does), starts the stack. No GitHub, no ghcr.io, no CI check; does not install `AutoDeploy.sh` (and removes it from the cron jobs). |
+| `1` / `local` — build here | The source in `/home/ubuntu/Maroik` as it is (a clone on any branch, or source copied by hand). Builds the three app images on the server (release build, as CI does), asks how the site is reached (below) and starts the stack for it. No GitHub, no ghcr.io, no CI check; does not install `AutoDeploy.sh` (and removes it from the cron jobs). |
 | `2` / `github` — GitHub | The newest `main` whose CI `publish` job succeeded: checks it out, pulls its three images from ghcr.io, starts the stack and installs `AutoDeploy.sh`, so merged changes reach production by themselves. |
 | `3` — quit | Nothing. |
+
+Choice 1 then asks whether the site has a domain and, if so, how it is reached. The answers are asked on every deploy
+(never saved); without a terminal pass them as arguments:
+
+| Answer | What runs | Arguments |
+|---|---|---|
+| No domain | The website on a port of this server (default 80) over plain HTTP — for a home network: passwords and sessions travel unencrypted. Also asks the address the mails link to (default `http://<LAN IP>[:port]/`). | `local nodomain [port] [address]` |
+| Domain, Cloudflare Tunnel | cloudflared, no port opened (as choice 2). Needs `TUNNEL_TOKEN`. | `local tunnel <domain>` |
+| Domain, port forwarding | Caddy on 80 / 443 with a Let's Encrypt certificate for `<domain>` and `www.<domain>` (asks the e-mail Let's Encrypt writes to). The router forwards 80 / 443 here and the domain's DNS points at the public IP. | `local portforward <domain> <e-mail>` |
+
+The website follows the answer (`ServerSetting:HostingMode`): HTTPS, HSTS and the www redirect only with a domain, and
+cookies a browser keeps over plain HTTP without one. Choice 2 always runs the Cloudflare Tunnel with `.env.prod`'s domain.
 
 Both need three server-only things the repository does not carry (all git-ignored). It checks for them before it
 does anything and lists whatever is missing:
 
 | Item | What it is |
 |---|---|
-| `.env.prod` | Passwords and settings: copy `.env.prod.example` and fill in the database, RabbitMQ and SMTP credentials, `TUNNEL_TOKEN` (Cloudflare Zero Trust > Networks > Tunnels > connector token), `EXTERNAL_DRIVE_UUID` (`sudo blkid`) and `BACKUP_BASE_DIR`. |
+| `.env.prod` | Passwords and settings: copy `.env.prod.example` and fill in the database, RabbitMQ and SMTP credentials, `TUNNEL_TOKEN` (Cloudflare Zero Trust > Networks > Tunnels > connector token; the tunnel only), `EXTERNAL_DRIVE_UUID` (`sudo blkid`) and `BACKUP_BASE_DIR`. |
 | `Maroik.DB/PostgreSQL/SQL_Init_Script/Production/Init.sql` | The database the stack starts from: a backup's `pg_dump`, or `Debugging/Init.sql` (same schema, demo data) on a new server. |
 | `Maroik.FileStorage/upload/` | Uploaded attachments. Empty is allowed only on a new server: `Deploy.sh` asks first (`ALLOW_EMPTY_UPLOAD=1` skips the question). |
 
@@ -385,7 +398,8 @@ on the backup drive in `BACKUP_BASE_DIR` (`/home/ubuntu/512GB/Maroik-Backup` by 
 next to the clone, in `/home/ubuntu`.
 
 Either choice then starts the whole stack, mounts the backup drive, installs the cron jobs (hourly backup, resource
-monitoring, and with choice 2 the auto deploy) and closes every inbound port. In the commands below, answer `1` to build
+monitoring, and with choice 2 the auto deploy) and closes every inbound port but the mode's (80 / 443 for port forwarding,
+the chosen port without a domain). In the commands below, answer `1` to build
 on the server or `2` when production should follow GitHub's `main`.
 
 ### Restore from a backup (a new server, or after losing the old one)
@@ -479,5 +493,5 @@ For issues and questions, please use the GitHub issue tracker.
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Special Notes
-- Deployment needs a real SMTP account (`ServerSetting__SmtpOptions__*` in `.env.prod`) and a Cloudflare Tunnel token
+- Deployment needs a real SMTP account (`ServerSetting__SmtpOptions__*` in `.env.prod`) and, for the Cloudflare Tunnel, its token
   (`TUNNEL_TOKEN`); `.env.prod.example` lists every setting with dummy values.
