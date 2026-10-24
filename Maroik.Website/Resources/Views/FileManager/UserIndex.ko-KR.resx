@@ -237,4 +237,10 @@
   <data name="{0} uploaded, {1} failed, {2} skipped." xml:space="preserve">
     <value>업로드 {0}개, 실패 {1}개, 건너뜀 {2}개</value>
   </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>취소</value>
+  </data>
+  <data name="Canceled" xml:space="preserve">
+    <value>취소됨</value>
+  </data>
 </root>

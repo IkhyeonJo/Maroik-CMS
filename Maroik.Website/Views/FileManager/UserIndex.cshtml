@@ -31,6 +31,7 @@
 @Html.Hidden("localizerUploadSummary", Localizer["{0} uploaded, {1} failed, {2} skipped."].Value)
 @Html.Hidden("localizerUploaded", Localizer["Uploaded"].Value)
 @Html.Hidden("localizerSkipped", Localizer["Skipped"].Value)
+@Html.Hidden("localizerCanceled", Localizer["Canceled"].Value)
 @Html.Hidden("localizerFileTooLarge", Localizer["A file larger than 2 GB cannot be uploaded."].Value)
 
 <section class="content">
@@ -169,7 +170,7 @@
     </div>
 </div>
 
-@*<!--uploadModal: progress, then the success / failure list (F2)-->*@
+@*<!--uploadModal: progress (Cancel stops the batch: the file being sent is aborted, the rest are not started), then the success / failure list (F2)-->*@
 <div class="modal fade" tabindex="-1" role="dialog" id="uploadModal" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -182,6 +183,7 @@
                 <ul id="uploadResults" class="list-unstyled file-manager-upload-results"></ul>
             </div>
             <div class="modal-footer">
+                <button type="button" id="btnUploadCancel" class="btn btn-danger" disabled>@Localizer["Cancel"].Value</button>
                 <button type="button" id="btnUploadClose" class="btn btn-secondary" data-dismiss="modal" disabled>@Localizer["Close"].Value</button>
             </div>
         </div>
